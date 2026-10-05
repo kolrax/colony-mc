@@ -81,6 +81,24 @@ public class TestsJeu {
         });
     }
 
+    /** Scénario 9 de KOLRAX : du pain en main à 2 blocs d'un PNJ à terre le relève, sans devoir viser sa silhouette. */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void releverAvecDuPain(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 4, 2, 4, ItemStack.EMPTY);
+        t.hurt(t.damageSources().generic(), 100);
+        h.assertTrue(t.aTerre, "il doit être à terre");
+        var joueur = h.makeMockServerPlayerInLevel();
+        joueur.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // en créatif, rien ne se consomme
+        Vec3 p = h.absoluteVec(new Vec3(2.5, 2, 4.5));
+        joueur.moveTo(p.x, p.y, p.z);
+        joueur.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD, 3));
+        h.assertTrue(Travailleur.releverAutour(joueur), "le pain doit le relever");
+        h.assertFalse(t.aTerre, "il doit être debout");
+        h.assertTrue(joueur.getMainHandItem().getCount() == 2, "un pain doit être consommé");
+        h.succeed();
+    }
+
     /** Caisse vide → grève (le plantage du 5 octobre) ; la caisse remplie → il se paie et reprend le travail. */
     @GameTest(template = "vide", timeoutTicks = 2000)
     public static void grevePuisReprise(GameTestHelper h) {

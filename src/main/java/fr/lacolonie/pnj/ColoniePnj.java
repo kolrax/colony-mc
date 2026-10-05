@@ -110,6 +110,19 @@ public class ColoniePnj {
             if (!e.getLevel().isClientSide && e.getEntity() instanceof Monster m && !(m instanceof NeutralMob))
                 m.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(m, Travailleur.class, 10, true, false, x -> !((Travailleur) x).aTerre));
         });
+        // Relever un PNJ à terre sans devoir viser sa petite silhouette allongée.
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem e) -> {
+            if (e.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND && Travailleur.releverAutour(e.getEntity())) {
+                e.setCanceled(true);
+                e.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            }
+        });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) -> {
+            if (e.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND && Travailleur.releverAutour(e.getEntity())) {
+                e.setCanceled(true);
+                e.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            }
+        });
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
             for (Travailleur t : pnjDe(p.server, p.getUUID())) {
@@ -141,6 +154,7 @@ public class ColoniePnj {
         secondes++;
         if (secondes % (60L * Reglages.actuel.chercheurs.minutes_entre_arrivees) != 0) return;
         ServerLevel monde = e.getServer().overworld();
+        if (!monde.isDay()) return; // la nuit, les voyageurs ne s'aventurent pas sur les routes
         for (ServerPlayer p : monde.players())
             if (!p.isSpectator() && monde.random.nextDouble() < Reglages.actuel.chercheurs.chance) faireVenir(monde, p);
     }

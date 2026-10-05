@@ -123,6 +123,10 @@ public class Travailleur extends PathfinderMob {
     protected void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(2, new net.minecraft.world.entity.ai.goal.AvoidEntityGoal<>(this, net.minecraft.world.entity.monster.Monster.class, 10, 0.9, 1.25) {
+            @Override
+            public boolean canUse() { return mode == Mode.CHOMEUR && !aTerre && super.canUse(); }
+        });
         goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.6) {
             @Override
             public boolean canUse() { return mode == Mode.CHOMEUR && !aTerre && super.canUse(); }
@@ -269,8 +273,22 @@ public class Travailleur extends PathfinderMob {
         getNavigation().stop();
         for (Mob m : level().getEntitiesOfClass(Mob.class, getBoundingBox().inflate(32), m -> m.getTarget() == this)) m.setTarget(null);
         majNom();
-        direAuChef("Je suis à terre ! Il me reste 2 minutes : donne-moi à manger ou une potion de soin.");
+        direAuChef("Je suis à terre en " + blockPosition().toShortString() + " ! Il me reste 2 minutes : clic droit sur moi (ou tout près) avec à manger ou une potion de soin.");
         dire("Je suis touché… aidez-moi !");
+    }
+
+    /**
+     * Clic droit avec à manger ou une potion de soin à moins de 3 blocs d'un PNJ à terre, même sans le viser : on le relève.
+     * (Allongé, sa zone cliquable ne fait que 0,2 bloc : Minecraft l'impose aux dormeurs, impossible à viser.)
+     */
+    static boolean releverAutour(Player p) {
+        if (p.level().isClientSide || !soigne(p.getMainHandItem())) return false;
+        Travailleur t = p.level().getEntitiesOfClass(Travailleur.class, p.getBoundingBox().inflate(3), x -> x.aTerre && x.isAlive())
+                .stream().min(java.util.Comparator.comparingDouble(p::distanceToSqr)).orElse(null);
+        if (t == null) return false;
+        p.getMainHandItem().consume(1, p);
+        t.relever(p);
+        return true;
     }
 
     void relever(Player p) {
@@ -297,7 +315,7 @@ public class Travailleur extends PathfinderMob {
             tomberATerre();
             return;
         }
-        if (!level().isClientSide && chef != null) direAuChef("§c" + prenom + " est mort. Ses affaires sont restées là où il est tombé.");
+        if (!level().isClientSide && chef != null) direAuChef("§c" + prenom + " est mort.");
         super.die(src);
     }
 
@@ -310,7 +328,7 @@ public class Travailleur extends PathfinderMob {
             ItemStack st = getItemBySlot(s);
             if (!st.isEmpty()) { tout.add(st); setItemSlot(s, ItemStack.EMPTY); }
         }
-        if (tout.isEmpty()) return;
+        if (tout.isEmpty()) { direAuChef("Il n'avait rien sur lui : pas de coffre."); return; }
         BlockPos pos = blockPosition();
         for (int i = 0; i < 3 && !level.getBlockState(pos).canBeReplaced(); i++) pos = pos.above();
         if (level.getBlockState(pos).canBeReplaced() && level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 3)
@@ -325,7 +343,11 @@ public class Travailleur extends PathfinderMob {
                 if (!reste.isEmpty()) spawnAtLocation(reste);
             }
             coffre.setChanged();
-        } else tout.forEach(this::spawnAtLocation);
+            direAuChef("Ses affaires sont dans le coffre « Affaires de " + prenom + " », en " + pos.toShortString() + ".");
+        } else {
+            tout.forEach(this::spawnAtLocation);
+            direAuChef("Ses affaires sont tombées par terre en " + blockPosition().toShortString() + ".");
+        }
     }
 
     @Override
@@ -445,7 +467,7 @@ public class Travailleur extends PathfinderMob {
             if (soigne(enMain)) {
                 enMain.consume(1, player);
                 relever(player);
-            } else sp.sendSystemMessage(Component.literal(prenom + " est à terre : donne-lui à manger ou une potion de soin (clic droit avec)."));
+            } else sp.sendSystemMessage(Component.literal(prenom + " est à terre : prends à manger ou une potion de soin en main, puis clic droit sur lui."));
             return InteractionResult.CONSUME;
         }
         if (mode == Mode.CHOMEUR) {
