@@ -1,0 +1,220 @@
+package fr.lacolonie.pnj;
+
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.MapColor;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.items.wrapper.InvWrapper;
+import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Mod(ColoniePnj.MODID)
+public class ColoniePnj {
+    public static final String MODID = "colonie_pnj";
+    public static final Logger LOG = LogUtils.getLogger();
+
+    static final DeferredRegister.Blocks BLOCS = DeferredRegister.createBlocks(MODID);
+    static final DeferredRegister.Items OBJETS = DeferredRegister.createItems(MODID);
+    static final DeferredRegister<EntityType<?>> ENTITES = DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
+    static final DeferredRegister<BlockEntityType<?>> BES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+    static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, MODID);
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Travailleur>> TRAVAILLEUR = ENTITES.register("travailleur",
+            () -> EntityType.Builder.of(Travailleur::new, MobCategory.MISC).sized(0.6f, 1.8f).eyeHeight(1.62f).clientTrackingRange(10).build("travailleur"));
+    public static final DeferredBlock<Bureau.Bloc> BUREAU = BLOCS.register("bureau",
+            () -> new Bureau.Bloc(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).ignitedByLava()));
+    public static final DeferredItem<BlockItem> BUREAU_OBJET = OBJETS.registerSimpleBlockItem(BUREAU);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<Bureau.Entite>> BUREAU_BE = BES.register("bureau",
+            () -> BlockEntityType.Builder.of(Bureau.Entite::new, BUREAU.get()).build(null));
+    public static final DeferredHolder<MenuType<?>, MenuType<Bureau.Menu>> BUREAU_MENU = MENUS.register("bureau",
+            () -> IMenuTypeExtension.create((id, inv, buf) -> new Bureau.Menu(id, inv)));
+
+    /** Garde chargé le chunk de chaque PNJ employé : il travaille même quand son chef n'est pas là. */
+    public static final TicketController TICKETS = new TicketController(ResourceLocation.fromNamespaceAndPath(MODID, "travail"));
+
+    public ColoniePnj(IEventBus bus) {
+        BLOCS.register(bus);
+        OBJETS.register(bus);
+        ENTITES.register(bus);
+        BES.register(bus);
+        MENUS.register(bus);
+        bus.addListener((EntityAttributeCreationEvent e) -> e.put(TRAVAILLEUR.get(), Travailleur.attributs().build()));
+        bus.addListener((RegisterTicketControllersEvent e) -> e.register(TICKETS));
+        bus.addListener(Reseau::enregistrer);
+        bus.addListener((RegisterCapabilitiesEvent e) ->
+                e.registerBlockEntity(Capabilities.ItemHandler.BLOCK, BUREAU_BE.get(), (be, cote) -> new InvWrapper(be.depot)));
+        bus.addListener((BuildCreativeModeTabContentsEvent e) -> {
+            if (e.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) e.accept(BUREAU_OBJET);
+        });
+
+        NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
+            Reglages.charger();
+            Lua.charger();
+            PanneauWeb.demarrer(e.getServer());
+        });
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> PanneauWeb.arreter());
+        NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
+        NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
+        NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
+            // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
+            if (!e.getLevel().isClientSide && e.getEntity() instanceof Monster m && !(m instanceof NeutralMob))
+                m.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(m, Travailleur.class, 10, true, false, x -> !((Travailleur) x).aTerre));
+        });
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
+            if (!(e.getEntity() instanceof ServerPlayer p)) return;
+            for (Travailleur t : pnjDe(p.server, p.getUUID())) {
+                if (t.mode == Travailleur.Mode.GREVE) t.direAuChef("Je suis toujours en grève : il me faut " + Reglages.texte(t.du()) + " dans la caisse du bureau.");
+                else if (!t.besoin.isEmpty()) t.direAuChef(t.besoin + " Je t'attends au bureau.");
+            }
+        });
+    }
+
+    /** Tous les PNJ d'un joueur (ils sont toujours chargés, puisqu'ils gardent leur chunk). */
+    public static List<Travailleur> pnjDe(MinecraftServer s, UUID chef) {
+        List<Travailleur> l = new ArrayList<>();
+        for (ServerLevel lvl : s.getAllLevels()) l.addAll(lvl.getEntities(TRAVAILLEUR.get(), t -> chef.equals(t.chef) && t.isAlive()));
+        return l;
+    }
+
+    public static List<Travailleur> tous(MinecraftServer s) {
+        List<Travailleur> l = new ArrayList<>();
+        for (ServerLevel lvl : s.getAllLevels()) l.addAll(lvl.getEntities(TRAVAILLEUR.get(), Travailleur::isAlive));
+        return l;
+    }
+
+    // --- Les chercheurs d'emploi arrivent à pied près des joueurs ------------------------------------
+
+    static long secondes;
+
+    static void arriveeChercheurs(ServerTickEvent.Post e) {
+        if (e.getServer().getTickCount() % 20 != 0) return;
+        secondes++;
+        if (secondes % (60L * Reglages.actuel.chercheurs.minutes_entre_arrivees) != 0) return;
+        ServerLevel monde = e.getServer().overworld();
+        for (ServerPlayer p : monde.players())
+            if (!p.isSpectator() && monde.random.nextDouble() < Reglages.actuel.chercheurs.chance) faireVenir(monde, p);
+    }
+
+    static void faireVenir(ServerLevel l, ServerPlayer p) {
+        List<String> metiers = Lua.metiersActifs();
+        if (metiers.isEmpty()) return;
+        long autour = l.getEntities(TRAVAILLEUR.get(), t -> t.mode == Travailleur.Mode.CHOMEUR && t.distanceTo(p) < 96).size();
+        if (autour >= Reglages.actuel.chercheurs.max_autour) return;
+        for (int essai = 0; essai < 10; essai++) {
+            double angle = l.random.nextDouble() * Math.PI * 2, d = 24 + l.random.nextInt(17);
+            int x = (int) (p.getX() + Math.cos(angle) * d), z = (int) (p.getZ() + Math.sin(angle) * d);
+            BlockPos pos = new BlockPos(x, l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+            if (!l.isLoaded(pos) || !l.getFluidState(pos.below()).isEmpty() || !l.getBlockState(pos.below()).isSolidRender(l, pos.below())) continue;
+            Travailleur t = TRAVAILLEUR.get().create(l);
+            if (t == null) return;
+            t.moveTo(x + 0.5, pos.getY(), z + 0.5, l.random.nextFloat() * 360, 0);
+            if (!l.noCollision(t)) continue;
+            t.tirerAuSort(metiers.get(l.random.nextInt(metiers.size())), 0);
+            l.addFreshEntity(t);
+            p.sendSystemMessage(Component.literal("On dit qu'un " + Lua.nomMetier(t.metier).toLowerCase() + " cherche du travail dans les environs…").withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
+            return;
+        }
+    }
+
+    // --- Commandes d'admin : /pnj ---------------------------------------------------------------------
+
+    static void commandes(RegisterCommandsEvent e) {
+        e.getDispatcher().register(Commands.literal("pnj").requires(s -> s.hasPermission(2))
+                .then(Commands.literal("chercheur").then(Commands.argument("metier", StringArgumentType.word())
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Lua.METIERS.keySet(), b))
+                        .executes(c -> chercheur(c, 0, ""))
+                        .then(Commands.argument("niveau", IntegerArgumentType.integer(1, 5)).executes(c -> chercheur(c, IntegerArgumentType.getInteger(c, "niveau"), ""))
+                                .then(Commands.argument("skin", StringArgumentType.word())
+                                        .executes(c -> chercheur(c, IntegerArgumentType.getInteger(c, "niveau"), StringArgumentType.getString(c, "skin")))))))
+                .then(Commands.literal("recharger").executes(c -> {
+                    Reglages.charger();
+                    Lua.charger();
+                    c.getSource().sendSuccess(() -> Component.literal("Réglages et scripts rechargés : " + Lua.METIERS.size() + " métier(s)"
+                            + (Lua.ERREURS.isEmpty() ? "." : ", erreurs dans : " + String.join(", ", Lua.ERREURS.keySet()))), true);
+                    return 1;
+                }))
+                .then(Commands.literal("liste").executes(c -> {
+                    var l = tous(c.getSource().getServer());
+                    c.getSource().sendSuccess(() -> Component.literal(l.size() + " PNJ :"), false);
+                    for (Travailleur t : l)
+                        c.getSource().sendSuccess(() -> Component.literal(" - " + t.prenom + " (" + t.metier + " " + t.niveau + "★, " + t.mode.lua
+                                + (t.aTerre ? ", à terre" : "") + ") chef=" + (t.chefNom.isEmpty() ? "aucun" : t.chefNom)
+                                + " pos=" + t.blockPosition().toShortString() + " action=" + (t.action == null ? "-" : t.action.nom)
+                                + " faim=" + t.faim + " impayes=" + t.impayes + (t.besoin.isEmpty() ? "" : " besoin=« " + t.besoin + " »")), false);
+                    return l.size();
+                }))
+                .then(Commands.literal("panneau").executes(c -> {
+                    String url = PanneauWeb.adresse();
+                    c.getSource().sendSuccess(() -> Component.literal("Panneau : " + url + "  (mot de passe : clique pour le copier)")
+                            .withStyle(s -> s.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, Reglages.actuel.jeton_panneau))
+                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copier le mot de passe")))), false);
+                    return 1;
+                })));
+    }
+
+    static int chercheur(CommandContext<CommandSourceStack> c, int niveau, String skin) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        String metier = StringArgumentType.getString(c, "metier");
+        if (!Lua.metierExiste(metier)) {
+            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : " + String.join(", ", Lua.METIERS.keySet())));
+            return 0;
+        }
+        ServerLevel l = c.getSource().getLevel();
+        Travailleur t = TRAVAILLEUR.get().create(l);
+        if (t == null) return 0;
+        var pos = c.getSource().getPosition();
+        t.moveTo(pos.x, pos.y, pos.z, c.getSource().getRotation().y, 0);
+        t.tirerAuSort(metier, niveau);
+        t.setSkin(skin);
+        l.addFreshEntity(t);
+        c.getSource().sendSuccess(() -> Component.literal(t.prenom + " (" + Lua.nomMetier(metier) + ", " + "★".repeat(t.niveau) + ") cherche du travail ici."), true);
+        return 1;
+    }
+}

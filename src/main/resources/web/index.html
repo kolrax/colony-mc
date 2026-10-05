@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panneau des PNJ · La Colonie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,600..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #e9ece8; --panel: #f6f7f4; --sunk: #dde2dc; --line: #c9d0c8; --fg: #1d2320; --muted: #5a645e;
+  --brass: #8a5d0c; --brass-soft: #f1e2c2; --ok: #2f6b3c; --ok-soft: #d7eadb; --warn: #9a4a12; --warn-soft: #f4dfcd;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif; --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #141816; --panel: #1c211f; --sunk: #111412; --line: #2e3532; --fg: #e2e7e3; --muted: #9aa49e;
+  --brass: #d9a94e; --brass-soft: #3a2f19; --ok: #7cc48b; --ok-soft: #1f3324; --warn: #e79a62; --warn-soft: #3a2618; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1200px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 48px; }
+header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+h1 { font: 800 28px/1.1 var(--display); font-stretch: 80%; margin: 0; }
+h2 { font: 800 19px/1.2 var(--display); font-stretch: 85%; margin: 0 0 10px; }
+h3 { font: 700 12px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 20px 0 8px; }
+.sub { color: var(--muted); font-size: 14px; }
+nav { display: flex; gap: 2px; overflow-x: auto; margin: 16px 0 18px; border-bottom: 2px solid var(--line); }
+nav button { font: 700 14px/1 var(--display); font-stretch: 85%; text-transform: uppercase; letter-spacing: .06em; background: none; border: 0; color: var(--muted);
+  padding: 12px 12px 10px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+nav button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--brass); }
+section[hidden] { display: none; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.grid2 { display: grid; gap: 14px; grid-template-columns: minmax(240px, 300px) 1fr; }
+@media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font: 700 12px/1 var(--display); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 8px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+input, select, textarea { font: 14px/1.4 var(--body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; min-width: 0; }
+input[type=number] { width: 90px; }
+textarea.code { width: 100%; min-height: 520px; font: 13px/1.5 var(--mono); tab-size: 2; white-space: pre; resize: vertical; }
+button { font: 700 13px/1 var(--display); text-transform: uppercase; letter-spacing: .05em; border-radius: 4px; padding: 9px 12px; cursor: pointer;
+  background: none; border: 1px solid var(--line); color: var(--fg); }
+button.go { background: var(--brass); color: var(--panel); border-color: var(--brass); }
+button.ko { color: var(--warn); border-color: var(--warn); }
+button.small { padding: 5px 7px; font-size: 11px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill { font: 700 11px/1 var(--display); text-transform: uppercase; letter-spacing: .06em; padding: 4px 7px; border-radius: 3px; white-space: nowrap; background: var(--sunk); color: var(--muted); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.ko { background: var(--warn-soft); color: var(--warn); } .pill.or { background: var(--brass-soft); color: var(--brass); }
+.metier { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 9px 10px; border-radius: 5px; cursor: pointer; border: 1px solid transparent; }
+.metier:hover { background: var(--sunk); }
+.metier.sel { border-color: var(--brass); background: var(--brass-soft); }
+.metier b { font-weight: 700; } .metier small { grid-column: 1 / -1; color: var(--muted); }
+.err { color: var(--warn); white-space: pre-wrap; font: 13px/1.4 var(--mono); }
+.okmsg { color: var(--ok); }
+.journal { font: 12.5px/1.6 var(--mono); white-space: pre-wrap; max-height: 70vh; overflow: auto; margin: 0; }
+.guide { max-width: 860px; } .guide pre { background: var(--sunk); padding: 10px 12px; border-radius: 5px; overflow-x: auto; font: 13px/1.5 var(--mono); }
+.guide code { font-family: var(--mono); font-size: 13px; } .guide table { margin: 8px 0 16px; }
+#login { max-width: 420px; margin: 12vh auto; }
+.status { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.status.on { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="login" class="card" hidden>
+    <h2>Panneau des PNJ</h2>
+    <p class="sub">Entre le mot de passe du panneau. En jeu, un opérateur l'obtient avec <code>/pnj panneau</code> (clic pour copier).</p>
+    <form id="f-login" class="row"><input id="jeton" type="password" placeholder="Mot de passe" style="flex:1" required><button class="go">Entrer</button></form>
+    <p id="login-err" class="err"></p>
+  </div>
+
+  <div id="app" hidden>
+    <header>
+      <h1>Panneau des PNJ</h1>
+      <span class="sub" id="resume">La Colonie</span>
+    </header>
+    <nav id="tabs">
+      <button data-tab="pnj" aria-selected="true">PNJ</button>
+      <button data-tab="metiers">Métiers</button>
+      <button data-tab="economie">Économie</button>
+      <button data-tab="journal">Journal</button>
+      <button data-tab="guide">Guide du scripteur</button>
+    </nav>
+
+    <section id="pnj">
+      <div class="card">
+        <h2>Faire apparaître un chercheur d'emploi</h2>
+        <form id="f-app" class="row">
+          <select id="app-metier" aria-label="Métier"></select>
+          <select id="app-niveau" aria-label="Compétence"><option value="0">Compétence au hasard</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+          <input id="app-nom" placeholder="Prénom (au hasard)">
+          <input id="app-skin" placeholder="Skin : pseudo Minecraft">
+          <select id="app-joueur" aria-label="Près de"></select>
+          <button class="go">Faire apparaître</button>
+        </form>
+        <p class="sub">Il apparaît deux blocs devant le joueur choisi, qui doit être connecté.</p>
+      </div>
+      <h3>Tous les PNJ</h3>
+      <div class="tablewrap card"><table>
+        <thead><tr><th>Nom</th><th>Métier</th><th>Chef</th><th>État</th><th>Action</th><th>Vie</th><th>Faim</th><th>Impayés</th><th>Demande</th><th>Position</th><th></th></tr></thead>
+        <tbody id="pnj-liste"></tbody>
+      </table></div>
+    </section>
+
+    <section id="metiers" hidden>
+      <div class="grid2">
+        <div class="card">
+          <div class="row" style="justify-content:space-between"><h2>Métiers</h2><button id="nouveau" class="small">Nouveau métier</button></div>
+          <div id="metiers-liste"></div>
+          <p class="sub">Un métier désactivé ne se présente plus à l'embauche ; ceux déjà embauchés continuent.</p>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2 id="ed-titre">Choisis un métier</h2>
+            <div class="row">
+              <button id="ed-verifier">Vérifier</button>
+              <button id="ed-enregistrer" class="go">Enregistrer</button>
+              <button id="ed-defaut" class="small">Version d'origine</button>
+              <button id="ed-retirer" class="small ko">Retirer</button>
+            </div>
+          </div>
+          <p id="ed-msg" class="sub">Le script est vérifié avant d'être enregistré ; l'ancienne version est gardée dans <code>config/colonie_pnj/historique/</code>.</p>
+          <textarea id="ed-source" class="code" spellcheck="false" aria-label="Script Lua"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section id="economie" hidden>
+      <div class="card">
+        <h2>Les pièces</h2>
+        <p class="sub">Identifiant de l'objet, nom affiché, et valeur en plus petite unité. Le change est rendu automatiquement.</p>
+        <div class="tablewrap"><table><thead><tr><th>Objet</th><th>Nom</th><th>Valeur</th><th></th></tr></thead><tbody id="pieces"></tbody></table></div>
+        <button id="ajout-piece" class="small" style="margin-top:8px">Ajouter une pièce</button>
+
+        <h3>Salaire et prime par compétence (en plus petite unité)</h3>
+        <div class="tablewrap"><table><thead><tr><th></th><th>★</th><th>★★</th><th>★★★</th><th>★★★★</th><th>★★★★★</th></tr></thead>
+          <tbody><tr><td>Salaire par paie</td><td><input type="number" min="0" id="s1"></td><td><input type="number" min="0" id="s2"></td><td><input type="number" min="0" id="s3"></td><td><input type="number" min="0" id="s4"></td><td><input type="number" min="0" id="s5"></td></tr>
+          <tr><td>Prime d'embauche</td><td><input type="number" min="0" id="p1"></td><td><input type="number" min="0" id="p2"></td><td><input type="number" min="0" id="p3"></td><td><input type="number" min="0" id="p4"></td><td><input type="number" min="0" id="p5"></td></tr></tbody></table></div>
+
+        <h3>Règles</h3>
+        <div class="tablewrap"><table><tbody>
+          <tr><td>Minutes entre deux paies (temps réel ; 1440 = une par jour)</td><td><input type="number" min="1" id="r-paie"></td></tr>
+          <tr><td>Paies impayées avant la grève</td><td><input type="number" min="1" id="r-greve"></td></tr>
+          <tr><td>PNJ maximum par joueur</td><td><input type="number" min="0" id="r-max"></td></tr>
+          <tr><td>Chercheurs d'emploi : une chance toutes les … minutes</td><td><input type="number" min="1" id="c-minutes"></td></tr>
+          <tr><td>… avec une probabilité de (0 à 1)</td><td><input type="number" min="0" max="1" step="0.05" id="c-chance"></td></tr>
+          <tr><td>Ils repartent au bout de … minutes s'ils ne sont pas embauchés</td><td><input type="number" min="1" id="c-duree"></td></tr>
+          <tr><td>Au plus … chercheurs autour d'un même joueur</td><td><input type="number" min="0" id="c-max"></td></tr>
+        </tbody></table></div>
+        <div class="row" style="margin-top:12px"><button id="eco-enregistrer" class="go">Enregistrer l'économie</button><span id="eco-msg" class="sub"></span></div>
+      </div>
+    </section>
+
+    <section id="journal" hidden>
+      <div class="card"><div class="row" style="justify-content:space-between"><h2>Journal des scripts</h2><button id="recharger" class="small">Recharger tous les scripts</button></div>
+      <pre class="journal" id="journal-texte"></pre></div>
+    </section>
+
+    <section id="guide" hidden><div class="card guide" id="guide-texte">Chargement du guide…</div></section>
+  </div>
+</div>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+};
+const flash = m => { const s = $("#status"); s.textContent = m; s.classList.add("on"); clearTimeout(flash.t); flash.t = setTimeout(() => s.classList.remove("on"), 2500); };
+let jeton = ""; try { jeton = localStorage.getItem("jeton") || ""; } catch {}
+let etat = null, metierCourant = null, ecoRempli = false;
+
+async function api(chemin, corps) {
+  const r = await fetch(chemin, { method: corps ? "POST" : "GET", headers: { "X-Jeton": jeton, "Content-Type": "application/json" }, body: corps ? JSON.stringify(corps) : undefined });
+  if (r.status === 401) { deconnecter("Mot de passe incorrect."); throw new Error("401"); }
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.erreur || r.status);
+  return j;
+}
+function deconnecter(msg) {
+  try { localStorage.removeItem("jeton"); } catch {}
+  $("#app").hidden = true; $("#login").hidden = false; $("#login-err").textContent = msg || "";
+}
+$("#f-login").addEventListener("submit", async e => {
+  e.preventDefault(); jeton = $("#jeton").value.trim();
+  try { await charger(); try { localStorage.setItem("jeton", jeton); } catch {} } catch {}
+});
+
+// Onglets
+$("#tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  document.querySelectorAll("#app section").forEach(s => s.hidden = s.id !== b.dataset.tab);
+  if (b.dataset.tab === "guide") chargerGuide();
+});
+
+async function charger() {
+  etat = await api("/api/etat");
+  $("#login").hidden = true; $("#app").hidden = false;
+  rendre();
+}
+
+function rendre() {
+  const e = etat;
+  $("#resume").textContent = `${e.pnj.length} PNJ · ${e.metiers.filter(m => !m.commun).length} métiers · joueurs connectés : ${e.joueurs.join(", ") || "aucun"}`;
+  // Apparition
+  const sm = $("#app-metier"), v = sm.value; sm.replaceChildren(...e.metiers.filter(m => !m.commun && !m.erreur).map(m => el("option", { value: m.id, text: m.nom })));
+  if (v) sm.value = v;
+  const sj = $("#app-joueur"), vj = sj.value; sj.replaceChildren(...(e.joueurs.length ? e.joueurs : ["(personne de connecté)"]).map(n => el("option", { value: n, text: "près de " + n })));
+  if (vj) sj.value = vj;
+  // PNJ
+  const tb = $("#pnj-liste"); tb.replaceChildren();
+  if (!e.pnj.length) tb.append(el("tr", {}, el("td", { colspan: 11, class: "sub", text: "Aucun PNJ dans les zones chargées du monde." })));
+  const MODES = { chomeur: ["cherche du travail", ""], suivre: ["suit", "or"], attendre: ["attend", ""], travail: ["au travail", "ok"], greve: ["en grève", "ko"] };
+  for (const p of e.pnj) {
+    const [lib, cls] = p.aTerre ? ["à terre", "ko"] : (MODES[p.mode] || [p.mode, ""]);
+    const nom = (e.metiers.find(m => m.id === p.metier) || {}).nom || p.metier;
+    tb.append(el("tr", {},
+      el("td", {}, el("b", { text: p.nom }), el("div", { class: "sub", text: p.temperament + (p.skin ? " · skin " + p.skin : "") })),
+      el("td", { text: nom + " " + "★".repeat(p.niveau) }),
+      el("td", { text: p.chef || "—" }),
+      el("td", {}, el("span", { class: "pill " + cls, text: lib })),
+      el("td", { class: "sub", text: (p.action || "—") + (p.resultat && p.resultat !== "ok" ? " (" + p.resultat + ")" : "") }),
+      el("td", { class: "num", text: p.vie }),
+      el("td", { class: "num", text: p.faim }),
+      el("td", { class: "num", text: p.impayes }),
+      el("td", { text: p.besoin || "" }),
+      el("td", { class: "num", text: p.position + (p.dimension !== "minecraft:overworld" ? " " + p.dimension : "") }),
+      el("td", {}, el("div", { class: "row" },
+        el("button", { class: "small", text: "Relever", onclick: () => action(p, "relever") }),
+        el("button", { class: "small", text: "Skin", onclick: () => { const s = prompt("Pseudo Minecraft dont il prend le skin (vide = skin de base) :", p.skin); if (s !== null) action(p, "skin", s); } }),
+        el("button", { class: "small", text: "Nom", onclick: () => { const s = prompt("Nouveau prénom :", p.nom); if (s) action(p, "nom", s); } }),
+        p.chef ? el("button", { class: "small", text: "Licencier", onclick: () => confirm(`Licencier ${p.nom} ?`) && action(p, "licencier") }) : null,
+        el("button", { class: "small ko", text: "Supprimer", onclick: () => confirm(`Supprimer ${p.nom} définitivement (sans coffre) ?`) && action(p, "supprimer") })))));
+  }
+  // Métiers
+  const lm = $("#metiers-liste"); lm.replaceChildren();
+  for (const m of e.metiers) {
+    const d = el("div", { class: "metier" + (metierCourant === m.id ? " sel" : ""), onclick: () => ouvrir(m.id) },
+      el("b", { text: m.nom }),
+      m.commun ? el("span", { class: "pill or", text: "commun" }) :
+        el("label", { class: "row", onclick: ev => ev.stopPropagation() }, (() => { const c = el("input", { type: "checkbox" }); c.checked = m.actif; c.addEventListener("change", () => basculer(m.id, c.checked)); return c; })(), el("span", { class: "sub", text: "actif" })),
+      el("small", { text: m.id + ".lua" + (m.description ? " · " + m.description : "") }),
+      m.erreur ? el("small", { class: "err", text: "⚠ " + m.erreur }) : null);
+    lm.append(d);
+  }
+  // Économie (seulement si on n'est pas en train de la modifier)
+  if (!ecoRempli) { remplirEconomie(e.reglages); ecoRempli = true; }
+  // Journal
+  $("#journal-texte").textContent = e.journal.join("\n") || "Rien pour l'instant.";
+}
+
+async function action(p, act, valeur) {
+  try { const r = await api("/api/pnj/action", { uuid: p.uuid, action: act, valeur }); flash(r.ok ? "Fait." : r.erreur); await charger(); } catch (e) { flash(e.message); }
+}
+async function basculer(id, actif) {
+  try { await api("/api/metier/actif", { id, actif }); flash(actif ? "Métier activé" : "Métier désactivé"); await charger(); } catch (e) { flash(e.message); }
+}
+$("#f-app").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const r = await api("/api/pnj/apparaitre", { metier: $("#app-metier").value, niveau: +$("#app-niveau").value, nom: $("#app-nom").value, skin: $("#app-skin").value, joueur: $("#app-joueur").value });
+    flash(r.ok ? "Le chercheur d'emploi est arrivé." : r.erreur); await charger();
+  } catch (er) { flash(er.message); }
+});
+
+// Éditeur de scripts
+async function ouvrir(id) {
+  metierCourant = id;
+  const r = await api("/api/script?id=" + encodeURIComponent(id));
+  $("#ed-titre").textContent = id + ".lua";
+  $("#ed-source").value = r.source || "";
+  const m = etat.metiers.find(x => x.id === id) || {};
+  $("#ed-defaut").hidden = !m.base; $("#ed-retirer").hidden = !!m.commun;
+  $("#ed-msg").className = m.erreur ? "err" : "sub";
+  $("#ed-msg").textContent = m.erreur ? "Erreur au chargement : " + m.erreur : "Modifie, vérifie, puis enregistre. Les PNJ prennent le nouveau comportement aussitôt.";
+  rendre();
+}
+const MODELE = id => `-- Métier : ${id}\n-- Voir l'onglet « Guide du scripteur » pour toutes les commandes du PNJ.\nlocal M = {\n  nom = "${id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g, " ")}",\n  description = "Ce que fait ce métier, en une phrase.",\n  garder = { "nourriture" },\n}\n\nfunction M.travailler(pnj, commun)\n  local lx, ly, lz = pnj.lieu()\n  if not lx then return pnj.attendre(5) end\n  -- Décider, lancer UNE action, et return.\n  return pnj.attendre(10)\nend\n\nreturn M\n`;
+$("#nouveau").addEventListener("click", () => {
+  const id = (prompt("Identifiant du nouveau métier (minuscules, chiffres, _) :", "") || "").trim();
+  if (!id) return;
+  if (!/^[a-z0-9_]{2,32}$/.test(id)) { flash("Identifiant invalide."); return; }
+  metierCourant = id; $("#ed-titre").textContent = id + ".lua (nouveau)"; $("#ed-source").value = MODELE(id);
+  $("#ed-defaut").hidden = true; $("#ed-retirer").hidden = true; $("#ed-msg").className = "sub"; $("#ed-msg").textContent = "Nouveau métier : écris-le, vérifie, puis enregistre.";
+});
+$("#ed-source").addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  const t = e.target, a = t.selectionStart; t.setRangeText("  ", a, t.selectionEnd, "end");
+});
+async function edAction(chemin, msgOk) {
+  if (!metierCourant) return;
+  try {
+    const r = await api(chemin, { id: metierCourant, source: $("#ed-source").value });
+    $("#ed-msg").className = r.ok ? "okmsg" : "err";
+    $("#ed-msg").textContent = r.ok ? msgOk : "Erreur : " + r.erreur;
+    if (r.ok && chemin !== "/api/script/verifier") { await charger(); if (chemin === "/api/script/defaut") await ouvrir(metierCourant); }
+  } catch (e) { $("#ed-msg").className = "err"; $("#ed-msg").textContent = e.message; }
+}
+$("#ed-verifier").addEventListener("click", () => edAction("/api/script/verifier", "Le script est correct."));
+$("#ed-enregistrer").addEventListener("click", () => edAction("/api/script/enregistrer", "Enregistré et chargé. Les PNJ de ce métier l'appliquent déjà."));
+$("#ed-defaut").addEventListener("click", () => confirm("Remettre la version d'origine de ce script ? La version actuelle sera gardée dans l'historique.") && edAction("/api/script/defaut", "Version d'origine remise."));
+$("#ed-retirer").addEventListener("click", async () => {
+  if (!confirm(`Retirer le métier ${metierCourant} ? Une copie est gardée dans l'historique.`)) return;
+  await edAction("/api/script/supprimer", "Métier retiré."); metierCourant = null; $("#ed-source").value = ""; $("#ed-titre").textContent = "Choisis un métier";
+});
+
+// Économie
+function lignePiece(p = { objet: "", nom: "", valeur: 1 }) {
+  const tr = el("tr", {},
+    el("td", {}, el("input", { value: p.objet, placeholder: "mod:objet", "data-k": "objet", style: "width:100%" })),
+    el("td", {}, el("input", { value: p.nom, "data-k": "nom", style: "width:100%" })),
+    el("td", {}, el("input", { type: "number", min: "1", value: p.valeur, "data-k": "valeur" })),
+    el("td", {}, el("button", { class: "small ko", type: "button", text: "Retirer", onclick: () => tr.remove() })));
+  return tr;
+}
+function remplirEconomie(r) {
+  $("#pieces").replaceChildren(...r.monnaie.map(lignePiece));
+  for (let i = 1; i <= 5; i++) { $("#s" + i).value = r.salaire_par_niveau[i - 1]; $("#p" + i).value = r.prime_par_niveau[i - 1]; }
+  $("#r-paie").value = r.minutes_entre_paies; $("#r-greve").value = r.paies_impayees_avant_greve; $("#r-max").value = r.pnj_max_par_joueur;
+  $("#c-minutes").value = r.chercheurs.minutes_entre_arrivees; $("#c-chance").value = r.chercheurs.chance; $("#c-duree").value = r.chercheurs.duree_minutes; $("#c-max").value = r.chercheurs.max_autour;
+}
+$("#ajout-piece").addEventListener("click", () => $("#pieces").append(lignePiece()));
+$("#eco-enregistrer").addEventListener("click", async () => {
+  const r = structuredClone(etat.reglages);
+  r.monnaie = [...$("#pieces").children].map(tr => ({
+    objet: tr.querySelector('[data-k="objet"]').value.trim(), nom: tr.querySelector('[data-k="nom"]').value.trim(), valeur: +tr.querySelector('[data-k="valeur"]').value }))
+    .filter(p => p.objet && p.valeur > 0);
+  r.salaire_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#s" + i).value);
+  r.prime_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#p" + i).value);
+  r.minutes_entre_paies = +$("#r-paie").value; r.paies_impayees_avant_greve = +$("#r-greve").value; r.pnj_max_par_joueur = +$("#r-max").value;
+  r.chercheurs = { minutes_entre_arrivees: +$("#c-minutes").value, chance: +$("#c-chance").value, duree_minutes: +$("#c-duree").value, max_autour: +$("#c-max").value };
+  try { const x = await api("/api/reglages", r); $("#eco-msg").textContent = x.ok ? "Enregistré." : x.erreur; if (x.ok) { ecoRempli = false; await charger(); } }
+  catch (e) { $("#eco-msg").textContent = e.message; }
+});
+
+$("#recharger").addEventListener("click", async () => { try { await api("/api/recharger", {}); flash("Scripts rechargés."); await charger(); } catch (e) { flash(e.message); } });
+
+let guideCharge = false;
+async function chargerGuide() {
+  if (guideCharge) return;
+  const t = await (await fetch("/guide.md")).text();
+  guideCharge = true;
+  const box = $("#guide-texte");
+  if (window.marked) box.innerHTML = marked.parse(t); else { box.replaceChildren(el("pre", { text: t })); }
+}
+
+if (jeton) charger().catch(() => {}); else deconnecter();
+setInterval(() => { if (!$("#app").hidden && !document.hidden) api("/api/etat").then(e => { etat = e; rendre(); }).catch(() => {}); }, 5000);
+</script>
+</body>
+</html>

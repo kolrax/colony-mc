@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PBP",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "B": {
+      "item": "minecraft:writable_book"
+    },
+    "C": {
+      "item": "minecraft:chest"
+    }
+  },
+  "result": {
+    "id": "colonie_pnj:bureau",
+    "count": 1
+  }
+}
