@@ -101,6 +101,8 @@ public class ColoniePnj {
             PanneauWeb.demarrer(e.getServer());
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> PanneauWeb.arreter());
+        // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> PanneauWeb.arreter());
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {

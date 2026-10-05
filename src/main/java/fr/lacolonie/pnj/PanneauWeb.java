@@ -42,16 +42,23 @@ public final class PanneauWeb {
     public static void demarrer(MinecraftServer s) {
         serveur = s;
         arreter();
-        try {
-            http = HttpServer.create(new InetSocketAddress(Reglages.actuel.port_panneau), 0);
-            http.setExecutor(Executors.newFixedThreadPool(2, r -> { Thread t = new Thread(r, "colonie-panneau"); t.setDaemon(true); return t; }));
-            http.createContext("/", PanneauWeb::traiter);
-            http.start();
-            ColoniePnj.LOG.info("Panneau des PNJ ouvert sur le port {}", Reglages.actuel.port_panneau);
-        } catch (IOException e) {
-            ColoniePnj.LOG.error("Impossible d'ouvrir le panneau sur le port {}", Reglages.actuel.port_panneau, e);
-            http = null;
-        }
+        // Démarré depuis un fil « démon » : le fil interne du serveur HTTP l'est aussi et n'empêche jamais
+        // Java de s'arrêter (après un plantage, NeoForge ne prévient pas les mods de l'arrêt du serveur).
+        Thread demarrage = new Thread(() -> {
+            try {
+                HttpServer h = HttpServer.create(new InetSocketAddress(Reglages.actuel.port_panneau), 0);
+                h.setExecutor(Executors.newFixedThreadPool(2, r -> { Thread t = new Thread(r, "colonie-panneau"); t.setDaemon(true); return t; }));
+                h.createContext("/", PanneauWeb::traiter);
+                h.start();
+                http = h;
+                ColoniePnj.LOG.info("Panneau des PNJ ouvert sur le port {}", Reglages.actuel.port_panneau);
+            } catch (IOException e) {
+                ColoniePnj.LOG.error("Impossible d'ouvrir le panneau sur le port {}", Reglages.actuel.port_panneau, e);
+            }
+        }, "colonie-panneau-demarrage");
+        demarrage.setDaemon(true);
+        demarrage.start();
+        try { demarrage.join(10_000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 
     public static void arreter() {

@@ -182,12 +182,14 @@ public class Travailleur extends PathfinderMob {
             if (System.currentTimeMillis() > arrivee + duree && level().getNearestPlayer(this, 16) == null) discard();
             return;
         }
-        if (action != null) {
+        // Copie locale : une action peut elle-même remplacer ou effacer l'action en cours (ex. la paie qui déclenche la grève).
+        Actions.Action a = action;
+        if (a != null) {
             Actions.Etat e;
-            try { e = action.tick(this); }
-            catch (RuntimeException ex) { ColoniePnj.LOG.error("Action {} de {} en erreur", action.nom, prenom, ex); e = Actions.Etat.ECHEC; action.raison = "erreur"; }
-            action.age++;
-            if (e != Actions.Etat.EN_COURS) finirAction(e == Actions.Etat.OK ? "ok" : action.raison.isEmpty() ? "echec" : action.raison);
+            try { e = a.tick(this); }
+            catch (RuntimeException ex) { ColoniePnj.LOG.error("Action {} de {} en erreur", a.nom, prenom, ex); e = Actions.Etat.ECHEC; a.raison = "erreur"; }
+            a.age++;
+            if (e != Actions.Etat.EN_COURS && action == a) finirAction(e == Actions.Etat.OK ? "ok" : a.raison.isEmpty() ? "echec" : a.raison);
         }
         if (pauseCerveau > 0) pauseCerveau--;
         else if ((tickCount + getId()) % 10 == 0) Lua.cerveau(this);

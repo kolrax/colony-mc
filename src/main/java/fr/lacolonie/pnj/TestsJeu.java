@@ -81,6 +81,35 @@ public class TestsJeu {
         });
     }
 
+    /** Caisse vide → grève (le plantage du 5 octobre) ; la caisse remplie → il se paie et reprend le travail. */
+    @GameTest(template = "vide", timeoutTicks = 2000)
+    public static void grevePuisReprise(GameTestHelper h) {
+        var avant = Reglages.actuel.monnaie;
+        Reglages.actuel.monnaie = new java.util.ArrayList<>(java.util.List.of(
+                new Reglages.Piece("minecraft:copper_ingot", "cuivre", 1), new Reglages.Piece("minecraft:gold_ingot", "or", 8)));
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        java.util.UUID chef = java.util.UUID.randomUUID();
+        h.setBlock(4, 2, 4, ColoniePnj.BUREAU.get());
+        BlockPos bureau = h.absolutePos(new BlockPos(4, 2, 4));
+        Bureau.Entite b = (Bureau.Entite) h.getLevel().getBlockEntity(bureau);
+        b.proprietaire = chef;
+        Bureau.Registre.de(h.getLevel().getServer()).mettre(h.getLevel(), bureau, chef);
+        Travailleur t = ouvrier(h, "mineur", 1, 2, 4, ItemStack.EMPTY);
+        t.chef = chef;
+        t.impayes = 1;
+        t.prochainePaie = System.currentTimeMillis() - 1000; // due, mais pas « en retard » : il va lui-même à la caisse vide
+        h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(t.mode == Travailleur.Mode.GREVE, "il doit se mettre en grève"))
+                .thenExecute(() -> b.caisse.addItem(new ItemStack(Items.GOLD_INGOT, 9)))
+                .thenWaitUntil(() -> h.assertTrue(t.mode == Travailleur.Mode.TRAVAIL && t.impayes == 0, "payé, il doit reprendre"))
+                .thenExecute(() -> {
+                    h.assertTrue(t.isAlive(), "il doit être vivant");
+                    h.assertTrue(Reglages.valeur(b.caisse) == 72 - 64, "il doit avoir pris 64 (2 paies de 32)");
+                    Reglages.actuel.monnaie = avant;
+                })
+                .thenSucceed();
+    }
+
     /** Le panneau web répond : la page, l'API avec le mot de passe, et un refus sans. */
     @GameTest(template = "vide", timeoutTicks = 6000) // le serveur de test enchaîne les ticks bien plus vite que le temps réel
     public static void panneauRepond(GameTestHelper h) {
