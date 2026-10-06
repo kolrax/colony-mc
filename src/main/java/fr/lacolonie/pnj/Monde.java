@@ -146,7 +146,12 @@ final class Monde {
      * Jamais un villageois, un golem, un animal ou un joueur qui ne s'en est pris à personne.
      */
     static List<LivingEntity> cibles(Travailleur t, double rayon) {
-        List<LivingEntity> l = new ArrayList<>(t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(rayon), Monde::hostile));
+        // Comme un joueur : les monstres qu'il voit, à sa hauteur (pas un zombie au fond d'une grotte sous ses pieds,
+        // ni un phantom tout là-haut), et pas ceux qu'il vient d'échouer à atteindre.
+        long maintenant = t.level().getGameTime();
+        t.inaccessibles.values().removeIf(v -> v < maintenant);
+        List<LivingEntity> l = new ArrayList<>(t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(rayon),
+                e -> hostile(e) && Math.abs(e.getY() - t.getY()) < 6 && t.getSensing().hasLineOfSight(e)));
         LivingEntity mien = t.getLastHurtByMob();
         if (mien != null && mien.isAlive() && recent(t, t.getLastHurtByMobTimestamp()) && !t.estDe(mien) && !l.contains(mien)) l.add(mien);
         ServerPlayer c = t.chefJoueur();
@@ -157,6 +162,7 @@ final class Monde {
             if (vise != null && vise.isAlive() && vise != t && !(vise instanceof Player) && recent(c, c.getLastHurtMobTimestamp()) && !l.contains(vise)
                     && (hostile(vise) || vise instanceof Mob m && m.getTarget() == c)) l.add(vise);
         }
+        l.removeIf(e -> t.inaccessibles.containsKey(e.getId()));
         l.sort(Comparator.comparingDouble(t::distanceToSqr));
         return l;
     }

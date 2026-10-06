@@ -433,6 +433,97 @@ public class TestsJeu {
         });
     }
 
+    /** Un zombie enfermé sous ses pieds, hors de vue (Raoul le 6 octobre) : le guerrier ne tourne pas en rond au-dessus. */
+    @GameTest(template = "grand", timeoutTicks = 300)
+    public static void guerrierNeTournePasEnRond(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++) h.setBlock(x, y, z, Blocks.STONE);
+        h.setBlock(12, 2, 12, Blocks.AIR);
+        h.setBlock(12, 3, 12, Blocks.AIR);
+        var zombie = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 12, 2, 12);
+        zombie.setNoAi(true);
+        Travailleur t = ouvrier(h, "guerrier", 12, 7, 12, new ItemStack(Items.IRON_SWORD), new BlockPos(12, 7, 9));
+        t.mode = Travailleur.Mode.ATTENDRE; // il ne bouge que pour se battre
+        float[] tour = {0, t.getYRot()};
+        h.onEachTick(() -> { tour[0] += Math.abs(net.minecraft.util.Mth.wrapDegrees(t.getYRot() - tour[1])); tour[1] = t.getYRot(); });
+        h.runAtTickTime(h.getTick() + 240, () -> {
+            h.assertTrue(tour[0] < 360, "il tourne en rond (" + (int) tour[0] + "° en 12 s, " + etat(t, t.bureau) + ", " + t.diag + ")");
+            t.discard();
+            zombie.discard();
+            h.succeed();
+        });
+    }
+
+    /** Un canal entre lui et son bureau (scénario 24) : il le traverse à la nage au lieu de faire le tour, en courant. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void traverseALaNage(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 21000);
+        for (int x = 8; x <= 16; x++)
+            for (int z = -40; z <= 40; z++) {
+                BlockPos s = sol(h, x, 21000 + z);
+                l.setBlockAndUpdate(s.below(), Blocks.WATER.defaultBlockState());
+                l.setBlockAndUpdate(s.below(2), Blocks.WATER.defaultBlockState());
+            }
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 26, 21000)), ItemStack.EMPTY);
+        boolean[] vu = new boolean[2];
+        h.onEachTick(() -> { if (t.isInWater()) vu[0] = true; if (t.isSprinting()) vu[1] = true; });
+        t.forcerChunk();
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bureau), 3));
+        h.succeedWhen(() -> {
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 16, "il doit être arrivé au bureau (" + etat(t, bureau) + ", " + t.diag + ")");
+            h.assertTrue(vu[0], "il devait traverser à la nage");
+            h.assertTrue(vu[1], "il devait courir");
+            t.discard();
+        });
+    }
+
+    /** Un bras de mer entre lui et son bureau, et un bateau dans son sac : il traverse en bateau, puis le remet dans son sac. */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void traverseEnBateau(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 24000);
+        for (int x = 6; x <= 46; x++)
+            for (int z = -50; z <= 50; z++) {
+                BlockPos s = sol(h, x, 24000 + z);
+                l.setBlockAndUpdate(s.below(), Blocks.WATER.defaultBlockState());
+                l.setBlockAndUpdate(s.below(2), Blocks.WATER.defaultBlockState());
+            }
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 50, 24000)), new ItemStack(Items.SPRUCE_BOAT));
+        boolean[] enBateau = {false};
+        h.onEachTick(() -> { if (t.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat) enBateau[0] = true; });
+        t.forcerChunk();
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bureau), 3));
+        h.succeedWhen(() -> {
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 16, "il doit être arrivé au bureau (" + etat(t, bureau) + ", " + t.diag + ")");
+            h.assertTrue(enBateau[0], "il devait traverser en bateau");
+            h.assertTrue(!t.isPassenger() && t.compter(Actions.Filtre.de("#minecraft:boats")) == 1, "son bateau doit être de nouveau dans son sac");
+            h.assertTrue(l.getEntitiesOfClass(net.minecraft.world.entity.vehicle.Boat.class, t.getBoundingBox().inflate(80)).isEmpty(), "il ne doit pas laisser de bateau derrière lui");
+            t.discard();
+        });
+    }
+
+    /** De l'eau devant la 5e marche de son escalier : l'escalier tourne, il ne remonte pas creuser ailleurs (Bérengère le 6 octobre). */
+    @GameTest(template = "grand", timeoutTicks = 3000)
+    public static void escalierContourneLEau(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, Blocks.STONE);
+        h.setBlock(18, 6, 12, Blocks.WATER); // une poche d'eau à l'est de la 5e marche
+        Travailleur t = ouvrier(h, "mineur", 12, 11, 12, new ItemStack(Items.DIAMOND_PICKAXE), new BlockPos(6, 11, 6));
+        t.niveau = 5;
+        t.commande = "charbon";
+        t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
+        t.memoire.putString("chantier", "charbon@" + Mineur.cle(t.bureau) + "/" + t.profondeurForcee);
+        t.memoire.putLong("puits", h.absolutePos(new BlockPos(12, 11, 12)).asLong());
+        t.memoire.putInt("marche", 0);
+        int but = h.absolutePos(new BlockPos(0, 5, 0)).getY();
+        int[] plusBas = {Integer.MAX_VALUE};
+        h.onEachTick(() -> {
+            plusBas[0] = Math.min(plusBas[0], t.getBlockY());
+            h.assertTrue(t.getBlockY() <= plusBas[0] + 2, "il est remonté (y=" + t.getBlockY() + " après " + plusBas[0] + ", mémoire " + t.memoire + ")");
+        });
+        h.succeedWhen(() -> h.assertTrue(t.getBlockY() <= but, "il doit être descendu (y=" + t.getBlockY() + ", attendu <= " + but + ", " + etat(t, t.bureau) + ")"));
+    }
+
     /** Ce que le bureau montre de lui : au travail, se repose, distance. */
     @GameTest(template = "vide")
     public static void statutAuBureau(GameTestHelper h) {

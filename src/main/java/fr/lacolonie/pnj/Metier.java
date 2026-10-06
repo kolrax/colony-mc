@@ -25,6 +25,7 @@ public abstract class Metier {
         this.description = description;
         this.combattant = combattant;
         for (String g : garder) this.garder.add(Actions.Filtre.de(g));
+        this.garder.add(Actions.Filtre.de("#minecraft:boats")); // son bateau, s'il en a un, pour traverser l'eau
     }
 
     /** Une ligne du catalogue. {@code objet} : ce qui se compte au dépôt ou à la livraison (null : ni stock ni quantité). */

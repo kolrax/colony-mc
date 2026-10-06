@@ -408,7 +408,7 @@ public final class Actions {
 
         Etat tick(Travailleur t) {
             if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > 32 * 32) return Etat.OK;
-            if (age > 20 * 60) return echec("trop_long");
+            if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;
             if (t.isWithinMeleeAttackRange(cible) && t.getSensing().hasLineOfSight(cible)) {
@@ -419,10 +419,16 @@ public final class Actions {
                     recharge = (int) Math.max(6, 14 / t.facteurTravail());
                 }
             } else {
-                if (coince()) return echec("inaccessible");
+                if (coince()) return laisser(t, "inaccessible");
                 marcher(t, cible.position(), 1.25);
             }
             return Etat.EN_COURS;
+        }
+
+        /** Il n'arrive pas à l'atteindre : il le laisse 30 secondes au lieu de s'acharner (et de tourner autour). */
+        Etat laisser(Travailleur t, String r) {
+            t.inaccessibles.put(cible.getId(), t.level().getGameTime() + 600);
+            return echec(r);
         }
     }
 

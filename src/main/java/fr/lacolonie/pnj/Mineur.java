@@ -111,11 +111,11 @@ final class Mineur extends Metier {
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(p), 0.7));
     }
 
-    /** Position de la marche k de l'escalier en colimaçon (k = 0 : l'entrée, en surface). */
-    static BlockPos marche(BlockPos puits, int k) {
+    /** Position de la marche k de l'escalier en colimaçon (k = 0 : son départ), qui part dans la direction {@code sens}. */
+    static BlockPos marche(BlockPos puits, int k, int sens) {
         int x = puits.getX(), z = puits.getZ();
         for (int i = 1; i <= k; i++) {
-            int[] d = DIRS[((i - 1) / PALIER) % 4];
+            int[] d = DIRS[((i - 1) / PALIER + sens) % 4];
             x += d[0];
             z += d[1];
         }
@@ -141,6 +141,8 @@ final class Mineur extends Metier {
         }
         m.putLong("puits", s.asLong());
         m.putInt("marche", 0);
+        m.putInt("sens", 0);
+        m.putInt("tours", 0);
         m.remove("fond");
         m.putInt("cote", 1);
         m.putInt("branche", 1);
@@ -194,20 +196,34 @@ final class Mineur extends Metier {
 
         // 3. L'escalier, marche après marche, jusqu'à la profondeur du minerai.
         if (!m.contains("fond")) {
-            int k = m.getInt("marche") + 1;
+            int k = m.getInt("marche") + 1, sens = m.getInt("sens");
             if (puits.getY() - m.getInt("marche") <= cible) {
-                m.putLong("fond", marche(puits, m.getInt("marche")).asLong());
+                m.putLong("fond", marche(puits, m.getInt("marche"), sens).asLong());
             } else {
-                BlockPos p = marche(puits, k);
+                BlockPos p = marche(puits, k, sens);
                 Case r = creuserCase(t, p, 3);
                 if (r == Case.ACTION) return;
                 if (r != Case.PRETE) {
-                    t.dire(r == Case.LIQUIDE ? "De l'eau ou de la lave dans mon escalier : je creuse ailleurs." : "Je n'arrive pas à creuser ici : je change d'endroit.");
+                    // De l'eau, de la lave ou un bloc incassable sur la prochaine marche : l'escalier tourne et repart de
+                    // la marche où il est, comme un joueur. Il ne remonte creuser ailleurs que si les quatre côtés sont pris
+                    // (avant, il abandonnait tout l'escalier : Bérengère remontait et redescendait sans fin).
+                    if ((m.getInt("marche") > 0 || m.getInt("tours") > 0) && m.getInt("tours") < 3) {
+                        m.putLong("puits", marche(puits, m.getInt("marche"), sens).asLong());
+                        m.putInt("sens", (m.getInt("marche") / PALIER + sens + 1) % 4);
+                        m.putInt("marche", 0);
+                        m.putInt("tours", m.getInt("tours") + 1);
+                        m.remove("cible");
+                        Cerveau.parfois(t, "escalier_tourne", r == Case.LIQUIDE ? "De l'eau ou de la lave devant mon escalier : je le fais tourner." : "Un bloc que je ne peux pas casser : mon escalier tourne.", false, 120);
+                        Cerveau.attendre(t, 1);
+                        return;
+                    }
+                    t.dire(r == Case.LIQUIDE ? "De l'eau ou de la lave tout autour de mon escalier : je creuse ailleurs." : "Je n'arrive pas à creuser ici : je change d'endroit.");
                     m.remove("puits");
                     Cerveau.attendre(t, 2);
                     return;
                 }
                 m.putInt("marche", k);
+                m.putInt("tours", 0);
                 avancer(t, p, k);
                 return;
             }

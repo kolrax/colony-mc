@@ -2,10 +2,18 @@ package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -30,7 +38,8 @@ import java.util.Set;
  * <li>Pour rentrer au bureau, il refait en sens inverse le chemin de l'aller (sa trace), qu'il sait praticable.</li>
  * <li>Sous terre, il cherche la sortie la plus proche en explorant les galeries ; s'il est muré, il creuse un
  *   escalier jusqu'à la surface (jamais à travers une construction, jamais vers un liquide).</li>
- * <li>Il court sur les longues distances et nage pour traverser l'eau.</li>
+ * <li>Il court sur les longues distances et nage pour traverser l'eau ; avec un bateau dans son sac, il traverse
+ *   les lacs et les océans en bateau.</li>
  * </ul>
  */
 final class Itineraire {
@@ -61,6 +70,8 @@ final class Itineraire {
 
     /** Un pas de marche vers le but (appelé à chaque tick par l'action en cours). */
     void avancer(Travailleur t, double vitesse, int age) {
+        if (bloque) return; // c'est à l'action de décider (elle échoue ou attend)
+        if (t.getVehicle() instanceof Boat b) { naviguer(t, b, age); return; }
         var nav = t.getNavigation();
         Vec3 p = t.position();
         double dh = horizontale(p, but), dv = Math.abs(but.y - p.y);
@@ -86,20 +97,29 @@ final class Itineraire {
         }
         ageCourant = age;
         if (sortie != null) { t.diag = "sort de sous terre " + indexSortie + "/" + sortie.size(); suivreSortie(t, v, age); return; }
+        // Une grande étendue d'eau devant lui, et un bateau dans son sac : il le met à l'eau.
+        if (age % 20 == 0 && age >= bateauPas && embarquer(t)) return;
 
-        // De près : le chemin direct, tant qu'il mène bien au but.
-        if (dh <= 40 && dv <= 20 && directRate < 4) {
+        // De près : le chemin direct, s'il mène bien au but.
+        if (dh <= 40 && dv <= 20 && directRate < 2) {
             t.diag = "chemin direct";
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
             if (age % 20 == 0 || nav.isDone()) {
                 if (!t.onGround() && !t.isInWater()) return;
                 Path c = nav.createPath(BlockPos.containing(but), 0);
-                if (c != null) {
+                // Le chemin s'arrête à côté du but (bloc à casser, coffre…) : c'est bon aussi.
+                if (c != null && (c.canReach() || c.getEndNode() != null && c.getEndNode().asBlockPos().distSqr(BlockPos.containing(but)) <= 4)) {
                     nav.moveTo(c, v);
-                    // Le chemin s'arrête à côté du but (bloc à casser, coffre…) : c'est bon aussi.
-                    boolean arrive = c.canReach() || c.getEndNode() != null && c.getEndNode().asBlockPos().distSqr(BlockPos.containing(but)) <= 4;
-                    directRate = arrive ? 0 : directRate + 1;
-                } else directRate++;
+                    directRate = 0;
+                } else {
+                    // Un chemin qui s'arrête en route, recalculé à chaque instant, le ferait hésiter et revenir sur ses pas
+                    // (Enguerrand le 6 octobre). De loin, il passe par des étapes sûres ; tout près (derrière un mur, au fond
+                    // d'un trou, en hauteur), c'est inaccessible : il ne tourne pas autour, l'action choisira autre chose.
+                    nav.stop();
+                    boolean pres = dh <= 8 && !sousTerre(t);
+                    directRate = pres ? directRate + 1 : 2;
+                    if (pres && directRate >= 2) { bloque = true; t.diag = "inaccessible"; }
+                }
             }
             return;
         }
@@ -379,6 +399,121 @@ final class Itineraire {
         if (monte) t.getJumpControl().jump();
         t.getMoveControl().setWantedPosition(montee.getX() + 0.5, montee.getY(), montee.getZ() + 0.5, 1.0);
         etape = null;
+    }
+
+    // --- En bateau -----------------------------------------------------------------------------------
+
+    private int bateauPas, bateauBloque, barreFin;
+    /** Décalage du cap (en radians) pour longer une côte qu'il ne peut pas aborder. */
+    private double barre;
+
+    /** De l'eau en surface en (x, z) (sinon de la terre, ou un coin pas encore chargé). */
+    static boolean eau(Level l, int x, int z) {
+        int s = Monde.surface(l, x, z);
+        return s != Integer.MIN_VALUE && l.getFluidState(new BlockPos(x, s - 1, z)).is(FluidTags.WATER);
+    }
+
+    static int bateau(Travailleur t) {
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (t.inventaire.getItem(i).is(ItemTags.BOATS)) return i;
+        return -1;
+    }
+
+    /** Au bord de l'eau (ou dedans), face à au moins 12 blocs d'eau vers le but : il met son bateau à l'eau et monte dedans. */
+    private boolean embarquer(Travailleur t) {
+        Level l = t.level();
+        Vec3 p = t.position();
+        if (horizontale(p, but) < 16 || bateau(t) < 0) return false;
+        double cap = Math.atan2(but.z - p.z, but.x - p.x), cx = Math.cos(cap), cz = Math.sin(cap);
+        int premier = -1;
+        for (int d = 0; d <= 2 && premier < 0; d++) if (eau(l, Mth.floor(p.x + cx * d), Mth.floor(p.z + cz * d))) premier = d;
+        if (premier < 0) return false;
+        int n = 0;
+        for (int d = premier + 1; d <= premier + 12; d++) if (eau(l, Mth.floor(p.x + cx * d), Mth.floor(p.z + cz * d))) n++;
+        if (n < 10) return false; // une flaque, une petite rivière : il nage
+        // Un bloc plus loin que le bord : le bateau ne doit pas toucher la rive.
+        int x = Mth.floor(p.x + cx * (premier + 1)), z = Mth.floor(p.z + cz * (premier + 1)), surface = Monde.surface(l, x, z) - 1;
+        if (!eau(l, x, z) || surface < t.getBlockY() - 3 || surface > t.getBlockY() + 1) return false; // l'eau est au pied d'une falaise
+        int i = bateau(t);
+        ItemStack objet = t.inventaire.getItem(i);
+        Boat b = EntityType.BOAT.create(l);
+        if (b == null) return false;
+        String bois = BuiltInRegistries.ITEM.getKey(objet.getItem()).getPath().replace("_chest_boat", "").replace("_boat", "").replace("_raft", "");
+        b.setVariant(Boat.Type.byName(bois));
+        b.moveTo(x + 0.5, surface + 1, z + 0.5, (float) Math.toDegrees(cap) - 90, 0);
+        if (!l.noCollision(b, b.getBoundingBox())) return false;
+        l.addFreshEntity(b);
+        if (!t.startRiding(b)) { b.discard(); return false; }
+        t.memoire.putString("bateau", BuiltInRegistries.ITEM.getKey(objet.getItem()).toString());
+        objet.shrink(1);
+        t.inventaire.setChanged();
+        t.getNavigation().stop();
+        t.setSprinting(false);
+        bateauBloque = 0;
+        barreFin = 0;
+        Cerveau.parfois(t, "bateau", "Je prends le bateau pour traverser.", false, 600);
+        return true;
+    }
+
+    /**
+     * En bateau : cap sur le but. Une rive praticable devant lui, il débarque ; une côte qu'il ne peut pas aborder
+     * (falaise, rochers), il la longe ; coincé, il finit par débarquer et nager.
+     */
+    private void naviguer(Travailleur t, Boat b, int age) {
+        Level l = t.level();
+        Vec3 p = b.position();
+        double dh = horizontale(p, but);
+        t.diag = "en bateau (but à " + (int) dh + " blocs)";
+        double cap = Math.atan2(but.z - p.z, but.x - p.x) + (age < barreFin ? barre : 0), cx = Math.cos(cap), cz = Math.sin(cap);
+        BlockPos rive = null;
+        boolean libre = true;
+        for (int d = 1; d <= 3 && libre; d++) {
+            int x = Mth.floor(p.x + cx * d), z = Mth.floor(p.z + cz * d);
+            if (eau(l, x, z)) continue;
+            libre = false;
+            int s = Monde.surface(l, x, z);
+            if (s != Integer.MIN_VALUE && Math.abs(s - p.y) <= 1.5 && Monde.debout(l, new BlockPos(x, s, z))) rive = new BlockPos(x, s, z);
+        }
+        if (rive != null && Vec3.atBottomCenterOf(rive).distanceTo(p) < 2.5) { debarquer(t, b, rive); return; }
+        if (!libre && rive == null && age >= barreFin) {
+            // Une côte qu'on ne peut pas aborder : il la longe, du côté où l'eau continue.
+            double base = Math.atan2(but.z - p.z, but.x - p.x);
+            for (int deg : new int[]{40, -40, 80, -80, 120, -120, 160, -160}) {
+                double a = base + Math.toRadians(deg);
+                boolean ok = true;
+                for (int d = 1; d <= 5 && ok; d++) ok = eau(l, Mth.floor(p.x + Math.cos(a) * d), Mth.floor(p.z + Math.sin(a) * d));
+                if (ok) { barre = Math.toRadians(deg); barreFin = age + 60; break; }
+            }
+        }
+        // Comme à pied, il n'entre pas dans un coin que le serveur n'a pas fini de préparer.
+        if (l instanceof net.minecraft.server.level.ServerLevel sl && !sl.isPositionEntityTicking(BlockPos.containing(p.add(cx * 8, 0, cz * 8)))) {
+            t.diag = "attend que le terrain soit prêt";
+            return;
+        }
+        float voulu = (float) Math.toDegrees(cap) - 90, ecart = Mth.wrapDegrees(voulu - b.getYRot());
+        b.setYRot(b.getYRot() + Mth.clamp(ecart, -6, 6));
+        if (Math.abs(ecart) < 60) {
+            float r = b.getYRot() * Mth.DEG_TO_RAD;
+            b.setDeltaMovement(b.getDeltaMovement().add(-Mth.sin(r) * 0.04, 0, Mth.cos(r) * 0.04));
+            b.setPaddleState(true, true);
+        }
+        // Bloqué contre des rochers ou des nénuphars : un autre cap ; toujours rien, il débarque et nage.
+        bateauBloque = b.getDeltaMovement().horizontalDistanceSqr() < 0.0004 ? bateauBloque + 1 : 0;
+        if (bateauBloque == 60) { barre = Math.toRadians(t.getRandom().nextBoolean() ? 90 : -90); barreFin = age + 60; }
+        if (bateauBloque > 200) { debarquer(t, b, null); bateauPas = age + 600; }
+    }
+
+    /** Il descend (sur la rive s'il y en a une, vers laquelle il se tourne) et remet le bateau dans son sac. */
+    private void debarquer(Travailleur t, Boat b, BlockPos rive) {
+        if (rive != null) t.setYRot((float) Math.toDegrees(Math.atan2(rive.getZ() + 0.5 - t.getZ(), rive.getX() + 0.5 - t.getX())) - 90);
+        t.stopRiding();
+        b.discard();
+        ResourceLocation id = ResourceLocation.tryParse(t.memoire.getString("bateau"));
+        var objet = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
+        t.memoire.remove("bateau");
+        t.ranger(new ItemStack(objet == Items.AIR ? Items.OAK_BOAT : objet));
+        etape = null;
+        chemin = null;
+        directRate = 0;
     }
 
     /** Prend en main l'outil de son sac qui casse ce bloc le plus vite (pioche, pelle…). */

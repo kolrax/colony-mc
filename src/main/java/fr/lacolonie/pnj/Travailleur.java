@@ -140,7 +140,22 @@ public class Travailleur extends PathfinderMob {
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, 2.0f);
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 0.0f);
         setCustomNameVisible(true);
+        // Un point visé juste au-dessus ou au-dessous de lui : Minecraft le ferait tourner sur lui-même (en toupie).
+        moveControl = new net.minecraft.world.entity.ai.control.MoveControl(this) {
+            @Override
+            public void tick() {
+                if (operation == Operation.MOVE_TO && Math.abs(wantedX - mob.getX()) < 0.15 && Math.abs(wantedZ - mob.getZ()) < 0.15) {
+                    if (wantedY > mob.getY() + 0.6 && mob.onGround()) mob.getJumpControl().jump();
+                    operation = Operation.WAIT;
+                    mob.setZza(0);
+                }
+                super.tick();
+            }
+        };
     }
+
+    /** Les cibles qu'il n'a pas pu atteindre (identifiant → moment jusqu'auquel il les laisse), pour ne pas s'acharner. */
+    final java.util.Map<Integer, Long> inaccessibles = new java.util.HashMap<>();
 
     public static AttributeSupplier.Builder attributs() {
         return Mob.createMobAttributes()
@@ -169,7 +184,10 @@ public class Travailleur extends PathfinderMob {
             public boolean canUse() { return mode == Mode.CHOMEUR && !aTerre && super.canUse(); }
         });
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8));
-        goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(9, new RandomLookAroundGoal(this) { // pas en marchant : il regarderait partout, l'air de ne pas savoir où il va
+            @Override
+            public boolean canUse() { return getNavigation().isDone() && !isPassenger() && super.canUse(); }
+        });
     }
 
     /** Tire un nouveau chercheur d'emploi au hasard. */
