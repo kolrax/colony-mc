@@ -895,9 +895,12 @@ public class Travailleur extends PathfinderMob {
         majNom();
     }
 
-    /** Comme un joueur, il saute d'un petit à-pic (6 blocs, quelques points de vie) plutôt que de rester bloqué au bord. */
+    /**
+     * Comme un joueur, il saute d'un petit à-pic (6 blocs, quelques points de vie) plutôt que de rester bloqué au bord ;
+     * affaibli (affamé, blessé), il ne prend plus ce risque (3 blocs, sans dégâts).
+     */
     @Override
-    public int getMaxFallDistance() { return 6; }
+    public int getMaxFallDistance() { return getHealth() > 10 ? 6 : 3; }
 
     @Override
     public boolean removeWhenFarAway(double distance) { return false; }
