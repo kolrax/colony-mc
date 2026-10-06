@@ -76,8 +76,23 @@ public class Travailleur extends PathfinderMob {
     public UUID chef;
     public String chefNom = "";
     public Mode mode = Mode.CHOMEUR;
-    public BlockPos lieu;
+    /** Son bureau (un PNJ par bureau) : sans bureau, il ne travaille pas. */
+    public BlockPos bureau;
+    /** Centre de sa zone de travail (null = le bureau) et rayon, réglés dans le bureau ou par « Travailler ici ». */
+    public BlockPos centre;
+    public int rayon = 96;
     public Direction direction = Direction.NORTH;
+    /** Heures de travail, en heures du jeu (0 à 24). */
+    public int debut = 6, fin = 18;
+    /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
+    public long salaire = -1;
+    /** Commande en cours : identifiant (catalogue du métier), « stock » ou « quantite », nombre, et ce qui est déjà livré. */
+    public String commande = "", commandeMode = "stock";
+    public int commandeNombre = 64, commandeLivre;
+    /** Profondeur imposée (tests) ; Integer.MIN_VALUE = celle du catalogue. */
+    public int profondeurForcee = Integer.MIN_VALUE;
+    public int fatigue;
+    int fatigueCompteur;
     public long prochainePaie, arrivee;
     public int impayes;
     public String besoin = "";
@@ -157,8 +172,35 @@ public class Travailleur extends PathfinderMob {
         setHealth(getMaxHealth());
     }
 
-    /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★. */
-    public double facteurTravail() { return 0.6 + 0.2 * niveau; }
+    /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue ou une paie trop basse. */
+    public double facteurTravail() { return (0.6 + 0.2 * niveau) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
+
+    /** Ce qu'il demande pour son niveau. */
+    public long salaireDemande() { return Reglages.salaire(niveau); }
+
+    /** Ce qu'on lui verse vraiment (fixé dans le bureau). */
+    public long salaireVerse() { return salaire < 0 ? salaireDemande() : salaire; }
+
+    /** Payé moitié moins, il travaille à 75 % ; payé plus, jusqu'à 115 %. */
+    public double facteurPaie() {
+        long d = salaireDemande();
+        if (d <= 0) return 1;
+        double r = (double) salaireVerse() / d;
+        return Math.clamp(0.5 + 0.5 * r, 0.5, 1.15);
+    }
+
+    /** Vrai pendant ses heures de travail (heures du jeu). */
+    public boolean enService() {
+        int h = (int) ((level().getDayTime() + 6000) % 24000 / 1000); // 0 tick = 6 h du matin
+        if (debut == fin) return true; // même heure de début et de fin : toute la journée
+        return debut < fin ? h >= debut && h < fin : h >= debut || h < fin;
+    }
+
+    /** L'objet que produit sa commande en cours. */
+    public Actions.Filtre objetCommande() { return Lua.objetCommande(this); }
+
+    /** Centre de la zone de travail : celui réglé, sinon le bureau. */
+    public BlockPos centreZone() { return centre != null ? centre : bureau; }
 
     public String skin() { return entityData.get(SKIN); }
     public void setSkin(String pseudo) { entityData.set(SKIN, pseudo == null ? "" : pseudo.trim()); }
@@ -214,6 +256,13 @@ public class Travailleur extends PathfinderMob {
             if (faim >= 15 && getHealth() < getMaxHealth()) heal(1);
             else if (faim == 0 && getHealth() > 1) hurt(damageSources().starve(), 1);
         }
+        if (++fatigueCompteur >= 1000) { // une heure du jeu
+            fatigueCompteur = 0;
+            if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE) fatigue -= isSleeping() ? 12 : 8;
+            else if (mode == Mode.TRAVAIL && action != null) fatigue += 5;
+            else fatigue -= 2;
+            fatigue = Math.clamp(fatigue, 0, 100);
+        }
         if (tickCount % 10 == 0) ramasserAutour();
         if (tickCount % 100 == 0) equiperArmure();
         if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && paieEnRetard()) {
@@ -233,7 +282,7 @@ public class Travailleur extends PathfinderMob {
     boolean paieEnRetard() { return System.currentTimeMillis() >= prochainePaie + periodePaie() / 4 && action == null; }
 
     /** Montant dû : les paies impayées, plus la paie du jour si elle est due. */
-    public long du() { return Reglages.salaire(niveau) * (impayes + (paieDue() ? 1 : 0)); }
+    public long du() { return salaireVerse() * (impayes + (paieDue() ? 1 : 0)); }
 
     void commencerGreve() {
         mode = Mode.GREVE;
@@ -247,7 +296,7 @@ public class Travailleur extends PathfinderMob {
         impayes = 0;
         if (paieDuJour) prochainePaie = System.currentTimeMillis() + periodePaie();
         if (mode == Mode.GREVE) {
-            mode = lieu != null ? Mode.TRAVAIL : Mode.SUIVRE;
+            mode = bureau != null ? Mode.TRAVAIL : Mode.SUIVRE;
             majNom();
             direAuChef("Merci chef, j'ai touché mon dû (" + Reglages.texte(montant) + "). Je reprends le travail.");
         }
@@ -504,7 +553,7 @@ public class Travailleur extends PathfinderMob {
         t.putString("metier", Lua.nomMetier(metier));
         t.putString("description", Lua.descriptionMetier(metier));
         t.putInt("niveau", niveau);
-        t.putString("salaire", Reglages.texte(Reglages.salaire(niveau)));
+        t.putString("salaire", Reglages.texte(entretien ? salaireDemande() : salaireVerse()));
         t.putString("prime", Reglages.texte(Reglages.prime(niveau)));
         t.putString("periode", Reglages.actuel.minutes_entre_paies % 1440 == 0
                 ? (Reglages.actuel.minutes_entre_paies == 1440 ? "par jour" : "tous les " + Reglages.actuel.minutes_entre_paies / 1440 + " jours")
@@ -546,10 +595,11 @@ public class Travailleur extends PathfinderMob {
             case "attendre" -> { mode = Mode.ATTENDRE; finirAction("ordre"); dire("J'attends ici."); }
             case "travailler" -> {
                 mode = Mode.TRAVAIL;
-                lieu = blockPosition();
+                centre = blockPosition();
                 direction = p.getDirection();
                 finirAction("ordre");
-                dire("Compris, je travaille ici.");
+                dire(bureau == null ? "Compris, je travaillerai autour d'ici. Mais il me faut un bureau : pose-en un et rattache-moi dans son écran."
+                        : "Compris, ma zone de travail est maintenant centrée ici (" + rayon + " blocs autour).");
             }
             case "inventaire" -> p.openMenu(new SimpleMenuProvider((id, inv, pl) -> ChestMenu.threeRows(id, inv, inventaire),
                     Component.literal("Sac de " + prenom)));
@@ -558,7 +608,8 @@ public class Travailleur extends PathfinderMob {
                 chef = null;
                 chefNom = "";
                 mode = Mode.CHOMEUR;
-                lieu = null;
+                centre = null;
+                Bureau.liberer(this);
                 arrivee = System.currentTimeMillis();
                 finirAction("licencie");
                 libererChunk();
@@ -590,9 +641,9 @@ public class Travailleur extends PathfinderMob {
         impayes = 0;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
-        dire("Marché conclu, chef ! Je te suis. Dis-moi où travailler.");
+        dire("Marché conclu, chef ! Je te suis. Rattache-moi à un bureau (clic droit dessus) pour me donner du travail.");
         p.sendSystemMessage(Component.literal("Tu as embauché " + prenom + " (" + Lua.nomMetier(metier) + ", " + "★".repeat(niveau)
-                + ") pour " + Reglages.texte(prime) + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", à déposer dans la caisse de ton bureau.").withStyle(ChatFormatting.GREEN));
+                + ") pour " + Reglages.texte(prime) + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", à déposer dans la caisse de son bureau. Pose un bureau et rattache-le pour lui donner du travail.").withStyle(ChatFormatting.GREEN));
     }
 
     // --- Sauvegarde ------------------------------------------------------------------------------
@@ -608,7 +659,17 @@ public class Travailleur extends PathfinderMob {
         if (chef != null) t.putUUID("Chef", chef);
         t.putString("ChefNom", chefNom);
         t.putString("Mode", mode.name());
-        if (lieu != null) t.put("Lieu", NbtUtils.writeBlockPos(lieu));
+        if (centre != null) t.put("Lieu", NbtUtils.writeBlockPos(centre));
+        if (bureau != null) t.put("Bureau", NbtUtils.writeBlockPos(bureau));
+        t.putInt("Rayon", rayon);
+        t.putInt("Debut", debut);
+        t.putInt("Fin", fin);
+        t.putLong("Salaire", salaire);
+        t.putString("Commande", commande);
+        t.putString("CommandeMode", commandeMode);
+        t.putInt("CommandeNombre", commandeNombre);
+        t.putInt("CommandeLivre", commandeLivre);
+        t.putInt("Fatigue", fatigue);
         t.putString("Direction", direction.getSerializedName());
         t.putLong("ProchainePaie", prochainePaie);
         t.putLong("Arrivee", arrivee);
@@ -632,7 +693,17 @@ public class Travailleur extends PathfinderMob {
         chef = t.hasUUID("Chef") ? t.getUUID("Chef") : null;
         chefNom = t.getString("ChefNom");
         try { mode = Mode.valueOf(t.getString("Mode")); } catch (IllegalArgumentException e) { mode = Mode.CHOMEUR; }
-        lieu = NbtUtils.readBlockPos(t, "Lieu").orElse(null);
+        centre = NbtUtils.readBlockPos(t, "Lieu").orElse(null);
+        bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
+        rayon = t.contains("Rayon") ? t.getInt("Rayon") : 96;
+        debut = t.contains("Debut") ? t.getInt("Debut") : 6;
+        fin = t.contains("Fin") ? t.getInt("Fin") : 18;
+        salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
+        commande = t.getString("Commande");
+        commandeMode = t.contains("CommandeMode") ? t.getString("CommandeMode") : "stock";
+        commandeNombre = t.contains("CommandeNombre") ? t.getInt("CommandeNombre") : 64;
+        commandeLivre = t.getInt("CommandeLivre");
+        fatigue = t.getInt("Fatigue");
         Direction d = Direction.byName(t.getString("Direction"));
         direction = d != null && d.getAxis().isHorizontal() ? d : Direction.NORTH;
         prochainePaie = t.getLong("ProchainePaie");

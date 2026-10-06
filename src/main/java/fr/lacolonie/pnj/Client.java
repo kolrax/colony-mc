@@ -48,6 +48,8 @@ public final class Client {
 
     static void ouvrirFiche(Reseau.Fiche f) { Minecraft.getInstance().setScreen(new EcranFiche(f.id(), f.infos())); }
 
+    static void ouvrirBureau(Reseau.FicheBureau f) { Minecraft.getInstance().setScreen(new EcranGestion(f.pos(), f.infos())); }
+
     // --- Apparence : un modèle de joueur avec le skin d'un pseudo Minecraft (ou un skin de base) ---------
 
     static final Map<String, PlayerSkin> SKINS = new ConcurrentHashMap<>();
@@ -145,7 +147,7 @@ public final class Client {
                 addRenderableWidget(Button.builder(Component.literal("Suivre"), b -> envoyer("suivre")).bounds(x0 + 10, yb, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Attendre ici"), b -> envoyer("attendre")).bounds(x0 + 20 + w, yb, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Travailler ici"), b -> envoyer("travailler"))
-                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Il travaille autour de l'endroit où il se tient. Le mineur creuse dans la direction où tu regardes.")))
+                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Le centre de sa zone de travail devient l'endroit où il se tient. Sa commande, ses horaires et sa paie se règlent dans l'écran de son bureau.")))
                         .bounds(x0 + 30 + 2 * w, yb, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Son sac"), b -> envoyer("inventaire")).bounds(x0 + 10, yb + 24, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Licencier"), b -> {
@@ -168,6 +170,173 @@ public final class Client {
             super.render(g, mx, my, pt);
             int y = y0 + 10;
             for (FormattedCharSequence l : lignes) { g.drawString(font, l, x0 + 10, y, 0xFFFFFF, false); y += 11; }
+        }
+
+        @Override
+        public boolean isPauseScreen() { return false; }
+    }
+
+    // --- Le bureau : l'écran de gestion de son employé ---------------------------------------------------
+
+    static class EcranGestion extends Screen {
+        final net.minecraft.core.BlockPos pos;
+        final CompoundTag f, e;
+        final List<CompoundTag> catalogue = new ArrayList<>();
+        int iCommande, debut, fin;
+        String mode;
+        int x0, y0;
+        static final int L = 360, H = 206;
+        net.minecraft.client.gui.components.EditBox nombre, cx, cy, cz, rayon, salaire;
+        Button bCommande, bMode, bDebut, bFin;
+
+        EcranGestion(net.minecraft.core.BlockPos pos, CompoundTag infos) {
+            super(Component.literal(infos.getString("titre")));
+            this.pos = pos;
+            this.f = infos;
+            this.e = infos.contains("employe") ? infos.getCompound("employe") : null;
+            if (e != null) {
+                CompoundTag aucune = new CompoundTag();
+                aucune.putString("id", "");
+                aucune.putString("nom", "Aucune commande");
+                catalogue.add(aucune);
+                for (var x : e.getList("catalogue", net.minecraft.nbt.Tag.TAG_COMPOUND)) catalogue.add((CompoundTag) x);
+                for (int i = 0; i < catalogue.size(); i++) if (catalogue.get(i).getString("id").equals(e.getString("commande"))) iCommande = i;
+                mode = e.getString("commandeMode");
+                debut = e.getInt("debut");
+                fin = e.getInt("fin");
+            }
+        }
+
+        void envoyer(String action, CompoundTag d) { PacketDistributor.sendToServer(new Reseau.ActionBureau(pos, action, d)); }
+
+        static int entier(net.minecraft.client.gui.components.EditBox b, int defaut) {
+            try { return Integer.parseInt(b.getValue().trim()); } catch (NumberFormatException ex) { return defaut; }
+        }
+
+        net.minecraft.client.gui.components.EditBox champ(int x, int y, int w, String valeur) {
+            var b = new net.minecraft.client.gui.components.EditBox(font, x, y, w, 16, Component.empty());
+            b.setMaxLength(9);
+            b.setFilter(v -> v.matches("-?[0-9]*"));
+            b.setValue(valeur);
+            return addRenderableWidget(b);
+        }
+
+        boolean quantitePossible() { return catalogue.get(iCommande).getBoolean("quantite"); }
+
+        void majBoutons() {
+            bCommande.setMessage(Component.literal(catalogue.get(iCommande).getString("nom")));
+            bMode.setMessage(Component.literal(mode.equals("quantite") ? "Quantité, puis arrêt" : "Garder en stock"));
+            bMode.active = nombre.active = quantitePossible();
+            bDebut.setMessage(Component.literal(debut + " h"));
+            bFin.setMessage(Component.literal(fin + " h"));
+        }
+
+        @Override
+        protected void init() {
+            x0 = (width - L) / 2;
+            y0 = (height - H) / 2;
+            int yb = y0 + H - 26;
+            if (e == null) {
+                var libres = f.getList("libres", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                for (int i = 0; i < Math.min(5, libres.size()); i++) {
+                    CompoundTag l = libres.getCompound(i);
+                    addRenderableWidget(Button.builder(Component.literal("Rattacher " + l.getString("nom")), b -> {
+                        CompoundTag d = new CompoundTag();
+                        d.putString("uuid", l.getString("uuid"));
+                        envoyer("rattacher", d);
+                    }).bounds(x0 + 10, y0 + 52 + i * 22, L - 20, 20).build());
+                }
+                addRenderableWidget(Button.builder(Component.literal("Caisse et dépôt"), b -> envoyer("stock", new CompoundTag())).bounds(x0 + 10, yb, 110, 20).build());
+                if (f.contains("absent"))
+                    addRenderableWidget(Button.builder(Component.literal("Libérer la place"), b -> envoyer("liberer", new CompoundTag())).bounds(x0 + 125, yb, 110, 20).build());
+                addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x0 + L - 90, yb, 80, 20).build());
+                return;
+            }
+            int g = x0 + 10, dcol = x0 + 190;
+            // Commande
+            addRenderableWidget(Button.builder(Component.literal("<"), b -> { iCommande = Math.floorMod(iCommande - 1, catalogue.size()); majBoutons(); }).bounds(g, y0 + 72, 16, 20).build());
+            bCommande = addRenderableWidget(Button.builder(Component.empty(), b -> { iCommande = (iCommande + 1) % catalogue.size(); majBoutons(); }).bounds(g + 18, y0 + 72, 126, 20).build());
+            addRenderableWidget(Button.builder(Component.literal(">"), b -> { iCommande = (iCommande + 1) % catalogue.size(); majBoutons(); }).bounds(g + 146, y0 + 72, 16, 20).build());
+            bMode = addRenderableWidget(Button.builder(Component.empty(), b -> { mode = mode.equals("quantite") ? "stock" : "quantite"; majBoutons(); }).bounds(g, y0 + 96, 118, 20).build());
+            nombre = champ(g + 122, y0 + 98, 40, String.valueOf(e.getInt("commandeNombre")));
+            // Paie
+            salaire = champ(g, y0 + 150, 60, String.valueOf(e.getLong("salaireVerse")));
+            // Zone
+            cx = champ(dcol + 12, y0 + 72, 48, String.valueOf(e.getInt("cx")));
+            cy = champ(dcol + 72, y0 + 72, 34, String.valueOf(e.getInt("cy")));
+            cz = champ(dcol + 118, y0 + 72, 48, String.valueOf(e.getInt("cz")));
+            addRenderableWidget(Button.builder(Component.literal("Centre = ma position"), b -> {
+                var j = Minecraft.getInstance().player;
+                if (j == null) return;
+                cx.setValue(String.valueOf(j.getBlockX()));
+                cy.setValue(String.valueOf(j.getBlockY()));
+                cz.setValue(String.valueOf(j.getBlockZ()));
+            }).bounds(dcol, y0 + 94, 118, 20).build());
+            rayon = champ(dcol + 78, y0 + 118, 40, String.valueOf(e.getInt("rayon")));
+            // Horaires
+            addRenderableWidget(Button.builder(Component.literal("-"), b -> { debut = Math.floorMod(debut - 1, 24); majBoutons(); }).bounds(dcol, y0 + 148, 14, 20).build());
+            bDebut = addRenderableWidget(Button.builder(Component.empty(), b -> {}).bounds(dcol + 15, y0 + 148, 34, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> { debut = (debut + 1) % 24; majBoutons(); }).bounds(dcol + 50, y0 + 148, 14, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("-"), b -> { fin = Math.floorMod(fin - 1, 24); majBoutons(); }).bounds(dcol + 88, y0 + 148, 14, 20).build());
+            bFin = addRenderableWidget(Button.builder(Component.empty(), b -> {}).bounds(dcol + 103, y0 + 148, 34, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> { fin = (fin + 1) % 24; majBoutons(); }).bounds(dcol + 138, y0 + 148, 14, 20).build());
+            // En bas
+            addRenderableWidget(Button.builder(Component.literal("Enregistrer"), b -> {
+                CompoundTag d = new CompoundTag();
+                d.putString("commande", catalogue.get(iCommande).getString("id"));
+                d.putString("commandeMode", mode);
+                d.putInt("commandeNombre", entier(nombre, 64));
+                d.putInt("cx", entier(cx, e.getInt("cx")));
+                d.putInt("cy", entier(cy, e.getInt("cy")));
+                d.putInt("cz", entier(cz, e.getInt("cz")));
+                d.putInt("rayon", entier(rayon, 96));
+                d.putInt("debut", debut);
+                d.putInt("fin", fin);
+                d.putLong("salaire", entier(salaire, (int) e.getLong("salaireVerse")));
+                envoyer("enregistrer", d);
+            }).bounds(x0 + 10, yb, 84, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("Caisse et dépôt"), b -> envoyer("stock", new CompoundTag())).bounds(x0 + 98, yb, 92, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("Libérer"), b -> envoyer("liberer", new CompoundTag())).bounds(x0 + 194, yb, 74, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x0 + 272, yb, 78, 20).build());
+            majBoutons();
+        }
+
+        @Override
+        public void renderBackground(GuiGraphics g, int mx, int my, float pt) {
+            super.renderBackground(g, mx, my, pt);
+            g.fill(x0, y0, x0 + L, y0 + H, 0xE0181C1A);
+            g.renderOutline(x0, y0, L, H, 0xFF8A6A2A);
+        }
+
+        void texte(GuiGraphics g, String t, int x, int y, int couleur) { g.drawString(font, t, x, y, couleur, false); }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            super.render(g, mx, my, pt);
+            int or = 0xF2C14E, gris = 0xAAAAAA, blanc = 0xFFFFFF;
+            texte(g, title.getString(), x0 + 10, y0 + 8, or);
+            if (e == null) {
+                texte(g, f.contains("absent") ? f.getString("absent") + " était rattaché ici, mais il est introuvable." : "Aucun PNJ n'est rattaché à ce bureau.", x0 + 10, y0 + 24, blanc);
+                texte(g, f.getList("libres", 10).isEmpty() ? "Tu n'as aucun PNJ libre : embauche-en un, ou libère-le de son bureau." : "Choisis le PNJ qui travaillera ici :", x0 + 10, y0 + 38, gris);
+                return;
+            }
+            int g0 = x0 + 10, dcol = x0 + 190;
+            texte(g, e.getString("nom") + " — " + e.getString("metier") + " " + "★".repeat(e.getInt("niveau")) + "   " + e.getString("mode")
+                    + (e.getString("action").isEmpty() ? "" : " (" + e.getString("action") + ")"), g0, y0 + 22, blanc);
+            texte(g, "Fatigue " + e.getInt("fatigue") + "/100   Faim " + e.getInt("faim") + "/20   Vie " + e.getInt("vie") + "/" + e.getInt("vieMax")
+                    + (e.getInt("impayes") > 0 ? "   Paies en retard : " + e.getInt("impayes") : ""), g0, y0 + 34, gris);
+            if (!e.getString("besoin").isEmpty()) texte(g, "Il demande : " + e.getString("besoin"), g0, y0 + 46, 0xFF9966);
+            texte(g, "COMMANDE", g0, y0 + 60, or);
+            texte(g, e.getString("avancement"), g0, y0 + 120, gris);
+            texte(g, "PAIE (en bronzes, à chaque paie)", g0, y0 + 138, or);
+            texte(g, "Il demande " + e.getLong("salaireDemande"), g0 + 66, y0 + 154, gris);
+            texte(g, "ZONE DE TRAVAIL", dcol, y0 + 60, or);
+            texte(g, "X", dcol, y0 + 76, gris);
+            texte(g, "Y", dcol + 63, y0 + 76, gris);
+            texte(g, "Z", dcol + 109, y0 + 76, gris);
+            texte(g, "Rayon (blocs)", dcol, y0 + 122, gris);
+            texte(g, "HORAIRES (heures du jeu)", dcol, y0 + 138, or);
+            texte(g, "à", dcol + 74, y0 + 154, gris);
         }
 
         @Override

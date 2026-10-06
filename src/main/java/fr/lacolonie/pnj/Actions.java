@@ -20,7 +20,9 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -310,7 +312,10 @@ public final class Actions {
     }
 
     /** Le pied de l'arbre naturel le plus proche du centre, dans un rayon donné. */
-    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon) {
+    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon) { return chercherArbre(lvl, centre, rayon, null); }
+
+    /** Pareil, pour un bois précis (filtre sur le pied de l'arbre, null = n'importe lequel). */
+    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon, Filtre bois) {
         BlockPos meilleur = null;
         double dMin = Double.MAX_VALUE;
         for (int dx = -rayon; dx <= rayon; dx++)
@@ -324,6 +329,7 @@ public final class Actions {
                     BlockPos p = new BlockPos(x, y, z);
                     if (!lvl.getBlockState(p).is(BlockTags.LOGS)) continue;
                     if (!lvl.getBlockState(p.below()).is(BlockTags.DIRT)) continue;
+                    if (bois != null && !bois.bloc(lvl.getBlockState(p))) break;
                     if (arbre(lvl, p) != null) { meilleur = p; dMin = d; }
                     break;
                 }
@@ -416,7 +422,7 @@ public final class Actions {
             t.getNavigation().stop();
             t.getLookControl().setLookAt(Vec3.atCenterOf(bureau));
             if (t.level().getBlockEntity(bureau) instanceof Bureau.Entite b) return b;
-            Bureau.Registre.de(t.level().getServer()).oublier((ServerLevel) t.level(), bureau);
+            t.bureau = null; // le bureau a disparu
             raison = "pas_de_bureau";
             return null;
         }
@@ -429,7 +435,7 @@ public final class Actions {
             Bureau.Entite b = arriver(t);
             if (b == null) {
                 if (raison.isEmpty()) return Etat.EN_COURS;
-                manque(t, raison.equals("pas_de_bureau") ? "Je n'ai pas trouvé ton bureau pour toucher ma paie. Pose un bureau près de mon lieu de travail." : "Je n'arrive pas à rejoindre ton bureau pour toucher ma paie.");
+                manque(t, raison.equals("pas_de_bureau") ? "Je n'ai pas de bureau où toucher ma paie : rattache-moi à un bureau." : "Je n'arrive pas à rejoindre mon bureau pour toucher ma paie.");
                 return Etat.ECHEC;
             }
             long du = t.du();
@@ -471,8 +477,11 @@ public final class Actions {
                 int k = -1;
                 for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
                 if (k >= 0) { garde[k] = true; continue; }
-                ItemStack reste = b.depot.addItem(s);
+                int avant = s.getCount();
+                boolean commande = t.objetCommande().objet(s);
+                ItemStack reste = b.ranger(s);
                 t.inventaire.setItem(i, reste);
+                if (commande) t.commandeLivre += avant - reste.getCount();
                 if (!reste.isEmpty()) plein = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
@@ -489,16 +498,9 @@ public final class Actions {
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
-            int pris = 0;
-            for (int i = 0; i < b.depot.getContainerSize() && pris < nombre; i++) {
-                ItemStack s = b.depot.getItem(i);
-                if (!filtre.objet(s)) continue;
-                ItemStack part = s.split(Math.min(nombre - pris, s.getCount()));
-                pris += part.getCount();
-                t.ranger(part);
-            }
-            b.depot.setChanged();
-            return pris > 0 ? Etat.OK : echec("rien_au_depot");
+            var pris = b.prendre(filtre, nombre);
+            pris.forEach(t::ranger);
+            return pris.isEmpty() ? echec("rien_au_depot") : Etat.OK;
         }
     }
 
@@ -508,7 +510,6 @@ public final class Actions {
         final Filtre filtre;
         final int nombre;
         boolean prevenu, annonce;
-        BlockPos bureau;
 
         Demander(String texte, Filtre filtre, int nombre) { super("demander"); this.texte = texte; this.filtre = filtre; this.nombre = nombre; }
 
@@ -530,10 +531,43 @@ public final class Actions {
                     if (!annonce) { t.dire(texte + " (accroupi + clic droit avec l'objet en main pour me le donner)"); annonce = true; }
                 }
             } else {
-                if (bureau == null) bureau = Bureau.trouver(t);
+                BlockPos bureau = t.bureau;
                 if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) marcher(t, Vec3.atBottomCenterOf(bureau), 1.0);
             }
             return Etat.EN_COURS;
+        }
+    }
+
+    /** Va se reposer : dans un lit libre à moins de 8 blocs de son bureau (il s'y couche), sinon à côté du bureau. */
+    static final class Reposer extends Action {
+        BlockPos lit, but;
+
+        Reposer() { super("se_reposer"); }
+
+        Etat tick(Travailleur t) {
+            if (but == null) {
+                if (t.isSleeping()) return age >= 600 ? Etat.OK : Etat.EN_COURS;
+                lit = t.bureau == null ? null : litLibre(t, t.bureau);
+                but = lit != null ? lit : t.bureau != null ? t.bureau : t.blockPosition();
+            }
+            if (!t.isSleeping() && t.position().distanceToSqr(Vec3.atBottomCenterOf(but)) > 2.5 * 2.5) {
+                if (coince() || age > 20 * 90) { but = t.blockPosition(); lit = null; }
+                else { marcher(t, Vec3.atBottomCenterOf(but), 1.0); return Etat.EN_COURS; }
+            }
+            t.getNavigation().stop();
+            if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock
+                    && !t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
+            return age >= 600 ? Etat.OK : Etat.EN_COURS; // il refait le point toutes les 30 s
+        }
+
+        static BlockPos litLibre(Travailleur t, BlockPos autour) {
+            for (BlockPos p : BlockPos.betweenClosed(autour.offset(-8, -3, -8), autour.offset(8, 3, 8))) {
+                if (!t.level().isLoaded(p)) continue;
+                BlockState st = t.level().getBlockState(p);
+                if (st.getBlock() instanceof BedBlock && st.getValue(BedBlock.PART) == BedPart.HEAD && !st.getValue(BedBlock.OCCUPIED))
+                    return p.immutable();
+            }
+            return null;
         }
     }
 

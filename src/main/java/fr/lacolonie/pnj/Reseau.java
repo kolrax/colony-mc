@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-/** Deux messages : le serveur montre la fiche d'un PNJ, le joueur répond par un ordre. */
+/** Les messages : la fiche d'un PNJ et ses ordres, l'écran d'un bureau et ses boutons. */
 public final class Reseau {
     private Reseau() {}
 
@@ -31,9 +31,35 @@ public final class Reseau {
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** L'écran de gestion d'un bureau (serveur vers joueur). */
+    public record FicheBureau(net.minecraft.core.BlockPos pos, CompoundTag infos) implements CustomPacketPayload {
+        static final Type<FicheBureau> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "fiche_bureau"));
+        static final StreamCodec<RegistryFriendlyByteBuf, FicheBureau> CODEC = StreamCodec.composite(
+                net.minecraft.core.BlockPos.STREAM_CODEC, FicheBureau::pos, ByteBufCodecs.COMPOUND_TAG, FicheBureau::infos, FicheBureau::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Un bouton de l'écran du bureau (joueur vers serveur). */
+    public record ActionBureau(net.minecraft.core.BlockPos pos, String action, CompoundTag donnees) implements CustomPacketPayload {
+        static final Type<ActionBureau> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "action_bureau"));
+        static final StreamCodec<RegistryFriendlyByteBuf, ActionBureau> CODEC = StreamCodec.composite(
+                net.minecraft.core.BlockPos.STREAM_CODEC, ActionBureau::pos, ByteBufCodecs.stringUtf8(32), ActionBureau::action,
+                ByteBufCodecs.COMPOUND_TAG, ActionBureau::donnees, ActionBureau::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     static void enregistrer(RegisterPayloadHandlersEvent e) {
-        var r = e.registrar("1");
+        var r = e.registrar("2"); // 2 : écran du bureau (0.2.0)
         r.playToClient(Fiche.TYPE, Fiche.CODEC, (p, ctx) -> Client.ouvrirFiche(p));
+        r.playToClient(FicheBureau.TYPE, FicheBureau.CODEC, (p, ctx) -> Client.ouvrirBureau(p));
+        r.playToServer(ActionBureau.TYPE, ActionBureau.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp && sp.level().isLoaded(p.pos()) && sp.level().getBlockEntity(p.pos()) instanceof Bureau.Entite b)
+                b.action(sp, p.action(), p.donnees());
+        });
         r.playToServer(Commande.TYPE, Commande.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) t.commande(sp, p.ordre());
         });

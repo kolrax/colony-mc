@@ -1,9 +1,9 @@
 -- ============================================================================
 -- Cerveau commun à tous les PNJ employés.
 -- Appelé toutes les demi-secondes, AVANT le métier. Il s'occupe de ce que tout
--- PNJ fait, quel que soit son métier : manger, toucher sa paie, faire grève,
--- fuir le danger, obéir aux ordres « suivre » et « attendre », vider son sac.
--- Ensuite seulement, il laisse la main au métier : metier.travailler(pnj, commun).
+-- PNJ fait, quel que soit son métier : grève, fuite, faim, paie, ordres
+-- « suivre » et « attendre », bureau, horaires et repos, sac plein, commande
+-- terminée. Ensuite seulement, il laisse la main au métier : metier.travailler(pnj, commun).
 -- Guide complet : GUIDE-SCRIPTS.md (onglet « Guide » du panneau).
 -- ============================================================================
 local M = {}
@@ -24,6 +24,14 @@ function M.parfois(pnj, cle, texte, auChef, delai)
   if auChef then pnj.direAuChef(texte) else pnj.dire(texte) end
 end
 
+-- Un point au hasard dans la zone de travail (pour explorer), à la surface si elle est connue.
+function M.pointDansZone(pnj)
+  local cx, cy, cz, r = pnj.zone()
+  local angle, d = math.random() * 2 * math.pi, math.sqrt(math.random()) * r
+  local x, z = math.floor(cx + math.cos(angle) * d), math.floor(cz + math.sin(angle) * d)
+  return x, pnj.surface(x, z) or cy, z
+end
+
 function M.cerveau(pnj, metier)
   -- Une action est en cours : le métier peut seulement surveiller
   -- (le guerrier lâche tout s'il voit un monstre).
@@ -33,6 +41,7 @@ function M.cerveau(pnj, metier)
   end
 
   local mode = pnj.mode()
+  local m = pnj.memoire
 
   -- En grève : il attend au bureau que la caisse couvre ce qu'on lui doit.
   if mode == "greve" then
@@ -69,18 +78,51 @@ function M.cerveau(pnj, metier)
   end
   if mode == "attendre" then return pnj.attendre(2) end
 
-  -- Au travail. Sac plein : direction le dépôt du bureau.
+  -- Au travail. Sans bureau, pas de travail.
+  if not pnj.aBureau() then
+    M.parfois(pnj, "bureau", "Il me faut un bureau pour travailler : pose-en un, puis rattache-moi dans son écran.", true, 1800)
+    return pnj.attendre(20)
+  end
+
+  -- Hors de ses heures, ou épuisé : il vide son sac, puis va se reposer (dans un lit près du bureau s'il y en a un).
+  if pnj.fatigue() >= 100 then m.epuise = true elseif pnj.fatigue() <= 40 then m.epuise = nil end
+  if not pnj.enService() or m.epuise then
+    if m.epuise then M.parfois(pnj, "epuise", "Je suis épuisé, chef : je vais me reposer.", true, 1800) end
+    if pnj.libres() < 24 and not m.sacVide then
+      m.sacVide = true
+      return pnj.deposer(metier.garder or M.garder)
+    end
+    return pnj.seReposer()
+  end
+  m.sacVide = nil
+
+  -- Sac plein : direction le dépôt du bureau.
   if pnj.plein() then
     if pnj.resultat() == "depot_plein" then
-      M.parfois(pnj, "depot", "Le dépôt du bureau est plein, chef ! Vide-le, je ne peux plus rien ranger.", true, 900)
+      M.parfois(pnj, "depot", "Le dépôt du bureau est plein, chef ! Vide-le (ou colle un coffre au bureau), je ne peux plus rien ranger.", true, 900)
       return pnj.attendre(30)
     end
-    if pnj.resultat() == "pas_de_bureau" then
-      M.parfois(pnj, "bureau", "Mon sac est plein et je ne trouve pas ton bureau. Pose un bureau près d'ici.", true, 900)
-      return pnj.attendre(30)
-    end
+    if pnj.resultat() == "pas_de_bureau" then return pnj.attendre(30) end
     return pnj.deposer(metier.garder or M.garder)
   end
+
+  -- Commande remplie : en mode quantité, c'est fini ; en mode stock, il attend que le stock baisse.
+  local c = pnj.commande()
+  if c and pnj.commandeRemplie() then
+    if pnj.libres() < 24 and not m.livre then
+      m.livre = true
+      return pnj.deposer(metier.garder or M.garder)
+    end
+    local fait, total = pnj.avancement()
+    if c.mode == "quantite" then
+      M.parfois(pnj, "commande_finie", "Commande terminée : " .. total .. " " .. c.nom .. ". Donne-moi la suivante dans le bureau.", true, 3600)
+    else
+      M.parfois(pnj, "stock_plein", "Le stock de " .. c.nom .. " est plein (" .. fait .. "/" .. total .. "). Je reprends dès qu'il baisse.", true, 3600)
+    end
+    return pnj.attendre(20)
+  end
+  m.livre = nil
+
   return metier.travailler(pnj, M)
 end
 

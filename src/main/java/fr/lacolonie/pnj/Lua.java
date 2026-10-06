@@ -173,6 +173,67 @@ public final class Lua {
         return t != null && t.get("description").isstring() ? t.get("description").tojstring() : "";
     }
 
+    // --- Les commandes (catalogue M.commandes de chaque métier) --------------------------------------
+
+    public record CommandeInfo(String id, String nom, boolean quantite) {}
+
+    /** Le catalogue des commandes d'un métier, pour l'écran du bureau. */
+    public static synchronized List<CommandeInfo> commandes(String metier) {
+        List<CommandeInfo> l = new ArrayList<>();
+        LuaTable m = METIERS.get(metier);
+        if (m == null || !m.get("commandes").istable()) return l;
+        LuaTable c = (LuaTable) m.get("commandes");
+        for (int i = 1; i <= c.length(); i++) {
+            LuaValue e = c.get(i);
+            if (!e.istable() || !e.get("id").isstring()) continue;
+            l.add(new CommandeInfo(e.get("id").tojstring(), e.get("nom").optjstring(e.get("id").tojstring()), !e.get("objet").isnil()));
+        }
+        return l;
+    }
+
+    static LuaTable entreeCommande(String metier, String id) {
+        LuaTable m = METIERS.get(metier);
+        if (id == null || id.isEmpty() || m == null || !m.get("commandes").istable()) return null;
+        LuaTable c = (LuaTable) m.get("commandes");
+        for (int i = 1; i <= c.length(); i++) if (c.get(i).istable() && id.equals(c.get(i).get("id").optjstring(""))) return (LuaTable) c.get(i);
+        return null;
+    }
+
+    public static String nomCommande(String metier, String id) {
+        LuaTable e = entreeCommande(metier, id);
+        return e == null ? id : e.get("nom").optjstring(id);
+    }
+
+    /** L'objet produit par la commande en cours (filtre qui ne prend rien s'il n'y en a pas). */
+    static Actions.Filtre objetCommande(Travailleur t) {
+        LuaTable e = entreeCommande(t.metier, t.commande);
+        return e != null && e.get("objet").isstring() ? Actions.Filtre.de(e.get("objet").tojstring()) : Actions.Filtre.de("");
+    }
+
+    /** Où en est la commande : le stock au dépôt (mode stock) ou ce qu'il a déjà livré (mode quantité) ; -1 si on ne sait pas. */
+    static int avancement(Travailleur t) {
+        if (entreeCommande(t.metier, t.commande) == null) return -1;
+        if (t.commandeMode.equals("quantite")) return t.commandeLivre;
+        Bureau.Entite b = Bureau.entite(t);
+        return b == null ? -1 : b.compter(objetCommande(t));
+    }
+
+    static boolean commandeRemplie(Travailleur t) {
+        LuaTable e = entreeCommande(t.metier, t.commande);
+        if (e == null || e.get("objet").isnil()) return false;
+        int a = avancement(t);
+        return a >= 0 && a >= t.commandeNombre;
+    }
+
+    static String avancementTexte(Travailleur t) {
+        LuaTable e = entreeCommande(t.metier, t.commande);
+        if (e == null) return "Aucune commande";
+        if (e.get("objet").isnil()) return nomCommande(t.metier, t.commande);
+        int a = avancement(t);
+        String n = (a < 0 ? "?" : String.valueOf(a)) + "/" + t.commandeNombre;
+        return nomCommande(t.metier, t.commande) + " : " + (t.commandeMode.equals("quantite") ? n + " livrés" : n + " au dépôt") + (commandeRemplie(t) ? " (fait)" : "");
+    }
+
     // --- Le cerveau ----------------------------------------------------------------------------------
 
     /** Appelé toutes les demi-secondes pour chaque PNJ employé. */
@@ -203,7 +264,49 @@ public final class Lua {
         f(p, "temperament", a -> v(t.temperament));
         f(p, "mode", a -> v(t.mode.lua));
         f(p, "position", a -> pos(t.blockPosition()));
-        f(p, "lieu", a -> t.lieu == null ? LuaValue.NIL : pos(t.lieu));
+        f(p, "lieu", a -> t.centreZone() == null ? LuaValue.NIL : pos(t.centreZone()));
+        f(p, "zone", a -> {
+            BlockPos c = t.centreZone();
+            return c == null ? LuaValue.NIL : LuaValue.varargsOf(new LuaValue[]{LuaValue.valueOf(c.getX()), LuaValue.valueOf(c.getY()), LuaValue.valueOf(c.getZ()), LuaValue.valueOf(t.rayon)});
+        });
+        f(p, "dansZone", a -> {
+            BlockPos c = t.centreZone();
+            if (c == null) return LuaValue.FALSE;
+            BlockPos b = bp(a, 1);
+            double dx = b.getX() - c.getX(), dz = b.getZ() - c.getZ();
+            return LuaValue.valueOf(dx * dx + dz * dz <= (double) t.rayon * t.rayon);
+        });
+        f(p, "enService", a -> LuaValue.valueOf(t.enService()));
+        f(p, "horaires", a -> LuaValue.varargsOf(LuaValue.valueOf(t.debut), LuaValue.valueOf(t.fin)));
+        f(p, "fatigue", a -> LuaValue.valueOf(t.fatigue));
+        f(p, "commande", a -> {
+            LuaTable e = entreeCommande(t.metier, t.commande);
+            if (e == null) return LuaValue.NIL;
+            LuaTable c = new LuaTable();
+            LuaValue k = LuaValue.NIL;
+            while (true) {
+                Varargs n = e.next(k);
+                if ((k = n.arg1()).isnil()) break;
+                c.set(k, n.arg(2));
+            }
+            c.set("mode", t.commandeMode);
+            c.set("nombre", t.commandeNombre);
+            c.set("livre", t.commandeLivre);
+            if (t.profondeurForcee != Integer.MIN_VALUE) c.set("profondeur", t.profondeurForcee);
+            return c;
+        });
+        f(p, "avancement", a -> LuaValue.varargsOf(LuaValue.valueOf(avancement(t)), LuaValue.valueOf(t.commandeNombre)));
+        f(p, "commandeRemplie", a -> LuaValue.valueOf(commandeRemplie(t)));
+        f(p, "surface", a -> {
+            int x = a.checkint(1), z = a.checkint(2);
+            if (!t.level().isLoaded(new BlockPos(x, 0, z))) return LuaValue.NIL;
+            return LuaValue.valueOf(t.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z));
+        });
+        f(p, "seReposer", a -> lancer(t, new Actions.Reposer()));
+        f(p, "solNaturel", a -> {
+            BlockPos s = solNaturel(t, Math.clamp(a.optint(1, 24), 4, Math.max(4, t.rayon)));
+            return s == null ? LuaValue.NIL : pos(s);
+        });
         f(p, "direction", a -> LuaValue.varargsOf(LuaValue.valueOf(t.direction.getStepX()), LuaValue.valueOf(t.direction.getStepZ())));
         f(p, "vie", a -> LuaValue.varargsOf(LuaValue.valueOf(t.getHealth()), LuaValue.valueOf(t.getMaxHealth())));
         f(p, "faim", a -> LuaValue.valueOf(t.faim));
@@ -213,19 +316,14 @@ public final class Lua {
         f(p, "heure", a -> LuaValue.valueOf((int) (t.level().getDayTime() % 24000)));
         f(p, "paieDue", a -> LuaValue.valueOf(t.paieDue()));
         f(p, "du", a -> LuaValue.valueOf((double) t.du()));
-        f(p, "aBureau", a -> LuaValue.valueOf(Bureau.trouver(t) != null));
+        f(p, "aBureau", a -> LuaValue.valueOf(t.bureau != null));
         f(p, "caisse", a -> {
-            BlockPos b = Bureau.trouver(t);
-            if (b == null || !t.level().isLoaded(b) || !(t.level().getBlockEntity(b) instanceof Bureau.Entite e)) return LuaValue.valueOf(-1);
-            return LuaValue.valueOf((double) Reglages.valeur(e.caisse));
+            Bureau.Entite e = Bureau.entite(t);
+            return LuaValue.valueOf(e == null ? -1 : (double) Reglages.valeur(e.caisse));
         });
         f(p, "depotContient", a -> {
-            BlockPos b = Bureau.trouver(t);
-            if (b == null || !t.level().isLoaded(b) || !(t.level().getBlockEntity(b) instanceof Bureau.Entite e)) return LuaValue.valueOf(0);
-            Actions.Filtre fi = filtre(a, 1);
-            int n = 0;
-            for (int i = 0; i < e.depot.getContainerSize(); i++) if (fi.objet(e.depot.getItem(i))) n += e.depot.getItem(i).getCount();
-            return LuaValue.valueOf(n);
+            Bureau.Entite e = Bureau.entite(t);
+            return LuaValue.valueOf(e == null ? 0 : e.compter(filtre(a, 1)));
         });
 
         // Le monde autour
@@ -263,7 +361,9 @@ public final class Lua {
             return meilleur == null ? LuaValue.NIL : pos(meilleur);
         });
         f(p, "chercherArbre", a -> {
-            BlockPos b = Actions.chercherArbre((ServerLevel) t.level(), centre(t, a.arg(2)), Math.clamp(a.checkint(1), 1, 24));
+            LuaValue o = a.arg(2);
+            Actions.Filtre bois = o.istable() && o.get("bois").isstring() ? Actions.Filtre.de(o.get("bois").tojstring()) : null;
+            BlockPos b = Actions.chercherArbre((ServerLevel) t.level(), centre(t, o), Math.clamp(a.checkint(1), 1, 24), bois);
             return b == null ? LuaValue.NIL : pos(b);
         });
         f(p, "bureau", a -> {
@@ -350,6 +450,51 @@ public final class Lua {
         return p;
     }
 
+    /**
+     * Un endroit de sa zone où creuser sans abîmer de construction : sol naturel (terre, sable, pierre…)
+     * à ciel ouvert, et aucun bloc « de joueur » (planches, vitres, portes, dalles, coffres…) à 5 blocs autour.
+     */
+    static BlockPos solNaturel(Travailleur t, int rayon) {
+        BlockPos c = t.centreZone();
+        if (c == null) return null;
+        var lvl = t.level();
+        var r = t.getRandom();
+        for (int essai = 0; essai < 200; essai++) {
+            double angle = r.nextDouble() * Math.PI * 2, d = 6 + r.nextDouble() * Math.max(1, rayon - 6);
+            int x = c.getX() + (int) (Math.cos(angle) * d), z = c.getZ() + (int) (Math.sin(angle) * d);
+            if (!lvl.isLoaded(new BlockPos(x, c.getY(), z))) continue;
+            int y = lvl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            BlockPos sol = new BlockPos(x, y - 1, z);
+            BlockState st = lvl.getBlockState(sol);
+            // Herbes, fleurs, neige, barrières : ce n'est pas encore le sol, on descend jusqu'à lui.
+            for (int i = 0; i < 20 && (st.canBeReplaced() && st.getFluidState().isEmpty() || st.is(net.minecraft.world.level.block.Blocks.BARRIER)); i++) {
+                sol = sol.below();
+                st = lvl.getBlockState(sol);
+            }
+            boolean naturel = st.is(net.minecraft.tags.BlockTags.DIRT) || st.is(net.minecraft.tags.BlockTags.SAND)
+                    || st.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) || st.is(net.minecraft.world.level.block.Blocks.GRAVEL);
+            if (!naturel || !st.getFluidState().isEmpty() || construitAutour(t, sol)) continue;
+            return sol.above();
+        }
+        return null;
+    }
+
+    static boolean construitAutour(Travailleur t, BlockPos sol) {
+        var lvl = t.level();
+        for (BlockPos q : BlockPos.betweenClosed(sol.offset(-5, -2, -5), sol.offset(5, 4, 5))) {
+            if (!lvl.isLoaded(q)) return true;
+            if (lvl.getBlockEntity(q) != null) return true;
+            BlockState st = lvl.getBlockState(q);
+            if (st.isAir()) continue;
+            if (st.is(net.minecraft.tags.BlockTags.PLANKS) || st.is(net.minecraft.tags.BlockTags.WOOL) || st.is(net.minecraft.tags.BlockTags.DOORS)
+                    || st.is(net.minecraft.tags.BlockTags.SLABS) || st.is(net.minecraft.tags.BlockTags.STAIRS) || st.is(net.minecraft.tags.BlockTags.FENCES)
+                    || st.is(net.minecraft.tags.BlockTags.WALLS) || st.is(net.minecraft.tags.BlockTags.BEDS) || st.is(net.neoforged.neoforge.common.Tags.Blocks.GLASS_BLOCKS)
+                    || st.is(net.minecraft.tags.BlockTags.TRAPDOORS) || st.is(net.minecraft.world.level.block.Blocks.TORCH) || st.is(net.minecraft.world.level.block.Blocks.WALL_TORCH))
+                return true;
+        }
+        return false;
+    }
+
     // --- Petits outils ------------------------------------------------------------------------------
 
     static void f(LuaTable p, String nom, Function<Varargs, Varargs> corps) {
@@ -363,6 +508,7 @@ public final class Lua {
 
     static LuaValue lancer(Travailleur t, Actions.Action a) {
         if (t.action != null) t.action.fin(t);
+        if (t.isSleeping() && !(a instanceof Actions.Reposer)) t.stopSleeping();
         if (!(a instanceof Actions.Demander) && !(a instanceof Actions.Attendre)) t.besoin = "";
         t.action = a;
         t.resultat = "";

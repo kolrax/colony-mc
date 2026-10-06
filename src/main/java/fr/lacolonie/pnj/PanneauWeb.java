@@ -165,6 +165,9 @@ public final class PanneauWeb {
             x.put("besoin", t.besoin);
             x.put("action", t.action == null ? "" : t.action.nom);
             x.put("resultat", t.resultat);
+            x.put("bureau", t.bureau == null ? "" : t.bureau.toShortString());
+            x.put("commande", Lua.avancementTexte(t));
+            x.put("fatigue", t.fatigue);
             pnj.add(x);
         }
         m.put("pnj", pnj);
@@ -233,6 +236,7 @@ public final class PanneauWeb {
         try {
             archiver(id);
             Files.writeString(Reglages.dossierMetiers().resolve(id + ".lua"), Reglages.scriptDeBase(id), StandardCharsets.UTF_8);
+            Reglages.installerScriptsDeBase();
         } catch (IOException e) {
             return resultat(e.getMessage());
         }
@@ -286,7 +290,8 @@ public final class PanneauWeb {
                 t.chef = null;
                 t.chefNom = "";
                 t.mode = Travailleur.Mode.CHOMEUR;
-                t.lieu = null;
+                t.centre = null;
+                Bureau.liberer(t);
                 t.arrivee = System.currentTimeMillis();
                 t.finirAction("licencie");
                 t.libererChunk();

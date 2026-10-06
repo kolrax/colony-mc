@@ -100,7 +100,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
       </div>
       <h3>Tous les PNJ</h3>
       <div class="tablewrap card"><table>
-        <thead><tr><th>Nom</th><th>Métier</th><th>Chef</th><th>État</th><th>Action</th><th>Vie</th><th>Faim</th><th>Impayés</th><th>Demande</th><th>Position</th><th></th></tr></thead>
+        <thead><tr><th>Nom</th><th>Métier</th><th>Chef</th><th>État</th><th>Action</th><th>Vie</th><th>Faim</th><th>Impayés</th><th>Bureau · commande</th><th>Fatigue</th><th>Demande</th><th>Position</th><th></th></tr></thead>
         <tbody id="pnj-liste"></tbody>
       </table></div>
     </section>
@@ -219,7 +219,7 @@ function rendre() {
   if (vj) sj.value = vj;
   // PNJ
   const tb = $("#pnj-liste"); tb.replaceChildren();
-  if (!e.pnj.length) tb.append(el("tr", {}, el("td", { colspan: 11, class: "sub", text: "Aucun PNJ dans les zones chargées du monde." })));
+  if (!e.pnj.length) tb.append(el("tr", {}, el("td", { colspan: 13, class: "sub", text: "Aucun PNJ dans les zones chargées du monde." })));
   const MODES = { chomeur: ["cherche du travail", ""], suivre: ["suit", "or"], attendre: ["attend", ""], travail: ["au travail", "ok"], greve: ["en grève", "ko"] };
   for (const p of e.pnj) {
     const [lib, cls] = p.aTerre ? ["à terre", "ko"] : (MODES[p.mode] || [p.mode, ""]);
@@ -233,6 +233,8 @@ function rendre() {
       el("td", { class: "num", text: p.vie }),
       el("td", { class: "num", text: p.faim }),
       el("td", { class: "num", text: p.impayes }),
+      el("td", { class: "sub", text: (p.bureau ? p.bureau + " · " : "sans bureau · ") + (p.commande || "") }),
+      el("td", { class: "num", text: p.fatigue }),
       el("td", { text: p.besoin || "" }),
       el("td", { class: "num", text: p.position + (p.dimension !== "minecraft:overworld" ? " " + p.dimension : "") }),
       el("td", {}, el("div", { class: "row" },

@@ -13,6 +13,18 @@ Ce guide s'adresse à toi, KOLRAX, comme à une IA chargée d'écrire un métier
 - **Une fonction `travailler` décide de la prochaine action, la lance et s'arrête.** Elle ne fait jamais de boucle d'attente. Pour attendre, elle lance `pnj.attendre(secondes)`.
 - Le PNJ a une **mémoire**, `pnj.memoire`. C'est une table Lua, gardée même quand le serveur redémarre. On y note où on en est : l'avancée de la galerie, les souches à replanter…
 - Les scripts tournent sur le serveur seulement. **Un nouveau métier ne demande pas de nouvelle version du modpack.**
+- **Le bureau est le poste de pilotage.** Chaque PNJ est rattaché à un bureau (un PNJ par bureau). Sans bureau, il ne travaille pas. Dans l'écran du bureau, le chef choisit :
+  - une **commande** dans le catalogue du métier ;
+  - une **zone de travail** : un centre et un rayon, 96 par défaut ;
+  - des **horaires**, en heures du jeu ;
+  - une **paie**.
+
+  Le PNJ est autonome dans sa zone : on ne lui dit pas où travailler, on lui dit quoi produire.
+- **Deux sortes de commandes :**
+  - « stock » : garder N objets au dépôt, en reprenant dès que le stock baisse ;
+  - « quantité » : livrer N objets, puis s'arrêter.
+
+  Le cerveau commun arrête le métier tout seul quand la commande est remplie.
 
 ## 2. Écrire un métier
 
@@ -38,6 +50,14 @@ function M.vigilance(pnj) end
 -- Facultatif. En mode « Suivre » : renvoyer true s'il a trouvé autre chose à faire que suivre.
 function M.escorter(pnj) return false end
 
+-- Facultatif mais conseillé : le catalogue des commandes affiché dans l'écran du bureau.
+M.commandes = {
+  -- id et nom : obligatoires. objet : ce qui se compte au dépôt (stock) ou à la livraison (quantité) ;
+  -- sans objet, la commande n'a ni stock ni quantité (ex. « Garder le bureau »).
+  -- Les autres champs sont libres : le script les relit avec pnj.commande().
+  { id = "andesite", nom = "Andésite", objet = "minecraft:andesite", blocs = "minecraft:andesite", profondeur = 40 },
+}
+
 return M
 ```
 
@@ -59,7 +79,11 @@ Voici ce qu'il fait, dans l'ordre. Chaque ligne qui lance une action termine la 
 6. **Ordres** :
    - « Suivre » : `metier.escorter`, sinon il suit son chef ;
    - « Attendre » : il attend.
-7. **Travail** : sac plein, il va vider son sac au dépôt. Sinon, `metier.travailler(pnj, commun)`.
+7. **Pas de bureau** : il prévient son chef, puis attend.
+8. **Hors de ses heures, ou épuisé** (fatigue à 100, jusqu'à ce qu'elle redescende à 40) : il vide son sac, puis va se reposer, dans un lit libre près du bureau s'il y en a un.
+9. **Sac plein** : il va le vider au dépôt (le bureau et les coffres collés au bureau).
+10. **Commande remplie** : il prévient son chef, puis attend.
+11. Sinon : `metier.travailler(pnj, commun)`.
 
 Le cerveau commun fournit aussi des outils aux métiers, à travers le deuxième argument `commun` :
 
@@ -67,6 +91,7 @@ Le cerveau commun fournit aussi des outils aux métiers, à travers le deuxième
 |---|---|
 | `commun.parfois(pnj, cle, texte, auChef, delai)` | Dit `texte`, au plus une fois toutes les `delai` secondes (600 par défaut) pour une même `cle`. `auChef = true` envoie un message privé au chef, sinon il parle à voix haute. Il évite de répéter le même message toutes les demi-secondes. |
 | `commun.garder` | La liste par défaut de ce qu'on garde en vidant son sac. |
+| `commun.pointDansZone(pnj)` | Un point au hasard dans sa zone de travail (x, y, z), à la surface si elle est connue. Il sert à explorer. |
 
 ## 4. Les filtres
 
@@ -104,8 +129,16 @@ Les coordonnées sont des nombres entiers de blocs. Une fonction qui « renvoie 
 | `pnj.temperament()` | `"calme"`, `"peureux"`, `"fourbe"` ou `"colerique"`. |
 | `pnj.mode()` | `"travail"`, `"suivre"`, `"attendre"` ou `"greve"`. |
 | `pnj.position()` | x, y, z de ses pieds. |
-| `pnj.lieu()` | x, y, z de son lieu de travail (là où le chef a dit « Travailler ici »), ou `nil`. |
-| `pnj.direction()` | dx, dz : la direction où regardait le chef à ce moment. Chacun vaut -1, 0 ou 1. |
+| `pnj.zone()` | x, y, z, rayon de sa zone de travail. Le centre est celui réglé au bureau ou par « Travailler ici », sinon le bureau. |
+| `pnj.lieu()` | x, y, z du centre de sa zone (comme `pnj.zone()` sans le rayon), ou `nil`. |
+| `pnj.dansZone(x, y, z)` | `true` si ce bloc est dans sa zone (distance horizontale au centre ≤ rayon). |
+| `pnj.direction()` | dx, dz : la direction où regardait le chef quand il a dit « Travailler ici ». Chacun vaut -1, 0 ou 1. |
+| `pnj.commande()` | Sa commande : la ligne du catalogue (`id`, `nom`, `objet`, et tes champs à toi), plus `mode` (`"stock"` ou `"quantite"`), `nombre` et `livre` (ce qu'il a déjà livré). Vaut `nil` s'il n'a pas de commande. |
+| `pnj.avancement()` | Deux nombres : où il en est, et le nombre demandé. En mode stock, c'est ce qu'il y a au dépôt ; en mode quantité, ce qu'il a livré. Le premier vaut -1 si on ne sait pas. |
+| `pnj.commandeRemplie()` | `true` quand la commande est remplie. |
+| `pnj.enService()` | `true` pendant ses heures de travail. |
+| `pnj.horaires()` | Début et fin de ses heures de travail, en heures du jeu. S'ils sont égaux, il travaille toute la journée. |
+| `pnj.fatigue()` | De 0 à 100. Elle monte de 5 par heure du jeu travaillée et descend au repos (plus vite dans un lit). À partir de 70, il travaille plus lentement. |
 | `pnj.vie()` | Sa vie et sa vie maximale. |
 | `pnj.faim()` | De 0 à 20, comme un joueur. |
 | `pnj.occupe()` | `true` si une action est en cours. |
@@ -119,12 +152,12 @@ Les coordonnées sont des nombres entiers de blocs. Une fonction qui « renvoie 
 
 | Commande | Renvoie |
 |---|---|
-| `pnj.bureau()` | x, y, z du bureau de son chef le plus proche, ou `nil`. |
-| `pnj.aBureau()` | `true` si son chef a un bureau. |
+| `pnj.bureau()` | x, y, z de son bureau, ou `nil` s'il n'est rattaché à aucun. |
+| `pnj.aBureau()` | `true` s'il est rattaché à un bureau. |
 | `pnj.paieDue()` | `true` quand c'est l'heure d'aller chercher sa paie. |
-| `pnj.du()` | Ce qu'on lui doit, en bronzes : les paies en retard, plus celle du jour si elle est due. |
+| `pnj.du()` | Ce qu'on lui doit, en bronzes : les paies en retard, plus celle du jour si elle est due. C'est le salaire fixé au bureau, pas forcément celui qu'il demandait. Moins payé, il travaille moins vite (jusqu'à 75 % à mi-salaire) ; mieux payé, un peu plus vite (jusqu'à 115 %). |
 | `pnj.caisse()` | Ce qu'il y a dans la caisse du bureau, en bronzes. Vaut -1 si le bureau est introuvable ou trop loin. |
-| `pnj.depotContient(filtre)` | Combien d'objets de ce filtre il y a au dépôt. |
+| `pnj.depotContient(filtre)` | Combien d'objets de ce filtre il y a au dépôt, coffres collés au bureau compris. |
 | `pnj.montant(n)` | Un montant en toutes lettres, par exemple « 1 rouage en laiton, 3 pièces de bronze ». |
 
 ### Regarder le monde
@@ -138,7 +171,9 @@ Les coordonnées sont des nombres entiers de blocs. Une fonction qui « renvoie 
 | `pnj.liquide(x, y, z)` | `"eau"`, `"lave"`, `"autre"` ou `nil`. |
 | `pnj.lumiere(x, y, z)` | La lumière, de 0 à 15. En dessous de 8, les monstres peuvent apparaître. |
 | `pnj.chercherBloc(filtre, rayon, options)` | x, y, z du bloc correspondant le plus proche du PNJ, ou `nil`. Le rayon va jusqu'à 12. `options` est facultatif : voir le tableau suivant. |
-| `pnj.chercherArbre(rayon, options)` | x, y, z du pied de l'arbre naturel le plus proche (rayon jusqu'à 24), ou `nil`. Une maison en rondins n'est pas un arbre : il faut des feuilles naturelles. `options` accepte `{x=, y=, z=}`. |
+| `pnj.chercherArbre(rayon, options)` | x, y, z du pied de l'arbre naturel le plus proche (rayon jusqu'à 24), ou `nil`. Une maison en rondins n'est pas un arbre : il faut des feuilles naturelles. `options` accepte `{x=, y=, z=}` et `bois = filtre` (par exemple `"minecraft:birch_log"`). |
+| `pnj.surface(x, z)` | La hauteur (Y) du sol à cet endroit, ou `nil` si le coin n'est pas chargé. |
+| `pnj.solNaturel(rayon)` | x, y, z d'un endroit de sa zone où creuser sans abîmer de construction : sol naturel (terre, sable, pierre…), sans planches, vitres, portes, dalles ni coffres à 5 blocs autour. Vaut `nil` s'il n'en trouve pas. |
 | `pnj.monstres(rayon)` | La liste des monstres proches (rayon jusqu'à 32). |
 | `pnj.cibles(rayon)` | Les monstres proches, plus quiconque l'a attaqué, a attaqué son chef ou a été frappé par son chef dans les 10 dernières secondes. Triés du plus proche au plus loin. |
 | `pnj.agresseur()` | Qui l'a attaqué dans les 10 dernières secondes, ou `nil`. |
@@ -185,9 +220,10 @@ Chaque action **rend la main tout de suite** et dure ensuite plusieurs secondes.
 | `pnj.attaquer(id)` | Poursuit et frappe jusqu'à la mort de la cible, au plus 60 secondes. |
 | `pnj.fuir(id)` | Court se mettre à l'abri, loin de cette entité. |
 | `pnj.attendre(secondes)` | Ne fait rien pendant ce temps (jusqu'à 600 s). |
+| `pnj.seReposer()` | Va se reposer : dans un lit libre à moins de 8 blocs de son bureau (il s'y couche), sinon à côté du bureau. Il refait le point toutes les 30 secondes. |
 | `pnj.suivreChef()` | Rejoint son chef, à pied. Jamais de téléportation. |
-| `pnj.deposer(garder)` | Va au bureau et range son sac dans le dépôt. Il garde **une pile** de chaque filtre de la liste `garder`. |
-| `pnj.prendre(filtre, nombre)` | Va au bureau et prend des objets dans le dépôt. |
+| `pnj.deposer(garder)` | Va au bureau et range son sac dans le dépôt, puis dans les coffres, tonneaux ou réservoirs collés au bureau. Il garde **une pile** de chaque filtre de la liste `garder`. Ce qu'il dépose de l'objet de sa commande compte comme livré. |
+| `pnj.prendre(filtre, nombre)` | Va au bureau et prend des objets au dépôt, ou dans les coffres collés au bureau. |
 | `pnj.toucherPaie()` | Va à la caisse et prend ce qu'on lui doit. Si la caisse est vide, la paie compte comme impayée. Après plusieurs impayés, il fait grève. |
 | `pnj.demander(texte, filtre, nombre)` | Va voir son chef et lui demande quelque chose. Si le chef n'est pas là, il l'attend au bureau et le lui dit à sa connexion. L'action réussit dès qu'il en a `nombre`. Elle abandonne au bout de 2 min 30, et le script peut redemander. |
 | `pnj.ramasser(rayon, filtre)` | Va ramasser les objets qui traînent autour de lui (au plus 40 s). |
@@ -218,7 +254,7 @@ Chaque action **rend la main tout de suite** et dure ensuite plusieurs secondes.
 | `"pas_d_objet"` | Il n'a pas l'objet à poser. |
 | `"rien_pour_tenir"` | Le bloc à poser n'a aucun appui. |
 | `"impossible"` | La pose a été refusée. |
-| `"pas_de_bureau"` | Son chef n'a pas de bureau à moins de 256 blocs. |
+| `"pas_de_bureau"` | Il n'est rattaché à aucun bureau, ou son bureau a été détruit. |
 | `"bureau_inaccessible"` | Il n'arrive pas à rejoindre le bureau. |
 | `"caisse_vide"` | La caisse ne couvre pas sa paie. |
 | `"depot_plein"` | Le dépôt du bureau est plein. |
@@ -257,22 +293,25 @@ Chaque action **rend la main tout de suite** et dure ensuite plusieurs secondes.
 ```lua
 local M = {
   nom = "Carrier",
-  description = "Extrait l'andésite autour de son lieu de travail et la rapporte au bureau.",
+  description = "Extrait la pierre demandée en surface, dans sa zone, et la rapporte au bureau.",
   garder = { "nourriture", "#minecraft:pickaxes" },
 }
-M.rayon = 10
-M.pierre = "minecraft:andesite"
+M.commandes = {
+  { id = "andesite", nom = "Andésite", objet = "minecraft:andesite", pierre = "minecraft:andesite" },
+  { id = "granite",  nom = "Granite",  objet = "minecraft:granite",  pierre = "minecraft:granite" },
+}
 
 function M.travailler(pnj, commun)
-  local lx, ly, lz = pnj.lieu()
-  if not lx then return pnj.attendre(5) end
+  local c = pnj.commande()
+  if not c then return pnj.attendre(20) end   -- le chef choisit la pierre dans le bureau
   if not pnj.equiper("#minecraft:pickaxes") then
     return pnj.demander("Il me faut une pioche pour extraire la pierre.", "#minecraft:pickaxes", 1)
   end
-  local x, y, z = pnj.chercherBloc(M.pierre, M.rayon, { x = lx, y = ly, z = lz, expose = true })
-  if x then return pnj.casser(x, y, z) end
-  commun.parfois(pnj, "vide", "Il n'y a plus d'andésite à portée, chef.", true, 1800)
-  return pnj.attendre(30)
+  local x, y, z = pnj.chercherBloc(c.pierre, 10, { expose = true })
+  if x and pnj.dansZone(x, y, z) then return pnj.casser(x, y, z) end
+  -- rien autour de lui : il va voir ailleurs dans sa zone
+  local ex, ey, ez = commun.pointDansZone(pnj)
+  return pnj.aller(ex, ey, ez, 3)
 end
 
 return M
@@ -296,7 +335,6 @@ end
 function M.travailler(pnj, commun)
   local m = pnj.memoire
   local lx, ly, lz = pnj.lieu()
-  if not lx then return pnj.attendre(5) end
   local dx, dz = pnj.direction()
   pnj.equiper("#minecraft:swords")
   -- Deux bornes : le poste, et 20 blocs plus loin dans la direction donnée.
@@ -313,7 +351,7 @@ return M
 1. Dans le panneau, onglet **Métiers** : **Nouveau métier**, colle le script, puis **Vérifier**. La vérification signale les fautes de syntaxe, le `return M` oublié et la fonction `travailler` manquante.
 2. **Enregistrer** : le métier est chargé tout de suite. L'ancienne version est gardée dans `config/colonie_pnj/historique/`.
 3. En jeu, ou dans l'onglet **PNJ** du panneau, fais apparaître un chercheur d'emploi de ce métier près de toi. En jeu, la commande est `/pnj chercheur <identifiant> [niveau] [skin]`.
-4. Embauche-le, donne-lui ses outils (accroupi + clic droit avec l'objet en main), puis « Travailler ici ».
+4. Embauche-le et donne-lui ses outils (accroupi + clic droit avec l'objet en main). Pose un bureau : dans son écran, rattache le PNJ, puis choisis sa commande, sa zone et ses horaires.
 5. Regarde l'onglet **Journal** du panneau : erreurs de script, messages `pnj.log`. En jeu, `/pnj liste` montre ce que fait chaque PNJ.
 
 **Check-list pour une IA qui écrit un métier**
@@ -324,5 +362,6 @@ return M
 - [ ] Les échecs répétés sont gérés (`pnj.resultat()`, mémoire).
 - [ ] Les messages passent par `commun.parfois` : pas de répétition toutes les demi-secondes.
 - [ ] L'outil nécessaire est demandé au chef avec `pnj.demander` s'il manque.
+- [ ] Le métier a un catalogue `M.commandes`. Il lit sa commande avec `pnj.commande()` et reste dans sa zone (`pnj.dansZone`, `commun.pointDansZone`).
 - [ ] Rien n'enfreint les règles du serveur : pas de téléportation, pas de vol ni de destruction hors RP, pas d'attaque gratuite d'un joueur.
 - [ ] Toutes les fonctions utilisées existent dans la partie 5. Il n'y a pas d'autres API : pas de `os`, `io` ni `require`.
