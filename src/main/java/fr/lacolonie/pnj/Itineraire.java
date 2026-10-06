@@ -121,10 +121,11 @@ final class Itineraire {
 
         // c) Sous terre : d'abord sortir à l'air libre.
         if (sousTerre(t) && (dh > 24 || but.y > p.y + 6)) {
-            sortie = sortieRatee ? null : versLeCiel(l, ici, 6000);
+            sortie = sortieRatee ? null : versLeCiel(l, ici, 30000);
             indexSortie = 0;
             sortieAvance = 0;
             if (sortie != null) return;
+            sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
             commencerCreusage(t);
             if (aCreuser != null) return;
         }
@@ -175,10 +176,11 @@ final class Itineraire {
         return true;
     }
 
+    /** Vraiment sous terre : sans ciel, et à plus de 8 blocs sous la surface (pas sous un toit, un arbre ou un surplomb). */
     static boolean sousTerre(Travailleur t) {
         BlockPos p = t.blockPosition();
         int s = Monde.surface(t.level(), p.getX(), p.getZ());
-        return s != Integer.MIN_VALUE && p.getY() < s - 3 && !t.level().canSeeSky(p.above());
+        return s != Integer.MIN_VALUE && p.getY() < s - 8 && !t.level().canSeeSky(p.above());
     }
 
     // --- Sortir de sous terre ------------------------------------------------------------------------
@@ -218,7 +220,7 @@ final class Itineraire {
                 if (Monde.debout(l, p.below())) voisins.add(p.below());
             }
             for (BlockPos q : voisins)
-                if (Math.abs(q.getX() - d.getX()) <= 48 && Math.abs(q.getZ() - d.getZ()) <= 48 && parent.putIfAbsent(q, p) == null) file.add(q);
+                if (Math.abs(q.getX() - d.getX()) <= 96 && Math.abs(q.getZ() - d.getZ()) <= 96 && parent.putIfAbsent(q, p) == null) file.add(q);
         }
         return null;
     }
@@ -230,7 +232,10 @@ final class Itineraire {
         int cible = Math.min(sortie.size() - 1, indexSortie + 5);
         BlockPos q = sortie.get(cible);
         Vec3 c = Vec3.atBottomCenterOf(q);
-        if (t.position().distanceToSqr(c) < 2.25) { indexSortie = cible + 1; sortieAvance = 0; return; }
+        boolean dernier = cible == sortie.size() - 1;
+        // Le dernier pas se fait jusqu'au bout : à un bloc près, il resterait sous le plafond et chercherait encore la sortie.
+        if (t.position().distanceToSqr(c) < (dernier ? 0.3 : 2.25)) { indexSortie = cible + 1; sortieAvance = 0; return; }
+        if (dernier && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         if (age % 20 == 0 || t.getNavigation().isDone()) {
             Path ch = t.getNavigation().createPath(q, 0);
             if (ch != null) t.getNavigation().moveTo(ch, v);
@@ -241,6 +246,7 @@ final class Itineraire {
     // --- Creuser un escalier vers la surface ---------------------------------------------------------
 
     private Direction sens;
+    private boolean monte;
     private final List<BlockPos> aCasser = new ArrayList<>();
 
     private void commencerCreusage(Travailleur t) {
@@ -249,16 +255,22 @@ final class Itineraire {
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         Vec3 pos = t.position();
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
-        for (Direction d : dirs) {
-            BlockPos marche = p.relative(d).above();
-            List<BlockPos> blocs = List.of(p.above(2), marche, marche.above());
+        // Un escalier qui monte vers le but ; sinon (plafond qu'il ne peut pas toucher), d'abord un pas de côté en galerie.
+        List<List<BlockPos>> essais = new ArrayList<>();
+        List<Direction> sensEssais = new ArrayList<>();
+        for (Direction d : dirs) { essais.add(List.of(p.above(2), p.relative(d).above(), p.relative(d).above(2))); sensEssais.add(d); }
+        for (Direction d : dirs) { essais.add(List.of(p.relative(d), p.relative(d).above())); sensEssais.add(d); }
+        for (int i = 0; i < essais.size(); i++) {
+            Direction d = sensEssais.get(i);
+            List<BlockPos> blocs = essais.get(i);
             if (blocs.stream().allMatch(b -> creusable(l, b))) {
+                monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();
                 for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
                 aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
                 if (aCreuser == null) monter(t);
-                else { progres = 0; Cerveau.parfois(t, "creuse", "Je suis muré sous terre : je creuse un escalier vers la surface.", false, 600); }
+                else { progres = 0; Cerveau.parfois(t, "creuse", "Je suis bloqué : je creuse un passage.", false, 600); }
                 return;
             }
         }
@@ -299,10 +311,10 @@ final class Itineraire {
         if (aCreuser == null) monter(t);
     }
 
-    /** Le passage est dégagé : il monte sur la marche suivante. */
+    /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
     private void monter(Travailleur t) {
-        BlockPos marche = t.blockPosition().relative(sens).above();
-        t.getJumpControl().jump();
+        BlockPos marche = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        if (monte) t.getJumpControl().jump();
         t.getMoveControl().setWantedPosition(marche.getX() + 0.5, marche.getY(), marche.getZ() + 0.5, 1.0);
         etape = null;
     }
