@@ -221,7 +221,7 @@ final class Itineraire {
                 int y = Monde.surface(l, x, z);
                 if (y == Integer.MIN_VALUE) { b.append(" ").append(ecart).append("°:non chargé"); continue; }
                 var c = t.getNavigation().createPath(new BlockPos(x, y, z), 1);
-                b.append(" ").append(ecart).append("°:").append(c == null ? "aucun" : c.canReach() ? "OK" : "partiel");
+                b.append(" ").append(ecart).append("°(y").append(y).append("):").append(c == null ? "aucun" : c.canReach() ? "OK" : "partiel");
             }
             r.add(b.toString());
         }
