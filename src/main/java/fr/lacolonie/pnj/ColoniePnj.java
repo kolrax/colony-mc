@@ -236,6 +236,13 @@ public class ColoniePnj {
                                 + " faim=" + t.faim + " impayes=" + t.impayes + (t.besoin.isEmpty() ? "" : " besoin=« " + t.besoin + " »")), false);
                     return l.size();
                 }))
+                .then(Commands.literal("diag").then(Commands.argument("prenom", StringArgumentType.greedyString()).executes(c -> {
+                    String n = StringArgumentType.getString(c, "prenom");
+                    var l = tous(c.getSource().getServer()).stream().filter(t -> t.prenom.equalsIgnoreCase(n)).toList();
+                    if (l.isEmpty()) { c.getSource().sendFailure(Component.literal("Aucun PNJ nommé " + n)); return 0; }
+                    for (Travailleur t : l) for (String ligne : Itineraire.diagnostic(t)) c.getSource().sendSuccess(() -> Component.literal(ligne), false);
+                    return 1;
+                })))
                 .then(Commands.literal("panneau").executes(c -> {
                     String url = PanneauWeb.adresse();
                     c.getSource().sendSuccess(() -> Component.literal("Panneau : " + url + "  (mot de passe : clique pour le copier)")

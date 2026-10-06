@@ -43,7 +43,7 @@ final class Itineraire {
     private int indexSortie;
     private BlockPos aCreuser;
     private float progres;
-    private int directRate, echecs, sortieAvance;
+    private int directRate, echecs, sortieAvance, ageCourant;
     private boolean sortieRatee;
     boolean bloque;
 
@@ -70,6 +70,21 @@ final class Itineraire {
         t.setSprinting(courir);
 
         if (aCreuser != null) { t.diag = "creuse " + aCreuser.toShortString(); creuser(t); return; }
+        if (montee != null) {
+            if (t.blockPosition().equals(montee) || age > monteeFin) { montee = null; etape = null; }
+            else {
+                t.diag = "monte en " + montee.toShortString();
+                if (t.onGround() && age % 10 == 0) {
+                    Path c = t.getNavigation().createPath(montee, 0);
+                    if (c != null) t.getNavigation().moveTo(c, 1.0);
+                    else t.getJumpControl().jump();
+                }
+                t.getMoveControl().setWantedPosition(montee.getX() + 0.5, montee.getY(), montee.getZ() + 0.5, 1.0);
+                ageCourant = age;
+                return;
+            }
+        }
+        ageCourant = age;
         if (sortie != null) { t.diag = "sort de sous terre " + indexSortie + "/" + sortie.size(); suivreSortie(t, v, age); return; }
 
         // De près : le chemin direct, tant qu'il mène bien au but.
@@ -137,7 +152,7 @@ final class Itineraire {
         Set<BlockPos> vus = new HashSet<>();
         for (int ecart = 0; ecart <= 180; ecart += 20) {
             for (int signe : ecart == 0 || ecart == 180 ? new int[]{1} : new int[]{1, -1}) {
-                for (double r : new double[]{Math.min(28, Math.max(8, dh)), 14}) {
+                for (double r : new double[]{Math.min(28, Math.max(8, dh)), 14, 7}) {
                     double a = cap + signe * Math.toRadians(ecart);
                     int x = (int) Math.floor(p.x + Math.cos(a) * r), z = (int) Math.floor(p.z + Math.sin(a) * r);
                     int y = Monde.surface(l, x, z);
@@ -153,9 +168,13 @@ final class Itineraire {
         }
         candidats.sort(Comparator.comparingDouble(Candidat::score));
         int essais = 0;
+        List<BlockPos> rates = new ArrayList<>();
         for (Candidat c : candidats) {
-            if (++essais > 10) break;
+            if (essais >= 18) break;
+            if (rates.stream().anyMatch(r -> r.distSqr(c.pos) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
+            essais++;
             if (aller(t, c.pos, Vec3.atBottomCenterOf(c.pos), v)) { echecs = 0; return; }
+            rates.add(c.pos);
         }
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
@@ -181,6 +200,41 @@ final class Itineraire {
         BlockPos p = t.blockPosition();
         int s = Monde.surface(t.level(), p.getX(), p.getZ());
         return s != Integer.MIN_VALUE && p.getY() < s - 8 && !t.level().canSeeSky(p.above());
+    }
+
+    /** Pour /pnj diag : pourquoi il avance ou n'avance pas (sous terre, sortie, ce qu'il peut creuser). */
+    static List<String> diagnostic(Travailleur t) {
+        Level l = t.level();
+        BlockPos p = t.blockPosition();
+        List<String> r = new ArrayList<>();
+        int s = Monde.surface(l, p.getX(), p.getZ());
+        r.add(t.prenom + " en " + p.toShortString() + " : " + (t.action == null ? "aucune action" : t.action.nom + " (" + t.diag + ")") + ", résultat « " + t.resultat + " »");
+        r.add("sol en surface à y=" + s + ", ciel visible : " + l.canSeeSky(p.above()) + ", sous terre : " + sousTerre(t) + ", au sol : " + t.onGround() + ", dans l'eau : " + t.isInWater());
+        List<BlockPos> sortie = versLeCiel(l, p, 30000);
+        r.add("sortie à pied : " + (sortie == null ? "aucune" : sortie.size() + " pas, jusqu'en " + sortie.get(sortie.size() - 1).toShortString()));
+        if (t.bureau != null) {
+            Vec3 but = Vec3.atBottomCenterOf(t.bureau);
+            double cap = Math.atan2(but.z - t.getZ(), but.x - t.getX());
+            StringBuilder b = new StringBuilder("étapes vers le bureau :");
+            for (int ecart = -160; ecart <= 180; ecart += 40) {
+                int x = (int) Math.floor(t.getX() + Math.cos(cap + Math.toRadians(ecart)) * 20), z = (int) Math.floor(t.getZ() + Math.sin(cap + Math.toRadians(ecart)) * 20);
+                int y = Monde.surface(l, x, z);
+                if (y == Integer.MIN_VALUE) { b.append(" ").append(ecart).append("°:non chargé"); continue; }
+                var c = t.getNavigation().createPath(new BlockPos(x, y, z), 1);
+                b.append(" ").append(ecart).append("°:").append(c == null ? "aucun" : c.canReach() ? "OK" : "partiel");
+            }
+            r.add(b.toString());
+        }
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            StringBuilder b = new StringBuilder(d.getName() + " :");
+            for (BlockPos q : List.of(p.relative(d), p.relative(d).above(), p.relative(d).above(2), p.above(2))) {
+                var st = l.getBlockState(q);
+                b.append(" ").append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath())
+                        .append(creusable(l, q) ? "" : Monde.construit(l, q) ? "(construction)" : "(non)");
+            }
+            r.add(b.toString());
+        }
+        return r;
     }
 
     // --- Sortir de sous terre ------------------------------------------------------------------------
@@ -247,6 +301,9 @@ final class Itineraire {
 
     private Direction sens;
     private boolean monte;
+    /** La marche qu'il vient de dégager : il y monte avant de réfléchir à la suite. */
+    private BlockPos montee;
+    private int monteeFin;
     private final List<BlockPos> aCasser = new ArrayList<>();
 
     private void commencerCreusage(Travailleur t) {
@@ -263,26 +320,29 @@ final class Itineraire {
         for (int i = 0; i < essais.size(); i++) {
             Direction d = sensEssais.get(i);
             List<BlockPos> blocs = essais.get(i);
-            if (blocs.stream().allMatch(b -> creusable(l, b))) {
+            // Rien à creuser : ce n'est une solution que si la marche est déjà prête (il retente de monter dessus).
+            BlockPos marche = i < dirs.size() ? p.relative(d).above() : p.relative(d);
+            boolean aCreuserIci = blocs.stream().anyMatch(b -> !Monde.traversable(l, b));
+            if (blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();
                 for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
                 aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
                 if (aCreuser == null) monter(t);
-                else { progres = 0; Cerveau.parfois(t, "creuse", "Je suis bloqué : je creuse un passage.", false, 600); }
+                else { progres = 0; echecs = 0; Cerveau.parfois(t, "creuse", "Je suis bloqué : je creuse un passage.", false, 600); }
                 return;
             }
         }
     }
 
-    /** On peut le casser sans risque : pas de construction, pas d'incassable, et pas de liquide qui coulerait sur lui. */
+    /** On peut le casser sans risque : pas de construction, pas d'incassable, et pas de lave à côté (l'eau, il la traverse à la nage). */
     static boolean creusable(Level l, BlockPos b) {
         if (!l.isLoaded(b)) return false;
         BlockState st = l.getBlockState(b);
-        if (Monde.traversable(l, b) && st.getFluidState().isEmpty()) return true;
+        if (Monde.traversable(l, b)) return true;
         if (st.getDestroySpeed(l, b) < 0 || Monde.construit(l, b) || !st.getFluidState().isEmpty()) return false;
-        for (Direction d : Direction.values()) if (!l.getBlockState(b.relative(d)).getFluidState().isEmpty()) return false;
+        for (Direction d : Direction.values()) if (l.getBlockState(b.relative(d)).getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) return false;
         return true;
     }
 
@@ -313,9 +373,11 @@ final class Itineraire {
 
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
     private void monter(Travailleur t) {
-        BlockPos marche = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        montee = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        monteeFin = ageCourant + 60;
+        echecs = 0; // il avance : ce n'est pas un échec
         if (monte) t.getJumpControl().jump();
-        t.getMoveControl().setWantedPosition(marche.getX() + 0.5, marche.getY(), marche.getZ() + 0.5, 1.0);
+        t.getMoveControl().setWantedPosition(montee.getX() + 0.5, montee.getY(), montee.getZ() + 0.5, 1.0);
         etape = null;
     }
 

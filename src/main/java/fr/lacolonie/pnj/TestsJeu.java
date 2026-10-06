@@ -394,7 +394,7 @@ public class TestsJeu {
         for (int y = 4; y <= 6; y++) h.setBlock(12, y, 12, Blocks.AIR);
         Travailleur t = ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 7, 3));
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
-        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti du puits (" + etat(t, t.bureau) + ", " + t.diag + ")"));
+        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti du puits (" + etat(t, t.bureau) + ", " + t.diag + ") " + String.join(" / ", Itineraire.diagnostic(t))));
     }
 
     /** Son chef frappe un villageois : le guerrier ne s'en mêle pas (il ne tue que les monstres et les agresseurs). */
