@@ -1,5 +1,7 @@
 # Poste commun, lettres, corbeau, ordres écrits : plan (version 0.5.0)
 
+**État : fait en 0.5.0 (modpack 0.4.6), le 6 octobre 2026 au soir.** Serveur à jour, modpack publié et annoncé. Tests : `OrdresTest` (interpréteur) et 36 tests de jeu (dont poste unique, missions à la suite, lettre à pied, corbeau, ordre par lettre, conversation, nage allongée).
+
 Le 6 octobre 2026 au soir, d'après les idées de KOLRAX dans l'Atelier : « Un seul bureau par joueur », « Communication par lettres », « Mission écrite, et interprétée par le code », « Ordres donnés en leur parlant, pas via bouton », « Bouton arrêter de me suivre », et les retours « Ne travaille pas » (Philippa) et le test 24 (nage).
 
 Cette version change les écrans et ajoute le corbeau : **nouveau modpack obligatoire** (canal réseau « 5 »).
