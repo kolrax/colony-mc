@@ -408,7 +408,7 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 100 == 0) equiperArmure();
         if (tickCount % 20 == 0) {
             if (bureau == null || chezLui(blockPosition())) {
-                if (expedition && sortieDepuis >= 0) { direAuChef("Me voilà rentré d'expédition, chef."); expedition = false; }
+                if (expedition && sortieDepuis >= 0) { direAuChef("Me voilà de retour d'expédition, chef."); expedition = false; }
                 if (expedition && !(action instanceof Actions.Aller)) expedition = false; // décidée, mais il n'est pas parti
                 sortieDepuis = -1;
                 trace.clear();

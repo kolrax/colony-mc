@@ -110,13 +110,13 @@ final class Cerveau {
         if (t.fatigue >= 100) mem.putBoolean("epuise", true);
         else if (t.fatigue <= 40) mem.remove("epuise");
         if (!t.enService() || mem.getBoolean("epuise")) {
-            if (mem.getBoolean("epuise")) parfois(t, "epuise", "Je suis épuisé, chef : je vais me reposer.", true, 1800);
+            if (mem.getBoolean("epuise")) parfois(t, "epuise", "Je n'en peux plus, chef : je vais me reposer.", true, 1800);
             if (dehors) {
                 // En expédition, il campe sur place ; à moins d'une heure de marche, il rentre plutôt dormir chez lui.
                 if (Travailleur.heuresDeMarche(t.blockPosition(), t.bureau) < 1) { rentrer(t); return; }
                 if (!mem.getBoolean("camp")) {
                     mem.putBoolean("camp", true);
-                    parfois(t, "camp", "Je passe la nuit dehors, à " + (int) t.distanceAuBureau() + " blocs du bureau. Je serai rentré dans "
+                    parfois(t, "camp", "Je passe la nuit dehors, à " + (int) t.distanceAuBureau() + " blocs du bureau. Je serai de retour dans "
                             + duree(t.heuresRestantes()) + " au plus tard.", true, 600);
                 }
                 lancer(t, new Actions.Reposer());
@@ -227,7 +227,7 @@ final class Cerveau {
         if (p == Portee.EXPEDITION && !t.expedition) {
             t.expedition = true;
             t.direAuChef("Je pars en expédition " + pourQuoi + " : vers " + dest.getX() + " " + dest.getZ() + ", à " + (int) Math.sqrt(t.blockPosition().distSqr(dest))
-                    + " blocs. Je serai rentré dans " + t.joursExpedition + (t.joursExpedition > 1 ? " jours" : " jour") + " au plus tard.");
+                    + " blocs. Je serai de retour dans " + t.joursExpedition + (t.joursExpedition > 1 ? " jours" : " jour") + " au plus tard.");
         }
         if (p == Portee.JOURNEE || p == Portee.EXPEDITION) lancer(t, new Actions.Aller(new Vec3(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5), 4, true));
         return p;
