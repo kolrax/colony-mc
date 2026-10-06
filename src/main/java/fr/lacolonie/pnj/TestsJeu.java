@@ -94,6 +94,20 @@ public class TestsJeu {
         h.succeedWhen(() -> {
             h.assertTrue(t.chezLui(t.blockPosition()), "il doit être rentré (" + etat(t, bureau) + ")");
             h.assertTrue(t.enService(), "il devait rentrer avant la fin de sa journée");
+            t.discard();
+        });
+    }
+
+    /** Figé dans un chunk inactif à côté de son ancien chunk (le cas d'Aliénor le 6 octobre, avant la 0.3.0) : le serveur le réveille. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void reveilleSiFige(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 12000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(bureau.east(2)), ItemStack.EMPTY);
+        net.minecraft.world.level.ChunkPos c = t.chunkPosition();
+        ColoniePnj.TICKETS.forceChunk(h.getLevel(), t, c.x + 1, c.z, true, true); // seul le chunk voisin reste actif
+        h.succeedWhen(() -> {
+            h.assertTrue(t.tickCount > 60 && ((ServerLevel) t.level()).isPositionEntityTicking(t.blockPosition()), "il doit être réveillé (" + etat(t, bureau) + ")");
+            t.discard();
         });
     }
 
@@ -112,6 +126,7 @@ public class TestsJeu {
         h.succeedWhen(() -> {
             h.assertTrue(t.action instanceof Actions.Reposer, "il doit se reposer (" + etat(t, bureau) + ")");
             h.assertTrue(t.blockPosition().distSqr(loin) < 16, "il doit camper là où il est (" + etat(t, bureau) + ")");
+            t.discard();
         });
     }
 
@@ -131,8 +146,10 @@ public class TestsJeu {
         t.commande = "bouleau";
         h.assertTrue(t.monLit() != null, "il doit prendre le lit près du bureau");
         t.forcerChunk();
-        h.succeedWhen(() -> h.assertTrue(t.compter(Actions.Filtre.de("minecraft:birch_log")) >= 3,
-                "il doit avoir abattu un bouleau (" + etat(t, bureau) + ")"));
+        h.succeedWhen(() -> {
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:birch_log")) >= 3, "il doit avoir abattu un bouleau (" + etat(t, bureau) + ")");
+            t.discard();
+        });
     }
 
     /** Le mineur extrait d'abord le minerai demandé qu'il voit autour de lui. */

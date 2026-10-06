@@ -109,11 +109,19 @@ public class ColoniePnj {
             Lua.charger();
             PanneauWeb.demarrer(e.getServer());
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> PanneauWeb.arreter());
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
+            PanneauWeb.arreter();
+            laisserFinirLaGeneration(e.getServer());
+        });
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> PanneauWeb.arreter());
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
+        // Filet de sécurité : un PNJ arrivé dans un chunk inactif (poussé, ou figé avant la 0.3.0) ne peut plus
+        // déplacer ses chunks lui-même ; le serveur les recale toutes les 5 secondes.
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> {
+            if (e.getServer().getTickCount() % 100 == 0) for (Travailleur t : tous(e.getServer())) t.forcerChunk();
+        });
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
             if (!e.getLevel().isClientSide && e.getEntity() instanceof Monster m && !(m instanceof NeutralMob))
@@ -139,6 +147,21 @@ public class ColoniePnj {
                 else if (!t.besoin.isEmpty()) t.direAuChef(t.besoin + " Je t'attends au bureau.");
             }
         });
+    }
+
+    /**
+     * À l'arrêt, Minecraft décharge tous les chunks dans une boucle qui peut tourner sans fin sur un chunk dont la
+     * génération est en cours (vu une fois aux tests, un PNJ explorant du terrain neuf). On laisse donc d'abord finir
+     * le travail des chunks en cours, 3 secondes au plus.
+     */
+    static void laisserFinirLaGeneration(MinecraftServer s) {
+        long fin = System.nanoTime() + 3_000_000_000L, dernier = System.nanoTime();
+        while (System.nanoTime() < fin && System.nanoTime() - dernier < 200_000_000L) {
+            boolean fait = false;
+            for (ServerLevel l : s.getAllLevels()) while (System.nanoTime() < fin && l.getChunkSource().pollTask()) fait = true;
+            if (fait) dernier = System.nanoTime();
+            else java.util.concurrent.locks.LockSupport.parkNanos(2_000_000L);
+        }
     }
 
     /** Tous les PNJ d'un joueur (ils sont toujours chargés, puisqu'ils gardent leur chunk). */
