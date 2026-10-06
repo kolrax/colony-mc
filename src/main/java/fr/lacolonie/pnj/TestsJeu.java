@@ -133,6 +133,23 @@ public class TestsJeu {
         });
     }
 
+    /** En expédition, épuisé en pleine marche vers plus loin (Aliénor le 6 octobre) : il s'arrête et campe. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void sArreteEpuiseEnExpedition(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 18000);
+        BlockPos loin = sol(h, 220, 18000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(loin), ItemStack.EMPTY);
+        t.expedition = true;
+        t.fatigue = 100;
+        t.action = new Actions.Aller(Vec3.atBottomCenterOf(sol(h, 800, 18000)), 4, true);
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(t.action instanceof Actions.Reposer, "il doit camper (" + etat(t, bureau) + ")");
+            h.assertTrue(t.blockPosition().distSqr(loin) < 100, "sans aller plus loin (" + etat(t, bureau) + ")");
+            t.discard();
+        });
+    }
+
     /** Pas de bouleau près du bureau, et aucun biome connu où il pousse (monde plat) : il fouille de plus en plus loin, jusqu'aux bouleaux à 100 blocs. */
     @GameTest(template = "vide", timeoutTicks = 12000)
     public static void expeditionTrouveLeBois(GameTestHelper h) {

@@ -44,6 +44,10 @@ final class Cerveau {
     }
 
     static void decider(Travailleur t, Metier m) {
+        // Une longue marche vers plus loin dure des heures : la faim, l'épuisement, la nuit ou l'heure du retour l'arrêtent
+        // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
+        if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible))
+                && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
