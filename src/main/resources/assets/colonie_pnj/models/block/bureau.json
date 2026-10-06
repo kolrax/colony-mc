@@ -1,8 +1,9 @@
 {
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "top": "minecraft:block/cartography_table_top",
-    "side": "minecraft:block/cartography_table_side3",
-    "bottom": "minecraft:block/dark_oak_planks"
+    "top": "colonie_pnj:block/bureau_dessus",
+    "side": "colonie_pnj:block/bureau_cote",
+    "bottom": "minecraft:block/dark_oak_planks",
+    "particle": "colonie_pnj:block/bureau_cote"
   }
 }
