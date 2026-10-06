@@ -116,10 +116,6 @@ configurations {
 }
 
 dependencies {
-    // Moteur de scripts Lua (MIT), embarque dans le jar du mod (jar-in-jar)
-    implementation 'org.luaj:luaj-jse:3.0.1'
-    additionalRuntimeClasspath 'org.luaj:luaj-jse:3.0.1'
-    jarJar('org.luaj:luaj-jse:[3.0.1,3.1)')
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -189,13 +185,6 @@ test {
     useJUnitPlatform()
 }
 
-// Le guide du scripteur est servi par le panneau web : on le copie dans le jar.
-processResources {
-    from('GUIDE-SCRIPTS.md') {
-        into 'web'
-        rename { 'guide.md' }
-    }
-}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation

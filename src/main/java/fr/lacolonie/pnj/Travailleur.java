@@ -51,13 +51,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.luaj.vm2.LuaTable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Un PNJ travailleur : un corps de joueur piloté par les scripts Lua de son métier. */
+/** Un PNJ travailleur : un corps de joueur piloté par le cerveau commun et son métier (codés dans le mod). */
 public class Travailleur extends PathfinderMob {
     public static final EntityDataAccessor<String> SKIN = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
 
@@ -94,6 +93,10 @@ public class Travailleur extends PathfinderMob {
     public int joursExpedition = 3;
     /** Moment (temps du jeu, en ticks) où il est sorti de son espace de vie ; -1 s'il y est. */
     public long sortieDepuis = -1;
+    /** Parti en expédition (il l'a décidé lui-même : ce qu'il cherche est trop loin pour une sortie à la journée). */
+    public boolean expedition;
+    /** Le chemin de l'aller, un point tous les 20 blocs environ : pour rentrer par un chemin qu'il sait praticable. */
+    public final List<BlockPos> trace = new ArrayList<>();
     /** Ce qu'il parcourt en une heure du jeu, compté large (il marche à 4 blocs par seconde sur le plat). */
     static final double BLOCS_PAR_HEURE = 120;
     /** Heures de travail, en heures du jeu (0 à 24). */
@@ -122,8 +125,8 @@ public class Travailleur extends PathfinderMob {
     // Cerveau
     public Actions.Action action;
     public String resultat = "";
-    LuaTable api;
-    CompoundTag memoireSauvee = new CompoundTag();
+    /** Sa mémoire de travail (où en est sa mine, les coins qu'il connaît…), sauvegardée avec lui. */
+    public CompoundTag memoire = new CompoundTag();
     int pauseCerveau;
     ChunkPos chunkForce;
 
@@ -131,6 +134,9 @@ public class Travailleur extends PathfinderMob {
         super(type, level);
         setPersistenceRequired();
         ((GroundPathNavigation) getNavigation()).setCanOpenDoors(true);
+        // Il nage comme un joueur : l'eau n'est pas un mur, il la traverse quand c'est plus court.
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, 2.0f);
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 0.0f);
         setCustomNameVisible(true);
     }
 
@@ -211,7 +217,7 @@ public class Travailleur extends PathfinderMob {
     }
 
     /** L'objet que produit sa commande en cours. */
-    public Actions.Filtre objetCommande() { return Lua.objetCommande(this); }
+    public Actions.Filtre objetCommande() { return Metier.objetCommande(this); }
 
     // --- Espace de vie, lit, sorties et expéditions -------------------------------------------------
 
@@ -239,7 +245,7 @@ public class Travailleur extends PathfinderMob {
     /** Heures du jeu avant lesquelles il doit être rentré : la fin de sa journée sans lit (ou l'épuisement), la fin de l'expédition avec un lit. */
     public double heuresRestantes() {
         if (bureau == null) return 0;
-        if (monLit() != null)
+        if (expedition)
             return joursExpedition * 24.0 - (sortieDepuis < 0 ? 0 : (level().getGameTime() - sortieDepuis) / 1000.0);
         return Math.min(heuresAvantFinService(), (100 - fatigue) / 5.0); // la fatigue monte de 5 par heure de travail
     }
@@ -257,8 +263,29 @@ public class Travailleur extends PathfinderMob {
 
     /** Jusqu'où il pourra aller au plus loin (une journée de marche aller-retour sans lit, l'expédition entière avec). */
     public double porteeMax() {
-        double h = monLit() != null ? joursExpedition * 24.0 : Math.min(debut == fin ? 24 : Math.floorMod(fin - debut, 24), 20);
-        return Math.max(ESPACE_DE_VIE, (h - 1) * BLOCS_PAR_HEURE / 2);
+        return Math.max(ESPACE_DE_VIE, (Math.max(joursExpedition * 24.0, heuresJourneeComplete()) - 1) * BLOCS_PAR_HEURE / 2);
+    }
+
+    /** Les heures d'une journée de travail entière (la fatigue l'arrête au bout de 20 heures). */
+    public double heuresJourneeComplete() { return Math.min(debut == fin ? 24 : Math.floorMod(fin - debut, 24), 20); }
+
+    public double distanceAuBureau() {
+        if (bureau == null) return 0;
+        double dx = getX() - bureau.getX(), dz = getZ() - bureau.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Ce qu'on voit au bureau : à terre, en grève, en expédition, se repose, au travail… */
+    public String statut() {
+        if (aTerre) return "À terre";
+        return switch (mode) {
+            case CHOMEUR -> "Cherche du travail";
+            case GREVE -> "En grève";
+            case SUIVRE -> "Te suit";
+            case ATTENDRE -> "Attend";
+            case TRAVAIL -> bureau == null ? "Sans bureau" : expedition ? "En expédition"
+                    : action instanceof Actions.Reposer || !enService() ? "Se repose" : "Au travail";
+        };
     }
 
     /** Son lit : le lit le plus proche du bureau (8 blocs au plus), qu'il garde pour lui. Null s'il n'en a pas. */
@@ -305,14 +332,11 @@ public class Travailleur extends PathfinderMob {
         }
     }
 
-    /** Où il en est, pour le bureau et le panneau : « Chez lui », « Dehors : 2 h, à 140 blocs », « Expédition : 1,5 j, à 420 blocs ». */
+    /** Depuis quand il est parti de son espace de vie (« parti depuis 2 h », « parti depuis 1,5 j »), ou rien s'il y est. */
     public String sortieTexte() {
-        if (bureau == null) return "";
-        if (sortieDepuis < 0) return "Chez lui";
+        if (bureau == null || sortieDepuis < 0) return "";
         double h = (level().getGameTime() - sortieDepuis) / 1000.0;
-        int d = (int) Math.sqrt(blockPosition().distSqr(new BlockPos(bureau.getX(), getBlockY(), bureau.getZ())));
-        String duree = h < 1 ? "moins d'1 h" : h < 24 ? (int) h + " h" : String.valueOf(Math.round(h / 2.4) / 10.0).replace('.', ',').replace(",0", "") + " j";
-        return (h >= 20 ? "Expédition : " : "Dehors : ") + duree + ", à " + d + " blocs";
+        return "parti depuis " + (h < 1 ? "moins d'1 h" : h < 24 ? (int) h + " h" : String.valueOf(Math.round(h / 2.4) / 10.0).replace('.', ',').replace(",0", "") + " j");
     }
 
     public String skin() { return entityData.get(SKIN); }
@@ -322,7 +346,7 @@ public class Travailleur extends PathfinderMob {
         String suffixe = switch (mode) {
             case CHOMEUR -> " · cherche du travail";
             case GREVE -> " · en grève";
-            default -> " (" + Lua.nomMetier(metier) + ")";
+            default -> " (" + Metier.nom(metier) + ")";
         };
         if (aTerre) suffixe = " · à terre";
         setCustomName(Component.literal(prenom + suffixe));
@@ -351,7 +375,7 @@ public class Travailleur extends PathfinderMob {
             if (e != Actions.Etat.EN_COURS && action == a) finirAction(e == Actions.Etat.OK ? "ok" : a.raison.isEmpty() ? "echec" : a.raison);
         }
         if (pauseCerveau > 0) pauseCerveau--;
-        else if ((tickCount + getId()) % 10 == 0) Lua.cerveau(this);
+        else if ((tickCount + getId()) % 10 == 0) Cerveau.penser(this);
     }
 
     void finirAction(String r) {
@@ -362,7 +386,7 @@ public class Travailleur extends PathfinderMob {
 
     void tickCorps() {
         // Faim : un point toutes les 6 minutes au travail, deux fois moins vite sinon.
-        faimCompteur += (mode == Mode.TRAVAIL && action != null) ? 2 : 1;
+        faimCompteur += (mode == Mode.TRAVAIL && action != null) ? (isSprinting() ? 3 : 2) : 1; // courir creuse l'appétit
         if (faimCompteur >= 6 * 60 * 20 * 2) { faimCompteur = 0; faim = Math.max(0, faim - 1); }
         if (++soinCompteur >= 200) {
             soinCompteur = 0;
@@ -371,16 +395,33 @@ public class Travailleur extends PathfinderMob {
         }
         if (++fatigueCompteur >= 1000) { // une heure du jeu
             fatigueCompteur = 0;
-            if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE) fatigue -= isSleeping() ? 12 : 8;
-            else if (mode == Mode.TRAVAIL && action != null) fatigue += 5;
+            // Une expédition fatigue : on y travaille plus dur, et on récupère mal en dormant dehors.
+            boolean dehors = expedition && sortieDepuis >= 0;
+            if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE) fatigue -= isSleeping() ? 12 : dehors ? 5 : 8;
+            else if (mode == Mode.TRAVAIL && action != null) fatigue += dehors ? 7 : 5;
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);
         }
         if (tickCount % 10 == 0) ramasserAutour();
         if (tickCount % 100 == 0) equiperArmure();
         if (tickCount % 20 == 0) {
-            if (bureau == null || chezLui(blockPosition())) sortieDepuis = -1;
-            else if (sortieDepuis < 0) sortieDepuis = level().getGameTime();
+            if (bureau == null || chezLui(blockPosition())) {
+                if (expedition && sortieDepuis >= 0) { direAuChef("Me voilà rentré d'expédition, chef."); expedition = false; }
+                if (expedition && !(action instanceof Actions.Aller)) expedition = false; // décidée, mais il n'est pas parti
+                sortieDepuis = -1;
+                trace.clear();
+            } else {
+                if (sortieDepuis < 0) sortieDepuis = level().getGameTime();
+                // La trace de l'aller : un point tous les 20 blocs, là où il a pu marcher, seulement en s'éloignant de chez lui
+                // (au retour, il la suit à l'envers : un point noté en revenant serait derrière lui).
+                // Elle commence en sortant de l'espace de vie (pas n'importe où : il ne la suivrait pas pour rien).
+                boolean depart = trace.isEmpty() && blockPosition().distSqr(bureau) <= (ESPACE_DE_VIE + 24) * (ESPACE_DE_VIE + 24);
+                if ((onGround() || isInWater()) && (depart || !trace.isEmpty() && trace.get(trace.size() - 1).distSqr(blockPosition()) >= 400
+                        && blockPosition().distSqr(bureau) > trace.get(trace.size() - 1).distSqr(bureau))) {
+                    trace.add(blockPosition());
+                    if (trace.size() > 300) for (int i = trace.size() - 2; i > 0; i -= 2) trace.remove(i); // un point sur deux au-delà
+                }
+            }
         }
         // Parti loin, il n'a pas pu passer à la caisse : il touchera sa paie à son retour.
         if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && sortieDepuis < 0 && paieEnRetard()) {
@@ -483,6 +524,7 @@ public class Travailleur extends PathfinderMob {
             return;
         }
         if (!level().isClientSide && chef != null) direAuChef("§c" + prenom + " est mort.");
+        if (!level().isClientSide) Bureau.marquerMort(this);
         super.die(src);
     }
 
@@ -680,8 +722,8 @@ public class Travailleur extends PathfinderMob {
         CompoundTag t = new CompoundTag();
         t.putBoolean("entretien", entretien);
         t.putString("nom", prenom);
-        t.putString("metier", Lua.nomMetier(metier));
-        t.putString("description", Lua.descriptionMetier(metier));
+        t.putString("metier", Metier.nom(metier));
+        t.putString("description", Metier.description(metier));
         t.putInt("niveau", niveau);
         t.putString("salaire", Reglages.texte(entretien ? salaireDemande() : salaireVerse()));
         t.putString("prime", Reglages.texte(Reglages.prime(niveau)));
@@ -749,7 +791,7 @@ public class Travailleur extends PathfinderMob {
 
     void embaucher(ServerPlayer p) {
         if (mode != Mode.CHOMEUR) return;
-        if (Reglages.actuel.metiers_inactifs.contains(metier) || !Lua.metierExiste(metier)) {
+        if (Reglages.actuel.metiers_inactifs.contains(metier) || !Metier.existe(metier)) {
             p.sendSystemMessage(Component.literal("Ce métier n'est plus proposé sur le serveur."));
             return;
         }
@@ -770,7 +812,7 @@ public class Travailleur extends PathfinderMob {
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
         dire("Marché conclu, chef ! Je te suis. Rattache-moi à un bureau (clic droit dessus) pour me donner du travail.");
-        p.sendSystemMessage(Component.literal("Tu as embauché " + prenom + " (" + Lua.nomMetier(metier) + ", " + "★".repeat(niveau)
+        p.sendSystemMessage(Component.literal("Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau)
                 + ") pour " + Reglages.texte(prime) + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", à déposer dans la caisse de son bureau. Pose un bureau et rattache-le pour lui donner du travail.").withStyle(ChatFormatting.GREEN));
     }
 
@@ -791,6 +833,8 @@ public class Travailleur extends PathfinderMob {
         if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
         t.putInt("JoursExpedition", joursExpedition);
         t.putLong("SortieDepuis", sortieDepuis);
+        t.putBoolean("Expedition", expedition);
+        t.putLongArray("Trace", trace.stream().mapToLong(BlockPos::asLong).toArray());
         t.putInt("Debut", debut);
         t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
@@ -807,7 +851,7 @@ public class Travailleur extends PathfinderMob {
         t.putBoolean("ATerre", aTerre);
         t.putInt("ATerreTicks", aTerreTicks);
         t.put("Inventaire", inventaire.createTag(registryAccess()));
-        t.put("Memoire", api != null ? Lua.versTag((LuaTable) api.get("memoire")) : memoireSauvee);
+        t.put("Etat", memoire);
     }
 
     @Override
@@ -825,6 +869,9 @@ public class Travailleur extends PathfinderMob {
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
         joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;
+        expedition = t.getBoolean("Expedition");
+        trace.clear();
+        for (long l : t.getLongArray("Trace")) trace.add(BlockPos.of(l));
         debut = t.contains("Debut") ? t.getInt("Debut") : 6;
         fin = t.contains("Fin") ? t.getInt("Fin") : 18;
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
@@ -842,8 +889,7 @@ public class Travailleur extends PathfinderMob {
         aTerreTicks = t.getInt("ATerreTicks");
         if (aTerre) setPose(Pose.SLEEPING);
         inventaire.fromTag(t.getList("Inventaire", Tag.TAG_COMPOUND), registryAccess());
-        memoireSauvee = t.getCompound("Memoire");
-        api = null;
+        memoire = t.getCompound("Etat"); // l'ancienne mémoire des scripts (« Memoire ») n'est pas reprise
         majNom();
     }
 

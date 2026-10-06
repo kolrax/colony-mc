@@ -1,3 +1,5 @@
+> **Depuis la 0.4.0 (6 octobre 2026)**, à la demande de KOLRAX, les métiers sont codés en Java dans le mod : le moteur Lua, l'éditeur de scripts du panneau et le guide du scripteur ont été retirés. Voir conception-bureau.md.
+
 # Mod « Colonie - PNJ travailleurs » : proposition de conception
 
 Le 5 octobre 2026, pour KOLRAX_MC. Elle s'appuie sur tes 8 réponses du jour (décisions r08 à r15 dans la console).

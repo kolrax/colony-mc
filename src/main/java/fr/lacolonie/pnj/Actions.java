@@ -101,56 +101,47 @@ public final class Actions {
         public final String nom;
         public int age;
         public String raison = "";
-        private Vec3 dernier, etape;
-        private int immobile, sansProgres, detour;
+        private Itineraire route;
+        private Vec3 dernier;
+        private int immobile, sansProgres;
         private double meilleure = Double.MAX_VALUE;
 
         Action(String nom) { this.nom = nom; }
 
         abstract Etat tick(Travailleur t);
 
-        void fin(Travailleur t) { t.getNavigation().stop(); }
+        void fin(Travailleur t) {
+            t.getNavigation().stop();
+            t.setSprinting(false);
+        }
 
-        /**
-         * Marche vers la cible, à n'importe quelle distance, en relançant le chemin régulièrement. Minecraft ne trace
-         * pas de chemin au-delà de 64 blocs : de loin, à l'air libre, il avance par étapes d'une trentaine de blocs.
-         * S'il ne se rapproche plus, il tente un détour d'un côté, puis de l'autre.
-         */
+        /** Marche vers la cible, à n'importe quelle distance, sans foncer dans un cul-de-sac (voir {@link Itineraire}). */
         void marcher(Travailleur t, Vec3 cible, double vitesse) {
+            if (route == null || route.but.distanceToSqr(cible) > 16) route = new Itineraire(t, cible);
             Vec3 p = t.position();
-            double d = p.distanceTo(cible);
-            if (d < meilleure - 2) { meilleure = d; sansProgres = 0; if (detour != 0) { detour = 0; etape = null; } }
-            else if (++sansProgres % 300 == 0) { detour = detour == 0 ? (t.getRandom().nextBoolean() ? 1 : -1) : -detour; etape = null; }
-            double dx = cible.x - p.x, dz = cible.z - p.z, dh = Math.sqrt(dx * dx + dz * dz);
-            Vec3 but = cible;
-            boolean dehors = t.getY() >= t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, t.getBlockX(), t.getBlockZ()) - 3;
-            if (dehors && (dh > 48 || detour != 0 && dh > 8)) {
-                if (etape == null || p.distanceToSqr(etape) < 16 || age % 100 == 0)
-                    etape = etape(t, Math.atan2(dz, dx) + detour * Math.toRadians(70), Math.min(32, dh));
-                but = etape;
-            } else etape = null;
-            // La navigation de Minecraft se dit « arrivée » à un bloc près : pour le dernier pas, on marche droit sur la cible.
-            if (p.distanceToSqr(but) < 2.25 && t.getNavigation().isDone())
-                t.getMoveControl().setWantedPosition(but.x, but.y, but.z, vitesse);
-            else if (age % 20 == 0 || t.getNavigation().isDone()) {
-                var chemin = t.getNavigation().createPath(BlockPos.containing(but), 0);
-                if (chemin != null) t.getNavigation().moveTo(chemin, vitesse);
+            // Il n'entre pas dans un coin que le monde n'a pas fini de préparer (terrain neuf en cours de génération) :
+            // il s'y figerait. Il attend au bord, le temps que le serveur le termine.
+            Vec3 cap = cible.subtract(p).multiply(1, 0, 1);
+            if (cap.lengthSqr() > 1 && t.level() instanceof net.minecraft.server.level.ServerLevel sl
+                    && !sl.isPositionEntityTicking(BlockPos.containing(p.add(cap.normalize().scale(5))))) {
+                t.getNavigation().stop();
+                sansProgres++; // au bout de 2 minutes d'attente, il se dira coincé
+                immobile = 0;
+                dernier = null;
+                return;
             }
+            route.avancer(t, vitesse, age);
+            double d = p.distanceTo(cible);
+            if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
+            else sansProgres++;
             if (age % 40 == 0) {
-                immobile = dernier != null && dernier.distanceToSqr(p) < 0.25 ? immobile + 40 : 0;
+                immobile = dernier != null && dernier.distanceToSqr(p) < 0.25 && !route.occupe() ? immobile + 40 : 0;
                 dernier = p;
             }
         }
 
-        /** Un point à {@code pas} blocs de lui dans cette direction, au niveau du sol si le coin est chargé. */
-        static Vec3 etape(Travailleur t, double angle, double pas) {
-            int x = (int) Math.floor(t.getX() + Math.cos(angle) * pas), z = (int) Math.floor(t.getZ() + Math.sin(angle) * pas);
-            int y = t.level().hasChunkAt(x, z) ? t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) : t.getBlockY();
-            return new Vec3(x + 0.5, y, z + 0.5);
-        }
-
-        /** Coincé : immobile depuis 10 s, ou sans se rapprocher depuis une minute malgré les détours. */
-        boolean coince() { return immobile >= 200 || sansProgres >= 1200; }
+        /** Coincé : plus aucun passage vers le but, immobile depuis 15 s, ou sans se rapprocher depuis 2 minutes. */
+        boolean coince() { return route != null && route.bloque || immobile >= 300 || sansProgres >= 2400; }
 
         Etat echec(String r) { raison = r; return Etat.ECHEC; }
     }
@@ -569,7 +560,7 @@ public final class Actions {
         }
     }
 
-    /** Va se reposer chez lui, dans son lit (sinon à côté du bureau) ; loin de chez lui avec un lit, en expédition, il campe sur place. */
+    /** Va se reposer chez lui, dans son lit s'il en a un (sinon à côté du bureau) ; loin de chez lui, en expédition, il campe sur place. */
     static final class Reposer extends Action {
         BlockPos lit, but;
 
@@ -578,7 +569,7 @@ public final class Actions {
         Etat tick(Travailleur t) {
             if (but == null) {
                 if (t.isSleeping()) return age >= 600 ? Etat.OK : Etat.EN_COURS;
-                boolean camp = t.bureau == null || !t.chezLui(t.blockPosition()) && t.monLit() != null;
+                boolean camp = t.bureau == null || !t.chezLui(t.blockPosition());
                 lit = camp ? null : t.monLit();
                 but = camp ? t.blockPosition() : lit != null ? lit : t.bureau;
             }

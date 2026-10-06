@@ -110,6 +110,8 @@ public final class Bureau {
         };
         public UUID proprietaire, employe;
         public String nomProprietaire = "", nomEmploye = "";
+        /** Son employé est mort (le bureau le montre jusqu'à ce qu'on libère la place). */
+        public boolean mort;
 
         public Entite(BlockPos pos, BlockState state) { super(ColoniePnj.BUREAU_BE.get(), pos, state); }
 
@@ -122,6 +124,7 @@ public final class Bureau {
             t.putString("NomProprietaire", nomProprietaire);
             if (employe != null) t.putUUID("Employe", employe);
             t.putString("NomEmploye", nomEmploye);
+            t.putBoolean("Mort", mort);
         }
 
         @Override
@@ -133,6 +136,7 @@ public final class Bureau {
             nomProprietaire = t.getString("NomProprietaire");
             employe = t.hasUUID("Employe") ? t.getUUID("Employe") : null;
             nomEmploye = t.getString("NomEmploye");
+            mort = t.getBoolean("Mort");
         }
 
         @Override
@@ -223,29 +227,36 @@ public final class Bureau {
                 BlockPos lit = t.monLit();
                 e.putString("lit", lit == null ? "" : lit.getX() + ", " + lit.getY() + ", " + lit.getZ());
                 e.putString("sortie", t.sortieTexte());
+                e.putString("statut", t.statut());
+                double d = t.distanceAuBureau();
+                e.putString("distance", d < 4 ? "au bureau" : "à " + (int) d + " blocs");
+                long paie = t.prochainePaie - System.currentTimeMillis();
+                e.putString("paie", paie <= 0 ? "Paie due : il vient la chercher" : "Prochaine paie dans " + (paie >= 3_600_000 ? paie / 3_600_000 + " h " : "") + (paie / 60_000 % 60) + " min");
                 e.putString("commande", t.commande);
                 e.putString("commandeMode", t.commandeMode);
                 e.putInt("commandeNombre", t.commandeNombre);
-                e.putString("avancement", Lua.avancementTexte(t));
+                e.putString("avancement", Metier.avancementTexte(t));
                 ListTag cat = new ListTag();
-                for (Lua.CommandeInfo ci : Lua.commandes(t.metier)) {
+                Metier m = Metier.de(t.metier);
+                if (m != null) for (Metier.Commande ci : m.commandes) {
                     CompoundTag x = new CompoundTag();
-                    x.putString("id", ci.id());
-                    x.putString("nom", ci.nom());
-                    x.putBoolean("quantite", ci.quantite());
+                    x.putString("id", ci.id);
+                    x.putString("nom", ci.nom);
+                    x.putBoolean("quantite", ci.objet != null);
                     cat.add(x);
                 }
                 e.put("catalogue", cat);
                 f.put("employe", e);
             } else if (employe != null) {
-                f.putString("absent", nomEmploye); // rattaché mais introuvable (mort, ou dans une autre dimension)
+                // Rattaché mais introuvable : mort, ou disparu (dans une autre dimension, retiré du monde…).
+                f.putString(mort ? "mort" : "absent", nomEmploye);
             }
             ListTag libres = new ListTag();
             for (Travailleur x : ColoniePnj.pnjDe(p.server, p.getUUID())) {
                 if (x.bureau != null || x == t) continue;
                 CompoundTag l = new CompoundTag();
                 l.putString("uuid", x.getUUID().toString());
-                l.putString("nom", x.prenom + " (" + Lua.nomMetier(x.metier) + " " + "★".repeat(x.niveau) + ")");
+                l.putString("nom", x.prenom + " (" + Metier.nom(x.metier) + " " + "★".repeat(x.niveau) + ")");
                 libres.add(l);
             }
             f.put("libres", libres);
@@ -266,6 +277,7 @@ public final class Bureau {
                     liberer(x);
                     employe = x.getUUID();
                     nomEmploye = x.prenom;
+                    mort = false;
                     x.bureau = worldPosition;
                     x.lit = null; // il prendra un lit près de son nouveau bureau
                     if (x.mode != Travailleur.Mode.GREVE) x.mode = Travailleur.Mode.TRAVAIL; // changer de bureau n'efface pas une grève
@@ -275,7 +287,7 @@ public final class Bureau {
                     setChanged();
                 }
                 case "liberer" -> {
-                    if (t == null) { employe = null; nomEmploye = ""; setChanged(); }
+                    if (t == null) { employe = null; nomEmploye = ""; mort = false; setChanged(); }
                     else {
                         liberer(t);
                         t.mode = Travailleur.Mode.ATTENDRE;
@@ -289,7 +301,8 @@ public final class Bureau {
                     String c = d.getString("commande");
                     String mode = d.getString("commandeMode").equals("quantite") ? "quantite" : "stock";
                     if (!c.equals(t.commande) || !mode.equals(t.commandeMode)) t.commandeLivre = 0;
-                    t.commande = Lua.commandes(t.metier).stream().anyMatch(ci -> ci.id().equals(c)) ? c : "";
+                    Metier m = Metier.de(t.metier);
+                    t.commande = m != null && m.commandes.stream().anyMatch(ci -> ci.id.equals(c)) ? c : "";
                     t.commandeMode = mode;
                     t.commandeNombre = Math.clamp(d.getInt("commandeNombre"), 1, 100_000);
                     t.joursExpedition = Math.clamp(d.getInt("joursExpedition"), 1, 30);
@@ -298,7 +311,7 @@ public final class Bureau {
                     long s = d.getLong("salaire");
                     t.salaire = s < 0 || s == t.salaireDemande() ? -1 : Math.min(s, 1_000_000);
                     t.finirAction("ordre");
-                    t.dire(t.commande.isEmpty() ? "Bien, chef. Mais je n'ai pas encore de commande." : "Bien, chef : " + Lua.nomCommande(t.metier, t.commande) + ".");
+                    t.dire(t.commande.isEmpty() ? "Bien, chef. Mais je n'ai pas encore de commande." : "Bien, chef : " + Metier.nomCommande(t.metier, t.commande) + ".");
                 }
                 default -> { return; }
             }
@@ -344,6 +357,16 @@ public final class Bureau {
             } else if (!moveItemStackTo(s, 9, 36, false)) return ItemStack.EMPTY;
             if (s.isEmpty()) slot.setByPlayer(ItemStack.EMPTY); else slot.setChanged();
             return copie;
+        }
+    }
+
+    /** À sa mort, le PNJ le note sur son bureau (chargé au besoin), qui l'affiche jusqu'à ce qu'on libère la place. */
+    static void marquerMort(Travailleur t) {
+        if (t.bureau == null || !(t.level() instanceof ServerLevel sl)) return;
+        if (sl.getChunk(t.bureau).getBlockEntity(t.bureau) instanceof Entite e && t.getUUID().equals(e.employe)) {
+            e.mort = true;
+            e.nomEmploye = t.prenom;
+            e.setChanged();
         }
     }
 

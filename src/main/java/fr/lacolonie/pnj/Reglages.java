@@ -10,7 +10,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,16 +56,13 @@ public class Reglages {
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    /** Scripts fournis avec le mod, copiés dans config/colonie_pnj/metiers/ s'ils n'y sont pas. */
-    static final List<String> SCRIPTS_DE_BASE = List.of("commun", "mineur", "bucheron", "guerrier");
 
     public static Path dossier() { return FMLPaths.CONFIGDIR.get().resolve("colonie_pnj"); }
-    public static Path dossierMetiers() { return dossier().resolve("metiers"); }
     static Path fichier() { return dossier().resolve("reglages.json"); }
 
     public static synchronized void charger() {
         try {
-            Files.createDirectories(dossierMetiers());
+            Files.createDirectories(dossier());
             Reglages r = Files.exists(fichier())
                     ? GSON.fromJson(Files.readString(fichier(), StandardCharsets.UTF_8), Reglages.class)
                     : new Reglages();
@@ -78,51 +74,8 @@ public class Reglages {
             r.valider();
             actuel = r;
             sauver();
-            installerScriptsDeBase();
         } catch (IOException e) {
             ColoniePnj.LOG.error("Réglages illisibles, valeurs par défaut utilisées", e);
-        }
-    }
-
-    /**
-     * Installe ou met à jour les scripts fournis avec le mod. On retient l'empreinte de chaque version installée
-     * (metiers/versions.json) : un script que l'admin n'a pas touché suit les mises à jour du mod (l'ancien part
-     * dans historique/), un script modifié à la main est gardé tel quel.
-     */
-    static void installerScriptsDeBase() throws IOException {
-        Path registre = dossierMetiers().resolve("versions.json");
-        java.util.Map<String, String> installes = Files.exists(registre)
-                ? GSON.fromJson(Files.readString(registre, StandardCharsets.UTF_8), new com.google.gson.reflect.TypeToken<java.util.Map<String, String>>() {}.getType())
-                : new java.util.HashMap<>();
-        if (installes == null) installes = new java.util.HashMap<>();
-        for (String s : SCRIPTS_DE_BASE) {
-            Path p = dossierMetiers().resolve(s + ".lua");
-            String neuf = scriptDeBase(s);
-            if (Files.exists(p)) {
-                String actuel = Files.readString(p, StandardCharsets.UTF_8);
-                if (empreinte(actuel).equals(empreinte(neuf))) { installes.put(s, empreinte(neuf)); continue; }
-                String connu = installes.get(s);
-                if (connu != null && !connu.equals(empreinte(actuel))) {
-                    Lua.journal("[" + s + ".lua] modifié à la main : la nouvelle version du mod n'est pas installée (bouton « Version d'origine » du panneau pour la prendre)");
-                    continue;
-                }
-                Path h = dossier().resolve("historique");
-                Files.createDirectories(h);
-                Files.copy(p, h.resolve(s + "-avant-maj-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".lua"),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
-            Files.writeString(p, neuf, StandardCharsets.UTF_8);
-            installes.put(s, empreinte(neuf));
-        }
-        Files.writeString(registre, GSON.toJson(installes), StandardCharsets.UTF_8);
-    }
-
-    static String empreinte(String texte) {
-        try {
-            byte[] h = java.security.MessageDigest.getInstance("SHA-1").digest(texte.replace("\r\n", "\n").getBytes(StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(h);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
         }
     }
 
@@ -152,13 +105,6 @@ public class Reglages {
         pnj_max_par_joueur = Math.max(0, pnj_max_par_joueur);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
         chercheurs.duree_minutes = Math.max(1, chercheurs.duree_minutes);
-    }
-
-    public static String scriptDeBase(String nom) throws IOException {
-        try (InputStream in = Reglages.class.getResourceAsStream("/scripts/" + nom + ".lua")) {
-            if (in == null) throw new IOException("script de base absent : " + nom);
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        }
     }
 
     // --- Argent -------------------------------------------------------------------------------

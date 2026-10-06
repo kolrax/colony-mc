@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** Tests de jeu automatiques : ./gradlew runGameTestServer. Les scripts Lua de base tournent pour de vrai. */
+/** Tests de jeu automatiques : ./gradlew runGameTestServer. Le cerveau et les métiers tournent pour de vrai. */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsJeu {
@@ -77,7 +77,7 @@ public class TestsJeu {
                 + ", tick " + t.tickCount + ", heure " + (t.level().getDayTime() + 6000) % 24000 + ", service " + t.debut + "-" + t.fin
                 + ", reste " + String.format("%.2f", t.heuresRestantes()) + " h, doitRentrer " + t.doitRentrer() + ", lit " + t.lit
                 + ", chunk actif " + ((ServerLevel) t.level()).isPositionEntityTicking(t.blockPosition())
-                + ", mémoire " + (t.api == null ? "?" : Lua.versTag((org.luaj.vm2.LuaTable) t.api.get("memoire")));
+                + ", mémoire " + t.memoire;
     }
 
     /**
@@ -90,10 +90,15 @@ public class TestsJeu {
         Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 200, 3000)), ItemStack.EMPTY); // sans commande, il ne bouge pas de lui-même
         t.debut = heure(h);
         t.fin = (t.debut + 3) % 24; // sa journée finit dans 2 à 3 heures du jeu : il lui en faut à peu près 2 pour rentrer
+        t.memoire.putLong("test_debut", h.getLevel().getDayTime() % 24000);
+        h.onEachTick(() -> {
+            if (t.action instanceof Actions.Aller && !t.memoire.contains("test_depart")) t.memoire.putLong("test_depart", h.getLevel().getDayTime() % 24000);
+            if (t.chezLui(t.blockPosition()) && !t.memoire.contains("test_arrivee")) t.memoire.putLong("test_arrivee", h.getLevel().getDayTime() % 24000);
+        });
         t.forcerChunk();
         h.succeedWhen(() -> {
             h.assertTrue(t.chezLui(t.blockPosition()), "il doit être rentré (" + etat(t, bureau) + ")");
-            h.assertTrue(t.enService(), "il devait rentrer avant la fin de sa journée");
+            h.assertTrue(t.enService(), "il devait rentrer avant la fin de sa journée (" + etat(t, bureau) + ", parti à " + t.memoire.getLong("test_depart") + ", début du test " + t.memoire.getLong("test_debut") + ")");
             t.discard();
         });
     }
@@ -111,17 +116,15 @@ public class TestsJeu {
         });
     }
 
-    /** Avec un lit, loin du bureau quand sa journée est finie : il campe sur place au lieu de rentrer. */
+    /** En expédition (sans lit), loin du bureau quand sa journée est finie : il campe sur place au lieu de rentrer. */
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void campeEnExpedition(GameTestHelper h) {
-        ServerLevel l = h.getLevel();
         BlockPos bureau = sol(h, 0, 6000);
-        lit(l, bureau.offset(3, 0, 2));
         BlockPos loin = sol(h, 220, 6000);
         Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(loin), ItemStack.EMPTY);
         t.debut = (heure(h) + 2) % 24; // sa journée commence dans 2 heures : il est au repos
         t.fin = (heure(h) + 3) % 24;
-        h.assertTrue(t.monLit() != null, "il doit prendre le lit près du bureau");
+        t.expedition = true;
         t.forcerChunk();
         h.succeedWhen(() -> {
             h.assertTrue(t.action instanceof Actions.Reposer, "il doit se reposer (" + etat(t, bureau) + ")");
@@ -130,12 +133,11 @@ public class TestsJeu {
         });
     }
 
-    /** Pas de bouleau près du bureau : avec un lit, il explore de plus en plus loin, jusqu'aux bouleaux à 100 blocs. */
+    /** Pas de bouleau près du bureau, et aucun biome connu où il pousse (monde plat) : il fouille de plus en plus loin, jusqu'aux bouleaux à 100 blocs. */
     @GameTest(template = "vide", timeoutTicks = 12000)
     public static void expeditionTrouveLeBois(GameTestHelper h) {
         ServerLevel l = h.getLevel();
         BlockPos bureau = sol(h, 0, 9000);
-        lit(l, bureau.offset(3, 0, 2));
         for (int i = 0; i < 12; i++) {
             BlockPos pied = sol(h, (int) (100 * Math.cos(i * Math.PI / 6)), 9000 + (int) (100 * Math.sin(i * Math.PI / 6)));
             for (int y = 0; y < 3; y++) l.setBlockAndUpdate(pied.above(y), Blocks.BIRCH_LOG.defaultBlockState());
@@ -144,7 +146,6 @@ public class TestsJeu {
         }
         Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
         t.commande = "bouleau";
-        h.assertTrue(t.monLit() != null, "il doit prendre le lit près du bureau");
         t.forcerChunk();
         h.succeedWhen(() -> {
             h.assertTrue(t.compter(Actions.Filtre.de("minecraft:birch_log")) >= 3, "il doit avoir abattu un bouleau (" + etat(t, bureau) + ")");
@@ -180,7 +181,7 @@ public class TestsJeu {
         int but = h.absolutePos(new BlockPos(0, 5, 0)).getY();
         h.succeedWhen(() -> h.assertTrue(t.getBlockY() <= but, "il doit être descendu (y=" + t.getBlockY() + ", attendu <= " + but + ", action "
                 + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat + ", besoin " + t.besoin
-                + ", mémoire " + (t.api == null ? "?" : Lua.versTag((org.luaj.vm2.LuaTable) t.api.get("memoire"))) + ")"));
+                + ", mémoire " + t.memoire + ")"));
     }
 
     /** Le bûcheron n'abat que le bois commandé. */
@@ -273,6 +274,7 @@ public class TestsJeu {
         t.aTerreTicks = 5;
         h.succeedWhen(() -> {
             h.assertFalse(t.isAlive(), "il doit être mort");
+            h.assertTrue(((Bureau.Entite) h.getLevel().getBlockEntity(h.absolutePos(new BlockPos(0, 2, 0)))).mort, "son bureau doit le dire mort");
             h.assertBlockPresent(Blocks.CHEST, 3, 2, 4);
         });
     }
@@ -336,13 +338,86 @@ public class TestsJeu {
         });
     }
 
-    /** Un script qui boucle à l'infini est coupé net au lieu de geler le serveur. */
+    /** Ce que fait pousser chaque biome est lu dans la génération du monde : le bois de la jungle pousse dans la jungle, pas au désert. */
     @GameTest(template = "vide")
-    public static void bouclesInfiniesCoupees(GameTestHelper h) {
-        String e = Lua.verifier("boucle", "while true do end");
-        h.assertTrue(e != null && e.contains("trop long"), "attendu : script trop long, obtenu : " + e);
-        String ok = Lua.verifier("essai", "local M = {nom='Essai'} function M.travailler(pnj) return pnj.attendre(1) end return M");
-        h.assertTrue(ok == null, "un script correct doit passer : " + ok);
+    public static void boisEtBiomes(GameTestHelper h) {
+        var jungle = Biomes.ouPousse(h.getLevel(), Actions.Filtre.de("minecraft:jungle_log"));
+        var bouleau = Biomes.ouPousse(h.getLevel(), Actions.Filtre.de("minecraft:birch_log"));
+        h.assertTrue(jungle.contains(net.minecraft.world.level.biome.Biomes.JUNGLE) && jungle.contains(net.minecraft.world.level.biome.Biomes.BAMBOO_JUNGLE), "jungle : " + jungle);
+        h.assertTrue(bouleau.contains(net.minecraft.world.level.biome.Biomes.BIRCH_FOREST), "bouleau : " + bouleau);
+        h.assertFalse(jungle.contains(net.minecraft.world.level.biome.Biomes.DESERT), "pas de jungle au désert");
+        h.succeed();
+    }
+
+    /** Le bois demandé pousse à 600 blocs et sa journée est courte : il décide seul de partir en expédition (sans lit). */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void partEnExpeditionSansLit(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 15000);
+        Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
+        t.commande = "bouleau";
+        t.debut = heure(h);
+        t.fin = (t.debut + 4) % 24; // 4 heures de travail : trop court pour un aller-retour de 1 200 blocs
+        t.memoire.putLong("coin_bouleau", bureau.offset(600, 0, 0).asLong()); // un coin de bouleaux qu'il connaît
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(t.expedition, "il doit partir en expédition (" + etat(t, bureau) + ")");
+            h.assertTrue(distance(t, bureau) > 60, "il doit être en route (" + etat(t, bureau) + ")");
+            t.discard();
+        });
+    }
+
+    /** Coincé au bout d'une galerie dont la sortie part à l'opposé du bureau : il trouve la sortie au lieu de buter contre la roche. */
+    @GameTest(template = "grand", timeoutTicks = 2400)
+    public static void sortParLesGaleries(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 12; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 4; x <= 20; x++) for (int y = 4; y <= 5; y++) h.setBlock(x, y, 12, Blocks.AIR);             // la galerie, vers l'est
+        for (int k = 1; k <= 8; k++) for (int y = 4 + k; y <= 6 + k; y++) h.setBlock(20, y, 12 + k, Blocks.AIR); // l'escalier, vers le sud
+        Travailleur t = ouvrier(h, "mineur", 4, 4, 12, ItemStack.EMPTY, new BlockPos(4, 13, 4)); // bureau au nord-ouest, au-dessus
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + etat(t, t.bureau) + ")"));
+    }
+
+    /** Muré sous terre, sans aucune galerie : il creuse un escalier jusqu'à la surface, puis rejoint son bureau. */
+    @GameTest(template = "grand", timeoutTicks = 3000)
+    public static void creuseVersLaSurface(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 12; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int y = 4; y <= 5; y++) h.setBlock(12, y, 12, Blocks.AIR);
+        Travailleur t = ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 13, 3));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit avoir creusé jusqu'au bureau (" + etat(t, t.bureau) + ")"));
+    }
+
+    /** Son chef frappe un villageois : le guerrier ne s'en mêle pas (il ne tue que les monstres et les agresseurs). */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void guerrierEpargneVillageois(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "guerrier", 2, 2, 4, new ItemStack(Items.IRON_SWORD));
+        var chef = h.makeMockServerPlayerInLevel();
+        Vec3 p = h.absoluteVec(new Vec3(3.5, 2, 4.5));
+        chef.moveTo(p.x, p.y, p.z);
+        t.chef = chef.getUUID();
+        t.commande = "escorter";
+        var villageois = h.spawn(net.minecraft.world.entity.EntityType.VILLAGER, 5, 2, 4);
+        villageois.setNoAi(true);
+        h.runAtTickTime(h.getTick() + 5, () -> chef.setLastHurtMob(villageois));
+        h.runAtTickTime(h.getTick() + 100, () -> {
+            h.assertTrue(villageois.isAlive() && villageois.getHealth() == villageois.getMaxHealth(), "le guerrier ne doit pas toucher au villageois");
+            h.succeed();
+        });
+    }
+
+    /** Ce que le bureau montre de lui : au travail, se repose, distance. */
+    @GameTest(template = "vide")
+    public static void statutAuBureau(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 4, 2, 4, ItemStack.EMPTY);
+        h.assertTrue(t.statut().equals("Au travail"), "statut : " + t.statut());
+        t.debut = (heure(h) + 2) % 24;
+        t.fin = (heure(h) + 3) % 24;
+        h.assertTrue(t.statut().equals("Se repose"), "hors de ses heures : " + t.statut());
+        t.expedition = true;
+        h.assertTrue(t.statut().equals("En expédition"), "en expédition : " + t.statut());
+        h.assertTrue((int) t.distanceAuBureau() == 6, "distance : " + t.distanceAuBureau());
         h.succeed();
     }
 

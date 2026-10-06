@@ -6,6 +6,18 @@ Le 6 octobre 2026, avec KOLRAX. Cette amélioration fait partie du jalon 1 (feui
 
 On ne dit plus au PNJ **où** travailler, on lui dit **quoi produire**. Il se débrouille seul dans sa zone, comme un joueur : il cherche, il va chercher, il rapporte au dépôt, et il vient demander ce qui lui manque. Un PNJ sans bureau ne travaille pas. Le bouton « Travailler ici » disparaît.
 
+## Changement du 6 octobre après-midi (0.4.0) : métiers codés en dur, plus besoin de lit
+
+Retours de KOLRAX sur les tests 14, 16 et 19, et ses idées « Arrêt du script de métiers », « Intelligence poussée », « Nage et sprint ».
+
+- **Les métiers sont codés en Java** dans le mod (classes `Cerveau`, `Mineur`, `Bucheron`, `Guerrier`). Le moteur Lua, l'éditeur de scripts du panneau et le guide du scripteur sont retirés. Changer un comportement demande une nouvelle version du mod ; tant que le canal réseau ne change pas, seul le serveur doit être mis à jour.
+- **Plus de lit pour partir en expédition** : le PNJ décide seul. Si ce qu'il cherche est trop loin pour une sortie à la journée, il part en expédition (il prévient son chef), campe la nuit et rentre au plus tard au bout de la durée réglée au bureau. Une expédition fatigue : +7 par heure de travail au lieu de +5, et dormir dehors ne fait récupérer que 5 par heure. Un lit près du bureau sert seulement à mieux dormir chez lui.
+- **Statut au bureau** : au travail, en expédition, se repose, en grève, à terre, mort, disparu, plus la distance au bureau et la prochaine paie. « Révolté » viendra avec le jalon 2.
+- **Le bûcheron sait où pousse chaque bois** : il lit les arbres que fait pousser chaque biome à la génération du monde (Terralith compris), cherche le biome le plus proche (comme /locate biome) et y va directement.
+- **Intelligence des déplacements** (`Itineraire`) : une étape n'est choisie que si son chemin complet est trouvé avant de partir ; il évite les coins déjà parcourus ; il rentre par la trace de l'aller ; sous terre, il cherche la sortie, ou creuse un escalier jusqu'à la surface ; il attend au bord d'un coin de terrain encore en génération plutôt que d'y entrer.
+- **Nage et sprint** : l'eau ne lui fait plus faire de détours, il court sur les longues distances (et a plus faim).
+- **Guerrier** : il ne frappe plus ce que son chef frappe, seulement les créatures hostiles et les agresseurs (deux guerriers avaient tué trois villageois que KOLRAX avait touchés) ; en escorte, si son chef n'est pas là, il garde le bureau.
+
 ## Changement du 6 octobre (0.3.0) : plus de zone de travail
 
 KOLRAX a supprimé la zone de travail : le PNJ est complètement autonome et va travailler où il veut pour remplir sa commande.

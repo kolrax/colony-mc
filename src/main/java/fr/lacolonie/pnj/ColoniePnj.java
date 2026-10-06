@@ -106,7 +106,6 @@ public class ColoniePnj {
 
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
-            Lua.charger();
             PanneauWeb.demarrer(e.getServer());
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
@@ -192,7 +191,7 @@ public class ColoniePnj {
     }
 
     static void faireVenir(ServerLevel l, ServerPlayer p) {
-        List<String> metiers = Lua.metiersActifs();
+        List<String> metiers = Metier.actifs();
         if (metiers.isEmpty()) return;
         long autour = l.getEntities(TRAVAILLEUR.get(), t -> t.mode == Travailleur.Mode.CHOMEUR && t.distanceTo(p) < 96).size();
         if (autour >= Reglages.actuel.chercheurs.max_autour) return;
@@ -207,7 +206,7 @@ public class ColoniePnj {
             if (!l.noCollision(t)) continue;
             t.tirerAuSort(metiers.get(l.random.nextInt(metiers.size())), 0);
             l.addFreshEntity(t);
-            p.sendSystemMessage(Component.literal("On dit qu'un " + Lua.nomMetier(t.metier).toLowerCase() + " cherche du travail dans les environs…").withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
+            p.sendSystemMessage(Component.literal("On dit qu'un " + Metier.nom(t.metier).toLowerCase() + " cherche du travail dans les environs…").withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
             return;
         }
     }
@@ -217,16 +216,14 @@ public class ColoniePnj {
     static void commandes(RegisterCommandsEvent e) {
         e.getDispatcher().register(Commands.literal("pnj").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("chercheur").then(Commands.argument("metier", StringArgumentType.word())
-                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Lua.METIERS.keySet(), b))
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Metier.TOUS.keySet(), b))
                         .executes(c -> chercheur(c, 0, ""))
                         .then(Commands.argument("niveau", IntegerArgumentType.integer(1, 5)).executes(c -> chercheur(c, IntegerArgumentType.getInteger(c, "niveau"), ""))
                                 .then(Commands.argument("skin", StringArgumentType.word())
                                         .executes(c -> chercheur(c, IntegerArgumentType.getInteger(c, "niveau"), StringArgumentType.getString(c, "skin")))))))
                 .then(Commands.literal("recharger").executes(c -> {
                     Reglages.charger();
-                    Lua.charger();
-                    c.getSource().sendSuccess(() -> Component.literal("Réglages et scripts rechargés : " + Lua.METIERS.size() + " métier(s)"
-                            + (Lua.ERREURS.isEmpty() ? "." : ", erreurs dans : " + String.join(", ", Lua.ERREURS.keySet()))), true);
+                    c.getSource().sendSuccess(() -> Component.literal("Réglages rechargés."), true);
                     return 1;
                 }))
                 .then(Commands.literal("liste").executes(c -> {
@@ -250,8 +247,8 @@ public class ColoniePnj {
 
     static int chercheur(CommandContext<CommandSourceStack> c, int niveau, String skin) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         String metier = StringArgumentType.getString(c, "metier");
-        if (!Lua.metierExiste(metier)) {
-            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : " + String.join(", ", Lua.METIERS.keySet())));
+        if (!Metier.existe(metier)) {
+            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : " + String.join(", ", Metier.TOUS.keySet())));
             return 0;
         }
         ServerLevel l = c.getSource().getLevel();
@@ -262,7 +259,7 @@ public class ColoniePnj {
         t.tirerAuSort(metier, niveau);
         t.setSkin(skin);
         l.addFreshEntity(t);
-        c.getSource().sendSuccess(() -> Component.literal(t.prenom + " (" + Lua.nomMetier(metier) + ", " + "★".repeat(t.niveau) + ") cherche du travail ici."), true);
+        c.getSource().sendSuccess(() -> Component.literal(t.prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(t.niveau) + ") cherche du travail ici."), true);
         return 1;
     }
 }

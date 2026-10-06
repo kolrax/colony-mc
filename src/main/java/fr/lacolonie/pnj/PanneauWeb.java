@@ -14,12 +14,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -77,7 +72,6 @@ public final class PanneauWeb {
         try {
             String chemin = ex.getRequestURI().getPath();
             if (chemin.equals("/") || chemin.equals("/index.html")) { ressource(ex, "/web/index.html", "text/html; charset=utf-8"); return; }
-            if (chemin.equals("/guide.md")) { ressource(ex, "/web/guide.md", "text/markdown; charset=utf-8"); return; }
             if (!chemin.startsWith("/api/")) { envoyer(ex, 404, "text/plain", "introuvable"); return; }
             String jeton = ex.getRequestHeaders().getFirst("X-Jeton");
             if (jeton == null || !MessageDigest.isEqual(jeton.getBytes(StandardCharsets.UTF_8), Reglages.actuel.jeton_panneau.getBytes(StandardCharsets.UTF_8))) {
@@ -90,16 +84,11 @@ public final class PanneauWeb {
                     : new JsonObject();
             Object reponse = switch (chemin) {
                 case "/api/etat" -> surServeur(PanneauWeb::etat);
-                case "/api/script" -> script(requete(ex, "id"));
-                case "/api/script/enregistrer" -> surServeur(() -> enregistrer(chaine(corps, "id"), chaine(corps, "source")));
-                case "/api/script/verifier" -> surServeur(() -> resultat(Lua.verifier(chaine(corps, "id"), chaine(corps, "source"))));
-                case "/api/script/supprimer" -> surServeur(() -> supprimer(chaine(corps, "id")));
-                case "/api/script/defaut" -> surServeur(() -> defaut(chaine(corps, "id")));
                 case "/api/metier/actif" -> surServeur(() -> actif(chaine(corps, "id"), corps.get("actif").getAsBoolean()));
                 case "/api/reglages" -> surServeur(() -> reglages(corps));
                 case "/api/pnj/apparaitre" -> surServeur(() -> apparaitre(corps));
                 case "/api/pnj/action" -> surServeur(() -> actionPnj(corps));
-                case "/api/recharger" -> surServeur(() -> { Reglages.charger(); Lua.charger(); return resultat(null); });
+                case "/api/recharger" -> surServeur(() -> { Reglages.charger(); return resultat(null); });
                 default -> null;
             };
             if (reponse == null) envoyer(ex, 404, "text/plain", "introuvable");
@@ -128,21 +117,14 @@ public final class PanneauWeb {
     static Map<String, Object> etat() {
         Map<String, Object> m = new LinkedHashMap<>();
         List<Map<String, Object>> metiers = new ArrayList<>();
-        try (var fichiers = Files.list(Reglages.dossierMetiers())) {
-            for (Path p : fichiers.filter(f -> f.toString().endsWith(".lua")).sorted().toList()) {
-                String id = p.getFileName().toString().replace(".lua", "");
-                Map<String, Object> x = new LinkedHashMap<>();
-                x.put("id", id);
-                x.put("nom", id.equals("commun") ? "Cerveau commun" : Lua.nomMetier(id));
-                x.put("description", id.equals("commun") ? "Besoins, paie, ordres : appelé avant chaque métier." : Lua.descriptionMetier(id));
-                x.put("actif", !Reglages.actuel.metiers_inactifs.contains(id));
-                x.put("commun", id.equals("commun"));
-                x.put("base", Reglages.SCRIPTS_DE_BASE.contains(id));
-                x.put("erreur", Lua.ERREURS.get(id));
-                metiers.add(x);
-            }
-        } catch (IOException e) {
-            m.put("erreur", "dossier des métiers illisible");
+        for (Metier mt : Metier.TOUS.values()) {
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("id", mt.id);
+            x.put("nom", mt.nom);
+            x.put("description", mt.description);
+            x.put("actif", !Reglages.actuel.metiers_inactifs.contains(mt.id));
+            x.put("commandes", mt.commandes.stream().map(c -> c.nom).toList());
+            metiers.add(x);
         }
         m.put("metiers", metiers);
         List<Map<String, Object>> pnj = new ArrayList<>();
@@ -166,9 +148,10 @@ public final class PanneauWeb {
             x.put("action", t.action == null ? "" : t.action.nom);
             x.put("resultat", t.resultat);
             x.put("bureau", t.bureau == null ? "" : t.bureau.toShortString());
-            x.put("commande", Lua.avancementTexte(t));
+            x.put("commande", Metier.avancementTexte(t));
             x.put("fatigue", t.fatigue);
-            x.put("sortie", t.sortieTexte() + (t.bureau == null ? "" : t.monLit() == null ? " · sans lit" : " · lit"));
+            x.put("statut", t.statut());
+            x.put("sortie", t.bureau == null ? "" : ((int) t.distanceAuBureau() + " blocs du bureau" + (t.sortieTexte().isEmpty() ? "" : ", " + t.sortieTexte())));
             pnj.add(x);
         }
         m.put("pnj", pnj);
@@ -176,77 +159,14 @@ public final class PanneauWeb {
         r.remove("jeton_panneau");
         m.put("reglages", r);
         m.put("joueurs", serveur.getPlayerList().getPlayers().stream().map(p -> p.getName().getString()).toList());
-        synchronized (Lua.class) { m.put("journal", new ArrayList<>(Lua.JOURNAL)); }
+        synchronized (Cerveau.class) { m.put("journal", new ArrayList<>(Cerveau.JOURNAL)); }
         return m;
-    }
-
-    static Map<String, Object> script(String id) throws IOException {
-        verifierId(id);
-        Path p = Reglages.dossierMetiers().resolve(id + ".lua");
-        if (!Files.exists(p)) return Map.of("erreur", "script introuvable");
-        return Map.of("id", id, "source", Files.readString(p, StandardCharsets.UTF_8));
     }
 
     // --- Écriture -----------------------------------------------------------------------------------
 
-    static void verifierId(String id) {
-        if (id == null || !id.matches("[a-z0-9_]{2,32}")) throw new IllegalArgumentException("identifiant invalide : lettres minuscules, chiffres et _ (2 à 32)");
-    }
-
-    /** Range l'ancienne version dans metiers/historique/ avant de la remplacer ou de la retirer. */
-    static void archiver(String id) throws IOException {
-        Path p = Reglages.dossierMetiers().resolve(id + ".lua");
-        if (!Files.exists(p)) return;
-        Path h = Reglages.dossier().resolve("historique");
-        Files.createDirectories(h);
-        Files.copy(p, h.resolve(id + "-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".lua"), StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    static Map<String, Object> enregistrer(String id, String source) {
-        verifierId(id);
-        String erreur = Lua.verifier(id, source);
-        if (erreur != null) return resultat(erreur);
-        try {
-            archiver(id);
-            Files.writeString(Reglages.dossierMetiers().resolve(id + ".lua"), source, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return resultat("écriture impossible : " + e.getMessage());
-        }
-        Lua.charger();
-        Lua.journal("Script " + id + ".lua enregistré depuis le panneau");
-        return resultat(null);
-    }
-
-    static Map<String, Object> supprimer(String id) {
-        verifierId(id);
-        if (id.equals("commun")) return resultat("le cerveau commun ne peut pas être retiré");
-        try {
-            archiver(id);
-            Files.deleteIfExists(Reglages.dossierMetiers().resolve(id + ".lua"));
-        } catch (IOException e) {
-            return resultat(e.getMessage());
-        }
-        Lua.charger();
-        Lua.journal("Métier " + id + " retiré (copie dans historique/)");
-        return resultat(null);
-    }
-
-    static Map<String, Object> defaut(String id) {
-        verifierId(id);
-        if (!Reglages.SCRIPTS_DE_BASE.contains(id)) return resultat("pas de version d'origine pour " + id);
-        try {
-            archiver(id);
-            Files.writeString(Reglages.dossierMetiers().resolve(id + ".lua"), Reglages.scriptDeBase(id), StandardCharsets.UTF_8);
-            Reglages.installerScriptsDeBase();
-        } catch (IOException e) {
-            return resultat(e.getMessage());
-        }
-        Lua.charger();
-        return resultat(null);
-    }
-
     static Map<String, Object> actif(String id, boolean actif) {
-        verifierId(id);
+        if (!Metier.existe(id)) return resultat("métier inconnu : " + id);
         Reglages.actuel.metiers_inactifs.remove(id);
         if (!actif) Reglages.actuel.metiers_inactifs.add(id);
         try { Reglages.sauver(); } catch (IOException e) { return resultat(e.getMessage()); }
@@ -256,6 +176,9 @@ public final class PanneauWeb {
     static Map<String, Object> reglages(JsonObject corps) {
         try {
             Reglages.remplacer(Reglages.GSON.fromJson(corps, Reglages.class));
+            // Un délai entre paies raccourci s'applique tout de suite (sinon la paie suivante resterait au lendemain).
+            long max = System.currentTimeMillis() + Travailleur.periodePaie();
+            for (Travailleur t : ColoniePnj.tous(serveur)) if (t.prochainePaie > max) t.prochainePaie = max;
         } catch (Exception e) {
             return resultat("réglages invalides : " + e.getMessage());
         }
@@ -264,7 +187,7 @@ public final class PanneauWeb {
 
     static Map<String, Object> apparaitre(JsonObject c) {
         String metier = chaine(c, "metier");
-        if (!Lua.metierExiste(metier)) return resultat("métier inconnu : " + metier);
+        if (!Metier.existe(metier)) return resultat("métier inconnu : " + metier);
         ServerPlayer p = serveur.getPlayerList().getPlayerByName(chaine(c, "joueur"));
         if (p == null) return resultat("ce joueur n'est pas connecté");
         ServerLevel l = p.serverLevel();
@@ -277,7 +200,7 @@ public final class PanneauWeb {
         if (!nom.isBlank()) { t.prenom = nom.trim(); t.majNom(); }
         t.setSkin(chaine(c, "skin"));
         l.addFreshEntity(t);
-        Lua.journal("Panneau : " + t.prenom + " (" + metier + ") apparaît près de " + p.getName().getString());
+        Cerveau.journal("Panneau : " + t.prenom + " (" + metier + ") apparaît près de " + p.getName().getString());
         return resultat(null);
     }
 
@@ -302,7 +225,7 @@ public final class PanneauWeb {
             case "nom" -> { t.prenom = chaine(c, "valeur").trim(); t.majNom(); }
             default -> { return resultat("action inconnue"); }
         }
-        Lua.journal("Panneau : " + chaine(c, "action") + " sur " + t.prenom);
+        Cerveau.journal("Panneau : " + chaine(c, "action") + " sur " + t.prenom);
         return resultat(null);
     }
 
@@ -311,16 +234,6 @@ public final class PanneauWeb {
     static String chaine(JsonObject o, String cle) {
         JsonElement e = o.get(cle);
         return e == null || e.isJsonNull() ? "" : e.getAsString();
-    }
-
-    static String requete(HttpExchange ex, String cle) {
-        String q = ex.getRequestURI().getQuery();
-        if (q == null) return "";
-        for (String p : q.split("&")) {
-            int i = p.indexOf('=');
-            if (i > 0 && p.substring(0, i).equals(cle)) return java.net.URLDecoder.decode(p.substring(i + 1), StandardCharsets.UTF_8);
-        }
-        return "";
     }
 
     static void ressource(HttpExchange ex, String chemin, String type) throws IOException {

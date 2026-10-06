@@ -249,7 +249,7 @@ public final class Client {
                     }).bounds(x0 + 10, y0 + 52 + i * 22, L - 20, 20).build());
                 }
                 addRenderableWidget(Button.builder(Component.literal("Caisse et dépôt"), b -> envoyer("stock", new CompoundTag())).bounds(x0 + 10, yb, 110, 20).build());
-                if (f.contains("absent"))
+                if (f.contains("absent") || f.contains("mort"))
                     addRenderableWidget(Button.builder(Component.literal("Libérer la place"), b -> envoyer("liberer", new CompoundTag())).bounds(x0 + 125, yb, 110, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x0 + L - 90, yb, 80, 20).build());
                 return;
@@ -266,7 +266,7 @@ public final class Client {
             // Expéditions : durée maximale, s'il a un lit
             addRenderableWidget(Button.builder(Component.literal("-"), b -> { jours = Math.max(1, jours - 1); majBoutons(); }).bounds(dcol + 84, y0 + 96, 14, 20).build());
             bJours = addRenderableWidget(Button.builder(Component.empty(), b -> {})
-                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Il travaille où il veut, tant qu'il rentre à temps dans son espace de vie (50 blocs autour du bureau). Sans lit, il rentre chaque soir. Avec un lit à 8 blocs du bureau au plus, il peut partir aussi loin qu'il veut et rester dehors jusqu'à ce nombre de jours.")))
+                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Il va où il faut pour remplir sa commande. Pour une sortie à la journée, il rentre le soir. Si c'est plus loin, il part de lui-même en expédition : il campe, se fatigue plus vite, et rentre au plus tard au bout de ce nombre de jours.")))
                     .bounds(dcol + 99, y0 + 96, 46, 20).build());
             addRenderableWidget(Button.builder(Component.literal("+"), b -> { jours = Math.min(30, jours + 1); majBoutons(); }).bounds(dcol + 146, y0 + 96, 14, 20).build());
             // Horaires
@@ -309,7 +309,8 @@ public final class Client {
             int or = 0xF2C14E, gris = 0xAAAAAA, blanc = 0xFFFFFF;
             texte(g, title.getString(), x0 + 10, y0 + 8, or);
             if (e == null) {
-                texte(g, f.contains("absent") ? f.getString("absent") + " était rattaché ici, mais il est introuvable." : "Aucun PNJ n'est rattaché à ce bureau.", x0 + 10, y0 + 24, blanc);
+                texte(g, f.contains("mort") ? f.getString("mort") + " est mort. Libère la place pour rattacher un autre PNJ."
+                        : f.contains("absent") ? f.getString("absent") + " a disparu : il est introuvable (autre dimension ?)." : "Aucun PNJ n'est rattaché à ce bureau.", x0 + 10, y0 + 24, f.contains("mort") ? 0xFF5555 : blanc);
                 texte(g, f.getList("libres", 10).isEmpty() ? "Tu n'as aucun PNJ libre : embauche-en un, ou libère-le de son bureau." : "Choisis le PNJ qui travaillera ici :", x0 + 10, y0 + 38, gris);
                 return;
             }
@@ -323,12 +324,13 @@ public final class Client {
             texte(g, e.getString("avancement"), g0, y0 + 120, gris);
             texte(g, "PAIE (en bronzes, à chaque paie)", g0, y0 + 138, or);
             texte(g, "Il demande " + e.getLong("salaireDemande"), g0 + 66, y0 + 154, gris);
-            texte(g, "SORTIES", dcol, y0 + 60, or);
-            boolean lit = !e.getString("lit").isEmpty();
-            texte(g, lit ? "Lit : " + e.getString("lit") : "Pas de lit : il rentre le soir", dcol, y0 + 72, lit ? blanc : 0xFF9966);
+            texte(g, "STATUT", dcol, y0 + 60, or);
+            String statut = e.getString("statut");
+            texte(g, statut, dcol, y0 + 72, statut.equals("En grève") || statut.equals("À terre") ? 0xFF5555 : statut.equals("En expédition") ? 0xF2C14E : blanc);
+            texte(g, " · " + e.getString("distance"), dcol + font.width(statut), y0 + 72, gris);
             texte(g, e.getString("sortie"), dcol, y0 + 84, gris);
             texte(g, "Expédition max", dcol, y0 + 102, gris);
-            texte(g, "Espace de vie : 50 blocs", dcol, y0 + 122, gris);
+            texte(g, e.getString("paie"), dcol, y0 + 122, gris);
             texte(g, "HORAIRES (heures du jeu)", dcol, y0 + 138, or);
             texte(g, "à", dcol + 74, y0 + 154, gris);
         }

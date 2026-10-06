@@ -53,7 +53,7 @@ public final class Reseau {
     }
 
     static void enregistrer(RegisterPayloadHandlersEvent e) {
-        var r = e.registrar("3"); // 2 : écran du bureau (0.2.0) ; 3 : sorties et expéditions (0.3.0)
+        var r = e.registrar("4"); // 2 : écran du bureau (0.2.0) ; 3 : sorties (0.3.0) ; 4 : statut au bureau, métiers en Java (0.4.0)
         r.playToClient(Fiche.TYPE, Fiche.CODEC, (p, ctx) -> Client.ouvrirFiche(p));
         r.playToClient(FicheBureau.TYPE, FicheBureau.CODEC, (p, ctx) -> Client.ouvrirBureau(p));
         r.playToServer(ActionBureau.TYPE, ActionBureau.CODEC, (p, ctx) -> {
