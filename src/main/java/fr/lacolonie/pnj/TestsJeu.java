@@ -391,7 +391,7 @@ public class TestsJeu {
         for (int k = 1; k <= 8; k++) for (int y = 4 + k; y <= 6 + k; y++) h.setBlock(20, y, 12 + k, Blocks.AIR); // l'escalier, vers le sud
         Travailleur t = ouvrier(h, "mineur", 4, 4, 12, ItemStack.EMPTY, new BlockPos(4, 13, 4)); // bureau au nord-ouest, au-dessus
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
-        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + etat(t, t.bureau) + ")"));
+        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + etat(t, t.bureau) + ", " + t.diag + ") " + String.join(" / ", Itineraire.diagnostic(t))));
     }
 
     /** Muré sous terre, sans aucune galerie : il creuse un escalier jusqu'à la surface, puis rejoint son bureau. */
@@ -447,6 +447,26 @@ public class TestsJeu {
         h.onEachTick(() -> { tour[0] += Math.abs(net.minecraft.util.Mth.wrapDegrees(t.getYRot() - tour[1])); tour[1] = t.getYRot(); });
         h.runAtTickTime(h.getTick() + 240, () -> {
             h.assertTrue(tour[0] < 360, "il tourne en rond (" + (int) tour[0] + "° en 12 s, " + etat(t, t.bureau) + ", " + t.diag + ")");
+            t.discard();
+            zombie.discard();
+            h.succeed();
+        });
+    }
+
+    /** Un zombie qu'il voit, perché sur un pilier qu'il ne peut pas escalader : il le laisse au lieu de tourner autour. */
+    @GameTest(template = "grand", timeoutTicks = 300, skyAccess = true)
+    public static void guerrierLaisseCibleInaccessible(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int y = 7; y <= 9; y++) h.setBlock(15, y, 12, Blocks.STONE);
+        var zombie = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 15, 10, 12);
+        zombie.setNoAi(true);
+        Travailleur t = ouvrier(h, "guerrier", 12, 7, 12, new ItemStack(Items.IRON_SWORD), new BlockPos(12, 7, 9));
+        t.mode = Travailleur.Mode.ATTENDRE;
+        float[] tour = {0, t.getYRot()};
+        h.onEachTick(() -> { tour[0] += Math.abs(net.minecraft.util.Mth.wrapDegrees(t.getYRot() - tour[1])); tour[1] = t.getYRot(); });
+        h.runAtTickTime(h.getTick() + 240, () -> {
+            h.assertTrue(tour[0] < 360, "il tourne autour (" + (int) tour[0] + "° en 12 s, " + etat(t, t.bureau) + ", " + t.diag + ")");
+            h.assertFalse(t.action instanceof Actions.Attaquer, "il doit avoir laissé ce zombie (" + etat(t, t.bureau) + ", " + t.diag + ")");
             t.discard();
             zombie.discard();
             h.succeed();

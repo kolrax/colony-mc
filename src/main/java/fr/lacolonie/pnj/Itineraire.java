@@ -113,12 +113,9 @@ final class Itineraire {
                     directRate = 0;
                 } else {
                     // Un chemin qui s'arrête en route, recalculé à chaque instant, le ferait hésiter et revenir sur ses pas
-                    // (Enguerrand le 6 octobre). De loin, il passe par des étapes sûres ; tout près (derrière un mur, au fond
-                    // d'un trou, en hauteur), c'est inaccessible : il ne tourne pas autour, l'action choisira autre chose.
+                    // (Enguerrand le 6 octobre) : il passe aux étapes, qui ne suivent que des chemins complets.
                     nav.stop();
-                    boolean pres = dh <= 8 && !sousTerre(t);
-                    directRate = pres ? directRate + 1 : 2;
-                    if (pres && directRate >= 2) { bloque = true; t.diag = "inaccessible"; }
+                    directRate = dh <= 8 ? directRate + 1 : 2; // tout près, il réessaie une fois
                 }
             }
             return;
@@ -170,6 +167,7 @@ final class Itineraire {
         record Candidat(BlockPos pos, double score) {}
         List<Candidat> candidats = new ArrayList<>();
         Set<BlockPos> vus = new HashSet<>();
+        boolean sousUnToit = !sousTerre(t) && !l.canSeeSky(ici.above()); // une maison, des arbres (sous terre, c'est la sortie qui compte)
         for (int ecart = 0; ecart <= 180; ecart += 20) {
             for (int signe : ecart == 0 || ecart == 180 ? new int[]{1} : new int[]{1, -1}) {
                 for (double r : new double[]{Math.min(28, Math.max(8, dh)), 14, 7}) {
@@ -177,7 +175,10 @@ final class Itineraire {
                     int x = (int) Math.floor(p.x + Math.cos(a) * r), z = (int) Math.floor(p.z + Math.sin(a) * r);
                     int y = Monde.surface(l, x, z);
                     if (y == Integer.MIN_VALUE) continue;
-                    if (Math.abs(y - p.y) > 12 && !sousTerre(t)) y = Math.max(y, ici.getY()); // falaise : on vise sa hauteur
+                    // Sous un toit (maison, grotte) : le sol de surface est au-dessus de lui, il vise un appui à sa hauteur.
+                    int h = sousUnToit && y > p.y + 3 ? appuiPres(l, x, z, ici.getY()) : Integer.MIN_VALUE;
+                    if (h != Integer.MIN_VALUE) y = h;
+                    else if (Math.abs(y - p.y) > 12 && !sousTerre(t)) y = Math.max(y, ici.getY()); // falaise : on vise sa hauteur
                     BlockPos q = new BlockPos(x, y, z);
                     if (!vus.add(q) || !Monde.debout(l, q)) continue;
                     double score = horizontale(Vec3.atBottomCenterOf(q), but) + 24 * visites.getOrDefault(cellule(q), 0)
@@ -193,7 +194,13 @@ final class Itineraire {
             if (essais >= 18) break;
             if (rates.stream().anyMatch(r -> r.distSqr(c.pos) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
             essais++;
-            if (aller(t, c.pos, Vec3.atBottomCenterOf(c.pos), v)) { echecs = 0; return; }
+            if (aller(t, c.pos, Vec3.atBottomCenterOf(c.pos), v)) {
+                // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
+                // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
+                if (dh <= 8 && !sousTerre(t)) { t.getNavigation().stop(); etape = null; bloque = true; t.diag = "inaccessible"; return; }
+                echecs = 0;
+                return;
+            }
             rates.add(c.pos);
         }
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
@@ -202,6 +209,12 @@ final class Itineraire {
         if (aCreuser != null) return;
         if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
         etape = null;
+    }
+
+    /** Un endroit où se tenir en (x, z), à quelques blocs de la hauteur y ; Integer.MIN_VALUE s'il n'y en a pas. */
+    static int appuiPres(Level l, int x, int z, int y) {
+        for (int dy : new int[]{0, 1, -1, 2, -2, 3, -3, -4}) if (Monde.debout(l, new BlockPos(x, y + dy, z))) return y + dy;
+        return Integer.MIN_VALUE;
     }
 
     /** Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. */
