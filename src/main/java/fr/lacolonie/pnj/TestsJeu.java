@@ -15,6 +15,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import java.util.List;
+
 /** Tests de jeu automatiques : ./gradlew runGameTestServer. Le cerveau et les métiers tournent pour de vrai. */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -484,14 +486,15 @@ public class TestsJeu {
                 l.setBlockAndUpdate(s.below(2), Blocks.WATER.defaultBlockState());
             }
         Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 26, 21000)), ItemStack.EMPTY);
-        boolean[] vu = new boolean[2];
-        h.onEachTick(() -> { if (t.isInWater()) vu[0] = true; if (t.isSprinting()) vu[1] = true; });
+        boolean[] vu = new boolean[3];
+        h.onEachTick(() -> { if (t.isInWater()) vu[0] = true; if (t.isSprinting()) vu[1] = true; if (t.getPose() == net.minecraft.world.entity.Pose.SWIMMING) vu[2] = true; });
         t.forcerChunk();
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bureau), 3));
         h.succeedWhen(() -> {
             h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 16, "il doit être arrivé au bureau (" + etat(t, bureau) + ", " + t.diag + ")");
             h.assertTrue(vu[0], "il devait traverser à la nage");
             h.assertTrue(vu[1], "il devait courir");
+            h.assertTrue(vu[2], "il devait nager allongé, comme un joueur");
             t.discard();
         });
     }
@@ -541,6 +544,150 @@ public class TestsJeu {
             h.assertTrue(t.getBlockY() <= plusBas[0] + 2, "il est remonté (y=" + t.getBlockY() + " après " + plusBas[0] + ", mémoire " + t.memoire + ")");
         });
         h.succeedWhen(() -> h.assertTrue(t.getBlockY() <= but, "il doit être descendu (y=" + t.getBlockY() + ", attendu <= " + but + ", " + etat(t, t.bureau) + ")"));
+    }
+
+    // --- 0.5.0 : poste commun, missions, courrier, corbeau, conversation ---------------------------------------
+
+    /** Un chef avec un poste : ses ouvriers s'y rattachent seuls, et il ne peut pas en poser un deuxième. */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void unSeulPosteParJoueur(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        var chef = h.makeMockServerPlayerInLevel();
+        BlockPos poste = h.absolutePos(new BlockPos(1, 2, 1));
+        h.getLevel().setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
+        ((Bureau.Entite) h.getLevel().getBlockEntity(poste)).proprietaire = chef.getUUID();
+        Courrier.de(h.getLevel().getServer()).definirPoste(chef.getUUID(), h.getLevel(), poste);
+        Travailleur a = ouvrier(h, "mineur", 5, 2, 5, ItemStack.EMPTY), b = ouvrier(h, "bucheron", 6, 2, 6, ItemStack.EMPTY);
+        for (Travailleur t : List.of(a, b)) { t.chef = chef.getUUID(); t.bureau = null; }
+        var clic = new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(poste.east(4)), Direction.UP, poste.east(4).below(), false);
+        var ctx = new net.minecraft.world.item.context.BlockPlaceContext(chef, net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ColoniePnj.BUREAU_OBJET.get()), clic);
+        h.assertTrue(ColoniePnj.BUREAU.get().getStateForPlacement(ctx) == null, "un deuxième poste doit être refusé");
+        h.succeedWhen(() -> {
+            h.assertTrue(poste.equals(a.bureau) && poste.equals(b.bureau), "ses ouvriers doivent se rattacher au poste (" + a.bureau + ", " + b.bureau + ")");
+            a.discard();
+            b.discard();
+        });
+    }
+
+    /** Ses missions, dans l'ordre : chaque quantité livrée est retirée, et il prévient son chef (une lettre, le chef n'étant pas là). */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void missionsALaSuite(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 2, new ItemStack(Items.IRON_PICKAXE));
+        t.missions.add(new Travailleur.Mission("pierre", "quantite", 5));
+        t.missions.add(new Travailleur.Mission("charbon", "quantite", 3));
+        t.missions.add(new Travailleur.Mission("fer", "stock", 16));
+        h.assertTrue(t.missionActive().id.equals("pierre"), "il commence par la première");
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 5));
+        t.inventaire.addItem(new ItemStack(Items.COAL, 3));
+        Cerveau.lancer(t, new Actions.Deposer(List.of()));
+        h.succeedWhen(() -> {
+            h.assertTrue(t.missions.size() == 1 && t.missions.get(0).id.equals("fer"), "il ne doit rester que le stock de fer (" + t.missions.size() + ")");
+            h.assertTrue(Courrier.de(h.getLevel().getServer()).boite(t.chef).stream().anyMatch(l -> l.objet.equals("Mission terminée"))
+                    || !t.lettresADeposer.isEmpty(), "il doit écrire qu'il a fini");
+            t.discard();
+        });
+    }
+
+    /** Près du poste, il apporte sa lettre à pied, une lettre à la main, et la pose au poste. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void lettreApporteeAPied(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 27000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 20, 27000)), ItemStack.EMPTY);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(t.chef, h.getLevel(), bureau);
+        t.forcerChunk();
+        Courrier.ecrire(t, "torches");
+        h.assertTrue(t.lettresADeposer.size() == 1, "près du poste, il doit garder la lettre pour l'apporter");
+        h.succeedWhen(() -> {
+            h.assertTrue(t.lettresADeposer.isEmpty() && c.boite(t.chef).stream().anyMatch(l -> l.objet.equals("Plus de torches")),
+                    "la lettre doit être au poste (" + etat(t, bureau) + ")");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 25, "il doit l'avoir apportée lui-même");
+            t.discard();
+        });
+    }
+
+    /** Au loin, il envoie un corbeau : la lettre arrive au poste au bout du temps de vol (15 blocs par seconde). */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void lettreParCorbeau(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 30000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 300, 30000)), ItemStack.EMPTY);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(t.chef, h.getLevel(), bureau);
+        t.forcerChunk();
+        Courrier.ecrire(t, "faim");
+        h.assertTrue(t.lettresADeposer.isEmpty() && c.vols.stream().anyMatch(v -> v.lettre.objet.equals("J'ai faim")), "un corbeau doit être parti");
+        long depart = h.getLevel().getGameTime();
+        h.succeedWhen(() -> {
+            h.assertTrue(c.boite(t.chef).stream().anyMatch(l -> l.objet.equals("J'ai faim")), "la lettre doit arriver au poste");
+            h.assertTrue(h.getLevel().getGameTime() - depart >= 300 / Courrier.VITESSE_CORBEAU * 20 - 25, "pas avant la fin du vol");
+            t.discard();
+        });
+    }
+
+    /** Le chef écrit « Rentre au poste » à un ouvrier au loin : un corbeau la lui porte, il la lit, rentre et répond. */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void ordreParLettre(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 33000);
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(sol(h, 150, 33000)), ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(t.chef, h.getLevel(), bureau);
+        t.mode = Travailleur.Mode.ATTENDRE; // il attend là-bas, jusqu'à la lettre
+        t.forcerChunk();
+        Courrier.ecrireAuPnj(chef, t, "Rentre au poste, s'il te plaît. Et ramène-moi 10 bûches de bouleau.");
+        h.succeedWhen(() -> {
+            h.assertTrue(t.missions.stream().anyMatch(m -> m.id.equals("bouleau") && m.nombre == 10), "il doit avoir compris sa mission (" + t.missions.size() + ")");
+            h.assertTrue(c.boite(t.chef).stream().anyMatch(l -> l.objet.equals("Des nouvelles")) || c.vols.stream().anyMatch(v -> v.lettre.objet.equals("Des nouvelles")),
+                    "il doit avoir répondu");
+            h.assertTrue(t.chezLui(t.blockPosition()), "il doit être rentré (" + etat(t, bureau) + ")");
+            t.discard();
+        });
+    }
+
+    /** On lui parle : il obéit et répond (sans boutons). */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void conversation(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        var chef = h.makeMockServerPlayerInLevel();
+        Vec3 p = h.absoluteVec(new Vec3(4.5, 2, 4.5));
+        chef.moveTo(p.x, p.y, p.z);
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        t.parler(chef, "Suis-moi !");
+        h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, "suis-moi");
+        t.parler(chef, "Arrête de me suivre");
+        h.assertTrue(t.mode == Travailleur.Mode.TRAVAIL, "arrête de me suivre");
+        t.parler(chef, "Ramène 10 fers et 1 diamant");
+        h.assertTrue(t.missions.size() == 2 && t.missions.get(0).id.equals("fer") && t.missions.get(0).nombre == 10 && t.missions.get(1).id.equals("diamant"), "missions");
+        t.parler(chef, "Travaille de 8 h à 20 h");
+        h.assertTrue(t.debut == 8 && t.fin == 20, "horaires");
+        t.parler(chef, "Tu es viré");
+        h.assertTrue(t.chef != null, "il doit d'abord demander confirmation");
+        t.parler(chef, "oui");
+        h.assertTrue(t.chef == null && t.mode == Travailleur.Mode.CHOMEUR, "renvoyé après confirmation");
+        t.discard();
+        h.succeed();
+    }
+
+    /** Un corbeau qu'on peut voir : il arrive au poste, s'y pose, laisse la lettre et repart. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void corbeauSePoseAuPoste(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        var chef = h.makeMockServerPlayerInLevel(); // un témoin
+        BlockPos poste = h.absolutePos(new BlockPos(4, 2, 4));
+        h.getLevel().setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(chef.getUUID(), h.getLevel(), poste);
+        Courrier.Lettre l = c.nouvelle("Aliénor", null, chef.getUUID(), "Essai", "Bonjour chef.", h.getLevel());
+        c.envoyerCorbeau(h.getLevel(), poste.east(40), chef.getUUID(), l, true);
+        boolean[] vu = {false};
+        h.onEachTick(() -> { if (!h.getLevel().getEntitiesOfClass(Corbeau.class, new net.minecraft.world.phys.AABB(poste).inflate(64)).isEmpty()) vu[0] = true; });
+        h.succeedWhen(() -> {
+            h.assertTrue(vu[0], "on doit voir le corbeau");
+            h.assertTrue(c.boite(chef.getUUID()).stream().anyMatch(x -> x.objet.equals("Essai")), "la lettre doit être livrée");
+        });
     }
 
     /** Ce que le bureau montre de lui : au travail, se repose, distance. */

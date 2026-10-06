@@ -161,7 +161,7 @@ public class Travailleur extends PathfinderMob {
             if (m.quantite() && m.livre >= m.nombre) {
                 it.remove();
                 Mission suivante = missionActive();
-                Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom,
+                Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom.toLowerCase(),
                         suivante == null ? "" : Metier.nomMission(metier, suivante));
             }
         }
@@ -484,6 +484,10 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 200 == 0) c.inscrire(this);
         Courrier.Poste p = c.poste(chef);
         if (p != null && p.monde() == level().dimension() && !p.pos().equals(bureau)) { bureau = p.pos(); lit = null; }
+        if (!lettresADeposer.isEmpty() && bureau != null && distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(bureau)) < 16) {
+            swing(InteractionHand.OFF_HAND); // au poste, quoi qu'il fasse : il y pose ses lettres
+            Courrier.deposer(this);
+        }
         if (!lettresADeposer.isEmpty() && (bureau == null || !chezLui(blockPosition()))) {
             for (Courrier.Lettre l : lettresADeposer) c.envoyerCorbeau(level(), blockPosition(), chef, l, true);
             lettresADeposer.clear();

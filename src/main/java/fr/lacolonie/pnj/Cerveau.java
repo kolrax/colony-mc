@@ -83,8 +83,9 @@ final class Cerveau {
         boolean dehors = t.bureau != null && !t.chezLui(t.blockPosition());
 
         // Le courrier : lire au poste les lettres de son chef, y poser les siennes.
-        if (!dehors && t.bureau != null && !t.lettresALire.isEmpty()) { lancer(t, new Actions.LireLettres()); return; }
-        if (!dehors && t.bureau != null && !t.lettresADeposer.isEmpty() && t.mode != Travailleur.Mode.SUIVRE) { lancer(t, new Actions.PorterLettres()); return; }
+        boolean libre = t.mode == Travailleur.Mode.TRAVAIL && t.bureau != null && !dehors; // pas s'il te suit ou t'attend
+        if (libre && !t.lettresALire.isEmpty()) { lancer(t, new Actions.LireLettres()); return; }
+        if (libre && !t.lettresADeposer.isEmpty()) { lancer(t, new Actions.PorterLettres()); return; }
 
         // La paie : il va la chercher à la caisse du poste (parti loin, à son retour).
         if (t.paieDue() && !dehors) { lancer(t, new Actions.ToucherPaie()); return; }
