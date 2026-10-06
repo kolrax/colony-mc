@@ -387,6 +387,16 @@ public class TestsJeu {
         h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit avoir creusé jusqu'au bureau (" + etat(t, t.bureau) + ")"));
     }
 
+    /** Au fond d'un puits à ciel ouvert de 3 blocs (trop haut pour sauter) : il creuse des marches pour en sortir. */
+    @GameTest(template = "grand", timeoutTicks = 2000)
+    public static void sortDuPuits(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int y = 4; y <= 6; y++) h.setBlock(12, y, 12, Blocks.AIR);
+        Travailleur t = ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 7, 3));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti du puits (" + etat(t, t.bureau) + ", " + t.diag + ")"));
+    }
+
     /** Son chef frappe un villageois : le guerrier ne s'en mêle pas (il ne tue que les monstres et les agresseurs). */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void guerrierEpargneVillageois(GameTestHelper h) {

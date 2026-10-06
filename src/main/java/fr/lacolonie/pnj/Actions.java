@@ -125,6 +125,7 @@ public final class Actions {
             if (cap.lengthSqr() > 1 && t.level() instanceof net.minecraft.server.level.ServerLevel sl
                     && !sl.isPositionEntityTicking(BlockPos.containing(p.add(cap.normalize().scale(5))))) {
                 t.getNavigation().stop();
+                t.diag = "attend que le terrain soit prêt";
                 sansProgres++; // au bout de 2 minutes d'attente, il se dira coincé
                 immobile = 0;
                 dernier = null;

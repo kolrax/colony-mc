@@ -207,7 +207,7 @@ function rendre() {
       el("td", { text: nom + " " + "★".repeat(p.niveau) }),
       el("td", { text: p.chef || "—" }),
       el("td", {}, el("span", { class: "pill " + cls, text: lib })),
-      el("td", { class: "sub", text: (p.action || "—") + (p.resultat && p.resultat !== "ok" ? " (" + p.resultat + ")" : "") }),
+      el("td", { class: "sub", text: (p.action || "—") + (p.resultat && p.resultat !== "ok" ? " (" + p.resultat + ")" : "") + (p.route ? " · " + p.route : "") }),
       el("td", { class: "num", text: p.vie }),
       el("td", { class: "num", text: p.faim }),
       el("td", { class: "num", text: p.impayes }),

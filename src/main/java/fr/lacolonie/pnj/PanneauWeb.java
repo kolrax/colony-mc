@@ -151,6 +151,7 @@ public final class PanneauWeb {
             x.put("commande", Metier.avancementTexte(t));
             x.put("fatigue", t.fatigue);
             x.put("statut", t.statut());
+            x.put("route", t.action == null ? "" : t.diag);
             x.put("sortie", t.bureau == null ? "" : ((int) t.distanceAuBureau() + " blocs du bureau" + (t.sortieTexte().isEmpty() ? "" : ", " + t.sortieTexte())));
             pnj.add(x);
         }

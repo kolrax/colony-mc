@@ -43,7 +43,8 @@ final class Itineraire {
     private int indexSortie;
     private BlockPos aCreuser;
     private float progres;
-    private int directRate, echecs;
+    private int directRate, echecs, sortieAvance;
+    private boolean sortieRatee;
     boolean bloque;
 
     Itineraire(Travailleur t, Vec3 but) {
@@ -68,11 +69,12 @@ final class Itineraire {
         double v = vitesse;
         t.setSprinting(courir);
 
-        if (aCreuser != null) { creuser(t); return; }
-        if (sortie != null) { suivreSortie(t, v, age); return; }
+        if (aCreuser != null) { t.diag = "creuse " + aCreuser.toShortString(); creuser(t); return; }
+        if (sortie != null) { t.diag = "sort de sous terre " + indexSortie + "/" + sortie.size(); suivreSortie(t, v, age); return; }
 
         // De près : le chemin direct, tant qu'il mène bien au but.
         if (dh <= 40 && dv <= 20 && directRate < 4) {
+            t.diag = "chemin direct";
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
             if (age % 20 == 0 || nav.isDone()) {
                 if (!t.onGround() && !t.isInWater()) return;
@@ -119,8 +121,9 @@ final class Itineraire {
 
         // c) Sous terre : d'abord sortir à l'air libre.
         if (sousTerre(t) && (dh > 24 || but.y > p.y + 6)) {
-            sortie = versLeCiel(l, ici, 6000);
+            sortie = sortieRatee ? null : versLeCiel(l, ici, 6000);
             indexSortie = 0;
+            sortieAvance = 0;
             if (sortie != null) return;
             commencerCreusage(t);
             if (aCreuser != null) return;
@@ -153,9 +156,11 @@ final class Itineraire {
             if (++essais > 10) break;
             if (aller(t, c.pos, Vec3.atBottomCenterOf(c.pos), v)) { echecs = 0; return; }
         }
-        // Rien d'atteignable : sous terre, il creuse ; sinon, après plusieurs essais, il se dit coincé.
-        if (sousTerre(t)) { commencerCreusage(t); if (aCreuser != null) return; }
-        if (++echecs >= 3) bloque = true;
+        // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
+        // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
+        commencerCreusage(t);
+        if (aCreuser != null) return;
+        if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
         etape = null;
     }
 
@@ -165,6 +170,7 @@ final class Itineraire {
         if (c == null || !c.canReach()) return false;
         chemin = c;
         etape = cible;
+        t.diag = "étape " + q.getX() + " " + q.getZ() + " (but à " + (int) horizontale(t.position(), but) + " blocs)";
         t.getNavigation().moveTo(c, v);
         return true;
     }
@@ -219,10 +225,12 @@ final class Itineraire {
 
     private void suivreSortie(Travailleur t, double v, int age) {
         if (indexSortie >= sortie.size()) { sortie = null; etape = null; return; }
+        // La route trouvée ne se laisse pas suivre (saut impossible, passage trop étroit…) : il creusera plutôt.
+        if (++sortieAvance > 300) { sortie = null; sortieRatee = true; etape = null; return; }
         int cible = Math.min(sortie.size() - 1, indexSortie + 5);
         BlockPos q = sortie.get(cible);
         Vec3 c = Vec3.atBottomCenterOf(q);
-        if (t.position().distanceToSqr(c) < 2.25) { indexSortie = cible + 1; return; }
+        if (t.position().distanceToSqr(c) < 2.25) { indexSortie = cible + 1; sortieAvance = 0; return; }
         if (age % 20 == 0 || t.getNavigation().isDone()) {
             Path ch = t.getNavigation().createPath(q, 0);
             if (ch != null) t.getNavigation().moveTo(ch, v);

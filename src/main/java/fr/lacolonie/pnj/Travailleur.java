@@ -127,6 +127,8 @@ public class Travailleur extends PathfinderMob {
     public String resultat = "";
     /** Sa mémoire de travail (où en est sa mine, les coins qu'il connaît…), sauvegardée avec lui. */
     public CompoundTag memoire = new CompoundTag();
+    /** Où en est son trajet (pour le panneau) : chemin direct, étape, sort de sous terre, creuse, attend le terrain, coincé. */
+    public String diag = "";
     int pauseCerveau;
     ChunkPos chunkForce;
 
