@@ -233,7 +233,7 @@ function rendre() {
       el("td", { class: "num", text: p.vie }),
       el("td", { class: "num", text: p.faim }),
       el("td", { class: "num", text: p.impayes }),
-      el("td", { class: "sub", text: (p.bureau ? p.bureau + " · " : "sans bureau · ") + (p.commande || "") }),
+      el("td", { class: "sub", text: (p.bureau ? p.bureau + " · " : "sans bureau · ") + (p.commande || "") + (p.sortie ? " · " + p.sortie : "") }),
       el("td", { class: "num", text: p.fatigue }),
       el("td", { text: p.besoin || "" }),
       el("td", { class: "num", text: p.position + (p.dimension !== "minecraft:overworld" ? " " + p.dimension : "") }),
@@ -287,7 +287,7 @@ async function ouvrir(id) {
   $("#ed-msg").textContent = m.erreur ? "Erreur au chargement : " + m.erreur : "Modifie, vérifie, puis enregistre. Les PNJ prennent le nouveau comportement aussitôt.";
   rendre();
 }
-const MODELE = id => `-- Métier : ${id}\n-- Voir l'onglet « Guide du scripteur » pour toutes les commandes du PNJ.\nlocal M = {\n  nom = "${id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g, " ")}",\n  description = "Ce que fait ce métier, en une phrase.",\n  garder = { "nourriture" },\n}\n\nfunction M.travailler(pnj, commun)\n  local lx, ly, lz = pnj.lieu()\n  if not lx then return pnj.attendre(5) end\n  -- Décider, lancer UNE action, et return.\n  return pnj.attendre(10)\nend\n\nreturn M\n`;
+const MODELE = id => `-- Métier : ${id}\n-- Voir l'onglet « Guide du scripteur » pour toutes les commandes du PNJ.\nlocal M = {\n  nom = "${id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g, " ")}",\n  description = "Ce que fait ce métier, en une phrase.",\n  garder = { "nourriture" },\n}\n\nfunction M.travailler(pnj, commun)\n  -- Décider, lancer UNE action, et return.\n  -- Il va où il veut : pnj.peutAller(x, y, z) dit s'il pourra rentrer à temps.\n  return pnj.attendre(10)\nend\n\nreturn M\n`;
 $("#nouveau").addEventListener("click", () => {
   const id = (prompt("Identifiant du nouveau métier (minuscules, chiffres, _) :", "") || "").trim();
   if (!id) return;

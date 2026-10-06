@@ -22,7 +22,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -102,8 +101,9 @@ public final class Actions {
         public final String nom;
         public int age;
         public String raison = "";
-        private Vec3 dernier;
-        private int immobile;
+        private Vec3 dernier, etape;
+        private int immobile, sansProgres, detour;
+        private double meilleure = Double.MAX_VALUE;
 
         Action(String nom) { this.nom = nom; }
 
@@ -111,23 +111,46 @@ public final class Actions {
 
         void fin(Travailleur t) { t.getNavigation().stop(); }
 
-        /** Marche vers la cible, en relançant le chemin régulièrement ; repère quand il est coincé. */
+        /**
+         * Marche vers la cible, à n'importe quelle distance, en relançant le chemin régulièrement. Minecraft ne trace
+         * pas de chemin au-delà de 64 blocs : de loin, à l'air libre, il avance par étapes d'une trentaine de blocs.
+         * S'il ne se rapproche plus, il tente un détour d'un côté, puis de l'autre.
+         */
         void marcher(Travailleur t, Vec3 cible, double vitesse) {
+            Vec3 p = t.position();
+            double d = p.distanceTo(cible);
+            if (d < meilleure - 2) { meilleure = d; sansProgres = 0; if (detour != 0) { detour = 0; etape = null; } }
+            else if (++sansProgres % 300 == 0) { detour = detour == 0 ? (t.getRandom().nextBoolean() ? 1 : -1) : -detour; etape = null; }
+            double dx = cible.x - p.x, dz = cible.z - p.z, dh = Math.sqrt(dx * dx + dz * dz);
+            Vec3 but = cible;
+            boolean dehors = t.getY() >= t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, t.getBlockX(), t.getBlockZ()) - 3;
+            if (dehors && (dh > 48 || detour != 0 && dh > 8)) {
+                if (etape == null || p.distanceToSqr(etape) < 16 || age % 100 == 0)
+                    etape = etape(t, Math.atan2(dz, dx) + detour * Math.toRadians(70), Math.min(32, dh));
+                but = etape;
+            } else etape = null;
             // La navigation de Minecraft se dit « arrivée » à un bloc près : pour le dernier pas, on marche droit sur la cible.
-            if (t.position().distanceToSqr(cible) < 2.25 && t.getNavigation().isDone())
-                t.getMoveControl().setWantedPosition(cible.x, cible.y, cible.z, vitesse);
+            if (p.distanceToSqr(but) < 2.25 && t.getNavigation().isDone())
+                t.getMoveControl().setWantedPosition(but.x, but.y, but.z, vitesse);
             else if (age % 20 == 0 || t.getNavigation().isDone()) {
-                var chemin = t.getNavigation().createPath(BlockPos.containing(cible), 0);
+                var chemin = t.getNavigation().createPath(BlockPos.containing(but), 0);
                 if (chemin != null) t.getNavigation().moveTo(chemin, vitesse);
             }
             if (age % 40 == 0) {
-                Vec3 p = t.position();
                 immobile = dernier != null && dernier.distanceToSqr(p) < 0.25 ? immobile + 40 : 0;
                 dernier = p;
             }
         }
 
-        boolean coince() { return immobile >= 200; }
+        /** Un point à {@code pas} blocs de lui dans cette direction, au niveau du sol si le coin est chargé. */
+        static Vec3 etape(Travailleur t, double angle, double pas) {
+            int x = (int) Math.floor(t.getX() + Math.cos(angle) * pas), z = (int) Math.floor(t.getZ() + Math.sin(angle) * pas);
+            int y = t.level().hasChunkAt(x, z) ? t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) : t.getBlockY();
+            return new Vec3(x + 0.5, y, z + 0.5);
+        }
+
+        /** Coincé : immobile depuis 10 s, ou sans se rapprocher depuis une minute malgré les détours. */
+        boolean coince() { return immobile >= 200 || sansProgres >= 1200; }
 
         Etat echec(String r) { raison = r; return Etat.ECHEC; }
     }
@@ -162,15 +185,23 @@ public final class Actions {
     // --- Déplacements -----------------------------------------------------------------------------
 
     static final class Aller extends Action {
-        final Vec3 cible;
+        Vec3 cible;
         final double portee;
+        /** La cible est au niveau du sol, qu'on ne connaît qu'une fois le coin chargé (exploration au loin). */
+        final boolean auSol;
 
-        Aller(Vec3 cible, double portee) { super("aller"); this.cible = cible; this.portee = Math.max(0.8, portee); }
+        Aller(Vec3 cible, double portee) { this(cible, portee, false); }
+
+        Aller(Vec3 cible, double portee, boolean auSol) { super("aller"); this.cible = cible; this.portee = Math.max(0.8, portee); this.auSol = auSol; }
 
         Etat tick(Travailleur t) {
+            if (auSol && age % 20 == 0) {
+                int x = (int) Math.floor(cible.x), z = (int) Math.floor(cible.z);
+                if (t.level().hasChunkAt(x, z)) cible = new Vec3(cible.x, t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), cible.z);
+            }
             if (t.position().distanceToSqr(cible) <= portee * portee) return Etat.OK;
             if (coince()) return echec("bloque");
-            if (age > 20 * 90) return echec("trop_loin");
+            if (age > 20 * 60 * 15) return echec("trop_loin");
             marcher(t, cible, 1.0);
             return Etat.EN_COURS;
         }
@@ -415,7 +446,7 @@ public final class Actions {
             if (bureau == null) bureau = Bureau.trouver(t);
             if (bureau == null) { raison = "pas_de_bureau"; return null; }
             if (t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 3.2 * 3.2) {
-                if (coince() || age > 20 * 120) raison = "bureau_inaccessible";
+                if (coince()) raison = "bureau_inaccessible";
                 marcher(t, Vec3.atBottomCenterOf(bureau), 1.0);
                 return null;
             }
@@ -538,7 +569,7 @@ public final class Actions {
         }
     }
 
-    /** Va se reposer : dans un lit libre à moins de 8 blocs de son bureau (il s'y couche), sinon à côté du bureau. */
+    /** Va se reposer chez lui, dans son lit (sinon à côté du bureau) ; loin de chez lui avec un lit, en expédition, il campe sur place. */
     static final class Reposer extends Action {
         BlockPos lit, but;
 
@@ -547,27 +578,18 @@ public final class Actions {
         Etat tick(Travailleur t) {
             if (but == null) {
                 if (t.isSleeping()) return age >= 600 ? Etat.OK : Etat.EN_COURS;
-                lit = t.bureau == null ? null : litLibre(t, t.bureau);
-                but = lit != null ? lit : t.bureau != null ? t.bureau : t.blockPosition();
+                boolean camp = t.bureau == null || !t.chezLui(t.blockPosition()) && t.monLit() != null;
+                lit = camp ? null : t.monLit();
+                but = camp ? t.blockPosition() : lit != null ? lit : t.bureau;
             }
             if (!t.isSleeping() && t.position().distanceToSqr(Vec3.atBottomCenterOf(but)) > 2.5 * 2.5) {
-                if (coince() || age > 20 * 90) { but = t.blockPosition(); lit = null; }
+                if (coince()) { but = t.blockPosition(); lit = null; }
                 else { marcher(t, Vec3.atBottomCenterOf(but), 1.0); return Etat.EN_COURS; }
             }
             t.getNavigation().stop();
             if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock
                     && !t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
             return age >= 600 ? Etat.OK : Etat.EN_COURS; // il refait le point toutes les 30 s
-        }
-
-        static BlockPos litLibre(Travailleur t, BlockPos autour) {
-            for (BlockPos p : BlockPos.betweenClosed(autour.offset(-8, -3, -8), autour.offset(8, 3, 8))) {
-                if (!t.level().isLoaded(p)) continue;
-                BlockState st = t.level().getBlockState(p);
-                if (st.getBlock() instanceof BedBlock && st.getValue(BedBlock.PART) == BedPart.HEAD && !st.getValue(BedBlock.OCCUPIED))
-                    return p.immutable();
-            }
-            return null;
         }
     }
 

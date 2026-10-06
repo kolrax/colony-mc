@@ -264,18 +264,26 @@ public final class Lua {
         f(p, "temperament", a -> v(t.temperament));
         f(p, "mode", a -> v(t.mode.lua));
         f(p, "position", a -> pos(t.blockPosition()));
-        f(p, "lieu", a -> t.centreZone() == null ? LuaValue.NIL : pos(t.centreZone()));
-        f(p, "zone", a -> {
-            BlockPos c = t.centreZone();
-            return c == null ? LuaValue.NIL : LuaValue.varargsOf(new LuaValue[]{LuaValue.valueOf(c.getX()), LuaValue.valueOf(c.getY()), LuaValue.valueOf(c.getZ()), LuaValue.valueOf(t.rayon)});
+        // Où il vit, jusqu'où il peut aller
+        f(p, "espaceDeVie", a -> t.bureau == null ? LuaValue.NIL : LuaValue.varargsOf(new LuaValue[]{LuaValue.valueOf(t.bureau.getX()),
+                LuaValue.valueOf(t.bureau.getY()), LuaValue.valueOf(t.bureau.getZ()), LuaValue.valueOf(Travailleur.ESPACE_DE_VIE)}));
+        f(p, "chezLui", a -> LuaValue.valueOf(t.chezLui(a.isnumber(1) ? bp(a, 1) : t.blockPosition())));
+        f(p, "lit", a -> { BlockPos l = t.monLit(); return l == null ? LuaValue.NIL : pos(l); });
+        f(p, "sortie", a -> {
+            LuaTable s = new LuaTable();
+            s.set("dehors", LuaValue.valueOf(t.bureau != null && !t.chezLui(t.blockPosition())));
+            s.set("depuis", t.sortieDepuis < 0 ? 0 : (t.level().getGameTime() - t.sortieDepuis) / 1000.0);
+            s.set("reste", t.heuresRestantes());
+            if (t.bureau != null) {
+                double dx = t.getX() - t.bureau.getX(), dz = t.getZ() - t.bureau.getZ();
+                s.set("distance", Math.sqrt(dx * dx + dz * dz));
+                s.set("retour", Travailleur.heuresDeMarche(t.blockPosition(), t.bureau));
+            }
+            return s;
         });
-        f(p, "dansZone", a -> {
-            BlockPos c = t.centreZone();
-            if (c == null) return LuaValue.FALSE;
-            BlockPos b = bp(a, 1);
-            double dx = b.getX() - c.getX(), dz = b.getZ() - c.getZ();
-            return LuaValue.valueOf(dx * dx + dz * dz <= (double) t.rayon * t.rayon);
-        });
+        f(p, "peutAller", a -> LuaValue.valueOf(t.peutAller(bp(a, 1))));
+        f(p, "doitRentrer", a -> LuaValue.valueOf(t.doitRentrer()));
+        f(p, "porteeMax", a -> LuaValue.valueOf(t.porteeMax()));
         f(p, "enService", a -> LuaValue.valueOf(t.enService()));
         f(p, "horaires", a -> LuaValue.varargsOf(LuaValue.valueOf(t.debut), LuaValue.valueOf(t.fin)));
         f(p, "fatigue", a -> LuaValue.valueOf(t.fatigue));
@@ -304,10 +312,10 @@ public final class Lua {
         });
         f(p, "seReposer", a -> lancer(t, new Actions.Reposer()));
         f(p, "solNaturel", a -> {
-            BlockPos s = solNaturel(t, Math.clamp(a.optint(1, 24), 4, Math.max(4, t.rayon)));
+            BlockPos c = a.arg(2).istable() ? centre(t, a.arg(2)) : t.bureau;
+            BlockPos s = c == null ? null : solNaturel(t, c, Math.clamp(a.optint(1, 24), 8, 128));
             return s == null ? LuaValue.NIL : pos(s);
         });
-        f(p, "direction", a -> LuaValue.varargsOf(LuaValue.valueOf(t.direction.getStepX()), LuaValue.valueOf(t.direction.getStepZ())));
         f(p, "vie", a -> LuaValue.varargsOf(LuaValue.valueOf(t.getHealth()), LuaValue.valueOf(t.getMaxHealth())));
         f(p, "faim", a -> LuaValue.valueOf(t.faim));
         f(p, "occupe", a -> LuaValue.valueOf(t.action != null));
@@ -415,6 +423,8 @@ public final class Lua {
 
         // Les actions (elles durent : le script reprend la main quand pnj.occupe() redevient faux)
         f(p, "aller", a -> lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bp(a, 1)), a.optdouble(4, 1.5))));
+        f(p, "allerVers", a -> lancer(t, new Actions.Aller(new Vec3(a.checkint(1) + 0.5, t.getY(), a.checkint(2) + 0.5), a.optdouble(3, 4), true)));
+        f(p, "rentrer", a -> t.bureau == null ? LuaValue.FALSE : lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3)));
         f(p, "casser", a -> lancer(t, new Actions.Casser(bp(a, 1))));
         f(p, "abattre", a -> lancer(t, new Actions.Abattre(bp(a, 1))));
         f(p, "poser", a -> lancer(t, new Actions.Poser(bp(a, 1), filtre(a, 4))));
@@ -451,16 +461,15 @@ public final class Lua {
     }
 
     /**
-     * Un endroit de sa zone où creuser sans abîmer de construction : sol naturel (terre, sable, pierre…)
-     * à ciel ouvert, et aucun bloc « de joueur » (planches, vitres, portes, dalles, coffres…) à 5 blocs autour.
+     * Un endroit où creuser sans abîmer de construction, le plus près possible du centre : sol naturel (terre,
+     * sable, pierre…) à ciel ouvert, et aucun bloc « de joueur » (planches, vitres, portes, dalles, coffres…) à 5 blocs autour.
      */
-    static BlockPos solNaturel(Travailleur t, int rayon) {
-        BlockPos c = t.centreZone();
-        if (c == null) return null;
+    static BlockPos solNaturel(Travailleur t, BlockPos c, int rayon) {
         var lvl = t.level();
         var r = t.getRandom();
         for (int essai = 0; essai < 200; essai++) {
-            double angle = r.nextDouble() * Math.PI * 2, d = 6 + r.nextDouble() * Math.max(1, rayon - 6);
+            // On cherche d'abord tout près, puis de plus en plus loin.
+            double angle = r.nextDouble() * Math.PI * 2, d = 6 + r.nextDouble() * Math.min(rayon - 6, 4 + essai);
             int x = c.getX() + (int) (Math.cos(angle) * d), z = c.getZ() + (int) (Math.sin(angle) * d);
             if (!lvl.isLoaded(new BlockPos(x, c.getY(), z))) continue;
             int y = lvl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);

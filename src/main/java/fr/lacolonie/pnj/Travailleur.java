@@ -1,8 +1,8 @@
 package fr.lacolonie.pnj;
 
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -44,8 +44,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.luaj.vm2.LuaTable;
 
@@ -76,12 +80,22 @@ public class Travailleur extends PathfinderMob {
     public UUID chef;
     public String chefNom = "";
     public Mode mode = Mode.CHOMEUR;
-    /** Son bureau (un PNJ par bureau) : sans bureau, il ne travaille pas. */
+    /** Son bureau (un PNJ par bureau) : sans bureau, il ne travaille pas. Autour, son espace de vie. */
     public BlockPos bureau;
-    /** Centre de sa zone de travail (null = le bureau) et rayon, réglés dans le bureau ou par « Travailler ici ». */
-    public BlockPos centre;
-    public int rayon = 96;
-    public Direction direction = Direction.NORTH;
+    public static final int ESPACE_DE_VIE = 50;
+    /**
+     * Il travaille où il veut, tant qu'il rentre à temps dans son espace de vie : le soir s'il n'a pas de lit,
+     * au bout de {@link #joursExpedition} jours s'il en a un (son lit : à 8 blocs du bureau au plus).
+     */
+    public BlockPos lit;
+    static final int RAYON_LIT = 8;
+    BlockPos litRefuse;
+    int prochaineRechercheLit;
+    public int joursExpedition = 3;
+    /** Moment (temps du jeu, en ticks) où il est sorti de son espace de vie ; -1 s'il y est. */
+    public long sortieDepuis = -1;
+    /** Ce qu'il parcourt en une heure du jeu, compté large (il marche à 4 blocs par seconde sur le plat). */
+    static final double BLOCS_PAR_HEURE = 120;
     /** Heures de travail, en heures du jeu (0 à 24). */
     public int debut = 6, fin = 18;
     /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
@@ -199,8 +213,107 @@ public class Travailleur extends PathfinderMob {
     /** L'objet que produit sa commande en cours. */
     public Actions.Filtre objetCommande() { return Lua.objetCommande(this); }
 
-    /** Centre de la zone de travail : celui réglé, sinon le bureau. */
-    public BlockPos centreZone() { return centre != null ? centre : bureau; }
+    // --- Espace de vie, lit, sorties et expéditions -------------------------------------------------
+
+    /** Vrai si ce point est dans son espace de vie (50 blocs autour du bureau, à l'horizontale). */
+    public boolean chezLui(BlockPos p) {
+        if (bureau == null) return false;
+        double dx = p.getX() - bureau.getX(), dz = p.getZ() - bureau.getZ();
+        return dx * dx + dz * dz <= ESPACE_DE_VIE * ESPACE_DE_VIE;
+    }
+
+    /** Heures du jeu qu'il lui faut pour marcher de a à b. */
+    static double heuresDeMarche(BlockPos a, BlockPos b) {
+        double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+        return (Math.sqrt(dx * dx + dz * dz) + 1.5 * Math.abs(a.getY() - b.getY())) / BLOCS_PAR_HEURE;
+    }
+
+    /** Heures du jeu avant la fin de son service (0 s'il n'est pas en service, 24 s'il travaille toute la journée). */
+    double heuresAvantFinService() {
+        if (!enService()) return 0;
+        if (debut == fin) return 24;
+        double reste = fin - ((level().getDayTime() + 6000) % 24000) / 1000.0;
+        return reste > 0 ? reste : reste + 24;
+    }
+
+    /** Heures du jeu avant lesquelles il doit être rentré : la fin de sa journée sans lit (ou l'épuisement), la fin de l'expédition avec un lit. */
+    public double heuresRestantes() {
+        if (bureau == null) return 0;
+        if (monLit() != null)
+            return joursExpedition * 24.0 - (sortieDepuis < 0 ? 0 : (level().getGameTime() - sortieDepuis) / 1000.0);
+        return Math.min(heuresAvantFinService(), (100 - fatigue) / 5.0); // la fatigue monte de 5 par heure de travail
+    }
+
+    /** Vrai s'il doit prendre le chemin du retour maintenant pour rentrer à temps. */
+    public boolean doitRentrer() {
+        return bureau != null && !chezLui(blockPosition()) && heuresDeMarche(blockPosition(), bureau) + 0.5 >= heuresRestantes();
+    }
+
+    /** Vrai s'il peut aller là, y travailler un peu, et rentrer à temps. Toujours vrai dans son espace de vie. */
+    public boolean peutAller(BlockPos p) {
+        if (bureau == null) return false;
+        return chezLui(p) || heuresDeMarche(blockPosition(), p) + heuresDeMarche(p, bureau) + 1 <= heuresRestantes();
+    }
+
+    /** Jusqu'où il pourra aller au plus loin (une journée de marche aller-retour sans lit, l'expédition entière avec). */
+    public double porteeMax() {
+        double h = monLit() != null ? joursExpedition * 24.0 : Math.min(debut == fin ? 24 : Math.floorMod(fin - debut, 24), 20);
+        return Math.max(ESPACE_DE_VIE, (h - 1) * BLOCS_PAR_HEURE / 2);
+    }
+
+    /** Son lit : le lit le plus proche du bureau (8 blocs au plus), qu'il garde pour lui. Null s'il n'en a pas. */
+    public BlockPos monLit() {
+        if (bureau == null) return lit = null;
+        if (lit != null) {
+            if (!level().isLoaded(lit)) return lit; // trop loin pour vérifier : on le croit sur parole
+            if (estUnLit(lit) && presDuBureau(lit)) return lit;
+            lit = null; // cassé, ou le bureau a changé
+        }
+        if (tickCount < prochaineRechercheLit || level().getServer() == null || !level().isLoaded(bureau)) return null;
+        prochaineRechercheLit = tickCount + 200;
+        java.util.Set<BlockPos> pris = new java.util.HashSet<>();
+        for (Travailleur x : ColoniePnj.tous(level().getServer())) if (x != this && x.lit != null) pris.add(x.lit);
+        for (ServerPlayer p : level().getServer().getPlayerList().getPlayers()) // le lit où un joueur réapparaît est à lui
+            if (p.getRespawnPosition() != null && p.getRespawnDimension() == level().dimension()) pris.add(p.getRespawnPosition());
+        BlockPos meilleur = null;
+        for (BlockPos q : BlockPos.betweenClosed(bureau.offset(-RAYON_LIT, -4, -RAYON_LIT), bureau.offset(RAYON_LIT, 4, RAYON_LIT)))
+            if (level().isLoaded(q) && estUnLit(q) && !pris.contains(q) && !q.equals(litRefuse)
+                    && (meilleur == null || q.distSqr(bureau) < meilleur.distSqr(bureau))) meilleur = q.immutable();
+        return lit = meilleur;
+    }
+
+    boolean presDuBureau(BlockPos p) {
+        return Math.abs(p.getX() - bureau.getX()) <= RAYON_LIT && Math.abs(p.getY() - bureau.getY()) <= 4 && Math.abs(p.getZ() - bureau.getZ()) <= RAYON_LIT;
+    }
+
+    boolean estUnLit(BlockPos p) {
+        BlockState st = level().getBlockState(p);
+        return st.getBlock() instanceof BedBlock && st.getValue(BedBlock.PART) == BedPart.HEAD;
+    }
+
+    /** Un joueur clique sur un lit où dort un PNJ : le PNJ se lève et le lui laisse (les joueurs passent avant). */
+    static void cederLit(Level lvl, BlockPos pos) {
+        BlockState st = lvl.getBlockState(pos);
+        if (!(st.getBlock() instanceof BedBlock)) return;
+        BlockPos tete = st.getValue(BedBlock.PART) == BedPart.HEAD ? pos : pos.relative(st.getValue(BedBlock.FACING));
+        for (Travailleur t : lvl.getEntitiesOfClass(Travailleur.class, new AABB(tete).inflate(3), x -> tete.equals(x.getSleepingPos().orElse(null)))) {
+            t.stopSleeping();
+            t.finirAction("ordre");
+            t.lit = null;
+            t.litRefuse = tete;
+            t.dire("Oh, pardon ! C'est ton lit : je t'en laisse.");
+        }
+    }
+
+    /** Où il en est, pour le bureau et le panneau : « Chez lui », « Dehors : 2 h, à 140 blocs », « Expédition : 1,5 j, à 420 blocs ». */
+    public String sortieTexte() {
+        if (bureau == null) return "";
+        if (sortieDepuis < 0) return "Chez lui";
+        double h = (level().getGameTime() - sortieDepuis) / 1000.0;
+        int d = (int) Math.sqrt(blockPosition().distSqr(new BlockPos(bureau.getX(), getBlockY(), bureau.getZ())));
+        String duree = h < 1 ? "moins d'1 h" : h < 24 ? (int) h + " h" : String.valueOf(Math.round(h / 2.4) / 10.0).replace('.', ',').replace(",0", "") + " j";
+        return (h >= 20 ? "Expédition : " : "Dehors : ") + duree + ", à " + d + " blocs";
+    }
 
     public String skin() { return entityData.get(SKIN); }
     public void setSkin(String pseudo) { entityData.set(SKIN, pseudo == null ? "" : pseudo.trim()); }
@@ -265,7 +378,12 @@ public class Travailleur extends PathfinderMob {
         }
         if (tickCount % 10 == 0) ramasserAutour();
         if (tickCount % 100 == 0) equiperArmure();
-        if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && paieEnRetard()) {
+        if (tickCount % 20 == 0) {
+            if (bureau == null || chezLui(blockPosition())) sortieDepuis = -1;
+            else if (sortieDepuis < 0) sortieDepuis = level().getGameTime();
+        }
+        // Parti loin, il n'a pas pu passer à la caisse : il touchera sa paie à son retour.
+        if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && sortieDepuis < 0 && paieEnRetard()) {
             impayes++;
             prochainePaie = System.currentTimeMillis() + periodePaie();
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
@@ -405,19 +523,31 @@ public class Travailleur extends PathfinderMob {
         super.remove(reason);
     }
 
+    /**
+     * Garde actifs les 3 x 3 chunks autour de lui, même sans joueur. Un seul ne suffit pas : Minecraft fige
+     * toute créature qui passe dans un chunk voisin inactif, et il ne pourrait plus déplacer ses chunks.
+     */
     void forcerChunk() {
         if (!(level() instanceof ServerLevel sl)) return;
         if (chef == null) { libererChunk(); return; }
         ChunkPos c = chunkPosition();
         if (c.equals(chunkForce)) return;
-        ColoniePnj.TICKETS.forceChunk(sl, this, c.x, c.z, true, true);
-        if (chunkForce != null) ColoniePnj.TICKETS.forceChunk(sl, this, chunkForce.x, chunkForce.z, false, true);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) ColoniePnj.TICKETS.forceChunk(sl, this, c.x + dx, c.z + dz, true, true);
+        LongSet avant = ColoniePnj.CHUNKS_D_AVANT.remove(getUUID()); // ceux qu'il gardait avant le redémarrage du serveur
+        if (avant != null) avant.forEach((long k) -> lacher(sl, new ChunkPos(k), c));
+        if (chunkForce != null)
+            for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) lacher(sl, new ChunkPos(chunkForce.x + dx, chunkForce.z + dz), c);
         chunkForce = c;
+    }
+
+    /** Ne garde plus ce chunk, s'il n'est pas autour de {@code centre}. */
+    void lacher(ServerLevel sl, ChunkPos k, ChunkPos centre) {
+        if (Math.abs(k.x - centre.x) > 1 || Math.abs(k.z - centre.z) > 1) ColoniePnj.TICKETS.forceChunk(sl, this, k.x, k.z, false, true);
     }
 
     void libererChunk() {
         if (chunkForce != null && level() instanceof ServerLevel sl)
-            ColoniePnj.TICKETS.forceChunk(sl, this, chunkForce.x, chunkForce.z, false, true);
+            for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) ColoniePnj.TICKETS.forceChunk(sl, this, chunkForce.x + dx, chunkForce.z + dz, false, true);
         chunkForce = null;
     }
 
@@ -595,11 +725,9 @@ public class Travailleur extends PathfinderMob {
             case "attendre" -> { mode = Mode.ATTENDRE; finirAction("ordre"); dire("J'attends ici."); }
             case "travailler" -> {
                 mode = Mode.TRAVAIL;
-                centre = blockPosition();
-                direction = p.getDirection();
                 finirAction("ordre");
-                dire(bureau == null ? "Compris, je travaillerai autour d'ici. Mais il me faut un bureau : pose-en un et rattache-moi dans son écran."
-                        : "Compris, ma zone de travail est maintenant centrée ici (" + rayon + " blocs autour).");
+                dire(bureau == null ? "Il me faut un bureau pour travailler : pose-en un et rattache-moi dans son écran."
+                        : "Je retourne au travail, chef. Je sais où chercher.");
             }
             case "inventaire" -> p.openMenu(new SimpleMenuProvider((id, inv, pl) -> ChestMenu.threeRows(id, inv, inventaire),
                     Component.literal("Sac de " + prenom)));
@@ -608,7 +736,7 @@ public class Travailleur extends PathfinderMob {
                 chef = null;
                 chefNom = "";
                 mode = Mode.CHOMEUR;
-                centre = null;
+                lit = null;
                 Bureau.liberer(this);
                 arrivee = System.currentTimeMillis();
                 finirAction("licencie");
@@ -659,9 +787,10 @@ public class Travailleur extends PathfinderMob {
         if (chef != null) t.putUUID("Chef", chef);
         t.putString("ChefNom", chefNom);
         t.putString("Mode", mode.name());
-        if (centre != null) t.put("Lieu", NbtUtils.writeBlockPos(centre));
         if (bureau != null) t.put("Bureau", NbtUtils.writeBlockPos(bureau));
-        t.putInt("Rayon", rayon);
+        if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
+        t.putInt("JoursExpedition", joursExpedition);
+        t.putLong("SortieDepuis", sortieDepuis);
         t.putInt("Debut", debut);
         t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
@@ -670,7 +799,6 @@ public class Travailleur extends PathfinderMob {
         t.putInt("CommandeNombre", commandeNombre);
         t.putInt("CommandeLivre", commandeLivre);
         t.putInt("Fatigue", fatigue);
-        t.putString("Direction", direction.getSerializedName());
         t.putLong("ProchainePaie", prochainePaie);
         t.putLong("Arrivee", arrivee);
         t.putInt("Impayes", impayes);
@@ -693,9 +821,10 @@ public class Travailleur extends PathfinderMob {
         chef = t.hasUUID("Chef") ? t.getUUID("Chef") : null;
         chefNom = t.getString("ChefNom");
         try { mode = Mode.valueOf(t.getString("Mode")); } catch (IllegalArgumentException e) { mode = Mode.CHOMEUR; }
-        centre = NbtUtils.readBlockPos(t, "Lieu").orElse(null);
         bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
-        rayon = t.contains("Rayon") ? t.getInt("Rayon") : 96;
+        lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
+        joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
+        sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;
         debut = t.contains("Debut") ? t.getInt("Debut") : 6;
         fin = t.contains("Fin") ? t.getInt("Fin") : 18;
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
@@ -704,8 +833,6 @@ public class Travailleur extends PathfinderMob {
         commandeNombre = t.contains("CommandeNombre") ? t.getInt("CommandeNombre") : 64;
         commandeLivre = t.getInt("CommandeLivre");
         fatigue = t.getInt("Fatigue");
-        Direction d = Direction.byName(t.getString("Direction"));
-        direction = d != null && d.getAxis().isHorizontal() ? d : Direction.NORTH;
         prochainePaie = t.getLong("ProchainePaie");
         arrivee = t.getLong("Arrivee");
         impayes = t.getInt("Impayes");

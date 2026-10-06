@@ -1,9 +1,10 @@
 -- ============================================================================
 -- Mineur (autonome)
--- Commande : un minerai ou une pierre. Il se débrouille seul dans sa zone :
+-- Commande : un minerai ou une pierre. Il se débrouille seul :
 --   1. il extrait les filons qu'il voit autour de lui (le minerai demandé d'abord) ;
---   2. sinon, il choisit un sol naturel de sa zone (jamais dans une construction)
---      et creuse un escalier en colimaçon jusqu'à la profondeur du minerai ;
+--   2. sinon, il choisit un sol naturel le plus près possible du bureau (jamais dans
+--      une construction ; s'il n'y en a pas, il en cherche plus loin) et creuse un
+--      escalier en colimaçon jusqu'à la profondeur du minerai ;
 --   3. là, il mine en galeries parallèles espacées de 3 blocs, comme un joueur.
 -- Il pose une torche tous les 8 blocs s'il en a, comble les trous du sol avec de la
 -- pierre et abandonne une galerie devant la lave ou l'eau. S'il lui faut une meilleure
@@ -11,7 +12,7 @@
 -- ============================================================================
 local M = {
   nom = "Mineur",
-  description = "Trouve seul le minerai demandé dans sa zone : filons, escalier jusqu'à la bonne profondeur, galeries parallèles.",
+  description = "Trouve seul le minerai demandé : filons, escalier jusqu'à la bonne profondeur, galeries parallèles.",
 }
 
 M.garder = { "nourriture", "minecraft:torch", "#minecraft:pickaxes", "#c:cobblestones" }
@@ -109,9 +110,19 @@ local function marche(m, k)
 end
 
 local function nouveauPuits(pnj, m, commun)
-  local x, y, z = pnj.solNaturel(math.min(48, select(4, pnj.zone())))
-  if not x then
-    commun.parfois(pnj, "pas_de_sol", "Je ne trouve pas d'endroit naturel où creuser dans ma zone (trop de constructions, ou zone pas chargée).", true, 1800)
+  -- Le plus près possible du bureau : il aura moins de marche pour rapporter le minerai.
+  local x, y, z = pnj.solNaturel(64)
+  if not x and not pnj.chezLui() then         -- en route vers plus loin : autour de lui
+    local px, py, pz = pnj.position()
+    x, y, z = pnj.solNaturel(24, { x = px, y = py, z = pz })
+  end
+  if not x then                               -- tout est construit autour du bureau : il cherche plus loin
+    local ex, ey, ez, raison = commun.pointAExplorer(pnj, "puits")
+    if ex then return pnj.allerVers(ex, ez, 4) end
+    if raison == "tout_fouille" then
+      commun.parfois(pnj, "pas_de_sol", "Je ne trouve aucun sol naturel où creuser sans abîmer de construction.", true, 1800)
+    end
+    if not pnj.chezLui() then return pnj.rentrer() end
     return pnj.attendre(30)
   end
   m.puits = { x = x, y = y, z = z }
@@ -127,9 +138,9 @@ function M.travailler(pnj, commun)
     return pnj.attendre(20)
   end
 
-  -- Nouvelle commande ou nouvelle zone : on repart de zéro.
-  local zx, zy, zz, zr = pnj.zone()
-  local chantier = c.id .. "@" .. cle(zx, zy, zz) .. "/" .. zr .. "/" .. (c.profondeur or 0)
+  -- Nouvelle commande ou nouveau bureau : on repart de zéro.
+  local bx, by, bz = pnj.bureau()
+  local chantier = c.id .. "@" .. cle(bx, by, bz) .. "/" .. (c.profondeur or 0)
   if m.chantier ~= chantier then
     m.chantier, m.puits, m.ignores, m.cible = chantier, nil, {}, nil
   end
@@ -147,13 +158,13 @@ function M.travailler(pnj, commun)
   -- 1. Les filons qu'il voit autour de lui : le minerai demandé d'abord, puis tout autre minerai récoltable.
   for _, f in ipairs({ { c.blocs, 3 }, { "#c:ores", 2 } }) do
     local fx, fy, fz = pnj.chercherBloc(f[1], f[2], { expose = true, recoltable = true })
-    if fx and not m.ignores[cle(fx, fy, fz)] and pnj.dansZone(fx, fy, fz) then
+    if fx and not m.ignores[cle(fx, fy, fz)] then
       if echecSur(pnj, m, fx, fy, fz) then m.ignores[cle(fx, fy, fz)] = true
       else return casser(pnj, m, fx, fy, fz) end
     end
   end
 
-  -- 2. Pas encore de puits : il en choisit l'entrée, sur un sol naturel de sa zone.
+  -- 2. Pas encore de puits : il en choisit l'entrée, sur un sol naturel.
   if not m.puits then return nouveauPuits(pnj, m, commun) end
   local cible = math.max(-59, c.profondeur or 0)
 
@@ -183,7 +194,7 @@ function M.travailler(pnj, commun)
   local gx, gz = 1, 0         -- les galeries partent vers l'est
   if m.branche > M.galeries then
     if m.cote == 1 then m.cote, m.branche, m.couloir, m.pas = -1, 1, 0, 0; return pnj.attendre(1) end
-    pnj.direAuChef("J'ai fini mes galeries à cet endroit : je creuse un nouveau puits ailleurs dans ma zone.")
+    pnj.direAuChef("J'ai fini mes galeries à cet endroit : je creuse un nouveau puits un peu plus loin.")
     m.puits = nil
     return pnj.attendre(2)
   end
@@ -192,7 +203,6 @@ function M.travailler(pnj, commun)
   if m.couloir < depart then
     local j = m.couloir + 1
     local x, y, z = f.x + px * j, f.y, f.z + pz * j
-    if not pnj.dansZone(x, y, z) then m.branche = M.galeries + 1; return pnj.attendre(1) end
     local r = creuserCase(pnj, m, x, y, z, 2)
     if r == "action" then return end
     if r then m.branche = M.galeries + 1; return pnj.attendre(1) end
@@ -203,7 +213,7 @@ function M.travailler(pnj, commun)
   local s = m.pas + 1
   local sx, sz = f.x + px * depart, f.z + pz * depart
   local x, y, z = sx + gx * s, f.y, sz + gz * s
-  if s > M.galerie or not pnj.dansZone(x, y, z) then
+  if s > M.galerie then
     m.branche, m.pas = m.branche + 1, 0
     return pnj.aller(sx, f.y, sz, 1)   -- retour au couloir
   end

@@ -39,7 +39,7 @@ import java.util.UUID;
 /**
  * Le bureau : le poste de pilotage d'un PNJ (un par bureau).
  * Une caisse (les salaires), un dépôt (sa production, agrandi par les coffres collés au bureau),
- * et l'écran de gestion du propriétaire : commande, zone, horaires, paie.
+ * et l'écran de gestion du propriétaire : commande, horaires, paie, durée des expéditions.
  */
 public final class Bureau {
     private Bureau() {}
@@ -88,6 +88,7 @@ public final class Bureau {
                 Travailleur t = e.employeCharge();
                 if (t != null) {
                     t.bureau = null;
+                    t.lit = null;
                     t.direAuChef("Mon bureau a été détruit : je ne peux plus travailler. Rattache-moi à un autre bureau.");
                 }
             }
@@ -218,11 +219,10 @@ public final class Bureau {
                 e.putString("salaireDemandeTexte", Reglages.texte(t.salaireDemande()));
                 e.putInt("debut", t.debut);
                 e.putInt("fin", t.fin);
-                BlockPos c = t.centreZone();
-                e.putInt("cx", c.getX());
-                e.putInt("cy", c.getY());
-                e.putInt("cz", c.getZ());
-                e.putInt("rayon", t.rayon);
+                e.putInt("joursExpedition", t.joursExpedition);
+                BlockPos lit = t.monLit();
+                e.putString("lit", lit == null ? "" : lit.getX() + ", " + lit.getY() + ", " + lit.getZ());
+                e.putString("sortie", t.sortieTexte());
                 e.putString("commande", t.commande);
                 e.putString("commandeMode", t.commandeMode);
                 e.putInt("commandeNombre", t.commandeNombre);
@@ -267,7 +267,7 @@ public final class Bureau {
                     employe = x.getUUID();
                     nomEmploye = x.prenom;
                     x.bureau = worldPosition;
-                    x.centre = null;
+                    x.lit = null; // il prendra un lit près de son nouveau bureau
                     if (x.mode != Travailleur.Mode.GREVE) x.mode = Travailleur.Mode.TRAVAIL; // changer de bureau n'efface pas une grève
                     x.finirAction("ordre");
                     x.majNom();
@@ -292,9 +292,7 @@ public final class Bureau {
                     t.commande = Lua.commandes(t.metier).stream().anyMatch(ci -> ci.id().equals(c)) ? c : "";
                     t.commandeMode = mode;
                     t.commandeNombre = Math.clamp(d.getInt("commandeNombre"), 1, 100_000);
-                    BlockPos centre = new BlockPos(d.getInt("cx"), d.getInt("cy"), d.getInt("cz"));
-                    t.centre = centre.equals(worldPosition) || centre.distSqr(worldPosition) > 512 * 512 ? null : centre;
-                    t.rayon = Math.clamp(d.getInt("rayon"), 8, 128);
+                    t.joursExpedition = Math.clamp(d.getInt("joursExpedition"), 1, 30);
                     t.debut = Math.floorMod(d.getInt("debut"), 24);
                     t.fin = Math.floorMod(d.getInt("fin"), 24);
                     long s = d.getLong("salaire");
@@ -366,5 +364,6 @@ public final class Bureau {
             e.setChanged();
         }
         t.bureau = null;
+        t.lit = null;
     }
 }

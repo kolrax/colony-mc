@@ -6,6 +6,21 @@ Le 6 octobre 2026, avec KOLRAX. Cette amélioration fait partie du jalon 1 (feui
 
 On ne dit plus au PNJ **où** travailler, on lui dit **quoi produire**. Il se débrouille seul dans sa zone, comme un joueur : il cherche, il va chercher, il rapporte au dépôt, et il vient demander ce qui lui manque. Un PNJ sans bureau ne travaille pas. Le bouton « Travailler ici » disparaît.
 
+## Changement du 6 octobre (0.3.0) : plus de zone de travail
+
+KOLRAX a supprimé la zone de travail : le PNJ est complètement autonome et va travailler où il veut pour remplir sa commande.
+
+- **Espace de vie** : 50 blocs autour du bureau. Il y dort, y dépose sa production et y touche sa paie.
+- **Sans lit**, il part travailler où il veut, mais il doit être rentré à la fin de sa journée (et avant d'être épuisé). Il calcule lui-même quand partir (120 blocs par heure du jeu, compté large).
+- **Avec un lit** (le lit le plus proche du bureau, à 8 blocs au plus), il peut partir en **expédition**, aussi loin qu'il veut. Il campe la nuit et rentre au plus tard au bout du nombre de jours réglé dans l'écran du bureau (3 par défaut, de 1 à 30).
+- Il rentre aussi quand son sac est plein, quand il a de quoi remplir la commande, ou quand il lui manque à manger ou un outil.
+- Le bouton « Travailler ici » de la fiche devient « Au travail » : il reprend son travail, sans endroit imposé.
+- Le bûcheron explore en spirale autour du bureau, de plus en plus loin, et retient les coins où il a trouvé le bois demandé. Sans lit et sans plus rien à portée, il demande un lit à son chef.
+- Le mineur creuse au plus près du bureau (moins de marche pour rapporter), et cherche plus loin seulement si tout est construit autour.
+- Correction au passage : un PNJ seul, loin de tout joueur, se figeait en passant dans le chunk voisin (Minecraft n'anime que les chunks actifs). Il garde maintenant 3 x 3 chunks actifs autour de lui.
+
+Ce qui suit décrit la version 0.2.0 ; la zone n'existe plus.
+
 ## Décisions de KOLRAX (6 octobre)
 
 - **Un PNJ par bureau.** Les équipes de plusieurs PNJ viendront plus tard (idée du jalon 4).

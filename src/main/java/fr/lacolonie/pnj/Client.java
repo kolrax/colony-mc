@@ -146,8 +146,8 @@ public final class Client {
                 int w = (largeur - 40) / 3;
                 addRenderableWidget(Button.builder(Component.literal("Suivre"), b -> envoyer("suivre")).bounds(x0 + 10, yb, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Attendre ici"), b -> envoyer("attendre")).bounds(x0 + 20 + w, yb, w, 20).build());
-                addRenderableWidget(Button.builder(Component.literal("Travailler ici"), b -> envoyer("travailler"))
-                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Le centre de sa zone de travail devient l'endroit où il se tient. Sa commande, ses horaires et sa paie se règlent dans l'écran de son bureau.")))
+                addRenderableWidget(Button.builder(Component.literal("Au travail"), b -> envoyer("travailler"))
+                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Il reprend son travail et cherche lui-même où trouver ce que demande sa commande. Commande, horaires, paie et expéditions se règlent dans l'écran de son bureau.")))
                         .bounds(x0 + 30 + 2 * w, yb, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Son sac"), b -> envoyer("inventaire")).bounds(x0 + 10, yb + 24, w, 20).build());
                 addRenderableWidget(Button.builder(Component.literal("Licencier"), b -> {
@@ -182,12 +182,12 @@ public final class Client {
         final net.minecraft.core.BlockPos pos;
         final CompoundTag f, e;
         final List<CompoundTag> catalogue = new ArrayList<>();
-        int iCommande, debut, fin;
+        int iCommande, debut, fin, jours;
         String mode;
         int x0, y0;
         static final int L = 360, H = 206;
-        net.minecraft.client.gui.components.EditBox nombre, cx, cy, cz, rayon, salaire;
-        Button bCommande, bMode, bDebut, bFin;
+        net.minecraft.client.gui.components.EditBox nombre, salaire;
+        Button bCommande, bMode, bDebut, bFin, bJours;
 
         EcranGestion(net.minecraft.core.BlockPos pos, CompoundTag infos) {
             super(Component.literal(infos.getString("titre")));
@@ -204,6 +204,7 @@ public final class Client {
                 mode = e.getString("commandeMode");
                 debut = e.getInt("debut");
                 fin = e.getInt("fin");
+                jours = Math.max(1, e.getInt("joursExpedition"));
             }
         }
 
@@ -229,6 +230,7 @@ public final class Client {
             bMode.active = nombre.active = quantitePossible();
             bDebut.setMessage(Component.literal(debut + " h"));
             bFin.setMessage(Component.literal(fin + " h"));
+            bJours.setMessage(Component.literal(jours + (jours > 1 ? " jours" : " jour")));
         }
 
         @Override
@@ -261,18 +263,12 @@ public final class Client {
             nombre = champ(g + 122, y0 + 98, 40, String.valueOf(e.getInt("commandeNombre")));
             // Paie
             salaire = champ(g, y0 + 150, 60, String.valueOf(e.getLong("salaireVerse")));
-            // Zone
-            cx = champ(dcol + 12, y0 + 72, 48, String.valueOf(e.getInt("cx")));
-            cy = champ(dcol + 72, y0 + 72, 34, String.valueOf(e.getInt("cy")));
-            cz = champ(dcol + 118, y0 + 72, 48, String.valueOf(e.getInt("cz")));
-            addRenderableWidget(Button.builder(Component.literal("Centre = ma position"), b -> {
-                var j = Minecraft.getInstance().player;
-                if (j == null) return;
-                cx.setValue(String.valueOf(j.getBlockX()));
-                cy.setValue(String.valueOf(j.getBlockY()));
-                cz.setValue(String.valueOf(j.getBlockZ()));
-            }).bounds(dcol, y0 + 94, 118, 20).build());
-            rayon = champ(dcol + 78, y0 + 118, 40, String.valueOf(e.getInt("rayon")));
+            // Expéditions : durée maximale, s'il a un lit
+            addRenderableWidget(Button.builder(Component.literal("-"), b -> { jours = Math.max(1, jours - 1); majBoutons(); }).bounds(dcol + 84, y0 + 96, 14, 20).build());
+            bJours = addRenderableWidget(Button.builder(Component.empty(), b -> {})
+                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Il travaille où il veut, tant qu'il rentre à temps dans son espace de vie (50 blocs autour du bureau). Sans lit, il rentre chaque soir. Avec un lit à 8 blocs du bureau au plus, il peut partir aussi loin qu'il veut et rester dehors jusqu'à ce nombre de jours.")))
+                    .bounds(dcol + 99, y0 + 96, 46, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> { jours = Math.min(30, jours + 1); majBoutons(); }).bounds(dcol + 146, y0 + 96, 14, 20).build());
             // Horaires
             addRenderableWidget(Button.builder(Component.literal("-"), b -> { debut = Math.floorMod(debut - 1, 24); majBoutons(); }).bounds(dcol, y0 + 148, 14, 20).build());
             bDebut = addRenderableWidget(Button.builder(Component.empty(), b -> {}).bounds(dcol + 15, y0 + 148, 34, 20).build());
@@ -286,10 +282,7 @@ public final class Client {
                 d.putString("commande", catalogue.get(iCommande).getString("id"));
                 d.putString("commandeMode", mode);
                 d.putInt("commandeNombre", entier(nombre, 64));
-                d.putInt("cx", entier(cx, e.getInt("cx")));
-                d.putInt("cy", entier(cy, e.getInt("cy")));
-                d.putInt("cz", entier(cz, e.getInt("cz")));
-                d.putInt("rayon", entier(rayon, 96));
+                d.putInt("joursExpedition", jours);
                 d.putInt("debut", debut);
                 d.putInt("fin", fin);
                 d.putLong("salaire", entier(salaire, (int) e.getLong("salaireVerse")));
@@ -330,11 +323,12 @@ public final class Client {
             texte(g, e.getString("avancement"), g0, y0 + 120, gris);
             texte(g, "PAIE (en bronzes, à chaque paie)", g0, y0 + 138, or);
             texte(g, "Il demande " + e.getLong("salaireDemande"), g0 + 66, y0 + 154, gris);
-            texte(g, "ZONE DE TRAVAIL", dcol, y0 + 60, or);
-            texte(g, "X", dcol, y0 + 76, gris);
-            texte(g, "Y", dcol + 63, y0 + 76, gris);
-            texte(g, "Z", dcol + 109, y0 + 76, gris);
-            texte(g, "Rayon (blocs)", dcol, y0 + 122, gris);
+            texte(g, "SORTIES", dcol, y0 + 60, or);
+            boolean lit = !e.getString("lit").isEmpty();
+            texte(g, lit ? "Lit : " + e.getString("lit") : "Pas de lit : il rentre le soir", dcol, y0 + 72, lit ? blanc : 0xFF9966);
+            texte(g, e.getString("sortie"), dcol, y0 + 84, gris);
+            texte(g, "Expédition max", dcol, y0 + 102, gris);
+            texte(g, "Espace de vie : 50 blocs", dcol, y0 + 122, gris);
             texte(g, "HORAIRES (heures du jeu)", dcol, y0 + 138, or);
             texte(g, "à", dcol + 74, y0 + 154, gris);
         }

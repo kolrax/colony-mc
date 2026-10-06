@@ -168,6 +168,7 @@ public final class PanneauWeb {
             x.put("bureau", t.bureau == null ? "" : t.bureau.toShortString());
             x.put("commande", Lua.avancementTexte(t));
             x.put("fatigue", t.fatigue);
+            x.put("sortie", t.sortieTexte() + (t.bureau == null ? "" : t.monLit() == null ? " · sans lit" : " · lit"));
             pnj.add(x);
         }
         m.put("pnj", pnj);
@@ -290,7 +291,6 @@ public final class PanneauWeb {
                 t.chef = null;
                 t.chefNom = "";
                 t.mode = Travailleur.Mode.CHOMEUR;
-                t.centre = null;
                 Bureau.liberer(t);
                 t.arrivee = System.currentTimeMillis();
                 t.finirAction("licencie");

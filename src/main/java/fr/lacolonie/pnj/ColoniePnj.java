@@ -77,8 +77,17 @@ public class ColoniePnj {
     public static final DeferredHolder<MenuType<?>, MenuType<Bureau.Menu>> BUREAU_MENU = MENUS.register("bureau",
             () -> IMenuTypeExtension.create((id, inv, buf) -> new Bureau.Menu(id, inv)));
 
-    /** Garde chargé le chunk de chaque PNJ employé : il travaille même quand son chef n'est pas là. */
-    public static final TicketController TICKETS = new TicketController(ResourceLocation.fromNamespaceAndPath(MODID, "travail"));
+    /**
+     * Garde chargés les chunks autour de chaque PNJ employé : il travaille même quand son chef n'est pas là.
+     * Au démarrage, chaque PNJ retrouve ses chunks d'avant ; il lâche lui-même ceux qu'il n'occupe plus.
+     */
+    static final java.util.Map<UUID, it.unimi.dsi.fastutil.longs.LongSet> CHUNKS_D_AVANT = new java.util.concurrent.ConcurrentHashMap<>();
+    public static final TicketController TICKETS = new TicketController(ResourceLocation.fromNamespaceAndPath(MODID, "travail"),
+            (level, aide) -> aide.getEntityTickets().forEach((id, t) -> {
+                var s = new it.unimi.dsi.fastutil.longs.LongOpenHashSet(t.ticking());
+                s.addAll(t.nonTicking());
+                CHUNKS_D_AVANT.put(id, s);
+            }));
 
     public ColoniePnj(IEventBus bus) {
         BLOCS.register(bus);
@@ -121,7 +130,7 @@ public class ColoniePnj {
             if (e.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND && Travailleur.releverAutour(e.getEntity())) {
                 e.setCanceled(true);
                 e.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-            }
+            } else if (!e.getLevel().isClientSide) Travailleur.cederLit(e.getLevel(), e.getPos());
         });
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;

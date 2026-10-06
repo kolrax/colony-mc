@@ -4,9 +4,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -22,25 +26,113 @@ public class TestsJeu {
 
     /** Un PNJ employé, rattaché à un bureau posé en {@code bureau} (coordonnées du test), au travail toute la journée. */
     static Travailleur ouvrier(GameTestHelper h, String metier, int x, int y, int z, ItemStack outil, BlockPos bureau) {
-        h.setBlock(bureau, ColoniePnj.BUREAU.get());
-        Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(h.getLevel());
-        Vec3 p = h.absoluteVec(new Vec3(x + 0.5, y, z + 0.5));
+        return employe(h, metier, h.absolutePos(bureau), h.absoluteVec(new Vec3(x + 0.5, y, z + 0.5)), outil);
+    }
+
+    /** Pareil en coordonnées absolues. */
+    static Travailleur employe(GameTestHelper h, String metier, BlockPos bureau, Vec3 p, ItemStack outil) {
+        ServerLevel l = h.getLevel();
+        l.setBlockAndUpdate(bureau, ColoniePnj.BUREAU.get().defaultBlockState());
+        Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
         t.moveTo(p.x, p.y, p.z, -90, 0);
         t.tirerAuSort(metier, 5);
         t.mode = Travailleur.Mode.TRAVAIL;
-        t.centre = h.absolutePos(new BlockPos(x, y, z));
-        t.direction = Direction.EAST;
         t.chef = java.util.UUID.randomUUID();
         t.prochainePaie = Long.MAX_VALUE; // pas de paie pendant les tests (sauf ceux qui la testent)
         t.debut = 0;
         t.fin = 0; // de 0 h à 0 h : en service toute la journée
-        Bureau.Entite b = (Bureau.Entite) h.getLevel().getBlockEntity(h.absolutePos(bureau));
+        Bureau.Entite b = (Bureau.Entite) l.getBlockEntity(bureau);
         b.proprietaire = t.chef;
         b.employe = t.getUUID();
-        t.bureau = h.absolutePos(bureau);
+        t.bureau = bureau;
         if (!outil.isEmpty()) t.inventaire.addItem(outil);
-        h.getLevel().addFreshEntity(t);
+        l.addFreshEntity(t);
         return t;
+    }
+
+    // --- Loin des tests, sur le monde plat : sorties et expéditions -----------------------------------
+
+    /** Le sol du monde plat à (dx, dz) de ce test : loin de tout, personne ne garde ces chunks actifs à part le PNJ. */
+    static BlockPos sol(GameTestHelper h, int dx, int dz) {
+        BlockPos o = h.absolutePos(BlockPos.ZERO).offset(dx, 0, dz);
+        h.getLevel().getChunk(o.getX() >> 4, o.getZ() >> 4); // sans chunk chargé, la hauteur du sol vaut le fond du monde
+        return new BlockPos(o.getX(), h.getLevel().getHeight(Heightmap.Types.MOTION_BLOCKING, o.getX(), o.getZ()), o.getZ());
+    }
+
+    /** Un lit, pied en p, tête au nord. */
+    static void lit(ServerLevel l, BlockPos p) {
+        var lit = Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH);
+        l.setBlockAndUpdate(p, lit.setValue(BedBlock.PART, BedPart.FOOT));
+        l.setBlockAndUpdate(p.north(), lit.setValue(BedBlock.PART, BedPart.HEAD));
+    }
+
+    static int distance(Travailleur t, BlockPos b) { return (int) Math.sqrt(t.blockPosition().distSqr(new BlockPos(b.getX(), t.getBlockY(), b.getZ()))); }
+
+    static int heure(GameTestHelper h) { return (int) ((h.getLevel().getDayTime() + 6000) % 24000 / 1000); }
+
+    /** Ce qu'il fait et pense, pour comprendre un échec. */
+    static String etat(Travailleur t, BlockPos bureau) {
+        return "à " + distance(t, bureau) + " blocs (y " + t.getBlockY() + "), vivant " + t.isAlive() + (t.isRemoved() ? " retiré " + t.getRemovalReason() : "")
+                + ", vie " + t.getHealth() + ", action " + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat
+                + ", tick " + t.tickCount + ", heure " + (t.level().getDayTime() + 6000) % 24000 + ", service " + t.debut + "-" + t.fin
+                + ", reste " + String.format("%.2f", t.heuresRestantes()) + " h, doitRentrer " + t.doitRentrer() + ", lit " + t.lit
+                + ", chunk actif " + ((ServerLevel) t.level()).isPositionEntityTicking(t.blockPosition())
+                + ", mémoire " + (t.api == null ? "?" : Lua.versTag((org.luaj.vm2.LuaTable) t.api.get("memoire")));
+    }
+
+    /**
+     * Sans lit, à 200 blocs du bureau, il part à temps pour être rentré avant la fin de sa journée.
+     * Il marche seul, loin de tout joueur : il ne doit pas se figer en changeant de chunk.
+     */
+    @GameTest(template = "vide", timeoutTicks = 4000)
+    public static void rentreATempsSansLit(GameTestHelper h) {
+        BlockPos bureau = sol(h, 0, 3000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(sol(h, 200, 3000)), ItemStack.EMPTY); // sans commande, il ne bouge pas de lui-même
+        t.debut = heure(h);
+        t.fin = (t.debut + 3) % 24; // sa journée finit dans 2 à 3 heures du jeu : il lui en faut à peu près 2 pour rentrer
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(t.chezLui(t.blockPosition()), "il doit être rentré (" + etat(t, bureau) + ")");
+            h.assertTrue(t.enService(), "il devait rentrer avant la fin de sa journée");
+        });
+    }
+
+    /** Avec un lit, loin du bureau quand sa journée est finie : il campe sur place au lieu de rentrer. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void campeEnExpedition(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 6000);
+        lit(l, bureau.offset(3, 0, 2));
+        BlockPos loin = sol(h, 220, 6000);
+        Travailleur t = employe(h, "mineur", bureau, Vec3.atBottomCenterOf(loin), ItemStack.EMPTY);
+        t.debut = (heure(h) + 2) % 24; // sa journée commence dans 2 heures : il est au repos
+        t.fin = (heure(h) + 3) % 24;
+        h.assertTrue(t.monLit() != null, "il doit prendre le lit près du bureau");
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(t.action instanceof Actions.Reposer, "il doit se reposer (" + etat(t, bureau) + ")");
+            h.assertTrue(t.blockPosition().distSqr(loin) < 16, "il doit camper là où il est (" + etat(t, bureau) + ")");
+        });
+    }
+
+    /** Pas de bouleau près du bureau : avec un lit, il explore de plus en plus loin, jusqu'aux bouleaux à 100 blocs. */
+    @GameTest(template = "vide", timeoutTicks = 12000)
+    public static void expeditionTrouveLeBois(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 9000);
+        lit(l, bureau.offset(3, 0, 2));
+        for (int i = 0; i < 12; i++) {
+            BlockPos pied = sol(h, (int) (100 * Math.cos(i * Math.PI / 6)), 9000 + (int) (100 * Math.sin(i * Math.PI / 6)));
+            for (int y = 0; y < 3; y++) l.setBlockAndUpdate(pied.above(y), Blocks.BIRCH_LOG.defaultBlockState());
+            for (BlockPos f : BlockPos.betweenClosed(pied.offset(-1, 2, -1), pied.offset(1, 3, 1)))
+                if (l.getBlockState(f).isAir()) l.setBlockAndUpdate(f, Blocks.BIRCH_LEAVES.defaultBlockState());
+        }
+        Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
+        t.commande = "bouleau";
+        h.assertTrue(t.monLit() != null, "il doit prendre le lit près du bureau");
+        t.forcerChunk();
+        h.succeedWhen(() -> h.assertTrue(t.compter(Actions.Filtre.de("minecraft:birch_log")) >= 3,
+                "il doit avoir abattu un bouleau (" + etat(t, bureau) + ")"));
     }
 
     /** Le mineur extrait d'abord le minerai demandé qu'il voit autour de lui. */
@@ -62,11 +154,10 @@ public class TestsJeu {
     @GameTest(template = "grand", timeoutTicks = 3000)
     public static void mineurDescend(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, Blocks.STONE);
-        Travailleur t = ouvrier(h, "mineur", 18, 11, 18, new ItemStack(Items.DIAMOND_PICKAXE), new BlockPos(1, 11, 1));
+        // Bureau au milieu de la pierre : il creuse le plus près possible du bureau, donc sur la pierre du test.
+        Travailleur t = ouvrier(h, "mineur", 18, 11, 18, new ItemStack(Items.DIAMOND_PICKAXE), new BlockPos(12, 11, 12));
         t.niveau = 5;
         t.commande = "charbon";
-        t.rayon = 8;
-        t.centre = h.absolutePos(new BlockPos(12, 11, 12)); // zone entièrement sur la pierre du test
         t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
         t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
         int but = h.absolutePos(new BlockPos(0, 5, 0)).getY();
