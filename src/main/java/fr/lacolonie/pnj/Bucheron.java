@@ -49,7 +49,7 @@ final class Bucheron extends Metier {
         ServerLevel l = (ServerLevel) t.level();
 
         if (!t.equiper(Actions.Filtre.de("#minecraft:axes")))
-            Cerveau.parfois(t, "hache", "Je n'ai pas de hache, chef : je coupe à la main, c'est bien plus lent.", true, 1800);
+            Cerveau.ecrire(t, "hache", 1800, "hache");
 
         // 1. Replanter les souches vides proches s'il a des pousses.
         List<Long> souches = new ArrayList<>(Arrays.stream(m.getLongArray("souches")).boxed().toList());
@@ -93,7 +93,7 @@ final class Bucheron extends Metier {
         BlockPos foret = Biomes.chercher(l, cle, c.bois, depuis, (int) Math.min(6400, t.porteeMax()));
         if (foret == null) { Cerveau.attendre(t, 2); return; } // il réfléchit (la recherche prend quelques secondes)
         if (foret.equals(BlockPos.ZERO)) {                         // aucun biome connu dans le rayon : il fouille autour de chez lui
-            Cerveau.parfois(t, "inconnu", "Je ne connais aucun endroit proche où pousse ce bois (" + c.nom + ") : je fouille les environs.", true, 3600);
+            Cerveau.ecrire(t, "inconnu", 3600, "bois_inconnu", c.nom.toLowerCase());
             foret = t.bureau;
         }
         BlockPos e = Cerveau.pointAExplorer(t, c.id, foret, foret.equals(t.bureau) ? t.porteeMax() : 160);
@@ -103,7 +103,7 @@ final class Bucheron extends Metier {
             double dx = foret.getX() - t.bureau.getX(), dz = foret.getZ() - t.bureau.getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
             if (foret.equals(t.bureau)) { dx = Math.cos(t.getRandom().nextDouble() * 6.28); dz = Math.sin(t.getRandom().nextDouble() * 6.28); n = 1; }
             m.putLong("depuis_" + c.id, foret.offset((int) (dx / n * 320), 0, (int) (dz / n * 320)).asLong());
-            Cerveau.parfois(t, "plus_d_arbre", "Plus d'arbre de ce bois (" + c.nom + ") autour de " + foret.getX() + " " + foret.getZ() + " : je vais chercher plus loin.", true, 1800);
+            Cerveau.ecrire(t, "plus_d_arbre", 1800, "plus_d_arbre", c.nom.toLowerCase(), foret.getX() + " " + foret.getZ());
             Cerveau.attendre(t, 5);
             return;
         }
@@ -115,14 +115,12 @@ final class Bucheron extends Metier {
         switch (Cerveau.partir(t, dest, "chercher " + c.article)) {
             case JOURNEE, EXPEDITION -> { return true; }
             case DEMAIN -> {
-                Cerveau.parfois(t, "demain", "Il y a " + c.article + " vers " + dest.getX() + " " + dest.getZ() + " : j'irai demain matin, la journée est trop avancée.", true, 1800);
+                Cerveau.ecrire(t, "demain", 1800, "bois_demain", c.article, Messages.direction(t.bureau, dest) + " (vers " + dest.getX() + " " + dest.getZ() + ")");
                 if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 60);
                 return true;
             }
             default -> {
-                Cerveau.parfois(t, "trop_loin", "Le bois demandé (" + c.nom + ") ne pousse qu'à " + (int) Math.sqrt(t.bureau.distSqr(dest)) + " blocs, vers "
-                        + dest.getX() + " " + dest.getZ() + " : trop loin, même en expédition de " + t.joursExpedition
-                        + " jours. Allonge la durée des expéditions dans le bureau.", true, 1800);
+                Cerveau.ecrire(t, "trop_loin", 1800, "bois_trop_loin", c.nom.toLowerCase(), (int) Math.sqrt(t.bureau.distSqr(dest)), t.joursExpedition);
                 return false;
             }
         }

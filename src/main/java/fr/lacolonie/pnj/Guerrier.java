@@ -55,7 +55,7 @@ final class Guerrier extends Metier {
                 return;
             }
             // Le chef n'est pas là (déconnecté, ou dans une autre dimension) : il garde le bureau en l'attendant.
-            Cerveau.parfois(t, "chef_absent", "Tu n'es pas là, chef : je garde le bureau en t'attendant.", false, 1800);
+            Cerveau.dire(t, "chef_absent", 1800, "Tu n'es pas là, chef : je garde le poste en t'attendant.");
             id = "garder";
         }
 

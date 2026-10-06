@@ -9,12 +9,17 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-/** Les messages : la fiche d'un PNJ et ses ordres, l'écran d'un bureau et ses boutons. */
+/** Les messages : l'entretien d'embauche, la conversation et la parole, l'écran du poste et ses boutons. */
 public final class Reseau {
     private Reseau() {}
 
+    static <T extends CustomPacketPayload> CustomPacketPayload.Type<T> typeDe(String nom) {
+        return new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, nom));
+    }
+
+    /** L'entretien d'embauche d'un chercheur d'emploi (serveur vers joueur). */
     public record Fiche(int id, CompoundTag infos) implements CustomPacketPayload {
-        static final Type<Fiche> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "fiche"));
+        static final Type<Fiche> TYPE = typeDe("fiche");
         static final StreamCodec<RegistryFriendlyByteBuf, Fiche> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Fiche::id, ByteBufCodecs.COMPOUND_TAG, Fiche::infos, Fiche::new);
 
@@ -22,8 +27,9 @@ public final class Reseau {
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** Un bouton de l'entretien (« embaucher »), joueur vers serveur. */
     public record Commande(int id, String ordre) implements CustomPacketPayload {
-        static final Type<Commande> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "commande"));
+        static final Type<Commande> TYPE = typeDe("commande");
         static final StreamCodec<RegistryFriendlyByteBuf, Commande> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Commande::id, ByteBufCodecs.stringUtf8(32), Commande::ordre, Commande::new);
 
@@ -31,19 +37,49 @@ public final class Reseau {
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    /** L'écran de gestion d'un bureau (serveur vers joueur). */
-    public record FicheBureau(net.minecraft.core.BlockPos pos, CompoundTag infos) implements CustomPacketPayload {
-        static final Type<FicheBureau> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "fiche_bureau"));
-        static final StreamCodec<RegistryFriendlyByteBuf, FicheBureau> CODEC = StreamCodec.composite(
-                net.minecraft.core.BlockPos.STREAM_CODEC, FicheBureau::pos, ByteBufCodecs.COMPOUND_TAG, FicheBureau::infos, FicheBureau::new);
+    /** Ouvre la fenêtre de conversation avec un de ses ouvriers (serveur vers joueur). */
+    public record Conversation(int id, CompoundTag infos) implements CustomPacketPayload {
+        static final Type<Conversation> TYPE = typeDe("conversation");
+        static final StreamCodec<RegistryFriendlyByteBuf, Conversation> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Conversation::id, ByteBufCodecs.COMPOUND_TAG, Conversation::infos, Conversation::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    /** Un bouton de l'écran du bureau (joueur vers serveur). */
+    /** Ce que le joueur dit à son ouvrier (joueur vers serveur). */
+    public record Parler(int id, String texte) implements CustomPacketPayload {
+        static final Type<Parler> TYPE = typeDe("parler");
+        static final StreamCodec<RegistryFriendlyByteBuf, Parler> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Parler::id, ByteBufCodecs.stringUtf8(256), Parler::texte, Parler::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Ce que dit un PNJ : une bulle au-dessus de sa tête, et la fenêtre de conversation (serveur vers joueur). */
+    public record Parole(int id, String texte) implements CustomPacketPayload {
+        static final Type<Parole> TYPE = typeDe("parole");
+        static final StreamCodec<RegistryFriendlyByteBuf, Parole> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Parole::id, ByteBufCodecs.stringUtf8(2048), Parole::texte, Parole::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** L'écran du poste de travail (serveur vers joueur). */
+    public record Poste(net.minecraft.core.BlockPos pos, CompoundTag infos) implements CustomPacketPayload {
+        static final Type<Poste> TYPE = typeDe("poste");
+        static final StreamCodec<RegistryFriendlyByteBuf, Poste> CODEC = StreamCodec.composite(
+                net.minecraft.core.BlockPos.STREAM_CODEC, Poste::pos, ByteBufCodecs.TRUSTED_COMPOUND_TAG, Poste::infos, Poste::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Un bouton de l'écran du poste (joueur vers serveur). */
     public record ActionBureau(net.minecraft.core.BlockPos pos, String action, CompoundTag donnees) implements CustomPacketPayload {
-        static final Type<ActionBureau> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "action_bureau"));
+        static final Type<ActionBureau> TYPE = typeDe("action_bureau");
         static final StreamCodec<RegistryFriendlyByteBuf, ActionBureau> CODEC = StreamCodec.composite(
                 net.minecraft.core.BlockPos.STREAM_CODEC, ActionBureau::pos, ByteBufCodecs.stringUtf8(32), ActionBureau::action,
                 ByteBufCodecs.COMPOUND_TAG, ActionBureau::donnees, ActionBureau::new);
@@ -53,15 +89,21 @@ public final class Reseau {
     }
 
     static void enregistrer(RegisterPayloadHandlersEvent e) {
-        var r = e.registrar("4"); // 2 : écran du bureau (0.2.0) ; 3 : sorties (0.3.0) ; 4 : statut au bureau, métiers en Java (0.4.0)
+        // 2 : écran du bureau (0.2.0) ; 3 : sorties (0.3.0) ; 4 : statut au bureau (0.4.0) ; 5 : poste commun, lettres, conversation (0.5.0)
+        var r = e.registrar("5");
         r.playToClient(Fiche.TYPE, Fiche.CODEC, (p, ctx) -> Client.ouvrirFiche(p));
-        r.playToClient(FicheBureau.TYPE, FicheBureau.CODEC, (p, ctx) -> Client.ouvrirBureau(p));
+        r.playToClient(Conversation.TYPE, Conversation.CODEC, (p, ctx) -> Client.ouvrirConversation(p));
+        r.playToClient(Parole.TYPE, Parole.CODEC, (p, ctx) -> Client.parole(p));
+        r.playToClient(Poste.TYPE, Poste.CODEC, (p, ctx) -> Client.ouvrirPoste(p));
         r.playToServer(ActionBureau.TYPE, ActionBureau.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().isLoaded(p.pos()) && sp.level().getBlockEntity(p.pos()) instanceof Bureau.Entite b)
                 b.action(sp, p.action(), p.donnees());
         });
         r.playToServer(Commande.TYPE, Commande.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) t.commande(sp, p.ordre());
+        });
+        r.playToServer(Parler.TYPE, Parler.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) t.parler(sp, p.texte());
         });
     }
 }

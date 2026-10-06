@@ -363,7 +363,7 @@ final class Itineraire {
                 for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
                 aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
                 if (aCreuser == null) monter(t);
-                else { progres = 0; echecs = 0; Cerveau.parfois(t, "creuse", "Je suis bloqué : je creuse un passage.", false, 600); }
+                else { progres = 0; echecs = 0; Cerveau.dire(t, "creuse", 600, "Je suis bloqué : je creuse un passage."); }
                 return;
             }
         }
@@ -463,7 +463,7 @@ final class Itineraire {
         t.setSprinting(false);
         bateauBloque = 0;
         barreFin = 0;
-        Cerveau.parfois(t, "bateau", "Je prends le bateau pour traverser.", false, 600);
+        Cerveau.dire(t, "bateau", 600, "Je prends le bateau pour traverser.");
         return true;
     }
 

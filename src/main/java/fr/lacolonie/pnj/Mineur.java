@@ -91,8 +91,7 @@ final class Mineur extends Metier {
             if (t.compter(Actions.Filtre.de("#c:cobblestones")) > 0) {
                 t.memoire.putString("cible", cle(sous));
                 Cerveau.lancer(t, new Actions.Poser(sous, Actions.Filtre.de("#c:cobblestones")));
-            } else Cerveau.lancer(t, new Actions.Demander("Il y a un trou sous mes pieds : il me faudrait de la pierre (cobblestone) pour le combler.",
-                    Actions.Filtre.de("#c:cobblestones"), 8));
+            } else Cerveau.lancer(t, new Actions.Demander("pierre_trou", Actions.Filtre.de("#c:cobblestones"), 8));
             return Case.ACTION;
         }
         return Case.PRETE;
@@ -105,7 +104,7 @@ final class Mineur extends Metier {
             if (t.compter(Actions.Filtre.de("minecraft:torch")) > 0) {
                 m.putInt("torche", m.getInt("torche") + 1);
                 if (m.getInt("torche") % 2 == 1) { Cerveau.lancer(t, new Actions.Poser(p.above(), Actions.Filtre.de("minecraft:torch"))); return; }
-            } else Cerveau.parfois(t, "torches", "Je n'ai plus de torches, chef : mes galeries vont rester sombres.", true, 1800);
+            } else Cerveau.ecrire(t, "torches", 1800, "torches");
         }
         m.putInt("torche", 0);
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(p), 0.7));
@@ -135,7 +134,7 @@ final class Mineur extends Metier {
                 if (p == Cerveau.Portee.JOURNEE || p == Cerveau.Portee.EXPEDITION) return;
                 if (p == Cerveau.Portee.DEMAIN) { Cerveau.attendre(t, 60); return; }
             }
-            Cerveau.parfois(t, "pas_de_sol", "Je ne trouve aucun sol naturel où creuser sans abîmer de construction.", true, 1800);
+            Cerveau.ecrire(t, "pas_de_sol", 1800, "pas_de_sol");
             if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 30);
             return;
         }
@@ -156,7 +155,7 @@ final class Mineur extends Metier {
         CompoundTag m = t.memoire;
         Commande commande = Metier.commande(t);
         if (!(commande instanceof Minerai c)) {
-            Cerveau.parfois(t, "sans_commande", "Je n'ai pas de commande, chef : choisis ce que je dois miner dans l'écran du bureau.", true, 1800);
+            Cerveau.ecrire(t, "sans_commande", 1800, "sans_mission");
             Cerveau.attendre(t, 20);
             return;
         }
@@ -175,8 +174,8 @@ final class Mineur extends Metier {
         // La bonne pioche.
         if (!t.equiper(c.outil)) {
             if (t.compter(Actions.Filtre.de(PIOCHE)) > 0)
-                Cerveau.lancer(t, new Actions.Demander("Pour le " + c.nom.toLowerCase() + ", il me faut une meilleure pioche (en fer ou mieux).", c.outil, 1));
-            else Cerveau.lancer(t, new Actions.Demander("Il me faut une pioche pour miner.", c.outil, 1));
+                Cerveau.lancer(t, new Actions.Demander("meilleure_pioche", c.outil, 1, c.nom.toLowerCase()));
+            else Cerveau.lancer(t, new Actions.Demander("pioche", c.outil, 1));
             return;
         }
 
@@ -213,7 +212,7 @@ final class Mineur extends Metier {
                         m.putInt("marche", 0);
                         m.putInt("tours", m.getInt("tours") + 1);
                         m.remove("cible");
-                        Cerveau.parfois(t, "escalier_tourne", r == Case.LIQUIDE ? "De l'eau ou de la lave devant mon escalier : je le fais tourner." : "Un bloc que je ne peux pas casser : mon escalier tourne.", false, 120);
+                        Cerveau.dire(t, "escalier_tourne", 120, r == Case.LIQUIDE ? "De l'eau ou de la lave devant mon escalier : je le fais tourner." : "Un bloc que je ne peux pas casser : mon escalier tourne.");
                         Cerveau.attendre(t, 1);
                         return;
                     }
@@ -241,7 +240,7 @@ final class Mineur extends Metier {
                 Cerveau.attendre(t, 1);
                 return;
             }
-            t.direAuChef("J'ai fini mes galeries à cet endroit : je creuse un nouveau puits un peu plus loin.");
+            Courrier.ecrire(t, "puits_fini");
             m.remove("puits");
             Cerveau.attendre(t, 2);
             return;

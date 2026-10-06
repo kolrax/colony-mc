@@ -43,7 +43,6 @@ public class TestsJeu {
         t.fin = 0; // de 0 h à 0 h : en service toute la journée
         Bureau.Entite b = (Bureau.Entite) l.getBlockEntity(bureau);
         b.proprietaire = t.chef;
-        b.employe = t.getUUID();
         t.bureau = bureau;
         if (!outil.isEmpty()) t.inventaire.addItem(outil);
         l.addFreshEntity(t);
@@ -162,7 +161,7 @@ public class TestsJeu {
                 if (l.getBlockState(f).isAir()) l.setBlockAndUpdate(f, Blocks.BIRCH_LEAVES.defaultBlockState());
         }
         Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
-        t.commande = "bouleau";
+        t.mission("bouleau", "stock", 64);
         t.forcerChunk();
         h.succeedWhen(() -> {
             h.assertTrue(t.compter(Actions.Filtre.de("minecraft:birch_log")) >= 3, "il doit avoir abattu un bouleau (" + etat(t, bureau) + ")");
@@ -177,7 +176,7 @@ public class TestsJeu {
         h.setBlock(3, 2, 4, Blocks.COAL_ORE);
         h.setBlock(3, 3, 4, Blocks.COAL_ORE);
         Travailleur t = ouvrier(h, "mineur", 1, 2, 4, new ItemStack(Items.IRON_PICKAXE));
-        t.commande = "charbon";
+        t.mission("charbon", "stock", 64);
         h.succeedWhen(() -> {
             h.assertBlockNotPresent(Blocks.COAL_ORE, 3, 2, 4);
             h.assertBlockNotPresent(Blocks.COAL_ORE, 3, 3, 4);
@@ -192,7 +191,7 @@ public class TestsJeu {
         // Bureau au milieu de la pierre : il creuse le plus près possible du bureau, donc sur la pierre du test.
         Travailleur t = ouvrier(h, "mineur", 18, 11, 18, new ItemStack(Items.DIAMOND_PICKAXE), new BlockPos(12, 11, 12));
         t.niveau = 5;
-        t.commande = "charbon";
+        t.mission("charbon", "stock", 64);
         t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
         t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
         int but = h.absolutePos(new BlockPos(0, 5, 0)).getY();
@@ -208,7 +207,7 @@ public class TestsJeu {
         arbre(h, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 3, 6);
         arbre(h, Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 6, 2);
         Travailleur t = ouvrier(h, "bucheron", 1, 2, 4, new ItemStack(Items.IRON_AXE));
-        t.commande = "bouleau";
+        t.mission("bouleau", "stock", 64);
         h.succeedWhen(() -> {
             h.assertBlockNotPresent(Blocks.BIRCH_LOG, 6, 2, 2);
             h.assertBlockPresent(Blocks.OAK_LOG, 3, 2, 6);
@@ -229,16 +228,14 @@ public class TestsJeu {
         Bureau.Entite b = (Bureau.Entite) h.getLevel().getBlockEntity(t.bureau);
         for (int i = 0; i < 27; i++) b.depot.setItem(i, new ItemStack(Items.DIRT, 64));
         h.setBlock(1, 2, 0, Blocks.CHEST);
-        t.commande = "pierre";
-        t.commandeMode = "quantite";
-        t.commandeNombre = 100_000;
+        t.mission("pierre", "quantite", 100_000);
         for (int i = 0; i < 27; i++) t.inventaire.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
         h.succeedWhen(() -> {
             var coffre = (net.minecraft.world.level.block.entity.ChestBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(new BlockPos(1, 2, 0)));
             int n = 0;
             for (int i = 0; i < coffre.getContainerSize(); i++) if (coffre.getItem(i).is(Items.COBBLESTONE)) n += coffre.getItem(i).getCount();
             h.assertTrue(n >= 64 * 20, "le coffre voisin doit avoir reçu la pierre (" + n + ")");
-            h.assertTrue(t.commandeLivre >= 64 * 20, "la commande doit compter la pierre livrée (" + t.commandeLivre + ")");
+            h.assertTrue(t.missions.get(0).livre >= 64 * 20, "la commande doit compter la pierre livrée (" + t.missions.get(0).livre + ")");
         });
     }
 
@@ -250,7 +247,7 @@ public class TestsJeu {
         h.setBlock(4, 2, 3, lit.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT));
         h.setBlock(4, 2, 2, lit.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD));
         Travailleur t = ouvrier(h, "mineur", 6, 2, 6, new ItemStack(Items.IRON_PICKAXE));
-        t.commande = "charbon";
+        t.mission("charbon", "stock", 64);
         int heure = (int) ((h.getLevel().getDayTime() + 6000) % 24000 / 1000);
         t.debut = (heure + 2) % 24; // son service commence dans 2 heures : il est au repos
         t.fin = (heure + 3) % 24;
@@ -291,7 +288,9 @@ public class TestsJeu {
         t.aTerreTicks = 5;
         h.succeedWhen(() -> {
             h.assertFalse(t.isAlive(), "il doit être mort");
-            h.assertTrue(((Bureau.Entite) h.getLevel().getBlockEntity(h.absolutePos(new BlockPos(0, 2, 0)))).mort, "son bureau doit le dire mort");
+            var membre = Courrier.de(h.getLevel().getServer()).effectifs.get(t.chef).get(t.getUUID());
+            h.assertTrue(membre != null && !membre.mort.isEmpty(), "le poste doit le dire mort");
+            h.assertTrue(Courrier.de(h.getLevel().getServer()).boite(t.chef).stream().anyMatch(l -> l.objet.startsWith("Avis de décès")), "un avis de décès doit arriver au poste");
             h.assertBlockPresent(Blocks.CHEST, 3, 2, 4);
         });
     }
@@ -371,7 +370,7 @@ public class TestsJeu {
     public static void partEnExpeditionSansLit(GameTestHelper h) {
         BlockPos bureau = sol(h, 0, 15000);
         Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
-        t.commande = "bouleau";
+        t.mission("bouleau", "stock", 64);
         t.debut = heure(h);
         t.fin = (t.debut + 4) % 24; // 4 heures de travail : trop court pour un aller-retour de 1 200 blocs
         t.memoire.putLong("coin_bouleau", bureau.offset(600, 0, 0).asLong()); // un coin de bouleaux qu'il connaît
@@ -423,7 +422,7 @@ public class TestsJeu {
         Vec3 p = h.absoluteVec(new Vec3(3.5, 2, 4.5));
         chef.moveTo(p.x, p.y, p.z);
         t.chef = chef.getUUID();
-        t.commande = "escorter";
+        t.mission("escorter", "stock", 64);
         var villageois = h.spawn(net.minecraft.world.entity.EntityType.VILLAGER, 5, 2, 4);
         villageois.setNoAi(true);
         h.runAtTickTime(h.getTick() + 5, () -> chef.setLastHurtMob(villageois));
@@ -529,7 +528,7 @@ public class TestsJeu {
         h.setBlock(18, 6, 12, Blocks.WATER); // une poche d'eau à l'est de la 5e marche
         Travailleur t = ouvrier(h, "mineur", 12, 11, 12, new ItemStack(Items.DIAMOND_PICKAXE), new BlockPos(6, 11, 6));
         t.niveau = 5;
-        t.commande = "charbon";
+        t.mission("charbon", "stock", 64);
         t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
         t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
         t.memoire.putString("chantier", "charbon@" + Mineur.cle(t.bureau) + "/" + t.profondeurForcee);
@@ -549,6 +548,8 @@ public class TestsJeu {
     public static void statutAuBureau(GameTestHelper h) {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         Travailleur t = ouvrier(h, "mineur", 4, 2, 4, ItemStack.EMPTY);
+        h.assertTrue(t.statut().equals("Sans mission"), "sans mission : " + t.statut());
+        t.mission("charbon", "stock", 64);
         h.assertTrue(t.statut().equals("Au travail"), "statut : " + t.statut());
         t.debut = (heure(h) + 2) % 24;
         t.fin = (heure(h) + 3) % 24;

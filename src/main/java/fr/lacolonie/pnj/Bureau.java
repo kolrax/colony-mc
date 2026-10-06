@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -33,13 +34,18 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Le bureau : le poste de pilotage d'un PNJ (un par bureau).
- * Une caisse (les salaires), un dépôt (sa production, agrandi par les coffres collés au bureau),
- * et l'écran de gestion du propriétaire : commande, horaires, paie, durée des expéditions.
+ * Le poste de travail : un seul par joueur, commun à tous ses ouvriers (0.5.0). Une caisse (les salaires), un dépôt
+ * (agrandi par les coffres collés au bureau), le courrier, et l'écran du chef : ses ouvriers, leurs missions, leurs
+ * horaires, leur paie et leurs expéditions, et les lettres.
+ * <p>
+ * Avant la 0.5.0, chaque PNJ avait son bureau. Le premier bureau qu'un joueur ouvre après la mise à jour lui propose
+ * d'en faire son poste ; les autres ne sont plus que des coffres (caisse et dépôt), à vider.
  */
 public final class Bureau {
     private Bureau() {}
@@ -58,23 +64,40 @@ public final class Bureau {
         @Override
         protected RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
+        /** Un seul poste par joueur : un deuxième est refusé. */
+        @Override
+        public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+            if (ctx.getPlayer() instanceof ServerPlayer p) {
+                Courrier.Poste poste = Courrier.de(p.server).poste(p.getUUID());
+                if (poste != null && posteExiste(p.server, poste)) {
+                    Travailleur.signaler(p, "Tu as déjà un poste de travail, en " + poste.pos().toShortString() + " : un seul par joueur.");
+                    return null;
+                }
+            }
+            return super.getStateForPlacement(ctx);
+        }
+
         @Override
         public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
             super.setPlacedBy(level, pos, state, placer, stack);
-            if (placer instanceof Player p && level.getBlockEntity(pos) instanceof Entite e) {
+            if (placer instanceof ServerPlayer p && level.getBlockEntity(pos) instanceof Entite e) {
                 e.proprietaire = p.getUUID();
                 e.nomProprietaire = p.getName().getString();
                 e.setChanged();
-                if (!level.isClientSide)
-                    p.sendSystemMessage(Component.literal("Ton bureau est posé. Clic droit dessus pour y rattacher un PNJ et lui donner son travail."));
+                Courrier c = Courrier.de(p.server);
+                Courrier.Poste ancien = c.poste(p.getUUID());
+                if (ancien == null || !posteExiste(p.server, ancien)) {
+                    c.definirPoste(p.getUUID(), level, pos);
+                    Travailleur.signaler(p, "Ton poste de travail est posé : tous tes ouvriers s'y rattachent. Clic droit dessus pour les gérer.");
+                }
             }
         }
 
         @Override
         protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
             if (!level.isClientSide && level.getBlockEntity(pos) instanceof Entite e && player instanceof ServerPlayer sp) {
-                // Le propriétaire gère son employé ; les autres ne voient que la caisse et le dépôt (aucune protection : le vol RP est permis).
-                if (sp.getUUID().equals(e.proprietaire)) PacketDistributor.sendToPlayer(sp, new Reseau.FicheBureau(pos, e.fiche(sp)));
+                // Le propriétaire gère ses ouvriers ; les autres ne voient que la caisse et le dépôt (aucune protection : le vol RP est permis).
+                if (sp.getUUID().equals(e.proprietaire)) PacketDistributor.sendToPlayer(sp, new Reseau.Poste(pos, e.fiche(sp)));
                 else sp.openMenu(e);
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
@@ -85,15 +108,29 @@ public final class Bureau {
             if (!state.is(neuf.getBlock()) && level.getBlockEntity(pos) instanceof Entite e) {
                 Containers.dropContents(level, pos, e.caisse);
                 Containers.dropContents(level, pos, e.depot);
-                Travailleur t = e.employeCharge();
-                if (t != null) {
-                    t.bureau = null;
-                    t.lit = null;
-                    t.direAuChef("Mon bureau a été détruit : je ne peux plus travailler. Rattache-moi à un autre bureau.");
+                if (e.proprietaire != null && level instanceof ServerLevel sl) {
+                    Courrier c = Courrier.de(sl.getServer());
+                    Courrier.Poste p = c.poste(e.proprietaire);
+                    if (p != null && p.monde() == level.dimension() && p.pos().equals(pos)) {
+                        c.oublierPoste(e.proprietaire, level, pos);
+                        for (Travailleur t : ColoniePnj.pnjDe(sl.getServer(), e.proprietaire)) {
+                            if (!pos.equals(t.bureau)) continue;
+                            t.bureau = null;
+                            t.lit = null;
+                            Courrier.ecrire(t, "poste_detruit");
+                        }
+                    }
                 }
             }
             super.onRemove(state, level, pos, neuf, piston);
         }
+    }
+
+    /** Le poste existe encore (son monde est là et le bloc aussi, s'il est chargé). */
+    static boolean posteExiste(net.minecraft.server.MinecraftServer s, Courrier.Poste p) {
+        ServerLevel l = s.getLevel(p.monde());
+        if (l == null) return false;
+        return !l.isLoaded(p.pos()) || l.getBlockEntity(p.pos()) instanceof Entite;
     }
 
     public static class Entite extends BlockEntity implements MenuProvider {
@@ -108,10 +145,8 @@ public final class Bureau {
             @Override
             public void setChanged() { super.setChanged(); Entite.this.setChanged(); }
         };
-        public UUID proprietaire, employe;
-        public String nomProprietaire = "", nomEmploye = "";
-        /** Son employé est mort (le bureau le montre jusqu'à ce qu'on libère la place). */
-        public boolean mort;
+        public UUID proprietaire;
+        public String nomProprietaire = "";
 
         public Entite(BlockPos pos, BlockState state) { super(ColoniePnj.BUREAU_BE.get(), pos, state); }
 
@@ -122,9 +157,6 @@ public final class Bureau {
             t.put("Depot", depot.createTag(reg));
             if (proprietaire != null) t.putUUID("Proprietaire", proprietaire);
             t.putString("NomProprietaire", nomProprietaire);
-            if (employe != null) t.putUUID("Employe", employe);
-            t.putString("NomEmploye", nomEmploye);
-            t.putBoolean("Mort", mort);
         }
 
         @Override
@@ -134,23 +166,20 @@ public final class Bureau {
             depot.fromTag(t.getList("Depot", Tag.TAG_COMPOUND), reg);
             proprietaire = t.hasUUID("Proprietaire") ? t.getUUID("Proprietaire") : null;
             nomProprietaire = t.getString("NomProprietaire");
-            employe = t.hasUUID("Employe") ? t.getUUID("Employe") : null;
-            nomEmploye = t.getString("NomEmploye");
-            mort = t.getBoolean("Mort");
         }
 
         @Override
         public Component getDisplayName() {
-            return Component.literal(nomProprietaire.isEmpty() ? "Bureau" : "Bureau de " + nomProprietaire);
+            return Component.literal(nomProprietaire.isEmpty() ? "Poste de travail" : "Poste de travail de " + nomProprietaire);
         }
 
         @Override
         public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) { return new Menu(id, inv, caisse, depot, this); }
 
-        /** Son employé, s'il est chargé (il l'est toujours : il garde son chunk). */
-        Travailleur employeCharge() {
-            if (employe == null || !(level instanceof ServerLevel sl)) return null;
-            return sl.getEntity(employe) instanceof Travailleur t && t.isAlive() ? t : null;
+        boolean estLePoste() {
+            if (proprietaire == null || !(level instanceof ServerLevel sl)) return false;
+            Courrier.Poste p = Courrier.de(sl.getServer()).poste(proprietaire);
+            return p != null && p.monde() == level.dimension() && p.pos().equals(worldPosition);
         }
 
         // --- Le dépôt : le bureau, plus les coffres, tonneaux ou réservoirs collés à lui -----------------
@@ -206,116 +235,111 @@ public final class Bureau {
             return pris;
         }
 
-        // --- L'écran de gestion ---------------------------------------------------------------------
+        // --- L'écran du poste -------------------------------------------------------------------------
 
-        /** Tout ce que l'écran du bureau affiche. */
+        /** Tout ce que l'écran affiche : ses ouvriers (vivants, morts, disparus) et son courrier. */
         CompoundTag fiche(ServerPlayer p) {
             CompoundTag f = new CompoundTag();
+            Courrier c = Courrier.de(p.server);
             f.putString("titre", getDisplayName().getString());
-            Travailleur t = employeCharge();
-            if (t != null && !worldPosition.equals(t.bureau)) { employe = null; t = null; setChanged(); }
-            if (t != null) {
-                CompoundTag e = t.fiche(false);
-                e.putString("uuid", t.getUUID().toString());
-                e.putInt("fatigue", t.fatigue);
-                e.putLong("salaireDemande", t.salaireDemande());
-                e.putLong("salaireVerse", t.salaireVerse());
-                e.putString("salaireDemandeTexte", Reglages.texte(t.salaireDemande()));
-                e.putInt("debut", t.debut);
-                e.putInt("fin", t.fin);
-                e.putInt("joursExpedition", t.joursExpedition);
-                BlockPos lit = t.monLit();
-                e.putString("lit", lit == null ? "" : lit.getX() + ", " + lit.getY() + ", " + lit.getZ());
-                e.putString("sortie", t.sortieTexte());
-                e.putString("statut", t.statut());
-                double d = t.distanceAuBureau();
-                e.putString("distance", d < 4 ? "au bureau" : "à " + (int) d + " blocs");
-                long paie = t.prochainePaie - System.currentTimeMillis();
-                e.putString("paie", paie <= 0 ? "Paie due : il vient la chercher" : "Prochaine paie dans " + (paie >= 3_600_000 ? paie / 3_600_000 + " h " : "") + (paie / 60_000 % 60) + " min");
-                e.putString("commande", t.commande);
-                e.putString("commandeMode", t.commandeMode);
-                e.putInt("commandeNombre", t.commandeNombre);
-                e.putString("avancement", Metier.avancementTexte(t));
-                ListTag cat = new ListTag();
-                Metier m = Metier.de(t.metier);
-                if (m != null) for (Metier.Commande ci : m.commandes) {
-                    CompoundTag x = new CompoundTag();
-                    x.putString("id", ci.id);
-                    x.putString("nom", ci.nom);
-                    x.putBoolean("quantite", ci.objet != null);
-                    cat.add(x);
-                }
-                e.put("catalogue", cat);
-                f.put("employe", e);
-            } else if (employe != null) {
-                // Rattaché mais introuvable : mort, ou disparu (dans une autre dimension, retiré du monde…).
-                f.putString(mort ? "mort" : "absent", nomEmploye);
+            boolean poste = estLePoste();
+            f.putBoolean("poste", poste);
+            Courrier.Poste ailleurs = c.poste(p.getUUID());
+            if (!poste && ailleurs != null && posteExiste(p.server, ailleurs)) f.putString("ailleurs", ailleurs.pos().toShortString());
+            if (!poste) return f;
+
+            ListTag ouvriers = new ListTag();
+            Set<UUID> vus = new HashSet<>();
+            for (Travailleur t : ColoniePnj.pnjDe(p.server, p.getUUID())) {
+                vus.add(t.getUUID());
+                c.inscrire(t);
+                ouvriers.add(ficheOuvrier(t));
             }
-            ListTag libres = new ListTag();
-            for (Travailleur x : ColoniePnj.pnjDe(p.server, p.getUUID())) {
-                if (x.bureau != null || x == t) continue;
-                CompoundTag l = new CompoundTag();
-                l.putString("uuid", x.getUUID().toString());
-                l.putString("nom", x.prenom + " (" + Metier.nom(x.metier) + " " + "★".repeat(x.niveau) + ")");
-                libres.add(l);
-            }
-            f.put("libres", libres);
+            var effectif = c.effectifs.get(p.getUUID());
+            if (effectif != null) effectif.forEach((id, m) -> {
+                if (vus.contains(id)) return;
+                CompoundTag x = new CompoundTag();
+                x.putString("uuid", id.toString());
+                x.putString("nom", m.nom);
+                x.putString("metier", Metier.nom(m.metier));
+                x.putInt("niveau", m.niveau);
+                x.putString("statut", m.mort.isEmpty() ? "Disparu" : "Mort");
+                x.putString("detail", m.mort.isEmpty() ? "Introuvable : il n'est plus dans le monde." : "Mort le " + m.mort.toLowerCase() + ".");
+                x.putBoolean("absent", true);
+                ouvriers.add(x);
+            });
+            f.put("ouvriers", ouvriers);
+
+            ListTag lettres = new ListTag();
+            List<Courrier.Lettre> boite = c.boite(p.getUUID());
+            for (int i = 0; i < Math.min(60, boite.size()); i++) lettres.add(boite.get(i).sauver());
+            f.put("lettres", lettres);
+            f.putLong("nonLues", c.nonLues(p.getUUID()));
             return f;
         }
 
-        /** Les boutons de l'écran de gestion (réservés au propriétaire, à moins de 8 blocs). */
+        static CompoundTag ficheOuvrier(Travailleur t) {
+            CompoundTag e = t.fiche(false);
+            e.putString("uuid", t.getUUID().toString());
+            e.putInt("fatigue", t.fatigue);
+            e.putLong("salaireDemande", t.salaireDemande());
+            e.putLong("salaireVerse", t.salaireVerse());
+            e.putInt("debut", t.debut);
+            e.putInt("fin", t.fin);
+            e.putInt("joursExpedition", t.joursExpedition);
+            e.putString("sortie", t.sortieTexte());
+            double d = t.distanceAuBureau();
+            e.putString("distance", t.bureau == null ? "" : d < 4 ? "au poste" : "à " + (int) d + " blocs");
+            long paie = t.prochainePaie - System.currentTimeMillis();
+            e.putString("paie", paie <= 0 ? "Paie due : il vient la chercher" : "Prochaine paie dans " + (paie >= 3_600_000 ? paie / 3_600_000 + " h " : "") + (paie / 60_000 % 60) + " min");
+            ListTag ms = new ListTag();
+            for (Travailleur.Mission m : t.missions) ms.add(net.minecraft.nbt.StringTag.valueOf(Metier.avancementTexte(t, m)));
+            e.put("missions", ms);
+            e.putInt("aLire", t.lettresALire.size());
+            return e;
+        }
+
+        /** Les boutons de l'écran du poste (réservés au propriétaire, à moins de 8 blocs). */
         void action(ServerPlayer p, String action, CompoundTag d) {
             if (!p.getUUID().equals(proprietaire) || p.distanceToSqr(worldPosition.getCenter()) > 64) return;
-            Travailleur t = employeCharge();
+            Courrier c = Courrier.de(p.server);
             switch (action) {
                 case "stock" -> { p.openMenu(this); return; }
-                case "rattacher" -> {
-                    Travailleur x = ColoniePnj.pnjDe(p.server, p.getUUID()).stream()
-                            .filter(y -> y.getUUID().toString().equals(d.getString("uuid"))).findFirst().orElse(null);
-                    if (x == null) return;
-                    if (t != null && t != x) liberer(t);
-                    liberer(x);
-                    employe = x.getUUID();
-                    nomEmploye = x.prenom;
-                    mort = false;
-                    x.bureau = worldPosition;
-                    x.lit = null; // il prendra un lit près de son nouveau bureau
-                    if (x.mode != Travailleur.Mode.GREVE) x.mode = Travailleur.Mode.TRAVAIL; // changer de bureau n'efface pas une grève
-                    x.finirAction("ordre");
-                    x.majNom();
-                    x.dire("Me voilà rattaché à ce bureau. Donne-moi ma commande, chef.");
-                    setChanged();
-                }
-                case "liberer" -> {
-                    if (t == null) { employe = null; nomEmploye = ""; mort = false; setChanged(); }
-                    else {
-                        liberer(t);
-                        t.mode = Travailleur.Mode.ATTENDRE;
-                        t.finirAction("ordre");
-                        t.majNom();
-                        t.dire("Je ne suis plus rattaché à ce bureau.");
-                    }
+                case "devenir_poste" -> {
+                    Courrier.Poste ancien = c.poste(p.getUUID());
+                    if (ancien != null && posteExiste(p.server, ancien) && !estLePoste()) return;
+                    c.definirPoste(p.getUUID(), level, worldPosition);
+                    Travailleur.signaler(p, "Ce bureau est ton poste de travail : tous tes ouvriers s'y rattachent.");
                 }
                 case "enregistrer" -> {
+                    Travailleur t = ouvrier(p, d.getString("uuid"));
                     if (t == null) return;
-                    String c = d.getString("commande");
-                    String mode = d.getString("commandeMode").equals("quantite") ? "quantite" : "stock";
-                    if (!c.equals(t.commande) || !mode.equals(t.commandeMode)) t.commandeLivre = 0;
-                    Metier m = Metier.de(t.metier);
-                    t.commande = m != null && m.commandes.stream().anyMatch(ci -> ci.id.equals(c)) ? c : "";
-                    t.commandeMode = mode;
-                    t.commandeNombre = Math.clamp(d.getInt("commandeNombre"), 1, 100_000);
                     t.joursExpedition = Math.clamp(d.getInt("joursExpedition"), 1, 30);
                     t.debut = Math.floorMod(d.getInt("debut"), 24);
                     t.fin = Math.floorMod(d.getInt("fin"), 24);
                     long s = d.getLong("salaire");
                     t.salaire = s < 0 || s == t.salaireDemande() ? -1 : Math.min(s, 1_000_000);
-                    t.finirAction("ordre");
-                    t.dire(t.commande.isEmpty() ? "Bien, chef. Mais je n'ai pas encore de commande." : "Bien, chef : " + Metier.nomCommande(t.metier, t.commande) + ".");
+                }
+                case "ecrire" -> {
+                    Travailleur t = ouvrier(p, d.getString("uuid"));
+                    String texte = d.getString("texte").strip();
+                    if (t == null || texte.isEmpty() || texte.length() > 1000) return;
+                    Courrier.ecrireAuPnj(p, t, texte);
+                    Travailleur.signaler(p, t.chezLui(t.blockPosition()) ? "Lettre posée au poste : " + t.prenom + " passera la prendre."
+                            : "Un corbeau s'envole vers " + t.prenom + ".");
+                }
+                case "lue" -> c.boite(p.getUUID()).stream().filter(l -> l.id == d.getLong("id")).forEach(l -> { l.lue = true; c.setDirty(); });
+                case "supprimer" -> { if (c.boite(p.getUUID()).removeIf(l -> l.id == d.getLong("id"))) c.setDirty(); }
+                case "retirer" -> {
+                    try { c.retirer(p.getUUID(), UUID.fromString(d.getString("uuid"))); } catch (IllegalArgumentException ignore) { return; }
                 }
                 default -> { return; }
             }
-            PacketDistributor.sendToPlayer(p, new Reseau.FicheBureau(worldPosition, fiche(p)));
+            PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
+        }
+
+        static Travailleur ouvrier(ServerPlayer p, String uuid) {
+            return ColoniePnj.pnjDe(p.server, p.getUUID()).stream().filter(t -> t.getUUID().toString().equals(uuid)).findFirst().orElse(null);
         }
     }
 
@@ -360,33 +384,11 @@ public final class Bureau {
         }
     }
 
-    /** À sa mort, le PNJ le note sur son bureau (chargé au besoin), qui l'affiche jusqu'à ce qu'on libère la place. */
-    static void marquerMort(Travailleur t) {
-        if (t.bureau == null || !(t.level() instanceof ServerLevel sl)) return;
-        if (sl.getChunk(t.bureau).getBlockEntity(t.bureau) instanceof Entite e && t.getUUID().equals(e.employe)) {
-            e.mort = true;
-            e.nomEmploye = t.prenom;
-            e.setChanged();
-        }
-    }
-
-    /** Le bureau du PNJ (celui auquel il est rattaché), ou null. */
+    /** Le poste du PNJ (celui de son chef), ou null. */
     public static BlockPos trouver(Travailleur t) { return t.bureau; }
 
-    /** Le bureau chargé du PNJ, ou null. */
+    /** Le poste chargé du PNJ, ou null. */
     static Entite entite(Travailleur t) {
         return t.bureau != null && t.level().isLoaded(t.bureau) && t.level().getBlockEntity(t.bureau) instanceof Entite e ? e : null;
-    }
-
-    /** Détache le PNJ de son bureau (le bureau oublie aussi son employé, s'il est chargé). */
-    static void liberer(Travailleur t) {
-        Entite e = entite(t);
-        if (e != null && t.getUUID().equals(e.employe)) {
-            e.employe = null;
-            e.nomEmploye = "";
-            e.setChanged();
-        }
-        t.bureau = null;
-        t.lit = null;
     }
 }

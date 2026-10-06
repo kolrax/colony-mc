@@ -211,16 +211,7 @@ public final class PanneauWeb {
         if (t == null) return resultat("PNJ introuvable");
         switch (chaine(c, "action")) {
             case "relever" -> { if (t.aTerre) { t.aTerre = false; t.setPose(net.minecraft.world.entity.Pose.STANDING); } t.setHealth(t.getMaxHealth()); t.faim = 20; t.majNom(); }
-            case "licencier" -> {
-                t.chef = null;
-                t.chefNom = "";
-                t.mode = Travailleur.Mode.CHOMEUR;
-                Bureau.liberer(t);
-                t.arrivee = System.currentTimeMillis();
-                t.finirAction("licencie");
-                t.libererChunk();
-                t.majNom();
-            }
+            case "licencier" -> t.licencier();
             case "supprimer" -> t.discard();
             case "skin" -> t.setSkin(chaine(c, "valeur"));
             case "nom" -> { t.prenom = chaine(c, "valeur").trim(); t.majNom(); }

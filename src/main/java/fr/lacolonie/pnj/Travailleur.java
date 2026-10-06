@@ -5,6 +5,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -87,7 +88,7 @@ public class Travailleur extends PathfinderMob {
      * au bout de {@link #joursExpedition} jours s'il en a un (son lit : à 8 blocs du bureau au plus).
      */
     public BlockPos lit;
-    static final int RAYON_LIT = 8;
+    static final int RAYON_LIT = 16; // un poste commun : les lits de tous ses ouvriers autour
     BlockPos litRefuse;
     int prochaineRechercheLit;
     public int joursExpedition = 3;
@@ -103,9 +104,68 @@ public class Travailleur extends PathfinderMob {
     public int debut = 6, fin = 18;
     /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
     public long salaire = -1;
-    /** Commande en cours : identifiant (catalogue du métier), « stock » ou « quantite », nombre, et ce qui est déjà livré. */
-    public String commande = "", commandeMode = "stock";
-    public int commandeNombre = 64, commandeLivre;
+    /**
+     * Ses missions, dans l'ordre : il remplit la première qui ne l'est pas. Une quantité livrée est retirée ; un stock
+     * reste (il reprend quand il baisse).
+     */
+    public final List<Mission> missions = new ArrayList<>();
+
+    /** Une mission : un identifiant du catalogue de son métier, « stock » ou « quantite », un nombre, et ce qu'il a déjà livré. */
+    public static final class Mission {
+        public final String id, mode;
+        public final int nombre;
+        public int livre;
+
+        public Mission(String id, String mode, int nombre) {
+            this.id = id;
+            this.mode = mode.equals("quantite") ? "quantite" : "stock";
+            this.nombre = Math.clamp(nombre, 1, 100_000);
+        }
+
+        public boolean quantite() { return mode.equals("quantite"); }
+
+        CompoundTag sauver() {
+            CompoundTag t = new CompoundTag();
+            t.putString("id", id);
+            t.putString("mode", mode);
+            t.putInt("nombre", nombre);
+            t.putInt("livre", livre);
+            return t;
+        }
+
+        static Mission lire(CompoundTag t) {
+            Mission m = new Mission(t.getString("id"), t.getString("mode"), t.getInt("nombre"));
+            m.livre = t.getInt("livre");
+            return m;
+        }
+    }
+
+    /** Une seule mission, qui remplace les autres (tests, et ancienne façon de faire). */
+    public void mission(String id, String mode, int nombre) {
+        missions.clear();
+        if (id != null && !id.isEmpty()) missions.add(new Mission(id, mode, nombre));
+    }
+
+    /** La mission sur laquelle il travaille : la première qui n'est pas remplie, ou null. */
+    public Mission missionActive() {
+        for (Mission m : missions) if (!Metier.remplie(this, m)) return m;
+        return null;
+    }
+
+    /** Retire les quantités livrées et les missions qui n'existent plus dans son métier ; prévient son chef. */
+    void nettoyerMissions() {
+        for (var it = missions.iterator(); it.hasNext(); ) {
+            Mission m = it.next();
+            Metier.Commande c = Metier.catalogue(metier, m.id);
+            if (c == null) { it.remove(); continue; }
+            if (m.quantite() && m.livre >= m.nombre) {
+                it.remove();
+                Mission suivante = missionActive();
+                Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom,
+                        suivante == null ? "" : Metier.nomMission(metier, suivante));
+            }
+        }
+    }
     /** Profondeur imposée (tests) ; Integer.MIN_VALUE = celle du catalogue. */
     public int profondeurForcee = Integer.MIN_VALUE;
     public int fatigue;
@@ -129,6 +189,13 @@ public class Travailleur extends PathfinderMob {
     public CompoundTag memoire = new CompoundTag();
     /** Où en est son trajet (pour le panneau) : chemin direct, étape, sort de sous terre, creuse, attend le terrain, coincé. */
     public String diag = "";
+    /** Les lettres qu'il porte au poste (il les y pose en passant) et celles de son chef qu'il doit y lire. */
+    public final List<Courrier.Lettre> lettresADeposer = new ArrayList<>(), lettresALire = new ArrayList<>();
+    /** Une lettre arrivée par corbeau, qu'il est en train de lire (il s'arrête un instant). */
+    Courrier.Lettre lettreEnMain;
+    int lectureTicks;
+    /** Où ses affaires ont été mises à sa mort (pour l'avis de décès). */
+    String lieuAffaires = "";
     int pauseCerveau;
     ChunkPos chunkForce;
 
@@ -236,7 +303,7 @@ public class Travailleur extends PathfinderMob {
         return debut < fin ? h >= debut && h < fin : h >= debut || h < fin;
     }
 
-    /** L'objet que produit sa commande en cours. */
+    /** L'objet que produit sa mission en cours. */
     public Actions.Filtre objetCommande() { return Metier.objetCommande(this); }
 
     // --- Espace de vie, lit, sorties et expéditions -------------------------------------------------
@@ -303,8 +370,10 @@ public class Travailleur extends PathfinderMob {
             case GREVE -> "En grève";
             case SUIVRE -> "Te suit";
             case ATTENDRE -> "Attend";
-            case TRAVAIL -> bureau == null ? "Sans bureau" : expedition ? "En expédition"
-                    : action instanceof Actions.Reposer || !enService() ? "Se repose" : "Au travail";
+            case TRAVAIL -> bureau == null ? "Sans poste" : expedition ? "En expédition"
+                    : action instanceof Actions.Reposer || !enService() ? "Se repose"
+                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") ? "Sans mission"
+                    : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
     }
 
@@ -380,6 +449,13 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 20 == 0) forcerChunk();
         if (aTerre) { tickATerre(); return; }
         tickCorps();
+        if (tickCount % 20 == 0) tickCourrier();
+        if (lettreEnMain != null) {
+            getNavigation().stop();
+            getLookControl().setLookAt(getX(), getEyeY() - 1, getZ());
+            if (--lectureTicks <= 0) { Courrier.Lettre l = lettreEnMain; lettreEnMain = null; lireLettre(l); }
+            return;
+        }
         if (mode == Mode.CHOMEUR) {
             long duree = Reglages.actuel.chercheurs.duree_minutes * 60_000L;
             if (System.currentTimeMillis() > arrivee + duree && level().getNearestPlayer(this, 16) == null) discard();
@@ -396,6 +472,41 @@ public class Travailleur extends PathfinderMob {
         }
         if (pauseCerveau > 0) pauseCerveau--;
         else if ((tickCount + getId()) % 10 == 0) Cerveau.penser(this);
+    }
+
+    /**
+     * Toutes les secondes : son poste de travail (le poste de son chef, où qu'il soit), son inscription à l'effectif,
+     * la lettre qu'il tient à la main, et celles qu'il ne peut plus porter à pied (il est sorti de l'espace de vie).
+     */
+    void tickCourrier() {
+        if (chef == null || !(level() instanceof ServerLevel sl)) return;
+        Courrier c = Courrier.de(sl.getServer());
+        if (tickCount % 200 == 0) c.inscrire(this);
+        Courrier.Poste p = c.poste(chef);
+        if (p != null && p.monde() == level().dimension() && !p.pos().equals(bureau)) { bureau = p.pos(); lit = null; }
+        if (!lettresADeposer.isEmpty() && (bureau == null || !chezLui(blockPosition()))) {
+            for (Courrier.Lettre l : lettresADeposer) c.envoyerCorbeau(level(), blockPosition(), chef, l, true);
+            lettresADeposer.clear();
+        }
+        // Une lettre à la main (dans la main gauche) quand il en porte ou en lit une.
+        boolean lettre = !lettresADeposer.isEmpty() || lettreEnMain != null || action instanceof Actions.LireLettres;
+        boolean tient = getOffhandItem().is(Items.PAPER);
+        if (lettre && !tient && getOffhandItem().isEmpty()) setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.PAPER));
+        else if (!lettre && tient) setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+    }
+
+    /** Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. */
+    void recevoirLettre(Courrier.Lettre l) {
+        lettreEnMain = l;
+        lectureTicks = 60;
+        finirAction("lettre");
+        setItemSlot(EquipmentSlot.OFFHAND, getOffhandItem().isEmpty() ? new ItemStack(Items.PAPER) : getOffhandItem());
+    }
+
+    /** Il lit une lettre de son chef : il exécute ce qu'il en comprend et répond, avec de ses nouvelles. */
+    void lireLettre(Courrier.Lettre l) {
+        String compris = appliquer(Ordres.lire(l.texte, metier), null);
+        Courrier.ecrire(this, "nouvelles", compris.isEmpty() ? "" : compris + " ", Messages.ou(this), activite(), Messages.etat(this));
     }
 
     void finirAction(String r) {
@@ -423,10 +534,14 @@ public class Travailleur extends PathfinderMob {
             fatigue = Math.clamp(fatigue, 0, 100);
         }
         if (tickCount % 10 == 0) ramasserAutour();
+        // Il nage comme un joueur : allongé, quand il court dans l'eau profonde.
+        boolean nage = isInWater() && isSprinting() && !isPassenger() && !isSleeping() && level().getFluidState(blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER);
+        if (nage && getPose() == Pose.STANDING) setPose(Pose.SWIMMING);
+        else if (!nage && getPose() == Pose.SWIMMING) setPose(Pose.STANDING);
         if (tickCount % 100 == 0) equiperArmure();
         if (tickCount % 20 == 0) {
             if (bureau == null || chezLui(blockPosition())) {
-                if (expedition && sortieDepuis >= 0) { direAuChef("Me voilà de retour d'expédition, chef."); expedition = false; }
+                if (expedition && sortieDepuis >= 0) { Courrier.ecrire(this, "retour_expedition"); expedition = false; }
                 if (expedition && !(action instanceof Actions.Aller)) expedition = false; // décidée, mais il n'est pas parti
                 sortieDepuis = -1;
                 trace.clear();
@@ -448,7 +563,7 @@ public class Travailleur extends PathfinderMob {
             impayes++;
             prochainePaie = System.currentTimeMillis() + periodePaie();
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
-            else direAuChef("Chef, ça fait un moment que je n'ai pas été payé. N'oublie pas de mettre des pièces dans la caisse du bureau.");
+            else Courrier.ecrire(this, "paie_retard");
         }
     }
 
@@ -467,7 +582,7 @@ public class Travailleur extends PathfinderMob {
         mode = Mode.GREVE;
         finirAction("greve");
         majNom();
-        direAuChef("Je ne suis plus payé : je me mets en grève. Remplis la caisse du bureau (" + Reglages.texte(du()) + ") et je reprendrai.");
+        Courrier.ecrire(this, "greve", Reglages.texte(du()));
     }
 
     /** Appelé quand il a touché tout ce qu'on lui devait. */
@@ -477,14 +592,13 @@ public class Travailleur extends PathfinderMob {
         if (mode == Mode.GREVE) {
             mode = bureau != null ? Mode.TRAVAIL : Mode.SUIVRE;
             majNom();
-            direAuChef("Merci chef, j'ai touché mon dû (" + Reglages.texte(montant) + "). Je reprends le travail.");
+            Courrier.ecrire(this, "reprise_greve", Reglages.texte(montant));
         }
     }
 
     void tickATerre() {
         getNavigation().stop();
         if (--aTerreTicks <= 0) {
-            direAuChef("…");
             mortDefinitive = true;
             kill();
             return;
@@ -501,7 +615,7 @@ public class Travailleur extends PathfinderMob {
         getNavigation().stop();
         for (Mob m : level().getEntitiesOfClass(Mob.class, getBoundingBox().inflate(32), m -> m.getTarget() == this)) m.setTarget(null);
         majNom();
-        direAuChef("Je suis à terre en " + blockPosition().toShortString() + " ! Il me reste 2 minutes : clic droit sur moi (ou tout près) avec à manger ou une potion de soin.");
+        Courrier.ecrire(this, "a_terre", blockPosition().toShortString());
         dire("Je suis touché… aidez-moi !");
     }
 
@@ -543,9 +657,12 @@ public class Travailleur extends PathfinderMob {
             tomberATerre();
             return;
         }
-        if (!level().isClientSide && chef != null) direAuChef("§c" + prenom + " est mort.");
-        if (!level().isClientSide) Bureau.marquerMort(this);
         super.die(src);
+        if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
+            Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
+            Courrier.avis(sl.getServer(), chef, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
+                    + ") est mort en " + blockPosition().toShortString() + ", " + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
+        }
     }
 
     /** Mort définitive : ses affaires vont dans un coffre à son nom. */
@@ -557,7 +674,8 @@ public class Travailleur extends PathfinderMob {
             ItemStack st = getItemBySlot(s);
             if (!st.isEmpty()) { tout.add(st); setItemSlot(s, ItemStack.EMPTY); }
         }
-        if (tout.isEmpty()) { direAuChef("Il n'avait rien sur lui : pas de coffre."); return; }
+        tout.removeIf(st -> st.is(Items.PAPER) && st.getCount() == 1); // la lettre qu'il tenait
+        if (tout.isEmpty()) { lieuAffaires = "Il n'avait rien sur lui."; return; }
         BlockPos pos = blockPosition();
         for (int i = 0; i < 3 && !level.getBlockState(pos).canBeReplaced(); i++) pos = pos.above();
         if (level.getBlockState(pos).canBeReplaced() && level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 3)
@@ -572,10 +690,10 @@ public class Travailleur extends PathfinderMob {
                 if (!reste.isEmpty()) spawnAtLocation(reste);
             }
             coffre.setChanged();
-            direAuChef("Ses affaires sont dans le coffre « Affaires de " + prenom + " », en " + pos.toShortString() + ".");
+            lieuAffaires = "Ses affaires sont dans le coffre « Affaires de " + prenom + " », en " + pos.toShortString() + ".";
         } else {
             tout.forEach(this::spawnAtLocation);
-            direAuChef("Ses affaires sont tombées par terre en " + blockPosition().toShortString() + ".");
+            lieuAffaires = "Ses affaires sont tombées par terre en " + blockPosition().toShortString() + ".";
         }
     }
 
@@ -681,20 +799,20 @@ public class Travailleur extends PathfinderMob {
 
     // --- Paroles ---------------------------------------------------------------------------------
 
+    /** Il parle : une bulle au-dessus de sa tête pour ceux qui sont près de lui (et la fenêtre de conversation). Jamais dans le chat. */
     public void dire(String texte) {
-        Component c = Component.literal("<" + prenom + "> ").withStyle(ChatFormatting.GOLD).append(Component.literal(texte).withStyle(ChatFormatting.WHITE));
-        for (Player p : level().players()) if (p.distanceToSqr(this) < 24 * 24) p.sendSystemMessage(c);
+        if (!(level() instanceof ServerLevel)) return;
+        for (Player p : level().players())
+            if (p.distanceToSqr(this) < 24 * 24 && p instanceof ServerPlayer sp && sp.connection != null && sp.connection.hasChannel(Reseau.Parole.TYPE))
+                PacketDistributor.sendToPlayer(sp, new Reseau.Parole(getId(), texte));
     }
 
     public ServerPlayer chefJoueur() {
         return chef == null || level().getServer() == null ? null : level().getServer().getPlayerList().getPlayer(chef);
     }
 
-    /** Message privé au chef, où qu'il soit (s'il est connecté). */
-    public void direAuChef(String texte) {
-        ServerPlayer p = chefJoueur();
-        if (p != null) p.sendSystemMessage(Component.literal("[" + prenom + "] ").withStyle(ChatFormatting.GOLD).append(Component.literal(texte).withStyle(ChatFormatting.WHITE)));
-    }
+    /** Une ligne discrète au-dessus de la barre d'objets du joueur (pas le chat). */
+    static void signaler(Player p, String texte) { p.displayClientMessage(Component.literal(texte).withStyle(ChatFormatting.GOLD), true); }
 
     // --- Interactions ----------------------------------------------------------------------------
 
@@ -708,7 +826,7 @@ public class Travailleur extends PathfinderMob {
             if (soigne(enMain)) {
                 enMain.consume(1, player);
                 relever(player);
-            } else sp.sendSystemMessage(Component.literal(prenom + " est à terre : prends à manger ou une potion de soin en main, puis clic droit sur lui."));
+            } else signaler(sp, prenom + " est à terre : prends à manger ou une potion de soin en main, puis clic droit sur lui.");
             return InteractionResult.CONSUME;
         }
         if (mode == Mode.CHOMEUR) {
@@ -716,16 +834,17 @@ public class Travailleur extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         if (!player.getUUID().equals(chef)) {
-            sp.sendSystemMessage(Component.literal(prenom + " travaille pour " + chefNom + "."));
+            signaler(sp, prenom + " travaille pour " + chefNom + ".");
             return InteractionResult.CONSUME;
         }
         if (player.isShiftKeyDown() && !enMain.isEmpty()) {
             ranger(enMain.copy());
             enMain.setCount(0);
-            dire("Merci chef !");
+            dire(Messages.corps(this, "dit_merci_objet"));
             return InteractionResult.CONSUME;
         }
-        PacketDistributor.sendToPlayer(sp, new Reseau.Fiche(getId(), fiche(false)));
+        getLookControl().setLookAt(player);
+        PacketDistributor.sendToPlayer(sp, new Reseau.Conversation(getId(), fiche(false)));
         return InteractionResult.CONSUME;
     }
 
@@ -764,6 +883,8 @@ public class Travailleur extends PathfinderMob {
         t.putInt("impayes", impayes);
         t.putString("besoin", besoin);
         t.putString("action", action != null ? action.nom : "");
+        t.putString("statut", statut());
+        t.putString("ou", Messages.ou(this));
         return t;
     }
 
@@ -777,52 +898,197 @@ public class Travailleur extends PathfinderMob {
         return phrases[Math.floorMod(getUUID().hashCode(), phrases.length)];
     }
 
-    /** Ordres reçus depuis la fiche ou l'entretien. */
+    /** L'entretien d'embauche (le seul écran à boutons qui reste). */
     void commande(ServerPlayer p, String ordre) {
         if (aTerre || p.distanceToSqr(this) > 64) return;
-        if (ordre.equals("embaucher")) { embaucher(p); return; }
-        if (!p.getUUID().equals(chef)) return;
-        switch (ordre) {
-            case "suivre" -> { mode = Mode.SUIVRE; finirAction("ordre"); dire("Je te suis, chef."); }
-            case "attendre" -> { mode = Mode.ATTENDRE; finirAction("ordre"); dire("J'attends ici."); }
-            case "travailler" -> {
-                mode = Mode.TRAVAIL;
-                finirAction("ordre");
-                dire(bureau == null ? "Il me faut un bureau pour travailler : pose-en un et rattache-moi dans son écran."
-                        : "Je retourne au travail, chef. Je sais où chercher.");
-            }
-            case "inventaire" -> p.openMenu(new SimpleMenuProvider((id, inv, pl) -> ChestMenu.threeRows(id, inv, inventaire),
-                    Component.literal("Sac de " + prenom)));
-            case "licencier" -> {
-                dire("Bon… je m'en vais chercher du travail ailleurs.");
-                chef = null;
-                chefNom = "";
-                mode = Mode.CHOMEUR;
-                lit = null;
-                Bureau.liberer(this);
-                arrivee = System.currentTimeMillis();
-                finirAction("licencie");
-                libererChunk();
-            }
-            default -> { return; }
+        if (ordre.equals("embaucher")) embaucher(p);
+    }
+
+    /** Son chef lui parle (fenêtre de conversation) : il comprend ce qu'il peut, obéit et répond. */
+    void parler(ServerPlayer p, String texte) {
+        if (aTerre || !p.getUUID().equals(chef) || p.distanceToSqr(this) > 16 * 16) return;
+        texte = texte.strip();
+        if (texte.isEmpty() || texte.length() > 256) return;
+        getLookControl().setLookAt(p);
+        String r = appliquer(Ordres.lire(texte, metier), p);
+        if (!r.isEmpty()) dire(r);
+    }
+
+    /**
+     * Applique ce qu'il a compris (de vive voix si {@code enFace} n'est pas nul, sinon par lettre) et renvoie sa réponse.
+     * Une lettre ne peut pas le faire suivre, attendre sur place, montrer son sac ni le renvoyer : il faut être là.
+     */
+    String appliquer(Ordres.Lecture l, ServerPlayer enFace) {
+        List<String> r = new ArrayList<>();
+        long maintenant = level().getGameTime();
+        boolean confirmation = memoire.getLong("renvoi") > maintenant;
+        if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
+            memoire.remove("renvoi");
+            String adieu = Messages.corps(this, "dit_renvoye");
+            licencier();
+            return adieu;
         }
+        if (confirmation && l.intentions.contains(Ordres.Intention.NON)) { memoire.remove("renvoi"); return Messages.corps(this, "dit_garde"); }
+        if (l.intentions.contains(Ordres.Intention.RENVOYER)) {
+            if (enFace == null) return "Si tu veux te passer de moi, dis-le-moi en face, chef.";
+            memoire.putLong("renvoi", maintenant + 600);
+            return Messages.corps(this, "dit_confirmer_renvoi");
+        }
+        if (mode == Mode.CHOMEUR || chef == null) return "";
+        boolean auTravail = false;
+
+        // Les missions.
+        if (!l.missions.isEmpty()) {
+            if (!l.ajouter) missions.clear();
+            for (Ordres.Mission m : l.missions) {
+                missions.removeIf(x -> x.id.equals(m.id()));
+                missions.add(new Mission(m.id(), m.mode(), m.nombre()));
+            }
+            auTravail = true;
+            r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
+        }
+        l.horsMetier.forEach((met, id) -> r.add(Messages.corps(this, "dit_hors_metier", Metier.nom(metier).toLowerCase(), "« " + Metier.nomCommande(met, id) + " »")));
+
+        // Horaires et expéditions.
+        if (l.debut >= 0 || l.fin >= 0) {
+            if (l.debut >= 0) debut = l.debut;
+            if (l.fin >= 0) fin = l.fin;
+            r.add(debut == fin ? Messages.corps(this, "dit_toute_journee") : Messages.corps(this, "dit_horaires", debut, fin));
+        }
+        if (l.jours > 0) {
+            joursExpedition = Math.clamp(l.jours, 1, 30);
+            r.add(Messages.corps(this, "dit_jours", joursExpedition));
+        }
+
+        // Les déplacements.
+        boolean arreter = l.intentions.contains(Ordres.Intention.ARRETER_SUIVRE);
+        if (arreter || l.intentions.contains(Ordres.Intention.TRAVAIL) && l.missions.isEmpty()) {
+            auTravail = true;
+            r.add(bureau == null ? Messages.corps(this, "sans_poste") : Messages.corps(this, arreter ? "dit_arrete_suivre" : "dit_travail"));
+        }
+        if (l.intentions.contains(Ordres.Intention.RENTRER)) {
+            if (bureau == null) r.add(Messages.corps(this, "sans_poste"));
+            else {
+                memoire.putBoolean("rappel", true);
+                if (l.intentions.contains(Ordres.Intention.ATTENDRE)) memoire.putBoolean("attendre_apres", true);
+                auTravail = true;
+                r.add(Messages.corps(this, "dit_rentrer"));
+            }
+        } else if (l.intentions.contains(Ordres.Intention.ATTENDRE)) {
+            if (enFace == null) r.add("Pour que je t'attende quelque part, viens me le dire, chef.");
+            else { mode = Mode.ATTENDRE; auTravail = false; finirAction("ordre"); r.add(Messages.corps(this, "dit_attendre")); }
+        }
+        if (l.intentions.contains(Ordres.Intention.SUIVRE)) {
+            if (enFace == null) r.add("Je ne peux pas te suivre d'aussi loin, chef : viens me chercher, ou dis-moi de rentrer.");
+            else { mode = Mode.SUIVRE; auTravail = false; finirAction("ordre"); r.add(Messages.corps(this, "dit_suivre")); }
+        }
+        if (auTravail && mode != Mode.GREVE) {
+            mode = Mode.TRAVAIL;
+            finirAction("ordre");
+        }
+
+        // Son sac.
+        if (l.intentions.contains(Ordres.Intention.SAC)) {
+            if (enFace == null) r.add("Je te montrerai mon sac à mon retour.");
+            else enFace.openMenu(new SimpleMenuProvider((id, inv, pl) -> ChestMenu.threeRows(id, inv, inventaire), Component.literal("Sac de " + prenom)));
+        }
+
+        // Les questions.
+        if (l.intentions.contains(Ordres.Intention.ETAT)) r.add(Messages.etat(this));
+        if (l.intentions.contains(Ordres.Intention.AVANCEMENT)) r.add(rapport());
+        if (l.intentions.contains(Ordres.Intention.POURQUOI)) r.add(pourquoi());
+        if (l.intentions.contains(Ordres.Intention.AIDE)) r.add(Messages.corps(this, "dit_aide"));
+        if (r.isEmpty() && l.intentions.contains(Ordres.Intention.SALUT)) r.add(Messages.corps(this, "dit_salut"));
+        if (l.intentions.contains(Ordres.Intention.MERCI)) r.add(Messages.corps(this, "dit_merci"));
+        majNom();
+        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC)) return enFace == null ? "" : Messages.corps(this, "dit_pas_compris");
+        return String.join(" ", r);
+    }
+
+    /** Ce qu'il est en train de faire, en une phrase. */
+    String activite() {
+        if (aTerre) return "Je suis à terre.";
+        if (mode == Mode.GREVE) return "Je suis en grève.";
+        if (mode == Mode.SUIVRE) return "Je te suis.";
+        if (mode == Mode.ATTENDRE) return "J'attends là où tu m'as dit d'attendre.";
+        Mission m = missionActive();
+        String mission = m == null ? "" : " Je travaille à : " + Metier.avancementTexte(this, m) + ".";
+        String geste = action == null ? "Je réfléchis à la suite." : switch (action.nom) {
+            case "aller" -> expedition ? "Je suis en route, en expédition." : "Je marche vers mon prochain chantier.";
+            case "casser" -> "Je mine.";
+            case "abattre" -> "J'abats un arbre.";
+            case "se_reposer" -> isSleeping() ? "Je dors." : sortieDepuis >= 0 ? "Je campe pour la nuit." : "Je me repose.";
+            case "demander" -> "J'attends qu'on m'apporte ce qu'il me faut.";
+            case "deposer" -> "Je range ce que j'ai rapporté au dépôt.";
+            case "toucher_paie" -> "Je vais chercher ma paie.";
+            case "attaquer" -> "Je me bats !";
+            case "fuir" -> "Je fuis un danger !";
+            case "poser" -> "Je pose des blocs.";
+            case "ramasser" -> "Je ramasse ce qui traîne.";
+            default -> "Je m'occupe.";
+        };
+        return geste + mission;
+    }
+
+    /** « Où en es-tu ? » */
+    String rapport() {
+        String ms = missions.isEmpty() ? "Je n'ai pas de mission." : "Mes missions : " + String.join(" ; ", missions.stream().map(m -> Metier.avancementTexte(this, m)).toList()) + ".";
+        return "Je suis " + Messages.ou(this) + ". " + activite() + " " + ms;
+    }
+
+    /** « Pourquoi tu ne travailles pas ? » */
+    String pourquoi() {
+        if (aTerre) return "Je suis à terre, chef : il me faut à manger ou une potion de soin, vite.";
+        if (mode == Mode.GREVE) return "Je suis en grève : il me faut " + Reglages.texte(du()) + " dans la caisse du poste.";
+        if (mode == Mode.SUIVRE) return "Je te suis, comme tu me l'as demandé. Dis-moi « au travail » et j'y retourne.";
+        if (mode == Mode.ATTENDRE) return "J'attends, comme tu me l'as demandé. Dis-moi « au travail » et j'y retourne.";
+        if (bureau == null) return Messages.corps(this, "sans_poste");
+        if (!besoin.isEmpty()) return besoin;
+        if (faim <= 8) return "J'ai trop faim pour travailler.";
+        if (memoire.getBoolean("epuise")) return "Je suis épuisé : je me repose avant de reprendre.";
+        if (!enService()) return "Ma journée est finie : je travaille de " + debut + " h à " + fin + " h.";
+        if (missions.isEmpty()) return metier.equals("bucheron") ? "Sans mission, je coupe n'importe quel bois." : Messages.corps(this, "sans_mission");
+        Mission m = missionActive();
+        if (m == null) {
+            Mission premiere = missions.get(0);
+            Metier.Commande c = Metier.catalogue(metier, premiere.id);
+            return "Mes missions sont remplies : " + (c == null ? "" : "le stock de " + c.nom.toLowerCase() + " est plein (" + Math.max(0, Metier.avancement(this, premiere)) + "/" + premiere.nombre + "). ")
+                    + "Je reprends dès qu'il baisse, ou donne-moi une autre mission.";
+        }
+        return "Mais je travaille, chef ! " + activite();
+    }
+
+    /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
+    void licencier() {
+        if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
+        chef = null;
+        chefNom = "";
+        mode = Mode.CHOMEUR;
+        lit = null;
+        bureau = null;
+        missions.clear();
+        lettresADeposer.clear();
+        lettresALire.clear();
+        arrivee = System.currentTimeMillis();
+        finirAction("licencie");
+        libererChunk();
         majNom();
     }
 
     void embaucher(ServerPlayer p) {
         if (mode != Mode.CHOMEUR) return;
         if (Reglages.actuel.metiers_inactifs.contains(metier) || !Metier.existe(metier)) {
-            p.sendSystemMessage(Component.literal("Ce métier n'est plus proposé sur le serveur."));
+            signaler(p, "Ce métier n'est plus proposé sur le serveur.");
             return;
         }
         long nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
         if (nb >= Reglages.actuel.pnj_max_par_joueur) {
-            p.sendSystemMessage(Component.literal("Tu as déjà " + nb + " PNJ : c'est le maximum (" + Reglages.actuel.pnj_max_par_joueur + ")."));
+            signaler(p, "Tu as déjà " + nb + " PNJ : c'est le maximum (" + Reglages.actuel.pnj_max_par_joueur + ").");
             return;
         }
         long prime = Reglages.prime(niveau);
         if (!Reglages.payer(p.getInventory(), prime, s -> { p.getInventory().add(s); return s; }, s -> p.drop(s, false))) {
-            p.sendSystemMessage(Component.literal("Il te faut " + Reglages.texte(prime) + " dans ton inventaire pour la prime d'embauche."));
+            signaler(p, "Il te faut " + Reglages.texte(prime) + " dans ton inventaire pour la prime d'embauche.");
             return;
         }
         chef = p.getUUID();
@@ -831,9 +1097,11 @@ public class Travailleur extends PathfinderMob {
         impayes = 0;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
-        dire("Marché conclu, chef ! Je te suis. Rattache-moi à un bureau (clic droit dessus) pour me donner du travail.");
-        p.sendSystemMessage(Component.literal("Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau)
-                + ") pour " + Reglages.texte(prime) + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", à déposer dans la caisse de son bureau. Pose un bureau et rattache-le pour lui donner du travail.").withStyle(ChatFormatting.GREEN));
+        if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
+        boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
+        dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
+        signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
+                + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", dans la caisse de ton poste.");
     }
 
     // --- Sauvegarde ------------------------------------------------------------------------------
@@ -858,10 +1126,9 @@ public class Travailleur extends PathfinderMob {
         t.putInt("Debut", debut);
         t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
-        t.putString("Commande", commande);
-        t.putString("CommandeMode", commandeMode);
-        t.putInt("CommandeNombre", commandeNombre);
-        t.putInt("CommandeLivre", commandeLivre);
+        ListTag ms = new ListTag();
+        for (Mission m : missions) ms.add(m.sauver());
+        t.put("Missions", ms);
         t.putInt("Fatigue", fatigue);
         t.putLong("ProchainePaie", prochainePaie);
         t.putLong("Arrivee", arrivee);
@@ -872,6 +1139,12 @@ public class Travailleur extends PathfinderMob {
         t.putInt("ATerreTicks", aTerreTicks);
         t.put("Inventaire", inventaire.createTag(registryAccess()));
         t.put("Etat", memoire);
+        ListTag ad = new ListTag(), al = new ListTag();
+        for (Courrier.Lettre l : lettresADeposer) ad.add(l.sauver());
+        for (Courrier.Lettre l : lettresALire) al.add(l.sauver());
+        if (lettreEnMain != null) al.add(0, lettreEnMain.sauver());
+        t.put("LettresADeposer", ad);
+        t.put("LettresALire", al);
     }
 
     @Override
@@ -895,10 +1168,14 @@ public class Travailleur extends PathfinderMob {
         debut = t.contains("Debut") ? t.getInt("Debut") : 6;
         fin = t.contains("Fin") ? t.getInt("Fin") : 18;
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
-        commande = t.getString("Commande");
-        commandeMode = t.contains("CommandeMode") ? t.getString("CommandeMode") : "stock";
-        commandeNombre = t.contains("CommandeNombre") ? t.getInt("CommandeNombre") : 64;
-        commandeLivre = t.getInt("CommandeLivre");
+        missions.clear();
+        if (t.contains("Missions")) for (Tag x : t.getList("Missions", Tag.TAG_COMPOUND)) missions.add(Mission.lire((CompoundTag) x));
+        else if (!t.getString("Commande").isEmpty()) { // avant la 0.5.0 : une seule commande
+            Mission m = new Mission(t.getString("Commande"), t.contains("CommandeMode") ? t.getString("CommandeMode") : "stock",
+                    t.contains("CommandeNombre") ? t.getInt("CommandeNombre") : 64);
+            m.livre = t.getInt("CommandeLivre");
+            missions.add(m);
+        }
         fatigue = t.getInt("Fatigue");
         prochainePaie = t.getLong("ProchainePaie");
         arrivee = t.getLong("Arrivee");
@@ -910,6 +1187,10 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) setPose(Pose.SLEEPING);
         inventaire.fromTag(t.getList("Inventaire", Tag.TAG_COMPOUND), registryAccess());
         memoire = t.getCompound("Etat"); // l'ancienne mémoire des scripts (« Memoire ») n'est pas reprise
+        lettresADeposer.clear();
+        lettresALire.clear();
+        for (Tag x : t.getList("LettresADeposer", Tag.TAG_COMPOUND)) lettresADeposer.add(Courrier.Lettre.lire((CompoundTag) x));
+        for (Tag x : t.getList("LettresALire", Tag.TAG_COMPOUND)) lettresALire.add(Courrier.Lettre.lire((CompoundTag) x));
         majNom();
     }
 

@@ -13,9 +13,9 @@ import java.util.Deque;
 /**
  * Le cerveau commun à tous les PNJ employés, appelé toutes les demi-secondes quand le PNJ n'a pas d'action en
  * cours. Il s'occupe de ce que tout PNJ fait, quel que soit son métier (grève, fuite, faim, paie, ordres, retour à
- * temps, repos, sac plein, commande terminée), puis laisse la main au métier.
+ * temps, repos, sac plein, courrier, missions remplies), puis laisse la main au métier.
  * <p>
- * Où travailler, c'est le PNJ qui le décide. Son espace de vie, c'est 50 blocs autour du bureau. Pour une sortie
+ * Où travailler, c'est le PNJ qui le décide. Son espace de vie, c'est 50 blocs autour du poste de travail. Pour une sortie
  * à la journée, il rentre avant la fin de ses horaires. Si ce qu'il cherche est plus loin, il part de lui-même en
  * expédition : il campe la nuit, se fatigue plus vite, et rentre au plus tard au bout de la durée réglée au bureau.
  */
@@ -52,13 +52,13 @@ final class Cerveau {
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
 
-        // En grève : il attend au bureau que la caisse couvre ce qu'on lui doit.
+        // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
             long du = t.du();
             Bureau.Entite b = Bureau.entite(t);
             if (du > 0 && b != null && Reglages.valeur(b.caisse) >= du) { lancer(t, new Actions.ToucherPaie()); return; }
             if (t.bureau != null && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 16) { lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3)); return; }
-            parfois(t, "greve", "Toujours en grève. Il me faut " + Reglages.texte(du) + " dans la caisse du bureau.", true, 1800);
+            ecrire(t, "greve", 1800, "toujours_greve", Reglages.texte(du));
             attendre(t, 20);
             return;
         }
@@ -67,7 +67,7 @@ final class Cerveau {
         LivingEntity agresseur = t.getLastHurtByMob();
         if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
             if (m.combattant) lancer(t, new Actions.Attaquer(agresseur));
-            else { parfois(t, "fuite", "À l'aide ! On m'attaque !", false, 30); lancer(t, new Actions.Fuir(agresseur)); }
+            else { dire(t, "fuite", 30, "À l'aide ! On m'attaque !"); lancer(t, new Actions.Fuir(agresseur)); }
             return;
         }
 
@@ -76,13 +76,17 @@ final class Cerveau {
         if (t.faim <= 8) {
             Bureau.Entite b = Bureau.entite(t);
             if (b != null && b.compter(Actions.Filtre.de("nourriture")) > 0) lancer(t, new Actions.Prendre(Actions.Filtre.de("nourriture"), 16));
-            else lancer(t, new Actions.Demander("J'ai faim, chef. Il me faudrait de quoi manger.", Actions.Filtre.de("nourriture"), 1));
+            else lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1));
             return;
         }
 
         boolean dehors = t.bureau != null && !t.chezLui(t.blockPosition());
 
-        // La paie : il va la chercher à la caisse du bureau (parti loin, à son retour).
+        // Le courrier : lire au poste les lettres de son chef, y poser les siennes.
+        if (!dehors && t.bureau != null && !t.lettresALire.isEmpty()) { lancer(t, new Actions.LireLettres()); return; }
+        if (!dehors && t.bureau != null && !t.lettresADeposer.isEmpty() && t.mode != Travailleur.Mode.SUIVRE) { lancer(t, new Actions.PorterLettres()); return; }
+
+        // La paie : il va la chercher à la caisse du poste (parti loin, à son retour).
         if (t.paieDue() && !dehors) { lancer(t, new Actions.ToucherPaie()); return; }
 
         // Les ordres du chef.
@@ -92,20 +96,28 @@ final class Cerveau {
         }
         if (t.mode == Travailleur.Mode.ATTENDRE) { attendre(t, 2); return; }
 
-        // Au travail. Sans bureau, pas de travail.
+        // Au travail. Sans poste, pas de travail.
         if (t.bureau == null) {
-            parfois(t, "bureau", "Il me faut un bureau pour travailler : pose-en un, puis rattache-moi dans son écran.", true, 1800);
+            ecrire(t, "bureau", 1800, "sans_poste");
             attendre(t, 20);
+            return;
+        }
+
+        // Rappelé au poste (« rentre ! », de vive voix ou par lettre).
+        if (mem.getBoolean("rappel")) {
+            if (dehors || t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 25) { rentrer(t); return; }
+            mem.remove("rappel");
+            if (mem.getBoolean("attendre_apres")) { mem.remove("attendre_apres"); t.mode = Travailleur.Mode.ATTENDRE; t.majNom(); }
+            t.dire("Me voilà au poste, chef.");
+            attendre(t, 2);
             return;
         }
 
         // Rentrer à temps : le soir après une sortie, au bout de la durée maximale d'une expédition.
         if (t.doitRentrer()) {
-            if ("bloque".equals(t.resultat)) {
-                BlockPos p = t.blockPosition();
-                parfois(t, "perdu", "Je n'arrive pas à rentrer au bureau : je suis coincé en " + p.getX() + " " + p.getY() + " " + p.getZ() + ".", true, 1800);
-            } else if (t.expedition) parfois(t, "rentre", "Mon expédition touche à sa fin : je rentre au bureau (" + (int) t.distanceAuBureau() + " blocs).", true, 1800);
-            else parfois(t, "rentre", "La journée avance : je rentre au bureau.", false, 600);
+            if ("bloque".equals(t.resultat)) ecrire(t, "perdu", 1800, "coince", t.blockPosition().toShortString());
+            else if (t.expedition) ecrire(t, "rentre", 1800, "fin_expedition", (int) t.distanceAuBureau());
+            else dire(t, "rentre", 600, "La journée avance : je rentre au poste.");
             rentrer(t);
             return;
         }
@@ -114,14 +126,13 @@ final class Cerveau {
         if (t.fatigue >= 100) mem.putBoolean("epuise", true);
         else if (t.fatigue <= 40) mem.remove("epuise");
         if (!t.enService() || mem.getBoolean("epuise")) {
-            if (mem.getBoolean("epuise")) parfois(t, "epuise", "Je n'en peux plus, chef : je vais me reposer.", true, 1800);
+            if (mem.getBoolean("epuise")) ecrire(t, "epuise", 1800, "epuise");
             if (dehors) {
                 // En expédition, il campe sur place ; à moins d'une heure de marche, il rentre plutôt dormir chez lui.
                 if (Travailleur.heuresDeMarche(t.blockPosition(), t.bureau) < 1) { rentrer(t); return; }
                 if (!mem.getBoolean("camp")) {
                     mem.putBoolean("camp", true);
-                    parfois(t, "camp", "Je passe la nuit dehors, à " + (int) t.distanceAuBureau() + " blocs du bureau. Je serai de retour dans "
-                            + duree(t.heuresRestantes()) + " au plus tard.", true, 600);
+                    ecrire(t, "camp", 600, "camp", (int) t.distanceAuBureau(), duree(t.heuresRestantes()));
                 }
                 lancer(t, new Actions.Reposer());
                 return;
@@ -137,10 +148,10 @@ final class Cerveau {
         mem.remove("sacVide");
         mem.remove("camp");
 
-        // Sac plein : direction le dépôt du bureau, même de très loin.
+        // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {
             if ("depot_plein".equals(t.resultat)) {
-                parfois(t, "depot", "Le dépôt du bureau est plein, chef ! Vide-le (ou colle un coffre au bureau), je ne peux plus rien ranger.", true, 900);
+                ecrire(t, "depot", 900, "depot_plein");
                 attendre(t, 30);
                 return;
             }
@@ -148,24 +159,27 @@ final class Cerveau {
             return;
         }
 
-        // Loin de chez lui, s'il a dans son sac de quoi remplir la commande, il rentre la livrer.
-        Metier.Commande c = Metier.commande(t);
-        if (c != null && c.objet != null && dehors) {
-            int fait = Metier.avancement(t);
-            if (fait >= 0 && fait + t.compter(c.objet) >= t.commandeNombre) { lancer(t, new Actions.Deposer(m.garder)); return; }
+        // Ses missions : la première qui n'est pas remplie.
+        t.nettoyerMissions();
+        Travailleur.Mission mission = t.missionActive();
+        Metier.Commande c = mission == null ? null : Metier.catalogue(t.metier, mission.id);
+
+        // Loin de chez lui, s'il a dans son sac de quoi finir une quantité, il rentre la livrer.
+        if (c != null && c.objet != null && dehors && mission.quantite() && mission.livre + t.compter(c.objet) >= mission.nombre) {
+            lancer(t, new Actions.Deposer(m.garder));
+            return;
         }
 
-        // Commande remplie : en mode quantité, c'est fini ; en mode stock, il attend que le stock baisse.
-        if (c != null && Metier.commandeRemplie(t)) {
+        // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse.
+        if (mission == null && !t.missions.isEmpty()) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
                 mem.putBoolean("livre", true);
                 lancer(t, new Actions.Deposer(m.garder));
                 return;
             }
-            int fait = Metier.avancement(t);
-            if (t.commandeMode.equals("quantite"))
-                parfois(t, "commande_finie", "Commande terminée : " + t.commandeNombre + " " + c.nom + ". Donne-moi la suivante dans le bureau.", true, 3600);
-            else parfois(t, "stock_plein", "Le stock de " + c.nom + " est plein (" + fait + "/" + t.commandeNombre + "). Je reprends dès qu'il baisse.", true, 3600);
+            Travailleur.Mission premiere = t.missions.get(0);
+            Metier.Commande cp = Metier.catalogue(t.metier, premiere.id);
+            if (cp != null) ecrire(t, "stock_plein", 3600, "stock_plein", cp.nom.toLowerCase(), Math.max(0, Metier.avancement(t, premiere)), premiere.nombre);
             if (dehors) rentrer(t); else attendre(t, 20);
             return;
         }
@@ -191,15 +205,21 @@ final class Cerveau {
     /** Une horloge en secondes qui ne fait qu'avancer. */
     static long temps(Travailleur t) { return t.level().getGameTime() / 20; }
 
-    /** Dit quelque chose au plus une fois toutes les {@code delai} secondes pour une même clé (évite de radoter). */
-    static void parfois(Travailleur t, String cle, String texte, boolean auChef, int delai) {
+    /** Vrai au plus une fois toutes les {@code delai} secondes pour une même clé (pour ne pas radoter). */
+    static boolean parfois(Travailleur t, String cle, int delai) {
         CompoundTag dits = t.memoire.getCompound("dits");
         long maintenant = temps(t);
-        if (dits.contains(cle) && maintenant - dits.getLong(cle) < delai) return;
+        if (dits.contains(cle) && maintenant - dits.getLong(cle) < delai) return false;
         dits.putLong(cle, maintenant);
         t.memoire.put("dits", dits);
-        if (auChef) t.direAuChef(texte); else t.dire(texte);
+        return true;
     }
+
+    /** Il le dit (bulle au-dessus de sa tête), au plus une fois par délai. */
+    static void dire(Travailleur t, String cle, int delai, String texte) { if (parfois(t, cle, delai)) t.dire(texte); }
+
+    /** Il l'écrit à son chef (ou le lui dit, s'il est là), au plus une fois par délai. */
+    static void ecrire(Travailleur t, String cle, int delai, String type, Object... vals) { if (parfois(t, cle, delai)) Courrier.ecrire(t, type, vals); }
 
     /** Une durée en heures du jeu, en toutes lettres (« 5 h », « 2 jours »). */
     static String duree(double heures) {
@@ -230,8 +250,8 @@ final class Cerveau {
         Portee p = portee(t, dest);
         if (p == Portee.EXPEDITION && !t.expedition) {
             t.expedition = true;
-            t.direAuChef("Je pars en expédition " + pourQuoi + " : vers " + dest.getX() + " " + dest.getZ() + ", à " + (int) Math.sqrt(t.blockPosition().distSqr(dest))
-                    + " blocs. Je serai de retour dans " + t.joursExpedition + (t.joursExpedition > 1 ? " jours" : " jour") + " au plus tard.");
+            Courrier.ecrire(t, "depart_expedition", pourQuoi, Messages.direction(t.blockPosition(), dest) + " (vers " + dest.getX() + " " + dest.getZ() + ")",
+                    (int) Math.sqrt(t.blockPosition().distSqr(dest)), t.joursExpedition + (t.joursExpedition > 1 ? " jours" : " jour"));
         }
         if (p == Portee.JOURNEE || p == Portee.EXPEDITION) lancer(t, new Actions.Aller(new Vec3(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5), 4, true));
         return p;

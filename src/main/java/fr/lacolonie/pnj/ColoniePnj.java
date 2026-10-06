@@ -69,6 +69,8 @@ public class ColoniePnj {
 
     public static final DeferredHolder<EntityType<?>, EntityType<Travailleur>> TRAVAILLEUR = ENTITES.register("travailleur",
             () -> EntityType.Builder.of(Travailleur::new, MobCategory.MISC).sized(0.6f, 1.8f).eyeHeight(1.62f).clientTrackingRange(10).build("travailleur"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Corbeau>> CORBEAU = ENTITES.register("corbeau",
+            () -> EntityType.Builder.<Corbeau>of(Corbeau::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).updateInterval(2).noSave().build("corbeau"));
     public static final DeferredBlock<Bureau.Bloc> BUREAU = BLOCS.register("bureau",
             () -> new Bureau.Bloc(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).ignitedByLava()));
     public static final DeferredItem<BlockItem> BUREAU_OBJET = OBJETS.registerSimpleBlockItem(BUREAU);
@@ -120,6 +122,7 @@ public class ColoniePnj {
         // déplacer ses chunks lui-même ; le serveur les recale toutes les 5 secondes.
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> {
             if (e.getServer().getTickCount() % 100 == 0) for (Travailleur t : tous(e.getServer())) t.forcerChunk();
+            if (e.getServer().getTickCount() % 20 == 0) Courrier.tick(e.getServer()); // les corbeaux arrivés livrent leur lettre
         });
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
@@ -141,10 +144,8 @@ public class ColoniePnj {
         });
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
-            for (Travailleur t : pnjDe(p.server, p.getUUID())) {
-                if (t.mode == Travailleur.Mode.GREVE) t.direAuChef("Je suis toujours en grève : il me faut " + Reglages.texte(t.du()) + " dans la caisse du bureau.");
-                else if (!t.besoin.isEmpty()) t.direAuChef(t.besoin + " Je t'attends au bureau.");
-            }
+            long n = Courrier.de(p.server).nonLues(p.getUUID());
+            if (n > 0) Travailleur.signaler(p, "✉ " + n + (n > 1 ? " lettres t'attendent" : " lettre t'attend") + " à ton poste de travail.");
         });
     }
 

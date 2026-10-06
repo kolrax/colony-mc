@@ -434,7 +434,7 @@ public final class Actions {
 
     // --- Bureau, paie, demandes -------------------------------------------------------------------
 
-    /** Marche jusqu'au bureau du chef ; renvoie le bureau quand il est à côté, sinon null (et l'état dans raison). */
+    /** Marche jusqu'au poste de travail ; renvoie le poste quand il est à côté, sinon null (et l'état dans raison). Il y pose ses lettres en passant. */
     abstract static class AuBureau extends Action {
         BlockPos bureau;
 
@@ -450,7 +450,10 @@ public final class Actions {
             }
             t.getNavigation().stop();
             t.getLookControl().setLookAt(Vec3.atCenterOf(bureau));
-            if (t.level().getBlockEntity(bureau) instanceof Bureau.Entite b) return b;
+            if (t.level().getBlockEntity(bureau) instanceof Bureau.Entite b) {
+                if (!t.lettresADeposer.isEmpty()) { t.swing(InteractionHand.OFF_HAND); Courrier.deposer(t); }
+                return b;
+            }
             t.bureau = null; // le bureau a disparu
             raison = "pas_de_bureau";
             return null;
@@ -464,7 +467,8 @@ public final class Actions {
             Bureau.Entite b = arriver(t);
             if (b == null) {
                 if (raison.isEmpty()) return Etat.EN_COURS;
-                manque(t, raison.equals("pas_de_bureau") ? "Je n'ai pas de bureau où toucher ma paie : rattache-moi à un bureau." : "Je n'arrive pas à rejoindre mon bureau pour toucher ma paie.");
+                if (raison.equals("pas_de_bureau")) manque(t, "sans_poste");
+                else manque(t, "coince", t.blockPosition().toShortString());
                 return Etat.ECHEC;
             }
             long du = t.du();
@@ -476,16 +480,16 @@ public final class Actions {
                 else { t.paye(du, jour); t.dire("Paie touchée : " + Reglages.texte(du) + ". Merci chef !"); }
                 return Etat.OK;
             }
-            manque(t, "La caisse du bureau est vide : il me faut " + Reglages.texte(du) + ".");
+            manque(t, "paie_retard");
             return echec("caisse_vide");
         }
 
-        static void manque(Travailleur t, String message) {
+        static void manque(Travailleur t, String type, Object... vals) {
             if (t.mode == Travailleur.Mode.GREVE || !t.paieDue()) return;
             t.impayes++;
             t.prochainePaie = System.currentTimeMillis() + Travailleur.periodePaie();
             if (t.impayes >= Reglages.actuel.paies_impayees_avant_greve) t.commencerGreve();
-            else t.direAuChef(message);
+            else Courrier.ecrire(t, type, vals);
         }
     }
 
@@ -507,13 +511,19 @@ public final class Actions {
                 for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
                 if (k >= 0) { garde[k] = true; continue; }
                 int avant = s.getCount();
-                boolean commande = t.objetCommande().objet(s);
+                // Ce qu'il livre compte pour la première quantité à livrer de cet objet.
+                Travailleur.Mission credit = null;
+                for (Travailleur.Mission mi : t.missions) {
+                    Metier.Commande ci = Metier.catalogue(t.metier, mi.id);
+                    if (mi.quantite() && mi.livre < mi.nombre && ci != null && ci.objet != null && ci.objet.objet(s)) { credit = mi; break; }
+                }
                 ItemStack reste = b.ranger(s);
                 t.inventaire.setItem(i, reste);
-                if (commande) t.commandeLivre += avant - reste.getCount();
+                if (credit != null) credit.livre += avant - reste.getCount();
                 if (!reste.isEmpty()) plein = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
+            t.nettoyerMissions();
             return plein ? echec("depot_plein") : Etat.OK;
         }
     }
@@ -533,26 +543,31 @@ public final class Actions {
         }
     }
 
-    /** Va voir son chef pour lui demander quelque chose ; s'il n'est pas là, l'attend au bureau. */
+    /**
+     * Il lui manque quelque chose : si son chef est dans les parages, il va le voir et le lui demande de vive voix ;
+     * sinon, il lui écrit (une fois) et l'attend au poste.
+     */
     static final class Demander extends Action {
-        final String texte;
+        final String type;
+        final Object[] vals;
         final Filtre filtre;
         final int nombre;
-        boolean prevenu, annonce;
+        String texte;
+        boolean ecrit, annonce;
 
-        Demander(String texte, Filtre filtre, int nombre) { super("demander"); this.texte = texte; this.filtre = filtre; this.nombre = nombre; }
+        Demander(String type, Filtre filtre, int nombre, Object... vals) { super("demander"); this.type = type; this.filtre = filtre; this.nombre = nombre; this.vals = vals; }
 
         Etat tick(Travailleur t) {
+            if (texte == null) texte = Messages.corps(t, type, vals);
             t.besoin = texte;
             if (t.compter(filtre) >= nombre) {
                 t.besoin = "";
-                t.dire("Merci chef !");
+                t.dire(Messages.corps(t, "dit_merci_objet"));
                 return Etat.OK;
             }
             if (age > 20 * 150) return echec("pas_recu");
             ServerPlayer c = t.chefJoueur();
             if (c != null && c.level() == t.level() && t.distanceTo(c) < 96) {
-                if (!prevenu) { t.direAuChef(texte + " J'arrive te voir."); prevenu = true; }
                 if (t.distanceTo(c) > 3) marcher(t, c.position(), 1.15);
                 else {
                     t.getNavigation().stop();
@@ -560,10 +575,43 @@ public final class Actions {
                     if (!annonce) { t.dire(texte + " (accroupi + clic droit avec l'objet en main pour me le donner)"); annonce = true; }
                 }
             } else {
+                if (!ecrit && Cerveau.parfois(t, "demande_" + type, 1800)) Courrier.ecrire(t, type, vals);
+                ecrit = true;
                 BlockPos bureau = t.bureau;
                 if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) marcher(t, Vec3.atBottomCenterOf(bureau), 1.0);
+                else if (bureau != null && !t.lettresADeposer.isEmpty()) { t.swing(InteractionHand.OFF_HAND); Courrier.deposer(t); }
             }
             return Etat.EN_COURS;
+        }
+    }
+
+    /** Il apporte ses lettres au poste, une lettre à la main, et les y pose. */
+    static final class PorterLettres extends AuBureau {
+        PorterLettres() { super("porter_lettres"); }
+
+        Etat tick(Travailleur t) {
+            if (t.lettresADeposer.isEmpty()) return Etat.OK;
+            Bureau.Entite b = arriver(t);
+            if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
+            return Etat.OK; // arriver() les a posées
+        }
+    }
+
+    /** Il passe au poste lire les lettres de son chef : il la tient un moment, la lit, obéit et répond. */
+    static final class LireLettres extends AuBureau {
+        int lecture;
+
+        LireLettres() { super("lire_lettres"); }
+
+        Etat tick(Travailleur t) {
+            if (t.lettresALire.isEmpty()) return Etat.OK;
+            Bureau.Entite b = arriver(t);
+            if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
+            t.getLookControl().setLookAt(t.getX(), t.getEyeY() - 1, t.getZ()); // les yeux sur la lettre
+            if (++lecture < 50) return Etat.EN_COURS;
+            lecture = 0;
+            t.lireLettre(t.lettresALire.remove(0));
+            return t.lettresALire.isEmpty() ? Etat.OK : Etat.EN_COURS;
         }
     }
 

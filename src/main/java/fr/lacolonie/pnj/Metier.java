@@ -69,49 +69,72 @@ public abstract class Metier {
 
     static String description(String id) { Metier m = de(id); return m == null ? "" : m.description; }
 
-    // --- Les commandes ------------------------------------------------------------------------------
+    // --- Les missions ------------------------------------------------------------------------------
 
-    /** La commande en cours du PNJ, ou null. */
-    static Commande commande(Travailleur t) {
-        Metier m = de(t.metier);
-        if (m == null || t.commande == null || t.commande.isEmpty()) return null;
-        for (Commande c : m.commandes) if (c.id.equals(t.commande)) return c;
+    /** L'entrée du catalogue de ce métier, ou null. */
+    static Commande catalogue(String metier, String id) {
+        Metier m = de(metier);
+        if (m == null || id == null) return null;
+        for (Commande c : m.commandes) if (c.id.equals(id)) return c;
         return null;
     }
 
-    static String nomCommande(String metier, String id) {
-        Metier m = de(metier);
-        if (m != null) for (Commande c : m.commandes) if (c.id.equals(id)) return c.nom;
-        return id;
+    /** L'entrée du catalogue de sa mission en cours, ou null. */
+    static Commande commande(Travailleur t) {
+        Travailleur.Mission m = t.missionActive();
+        return m == null ? null : catalogue(t.metier, m.id);
     }
 
-    /** L'objet produit par la commande en cours (filtre qui ne prend rien s'il n'y en a pas). */
+    static String nomCommande(String metier, String id) {
+        Commande c = catalogue(metier, id);
+        return c == null ? id : c.nom;
+    }
+
+    /** L'objet produit par la mission en cours (filtre qui ne prend rien s'il n'y en a pas). */
     static Actions.Filtre objetCommande(Travailleur t) {
         Commande c = commande(t);
         return c != null && c.objet != null ? c.objet : Actions.Filtre.de("");
     }
 
-    /** Où en est la commande : le stock au dépôt (mode stock) ou ce qu'il a livré (mode quantité) ; -1 si on ne sait pas. */
-    static int avancement(Travailleur t) {
-        if (commande(t) == null) return -1;
-        if (t.commandeMode.equals("quantite")) return t.commandeLivre;
+    /** Où en est une mission : le stock au dépôt (stock) ou ce qu'il a livré (quantité) ; -1 si on ne sait pas. */
+    static int avancement(Travailleur t, Travailleur.Mission m) {
+        Commande c = catalogue(t.metier, m.id);
+        if (c == null || c.objet == null) return -1;
+        if (m.quantite()) return m.livre;
         Bureau.Entite b = Bureau.entite(t);
-        return b == null ? -1 : b.compter(objetCommande(t));
+        return b == null ? -1 : b.compter(c.objet);
     }
 
-    static boolean commandeRemplie(Travailleur t) {
-        Commande c = commande(t);
-        if (c == null || c.objet == null) return false;
-        int a = avancement(t);
-        return a >= 0 && a >= t.commandeNombre;
+    /** Une mission est remplie : quantité livrée, ou stock plein. Garder, faire la ronde ou escorter ne le sont jamais. */
+    static boolean remplie(Travailleur t, Travailleur.Mission m) {
+        Commande c = catalogue(t.metier, m.id);
+        if (c == null) return true;
+        if (c.objet == null) return false;
+        int a = avancement(t, m);
+        return a >= 0 && a >= m.nombre;
     }
 
-    static String avancementTexte(Travailleur t) {
-        Commande c = commande(t);
-        if (c == null) return "Aucune commande";
+    /** « 10 fers », « un stock de 32 charbons », « Faire la ronde ». */
+    static String nomMission(String metier, Travailleur.Mission m) {
+        Commande c = catalogue(metier, m.id);
+        if (c == null) return m.id;
         if (c.objet == null) return c.nom;
-        int a = avancement(t);
-        String n = (a < 0 ? "?" : String.valueOf(a)) + "/" + t.commandeNombre;
-        return c.nom + " : " + (t.commandeMode.equals("quantite") ? n + " livrés" : n + " au dépôt") + (commandeRemplie(t) ? " (fait)" : "");
+        return m.quantite() ? m.nombre + " " + c.nom.toLowerCase() : "un stock de " + m.nombre + " " + c.nom.toLowerCase();
+    }
+
+    /** « Fer : 7/10 livrés », « Charbon : 40/64 au dépôt (plein) », « Faire la ronde ». */
+    static String avancementTexte(Travailleur t, Travailleur.Mission m) {
+        Commande c = catalogue(t.metier, m.id);
+        if (c == null) return m.id;
+        if (c.objet == null) return c.nom;
+        int a = avancement(t, m);
+        String n = (a < 0 ? "?" : String.valueOf(a)) + "/" + m.nombre;
+        return c.nom + " : " + (m.quantite() ? n + " livrés" : n + " au dépôt") + (remplie(t, m) ? (m.quantite() ? " (fait)" : " (plein)") : "");
+    }
+
+    /** Toutes ses missions, en une ligne (pour le panneau web). */
+    static String avancementTexte(Travailleur t) {
+        if (t.missions.isEmpty()) return "Aucune mission";
+        return String.join(" ; ", t.missions.stream().map(m -> avancementTexte(t, m)).toList());
     }
 }
