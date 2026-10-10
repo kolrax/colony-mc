@@ -452,9 +452,15 @@ final class IA {
                 .thenApply(rep -> "Groq : OK (" + r().modele_conversation + " répond « " + ReponsesIA.contenu(rep).strip() + " »)")
                 .exceptionally(e -> "Groq : ÉCHEC — " + racine(e));
         CompletableFuture<String> gemini = r().gemini_cle.isEmpty() ? CompletableFuture.completedFuture("Gemini : pas de clé dans ia.json")
-                : envoyer(VOIX, requeteVoix(r().modele_voix, "Bonjour chef.", "Kore", "calm", false))
-                .thenApply(rep -> { VOIX.reprendre(); return rep; })
-                .thenApply(rep -> "Gemini : OK (" + r().modele_voix + ", " + String.format("%.1f", IA.enVoix(ReponsesIA.audio(rep), 1f).length / 48000.0) + " s de voix)")
+                // Par le même relais que les vraies répliques : un modèle épuisé ne coupe pas la voix.
+                : essayerVoix(modelesVoix(), 0, false, "Bonjour chef.", "Kore", "calm")
+                .thenApply(octets -> {
+                    VOIX.reprendre();
+                    long t = System.currentTimeMillis();
+                    List<String> epuises = EPUISES.entrySet().stream().filter(e -> e.getValue() > t).map(Map.Entry::getKey).sorted().toList();
+                    return "Gemini : OK (" + String.format("%.1f", enVoix(octets, 1f).length / 48000.0) + " s de voix"
+                            + (epuises.isEmpty() ? "" : " ; quota du jour atteint pour " + String.join(", ", epuises)) + ")";
+                })
                 .exceptionally(e -> "Gemini : ÉCHEC — " + racine(e));
         return groq.thenCombine(gemini, (a, b) -> List.of(a, b, "Simple Voice Chat : " + (Voix.pret ? "prêt" : "absent ou pas encore démarré")));
     }
