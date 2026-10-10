@@ -1,0 +1,84 @@
+{
+  "poids": {
+    "appele": 0.0,
+    "appele_autre": 0.0,
+    "groupe": 0.0,
+    "exclu": 0.0,
+    "metier_tous": 0.0,
+    "metier_designe": 0.0,
+    "metier_autre": 0.0,
+    "deuxieme": 0.1433,
+    "demande": 1.4089,
+    "question": 0.9257,
+    "politesse": 1.3317,
+    "troisieme": -0.2334,
+    "je": -1.0871,
+    "ordre": 1.4022,
+    "cite": -0.0445,
+    "mission_demande": 2.1776,
+    "mission_seule": -0.2399,
+    "mission_autre": -1.5358,
+    "hors_metier": -0.8399,
+    "regarde_seul": 1.5687,
+    "regarde_avec_joueur": -0.0025,
+    "regarde_sans_adresse": 0.0462,
+    "regarde_autre": -0.4762,
+    "regard": 0.5132,
+    "proche_sans_regard": 0.4329,
+    "distance": -0.37,
+    "nb_pnj": -0.1692,
+    "joueur_proche": -0.8719,
+    "regarde_joueur": -1.8304,
+    "joueur_appele": -1.3918,
+    "recent": 2.268,
+    "recent_x_adresse": 1.3321,
+    "recent_autre": -2.276,
+    "question_pnj": 2.4451,
+    "court_x_question_pnj": 2.4451,
+    "fenetre": 2.3827,
+    "fenetre_autre": -1.0768,
+    "micro": -1.3059,
+    "seul_x_adresse": 0.4521,
+    "fenetre_x_pas_son_metier": -1.235,
+    "son_metier_x_fenetre_autre": 0.3847
+  },
+  "biais": -1.8591,
+  "fusion": {
+    "code": 1.6391,
+    "ia": 1.0471,
+    "biais": 0.3078
+  },
+  "seuils": {
+    "decision": 0.53,
+    "code_seul": 0.4,
+    "bas": 0.034,
+    "haut": 0.99
+  },
+  "mesures": {
+    "croise_openai_gpt-oss-20b#v2_validation_croisee": {
+      "situations": 63,
+      "justes": 95.2,
+      "pour_rien": 3.2,
+      "oublis": 1.6
+    },
+    "code_entrainement": {
+      "situations": 1540,
+      "justes": 91.0,
+      "pour_rien": 5.8,
+      "oublis": 3.7
+    },
+    "code_test": {
+      "situations": 392,
+      "justes": 95.4,
+      "pour_rien": 4.1,
+      "oublis": 0.8
+    },
+    "code_reels": {
+      "situations": 63,
+      "justes": 95.2,
+      "pour_rien": 3.2,
+      "oublis": 1.6
+    }
+  },
+  "entraine_le": "2026-10-10"
+}

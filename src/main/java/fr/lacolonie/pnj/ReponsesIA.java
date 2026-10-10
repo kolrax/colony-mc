@@ -117,15 +117,25 @@ final class ReponsesIA {
 
     /** La requête de conversation (Groq, ou tout service compatible OpenAI). */
     static String requeteConversation(String modele, String systeme, String parole, JsonObject schema) {
+        return requete(modele, systeme, parole, schema, 0.7, 700);
+    }
+
+    /** Une requête compatible OpenAI, à réponse JSON imposée par le schéma (mode strict). */
+    static String requete(String modele, String systeme, String parole, JsonObject schema, double temperature, int maxJetons) {
+        return requete(modele, systeme, parole, schema, temperature, maxJetons, "low");
+    }
+
+    /** Pareil, avec l'effort de réflexion des modèles qui raisonnent (« low », « medium », « high »). */
+    static String requete(String modele, String systeme, String parole, JsonObject schema, double temperature, int maxJetons, String effort) {
         JsonObject r = new JsonObject();
         r.addProperty("model", modele);
         JsonArray messages = new JsonArray();
         messages.add(message("system", systeme));
         messages.add(message("user", parole));
         r.add("messages", messages);
-        r.addProperty("temperature", 0.7);
-        r.addProperty("max_completion_tokens", 700);
-        if (modele.contains("gpt-oss") || modele.contains("qwen3")) r.addProperty("reasoning_effort", "low"); // moins de jetons, plus vite
+        r.addProperty("temperature", temperature);
+        r.addProperty("max_completion_tokens", maxJetons);
+        if (modele.contains("gpt-oss") || modele.contains("qwen3")) r.addProperty("reasoning_effort", effort); // « low » : moins de jetons, plus vite
         JsonObject format = new JsonObject(), js = new JsonObject();
         format.addProperty("type", "json_schema");
         js.addProperty("name", "decision");

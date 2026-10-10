@@ -173,6 +173,10 @@ class OrdresTest {
     @Test
     void groupesEtExclus() {
         assertTrue(adr("Les gars, suivez-moi").tous());
+        assertTrue(adr("On bouge, tout le monde !").tous(), "« tout le monde » placé comme un appel");
+        assertFalse(adr("Les gars sont partis à la mine.").tous(), "sujet d'un verbe : on parle d'eux");
+        assertFalse(adr("Niels, viens voir mes ouvriers.").tous(), "complément de « voir » : ce n'est pas un appel");
+        assertTrue(adr("Allez hop, au travail tout le monde !").tous());
         assertTrue(adr("Tout le monde au travail !").tous());
         assertTrue(adr("Rentrez au poste, vous tous").tous());
         Ordres.Adresse a = adr("Tout le monde sauf Raoul, rentrez au poste");

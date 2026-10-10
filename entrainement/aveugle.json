@@ -1,0 +1,1017 @@
+[
+{
+"texte": "Gauthier, file au poste !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier"
+],
+"note": "",
+"id": "aveugle-1",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Ysolde, tu me coupes un peu de sapin ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 8,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-2",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Merci ma grande.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.96,
+"depuis": 6,
+"question": false,
+"fenetre": false,
+"derniers": [
+"Ysolde : Voilà tes bûches, chef."
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-3",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "On bouge, tout le monde !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier",
+"Ysolde",
+"Raoul"
+],
+"note": "",
+"id": "aveugle-4",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Restez tous ici, je reviens.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier",
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-5",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Les bûcherons, au boulot !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 8,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde",
+"Odon"
+],
+"note": "",
+"id": "aveugle-6",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Qui peut me ramener du cuivre ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 7,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier"
+],
+"note": "",
+"id": "aveugle-7",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Il me faut quelqu'un pour garder la porte.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "aveugle-8",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Viens là, toi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier"
+],
+"note": "",
+"id": "aveugle-9",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "T'as mangé ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-10",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Ça avance ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 8,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier"
+],
+"note": "",
+"id": "aveugle-11",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Bonne nuit Raoul.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "aveugle-12",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Raoul, protège Ysolde.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "aveugle-13",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Arrêtez tout, rentrez !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier",
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-14",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Oui, ramène-en trente.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.3,
+"depuis": 7,
+"question": true,
+"fenetre": false,
+"derniers": [
+"Gauthier : J'en ramène combien, chef ?"
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Gauthier"
+],
+"note": "",
+"id": "aveugle-15",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Le guerrier, reste avec moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 10,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "aveugle-16",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "toi viens",
+"micro": false,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-17",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "dis à Raoul de rentrer",
+"micro": false,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-18",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Gauthier il est trop lent",
+"micro": false,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Ysolde"
+],
+"note": "",
+"id": "aveugle-19",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Il est super efficace, Gauthier.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 6,
+"regard": 0.3
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-20",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Niels, t'as vu Ysolde ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 5,
+"regard": 0.5
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-21",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Viens on va à la mine.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.94,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 4,
+"regard": 0.93
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-22",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Encore un creeper, génial.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 5,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-23",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Je vais me coucher.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-24",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Où j'ai mis mes torches ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-25",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Il nous faudrait plus de bois pour le toit.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 7,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 5,
+"regard": 0.4
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-26",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Elle est où la mine déjà ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 5,
+"regard": 0.5
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-27",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Trop bien ce château !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-28",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Mes ouvriers sont au top.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 7,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Kalia",
+"distance": 6,
+"regard": 0.4
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-29",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Hmm, voyons ce qu'il me reste.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Gauthier",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-30",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Ah non, j'ai plus de pain.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Ysolde",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "aveugle-31",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+},
+{
+"texte": "Bravo Kalia !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 4,
+"regard": 0.94,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Kalia",
+"distance": 5,
+"regard": 0.6
+}
+],
+"attendu": [],
+"note": "",
+"id": "aveugle-32",
+"categorie": "aveugle",
+"famille": "aveugle",
+"jeu": "aveugle"
+}
+]

@@ -96,10 +96,15 @@ final class IA {
 
     // Groq gratuit : 30 demandes par minute pour la conversation, 20 pour Whisper ; Gemini : plus serré.
     static final Service CONVERSATION = new Service("conversation", 25), TRANSCRIPTION = new Service("transcription", 18), VOIX = new Service("voix", 8);
+    /** L'avis d'écoute (à qui le chef parle) : un autre modèle, avec son propre quota chez Groq. */
+    static final Service ECOUTE = new Service("écoute", 25);
 
     static ReglagesIA r() { return ReglagesIA.actuel; }
 
     static boolean conversationDisponible() { return r().conversationPossible() && CONVERSATION.disponible(r().max_conversations_jour); }
+
+    /** L'avis d'écoute est possible (clé Groq, quota du jour et de la minute). */
+    static boolean ecouteIADisponible() { return r().conversationPossible() && ECOUTE.disponible(r().max_ecoutes_jour); }
 
     static boolean voixDisponible() { return r().voixPossible() && VOIX.disponible(r().max_voix_jour); }
 
@@ -209,10 +214,10 @@ final class IA {
     }
 
     /**
-     * Le chef parle à voix haute devant certains de ses ouvriers : l'IA dit à qui il s'adresse (sauf si le mod l'a
-     * déjà compris : {@code imposes}), puis répond et agit pour chacun.
+     * Le chef vient de parler à ces ouvriers (ses destinataires, déjà trouvés : {@link Adressage}) : l'IA répond et
+     * agit pour chacun.
      */
-    static String systemeGroupe(List<Travailleur> ouvriers, List<String> etiquettes, Travailleur vise, boolean imposes, boolean ecrit) {
+    static String systemeGroupe(List<Travailleur> ouvriers, List<String> etiquettes, Travailleur vise, boolean ecrit) {
         Travailleur t0 = ouvriers.get(0);
         net.minecraft.world.entity.player.Player chef = t0.chefJoueur();
         StringBuilder b = new StringBuilder();
@@ -232,18 +237,7 @@ final class IA {
             if (!e.isEmpty()) b.append(" Derniers échanges avec le chef : ").append(e.replace("\n", " / ")).append('.');
             b.append('\n');
         }
-        if (imposes) b.append("destinataires : tous ceux de la liste (le chef s'adresse à eux, c'est sûr).\n");
-        else {
-            b.append("D'abord, destinataires : à qui le chef s'adresse VRAIMENT. ");
-            if (!ecrit) b.append("Au micro, il parle aussi aux autres joueurs, réfléchit tout haut, commente, ou parle de ses ouvriers à la troisième personne ")
-                    .append("(« c'est un chômeur, ce mec », « il est lent, Raoul ») : alors personne ne lui répond (liste vide). Il s'adresse à un ouvrier seulement ")
-                    .append("s'il l'interpelle, lui donne un ordre, lui pose une question, le tutoie ou le vouvoie, le salue ou le remercie. Dans le doute, liste vide. ");
-            b.append("Un prénom par lequel il interpelle quelqu'un (« Raoul, viens ») : celui-là. « Les gars », « tout le monde », « vous tous » : tous ceux ")
-                    .append("que ça concerne. « Les mineurs », « le guerrier » : ceux de ce métier. Un ordre sans prénom : devine d'après ce qu'il demande et le métier ")
-                    .append("de chacun (« va protéger la base » : un guerrier ; « ramène du fer » : un mineur ; « coupe du bois » : un bûcheron) ; au singulier, un seul ")
-                    .append("(celui qu'il regarde s'il convient, sinon le plus proche qui convient) ; au pluriel, tous ceux qui conviennent. ")
-                    .append(ecrit ? "Sinon, c'est à celui à qui il écrit.\n" : "Une question, un salut ou un merci sans prénom : celui qu'il regarde, s'il en regarde un.\n");
-        }
+        b.append("Il s'adresse à eux tous (destinataires : tous ceux de la liste).\n");
         b.append("Puis reponses : une par destinataire au plus (qui = son nom, écrit comme ci-dessus). Chacun parle dans son personnage : en français, ")
                 .append("il tutoie le chef et l'appelle « chef », en une ou deux phrases courtes et naturelles, comme à l'oral. À plusieurs, un ou deux seulement ")
                 .append("prennent la parole, très brièvement ; les autres laissent reponse vide mais font quand même leur action. ")
@@ -251,6 +245,26 @@ final class IA {
                 .append(CORRECT).append("\n")
                 .append(actions(true));
         return b.toString();
+    }
+
+    /**
+     * L'avis de l'IA sur une phrase : pour chaque ouvrier, la probabilité que le chef s'adresse à lui, et le lien
+     * qu'elle voit (consigne courte, modèle rapide : {@code modele_ecoute}). Croisé ensuite avec celui du code.
+     */
+    static CompletableFuture<Adressage.Avis> ecouter(Adressage.Situation s) {
+        if (!r().conversationPossible() || !ECOUTE.prendre(r().max_ecoutes_jour))
+            return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
+        List<String> et = Adressage.etiquettes(s);
+        String corps = ReponsesIA.requete(r().modele_ecoute, Adressage.consigne(s, et), "Donne la probabilité pour chaque ouvrier.",
+                Adressage.schema(et), 0, 700);
+        HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(15))
+                .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(corps)).build();
+        return envoyer(ECOUTE, req).thenApply(rep -> {
+            Adressage.Avis a = Adressage.lireAvis(ReponsesIA.contenu(rep), et);
+            ECOUTE.reussite(ReponsesIA.jetons(rep));
+            return a;
+        });
     }
 
     /** Une étiquette par ouvrier pour l'IA : son prénom (avec son métier si deux ouvriers ont le même). */
@@ -265,7 +279,7 @@ final class IA {
     }
 
     /** Ce que répondent ces ouvriers à ce que le chef vient de dire devant eux (et à qui il parlait). À appeler sur le fil du serveur. */
-    static CompletableFuture<ReponsesIA.Groupe> converserGroupe(List<Travailleur> ouvriers, Travailleur vise, boolean imposes, boolean ecrit, String parole) {
+    static CompletableFuture<ReponsesIA.Groupe> converserGroupe(List<Travailleur> ouvriers, Travailleur vise, boolean ecrit, String parole) {
         if (!r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour))
             return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
         List<String> etiquettes = etiquettes(ouvriers), tous = new java.util.ArrayList<>();
@@ -275,7 +289,7 @@ final class IA {
             ids.put(etiquettes.get(i), Set.copyOf(x));
             x.forEach(id -> { if (!tous.contains(id)) tous.add(id); });
         }
-        String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, imposes, ecrit),
+        String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, ecrit),
                 "Le chef dit : « " + parole + " »", ReponsesIA.schemaGroupe(etiquettes, tous));
         HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
                 .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
@@ -444,6 +458,7 @@ final class IA {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("reglages", r().public_());
         m.put("conversation", CONVERSATION.etat(r().max_conversations_jour));
+        m.put("ecoute", ECOUTE.etat(r().max_ecoutes_jour));
         m.put("transcription", TRANSCRIPTION.etat(r().max_transcriptions_jour));
         m.put("voix", VOIX.etat(r().max_voix_jour));
         m.put("simpleVoiceChat", Voix.pret);

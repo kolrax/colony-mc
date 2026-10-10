@@ -1,0 +1,3771 @@
+{
+  "openai/gpt-oss-20b|reel-1|939a7192bf31": {
+    "id": "reel-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Le chef parle de lui à la troisième personne, sans lien direct avec son métier de bûcheron. La phrase ne s’adresse pas à Enguerrand et ne concerne pas son trava…"
+    ],
+    "jetons": 642
+  },
+  "openai/gpt-oss-20b|reel-3|f74f64850233": {
+    "id": "reel-3",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.3
+    ],
+    "liens": [
+      "Le chef donne un ordre de déplacement qui ne correspond pas directement aux tâches habituelles d’un guerrier (protection, patrouille, escort). Il est possible q…"
+    ],
+    "jetons": 674
+  },
+  "openai/gpt-oss-20b|reel-4|761398f57d54": {
+    "id": "reel-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l’a remercié probablement après qu’il ait surveillé les alentours, donc la phrase s’adresse directement à lui."
+    ],
+    "jetons": 633
+  },
+  "openai/gpt-oss-20b|reel-5|96e90e533a4a": {
+    "id": "reel-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef donne un ordre de surveillance, directement lié au rôle de Raoul en tant que guerrier chargé de garder la base et de faire la ronde. Le fait qu’il soit …"
+    ],
+    "jetons": 674
+  },
+  "openai/gpt-oss-20b|reel-6|905ef0e38293": {
+    "id": "reel-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom et lui donne un ordre correspondant à son rôle de guerrier, donc très probable.",
+      "Le chef ne l’adresse pas directement, l’ordre concerne la protection de la base, pas le métier de mineur, donc peu probable."
+    ],
+    "jetons": 698
+  },
+  "openai/gpt-oss-20b|reel-7|890ef33f3d52": {
+    "id": "reel-7",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Il demande à un garde de surveiller l’entrée, rôle correspondant à celui de Raoul.",
+      "La phrase ne concerne pas le travail de mineur, donc moins probable qu’il l’emploie."
+    ],
+    "jetons": 688
+  },
+  "openai/gpt-oss-20b|reel-8|624cbb98f91c": {
+    "id": "reel-8",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3,
+      0.3
+    ],
+    "liens": [
+      "Le chef s'adresse à l'ensemble du groupe, donc Bertrand, mineur, est inclus.",
+      "Raoul est hors de vue, moins probable qu'il soit ciblé par l'exclamation collective.",
+      "Odon est à 9 blocs, hors de vue, donc moins probable d'être inclus dans l'appel collectif."
+    ],
+    "jetons": 770
+  },
+  "openai/gpt-oss-20b|reel-9|9cd975c0bbf3": {
+    "id": "reel-9",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef demande directement au mineur s’il a trouvé du diamant, ce qui correspond à son métier.",
+      "Le chef ne s’adresse pas à l’archer, mais la phrase est moins liée à son rôle de garde."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-20b|reel-10|3cc872a9509c": {
+    "id": "reel-10",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef ne demande pas de charbon à un garde, donc faible lien.",
+      "Bertrand est mineur, donc commande de charbon correspond à son métier."
+    ],
+    "jetons": 673
+  },
+  "openai/gpt-oss-20b|reel-11|94413605fa88": {
+    "id": "reel-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef demande du charbon, métier de mineur",
+      "Pas de lien, rôle de garde"
+    ],
+    "jetons": 660
+  },
+  "openai/gpt-oss-20b|reel-12|ae216987a03f": {
+    "id": "reel-12",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef demande à Odon, bûcheron, de couper du bouleau, directement lié à son métier.",
+      "La phrase ne concerne pas la garde ou la protection, donc peu probable que Raoul soit ciblé."
+    ],
+    "jetons": 696
+  },
+  "openai/gpt-oss-20b|reel-13|414556aacfad": {
+    "id": "reel-13",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l’appelle directement, lui demandant de le suivre pour qu’il puisse lui montrer où couper du bois.",
+      "Le chef l’appelle pour qu’il garde la base pendant qu’il se dirige vers les arbres, mais l’ordre est moins direct que pour Odon."
+    ],
+    "jetons": 704
+  },
+  "openai/gpt-oss-20b|reel-14|7df46446bb4e": {
+    "id": "reel-14",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l’appelle par le pluriel « vous deux », mais l’ordre de suivre ne correspond pas à son métier de bûcheron, donc lien faible.",
+      "Le chef l’appelle également, mais l’ordre de suivre ne correspond pas à son rôle de garde, donc lien encore plus faible."
+    ],
+    "jetons": 713
+  },
+  "openai/gpt-oss-20b|reel-15|528f43d67b0d": {
+    "id": "reel-15",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom, mais la phrase ne correspond pas à une tâche de guerrier, donc faible probabilité.",
+      "Le chef s’adresse directement à Bertrand, qui est à 4 blocs et vu, et la phrase peut être un ordre de déplacement, donc haute probabilité."
+    ],
+    "jetons": 706
+  },
+  "openai/gpt-oss-20b|reel-16|0c4b23219f6c": {
+    "id": "reel-16",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef s'adresse à lui en tant que mineur, lui demandant de rentrer au poste pour continuer l'extraction.",
+      "Le même ordre s'applique à ce mineur, même s'il est un peu plus éloigné.",
+      "Le chef ne lui donne pas d'ordre de retour au poste, car Raoul est déjà en garde de la base."
+    ],
+    "jetons": 778
+  },
+  "openai/gpt-oss-20b|reel-17|5b6fa7d3ccbc": {
+    "id": "reel-17",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.3,
+      0.3
+    ],
+    "liens": [
+      "Le chef exclut Odon, donc il ne l’adresse pas.",
+      "Raoul est un guerrier, mais la phrase ne lui donne pas d’ordre spécifique.",
+      "Bertrand est un mineur, pas d’ordre lié à son métier."
+    ],
+    "jetons": 761
+  },
+  "openai/gpt-oss-20b|reel-18|1ad7cc2cb71a": {
+    "id": "reel-18",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, mais la phrase est générique, pas spécifique à la coupe de bois.",
+      "Le chef s'adresse à lui en le regardant, l'ordre est général mais le guerrier est en vue, donc probable.",
+      "Le chef l'appelle par son prénom, mais la phrase ne concerne pas la mine, donc faible probabilité."
+    ],
+    "jetons": 779
+  },
+  "openai/gpt-oss-20b|reel-19|605674640d05": {
+    "id": "reel-19",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.2
+    ],
+    "liens": [
+      "Le chef s'adresse à l'ensemble des ouvriers, pas spécifiquement à Odon, mais la phrase est un salut général.",
+      "Le même salut général, sans lien particulier avec Raoul."
+    ],
+    "jetons": 688
+  },
+  "openai/gpt-oss-20b|reel-20|d970d3aa6d83": {
+    "id": "reel-20",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.3,
+      0.25
+    ],
+    "liens": [
+      "Phrase générique, pas de lien spécifique au métier de bûcheron.",
+      "Phrase générale, pas d’ordre de protection, donc faible lien.",
+      "Phrase neutre, pas d’instruction de minage, donc modéré."
+    ],
+    "jetons": 758
+  },
+  "openai/gpt-oss-20b|reel-21|7400e431afe2": {
+    "id": "reel-21",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et demande de l'aide, ce qui est cohérent avec son rôle de bûcheron.",
+      "Le chef s'adresse à Thibaut, mais la phrase n’est pas directement liée à son métier de mineur, donc la probabilité est moindre."
+    ],
+    "jetons": 712
+  },
+  "openai/gpt-oss-20b|reel-22|8d096ca0e1dd": {
+    "id": "reel-22",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.85
+    ],
+    "liens": [
+      "appel direct par prénom, question de disponibilité liée à son métier de bûcheron"
+    ],
+    "jetons": 651
+  },
+  "openai/gpt-oss-20b|reel-23|e61b30e49808": {
+    "id": "reel-23",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom, mais la phrase est trop générale pour un ordre spécifique au métier de mineur.",
+      "Le chef s’adresse directement à Raoul, qui est à son regard et à proximité, et la phrase peut être un ordre général pour qu’il commence à travailler."
+    ],
+    "jetons": 710
+  },
+  "openai/gpt-oss-20b|reel-24|986692ee90bf": {
+    "id": "reel-24",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, probablement pour lui donner un ordre lié à la garde ou à la protection de la base.",
+      "Le chef l'appelle par son prénom, mais l'ordre n'est pas clairement lié à son métier de bûcheron, donc moins probable."
+    ],
+    "jetons": 706
+  },
+  "openai/gpt-oss-20b|reel-25|169744b6131b": {
+    "id": "reel-25",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, mais la phrase ne fait pas référence à son travail de mineur.",
+      "Le chef salue Odon, qui est visible et à proximité, et la phrase correspond à un remerciement général pour son travail de bûcheron."
+    ],
+    "jetons": 702
+  },
+  "openai/gpt-oss-20b|reel-26|85cd0126db61": {
+    "id": "reel-26",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom ou un pluriel, et Bertrand est à portée et le regarde, donc il est probable qu’il s’adresse à lui.",
+      "Odon est hors de vue du chef, donc moins probable qu’il s’adresse directement à lui, mais il peut encore l’entendre."
+    ],
+    "jetons": 705
+  },
+  "openai/gpt-oss-20b|reel-27|16b1e17c119d": {
+    "id": "reel-27",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15
+    ],
+    "liens": [
+      "La phrase est générique et ne cible pas son métier de bûcheron ; il n’est pas directement appelé ni donné d’ordre spécifique. Le chef ne semble pas s’adresser à…"
+    ],
+    "jetons": 652
+  },
+  "openai/gpt-oss-20b|reel-28|392bb166f794": {
+    "id": "reel-28",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.05
+    ],
+    "liens": [
+      "Le chef demande un contenu de sac, pas lié au métier de mineur.",
+      "Le chef ne s’adresse pas à un guerrier pour un contenu de sac."
+    ],
+    "jetons": 680
+  },
+  "openai/gpt-oss-20b|reel-29|76e59c4e46d6": {
+    "id": "reel-29",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef s'adresse à lui directement, lui rappelant de rester vigilant face aux creepers, ce qui est pertinent pour un bûcheron qui travaille à proximité de la f…"
+    ],
+    "jetons": 642
+  },
+  "openai/gpt-oss-20b|reel-30|172c599f1fd9": {
+    "id": "reel-30",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef lève la main pour lui donner du bois, un ordre direct lié à son métier de bûcheron.",
+      "Le chef peut lui demander de garder la base, mais la phrase « Prends ça » est moins liée à la garde, donc probabilité plus faible."
+    ],
+    "jetons": 703
+  },
+  "openai/gpt-oss-20b|reel-31|47a26ec315dd": {
+    "id": "reel-31",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef demande directement du bois, métier de bûcheron",
+      "Le chef pourrait vouloir du bois mais Bertrand est mineur, moins probable"
+    ],
+    "jetons": 678
+  },
+  "openai/gpt-oss-20b|reel-32|b2708543f511": {
+    "id": "reel-32",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef lève les yeux vers lui, mais la phrase ne cible pas son métier ni son prénom.",
+      "Le chef l’appelle de façon vague, probablement pour lui demander de venir, sans préciser de tâche liée à la coupe de bois."
+    ],
+    "jetons": 703
+  },
+  "openai/gpt-oss-20b|reel-33|ff01dcac78d7": {
+    "id": "reel-33",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef parle de « fer et charbon », mais Lancelin est bûcheron ; la phrase ne correspond pas à son métier, donc faible probabilité.",
+      "Thibaut est mineur, donc la demande de fer et charbon correspond directement à son travail, augmentant la probabilité."
+    ],
+    "jetons": 716
+  },
+  "openai/gpt-oss-20b|reel-34|149c5bd28a12": {
+    "id": "reel-34",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15
+    ],
+    "liens": [
+      "La phrase est trop vague pour être un ordre ou une question liée à son métier de bûcheron ; elle ne l'adresse pas directement par son prénom ni par un pluriel, …"
+    ],
+    "jetons": 665
+  },
+  "openai/gpt-oss-20b|reel-37|0ed0f13d8fbf": {
+    "id": "reel-37",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef remercie Odon pour avoir terminé la coupe de bois, répondant à son dernier échange."
+    ],
+    "jetons": 684
+  },
+  "openai/gpt-oss-20b|reel-38|5842f515e5f4": {
+    "id": "reel-38",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Question de localisation, pas liée à son métier"
+    ],
+    "jetons": 679
+  },
+  "openai/gpt-oss-20b|reel-39|e2d84670c624": {
+    "id": "reel-39",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Il répond à la question de Raoul et l’invite à rester à la base.",
+      "Il ne s’adresse pas directement à Odon, mais la phrase pourrait être un rappel général."
+    ],
+    "jetons": 714
+  },
+  "openai/gpt-oss-20b|reel-40|b5710890c67a": {
+    "id": "reel-40",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "aucun lien apparent – la phrase ne s’adresse pas à lui et ne répond pas à sa question"
+    ],
+    "jetons": 655
+  },
+  "openai/gpt-oss-20b|reel-41|2f7a216fc197": {
+    "id": "reel-41",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.1
+    ],
+    "liens": [
+      "Le chef lève la voix pour l'arrêter, mais la phrase ne cible pas son métier de bûcheron et n’est pas un ordre direct ; il s’adresse probablement à l’ensemble du…",
+      "La phrase ne concerne pas le travail de mineur et ne semble pas être un ordre spécifique ; il est peu probable que le chef l’adresse directement à Thibaut."
+    ],
+    "jetons": 761
+  },
+  "openai/gpt-oss-20b|reel-42|05157463c3a6": {
+    "id": "reel-42",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'adresse directement, lui demandant comment il va, car Odon est proche et visible.",
+      "Raoul est hors de vue, donc moins probable que le chef l'adresse, mais il peut encore l'entendre."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-20b|reel-43|66d5ed490b5a": {
+    "id": "reel-43",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, mais Odon est à 3 blocs et hors de vue, donc faible probabilité.",
+      "Le chef l'appelle par son prénom, Raoul est le guerrier, à 6 blocs, hors de vue, mais le chef peut l'entendre et l'appeler."
+    ],
+    "jetons": 707
+  },
+  "openai/gpt-oss-20b|reel-44|4d8188209825": {
+    "id": "reel-44",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef ne l’appelle pas par son prénom et l’ordre ne concerne pas le minage, donc faible probabilité.",
+      "« Va garder la base » correspond exactement à la tâche de garde du poste, et Raoul est le seul guerrier à proximité."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-20b|reel-45|87852ac5745a": {
+    "id": "reel-45",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.9
+    ],
+    "liens": [
+      "Le chef parle de Raoul à la troisième personne, sans s’adresser directement à Bertrand.",
+      "Le chef s’adresse à Raoul en le qualifiant de fainéant, ce qui cible directement le guerrier."
+    ],
+    "jetons": 688
+  },
+  "openai/gpt-oss-20b|reel-46|2865965dc5ed": {
+    "id": "reel-46",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef s'adresse à lui en groupe, \"les gars\", mais l'ordre n’est pas spécifique au métier de bûcheron.",
+      "Le chef parle à l’ensemble, mais Raoul est hors de vue, donc moins probable qu’il l’entende."
+    ],
+    "jetons": 696
+  },
+  "openai/gpt-oss-20b|reel-47|1a35a6ff0c5d": {
+    "id": "reel-47",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom et lui donne un ordre correspondant à son métier de bûcheron."
+    ],
+    "jetons": 621
+  },
+  "openai/gpt-oss-20b|reel-48|568a10c833dd": {
+    "id": "reel-48",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef s'adresse directement à Bertrand, le nommant par son prénom, et lui demande s'il travaille bien, ce qui correspond à son rôle de mineur."
+    ],
+    "jetons": 636
+  },
+  "openai/gpt-oss-20b|reel-49|f86f6b1add74": {
+    "id": "reel-49",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, probablement pour lui donner un ordre lié à son métier de mineur."
+    ],
+    "jetons": 612
+  },
+  "openai/gpt-oss-20b|reel-50|874e10b65baa": {
+    "id": "reel-50",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.2
+    ],
+    "liens": [
+      "La phrase ne mentionne pas le travail de minage, donc il est peu probable qu’il s’adresse à lui.",
+      "La phrase ne concerne pas le bois, donc il est peu probable qu’il s’adresse à lui."
+    ],
+    "jetons": 697
+  },
+  "openai/gpt-oss-20b|reel-51|7af74c1d49cd": {
+    "id": "reel-51",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La question sur l'heure n’est pas liée à son rôle de mineur et ne s’adresse pas directement à lui ; elle est plus générale, donc la probabilité qu’il soit ciblé…"
+    ],
+    "jetons": 648
+  },
+  "openai/gpt-oss-20b|reel-52|9581d084b8c9": {
+    "id": "reel-52",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef s'adresse directement à Bertrand, le nommant par son prénom, pour lui montrer la découverte qu’il a faite, ce qui correspond à un ordre ou une remarque …"
+    ],
+    "jetons": 661
+  },
+  "openai/gpt-oss-20b|reel-53|ba2cdb4e7e2f": {
+    "id": "reel-53",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15
+    ],
+    "liens": [
+      "La phrase ne cible pas directement un travail spécifique de Bertrand, mais il est le seul ouvrier présent, donc la probabilité qu’il l’adresse à lui est faible."
+    ],
+    "jetons": 624
+  },
+  "openai/gpt-oss-20b|reel-54|27fe51c84668": {
+    "id": "reel-54",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.3,
+      0.7
+    ],
+    "liens": [
+      "Le chef lève la voix vers la base, mais la phrase ne cible pas explicitement la garde, donc faible lien.",
+      "La question s’adresse à l’ouvrier qui est à proximité de la forêt, donc plus probable qu’il s’agisse de lui."
+    ],
+    "jetons": 704
+  },
+  "openai/gpt-oss-20b|reel-55|4af899f68164": {
+    "id": "reel-55",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef s'adresse à lui par son prénom, lui demandant de voir son guerrier, ce qui correspond à son rôle de garde de la base et de protection."
+    ],
+    "jetons": 661
+  },
+  "openai/gpt-oss-20b|reel-57|81cb4c475922": {
+    "id": "reel-57",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Il l'appelle par son prénom, indiquant qu'il s'adresse directement à lui."
+    ],
+    "jetons": 618
+  },
+  "openai/gpt-oss-20b|reel-58|2afa7d735cf3": {
+    "id": "reel-58",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "La phrase indique un manque de fer, directement lié au métier de mineur qui extrait le fer."
+    ],
+    "jetons": 626
+  },
+  "openai/gpt-oss-20b|reel-59|f6c364e53bbf": {
+    "id": "reel-59",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2
+    ],
+    "liens": [
+      "La phrase indique qu’il y a suffisamment de bois, mais elle n’est pas adressée directement à Odon (il est hors de vue et la phrase ne mentionne pas son métier)."
+    ],
+    "jetons": 700
+  },
+  "openai/gpt-oss-20b|reel-60|f74227afaf0c": {
+    "id": "reel-60",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et le remercie probablement pour un travail récent, comme la collecte de charbon ou d'autres minerais."
+    ],
+    "jetons": 625
+  },
+  "openai/gpt-oss-20b|reel-62|e08f84a8c075": {
+    "id": "reel-62",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne cible pas un besoin ou une action liée à son métier, donc il n’est pas probable qu’il l’ait adressé à lui."
+    ],
+    "jetons": 638
+  },
+  "openai/gpt-oss-20b|reel-63|d580708c0413": {
+    "id": "reel-63",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne cible pas son métier ni son nom, donc il est peu probable que le chef l’adresse directement."
+    ],
+    "jetons": 623
+  },
+  "openai/gpt-oss-20b|V8-5|3e45d4469c42": {
+    "id": "V8-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'adresse directement, le regarde, et le félicite pour son travail de garde.",
+      "Le chef l'appelle par son prénom, mais elle est hors de vue, donc moins probable qu'il s'adresse à elle."
+    ],
+    "jetons": 707
+  },
+  "openai/gpt-oss-20b|G4-10|3695f6eeac09": {
+    "id": "G4-10",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7,
+      0.1
+    ],
+    "liens": [
+      "Le chef s'adresse à un groupe, mais Héloïse est hors de vue et à 2 blocs ; peu de chance qu’il l’appelle directement.",
+      "Ermengarde est à 3 blocs et en vue du chef ; la phrase « Allez les gars, rentrez au poste ! » est un ordre collectif adressé à elle et aux autres ouvriers.",
+      "Tancrède est hors de vue et à 5 blocs ; le chef est moins susceptible de l’inclure dans l’ordre collectif."
+    ],
+    "jetons": 849
+  },
+  "openai/gpt-oss-20b|S4-5|76a9dffe8290": {
+    "id": "S4-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.1,
+      0.1,
+      0.2
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom, l’invite à suivre, et l’ordonne de rester à la base.",
+      "Le chef ne l’adresse pas directement, mais l’invite au groupe ; elle est hors de vue.",
+      "Le chef ne parle pas à la mineur, l’ordre ne concerne pas son métier.",
+      "Même raison que Sibylle, peu probable qu’elle soit ciblée.",
+      "Le chef l’invite au groupe, mais l’ordre ne concerne pas son rôle de guerrier."
+    ],
+    "jetons": 936
+  },
+  "openai/gpt-oss-20b|M4-10|db01d1333051": {
+    "id": "M4-10",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.8,
+      0.3,
+      0.05
+    ],
+    "liens": [
+      "Le chef ne donne pas d’ordre de coupe de bois à un guerrier, donc peu probable.",
+      "Amaury est bûcheron, à 5 blocs et dans le champ de vision, donc très probable qu’il reçoive l’ordre.",
+      "Mahaut est bûcheron mais hors de la vue du chef, donc moins probable qu’il l’appelle directement.",
+      "Thierry est mineur, l’ordre concerne le bois, donc très peu probable."
+    ],
+    "jetons": 878
+  },
+  "openai/gpt-oss-20b|R7-1|6f5bc270ed7e": {
+    "id": "R7-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne concerne pas directement son métier de bûcheron et n’est pas adressée à son prénom ou à un groupe ; elle semble plutôt une question adressée à un a…"
+    ],
+    "jetons": 689
+  },
+  "openai/gpt-oss-20b|K2-9|ad9a069663c7": {
+    "id": "K2-9",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05,
+      0.7,
+      0.05,
+      0.8
+    ],
+    "liens": [
+      "Le chef ne lève pas la tête, donc peu probable qu’il s’adresse à elle.",
+      "Le chef la regarde et la phrase « il est lent, Thierry » peut être une remarque sur le travail de Thierry, mais il s’adresse indirectement à Clémence en la fais…",
+      "Béatrix est hors de vue, donc très peu probable.",
+      "Le chef l’appelle par son prénom, donc la phrase s’adresse directement à Thierry."
+    ],
+    "jetons": 879
+  },
+  "openai/gpt-oss-20b|L7-1|68f67e1e5236": {
+    "id": "L7-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.6,
+      0.15
+    ],
+    "liens": [
+      "Le chef le regarde et l’énoncé est un rappel de son retour, donc il s’adresse probablement à lui.",
+      "Il est hors de vue du chef, donc moins probable qu’il l’ait entendu.",
+      "Dans le champ de vision du chef, donc le chef peut l’avoir entendu et l’énoncé est un rappel de son retour.",
+      "Hors de vue du chef, donc moins probable qu’il l’ait entendu."
+    ],
+    "jetons": 883
+  },
+  "openai/gpt-oss-20b|J12-1|031919bfa9ef": {
+    "id": "J12-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.15,
+      0.1,
+      0.7,
+      0.8
+    ],
+    "liens": [
+      "Il est hors de vue, donc peu probable qu’il l’appelle directement.",
+      "Même situation que Lancelin, hors de vue.",
+      "Mineur, pas de lien direct avec la phrase.",
+      "Il est vu par le chef, donc probable qu’il l’appelle ou donne un ordre.",
+      "Dans le champ de vision, le chef peut l’appeler ou lui donner un ordre."
+    ],
+    "jetons": 911
+  },
+  "openai/gpt-oss-20b|Q7-6|0e57e77babee": {
+    "id": "Q7-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.6,
+      0.15
+    ],
+    "liens": [
+      "Le chef ne la regarde pas et elle est hors de vue, donc peu probable qu’il l’adresse directement.",
+      "Il est à 3 blocs et le chef le regarde, donc il est probable qu’il l’adresse.",
+      "Elle a posé une question au chef il y a 7 s, donc il est probable qu’il réponde.",
+      "Il est hors de vue et le chef ne le regarde pas, donc faible probabilité."
+    ],
+    "jetons": 914
+  },
+  "openai/gpt-oss-20b|U4-1|ae8f41d84fa8": {
+    "id": "U4-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef s'adresse directement à Guillaume, son bûcheron, pour lui rappeler de rester vigilant contre les creepers qui pourraient endommager le bois qu’il coupe.",
+      "Le chef peut aussi parler à Renaud, le mineur, pour qu’il garde un œil sur les creepers qui pourraient apparaître près de la mine, même si la phrase n’est pas d…"
+    ],
+    "jetons": 757
+  },
+  "openai/gpt-oss-20b|B4-4|f813f0b4545b": {
+    "id": "B4-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Il s'agit d'une exclamation de douleur, pas d'une instruction ou d'une référence directe à son rôle de bûcheron. Le chef ne l'adresse pas spécifiquement à Gauth…"
+    ],
+    "jetons": 662
+  },
+  "openai/gpt-oss-20b|V4-4|2d8a1835c5cf": {
+    "id": "V4-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, mais la phrase ne concerne pas son rôle de guerrier.",
+      "Le chef l'appelle par son prénom, probablement pour lui demander de venir afin de lui donner un ordre lié à son métier de mineur."
+    ],
+    "jetons": 698
+  },
+  "openai/gpt-oss-20b|G8-12|2fe8ba3732a9": {
+    "id": "G8-12",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Phrase trop générale, sans référence à son métier ou à un groupe, donc faible probabilité qu’il l’adresse directement."
+    ],
+    "jetons": 621
+  },
+  "openai/gpt-oss-20b|S4-8|adb411413a15": {
+    "id": "S4-8",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.3,
+      0.6
+    ],
+    "liens": [
+      "Le chef exclut Hugues, donc il n’est pas ciblé.",
+      "Guillaume a récemment répondu au chef, mais la phrase ne s’adresse pas directement à lui.",
+      "La phrase est un appel collectif, donc Jehanne est probablement inclus."
+    ],
+    "jetons": 779
+  },
+  "openai/gpt-oss-20b|M4-5|016815d812e9": {
+    "id": "M4-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7
+    ],
+    "liens": [
+      "La phrase « suis‑moi » ne correspond pas à son métier de bûcheron et elle est hors de vue, donc faible probabilité qu’il l’adresse à elle.",
+      "Enguerrand est à 5 blocs, le chef le regarde, et la phrase est un ordre qui peut s’appliquer à un mineur (le guider vers une zone), donc probabilité élevée."
+    ],
+    "jetons": 758
+  },
+  "openai/gpt-oss-20b|R7-4|d1147d71a2e1": {
+    "id": "R7-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.3,
+      0.1,
+      0.15,
+      0.25
+    ],
+    "liens": [
+      "Le chef lève la voix mais ne l'adresse pas directement ; la phrase ne concerne pas son travail de mineur.",
+      "Il est à portée et dans le champ de vision, mais la phrase ne demande pas de couper du bois ; faible lien.",
+      "Elle est hors de vue et son dernier échange était un retour au travail ; la phrase ne s'adresse pas à elle.",
+      "Elle garde la base, mais la phrase ne lui demande pas de protéger ; lien faible.",
+      "Il est à 14 blocs hors de vue ; la phrase ne concerne pas son métier de mineur."
+    ],
+    "jetons": 976
+  },
+  "openai/gpt-oss-20b|K12-6|16d13220b9a4": {
+    "id": "K12-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, mais la phrase ne concerne pas son métier de bûcheron.",
+      "Le chef s'adresse directement à Perceval, le mineur, en le félicitant pour son travail."
+    ],
+    "jetons": 745
+  },
+  "openai/gpt-oss-20b|L7-10|940c0d4d922d": {
+    "id": "L7-10",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l'adresse directement, car ils viennent de terminer un échange et le chef le regarde, indiquant qu'il s'adresse à lui."
+    ],
+    "jetons": 672
+  },
+  "openai/gpt-oss-20b|J4-6|b4fe6f5141c7": {
+    "id": "J4-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.05,
+      0.05,
+      0.1,
+      0.05
+    ],
+    "liens": [
+      "Le chef lève les yeux vers lui, mais la phrase ne s’adresse pas directement à un mineur proche.",
+      "Elle est hors de vue, donc peu probable qu’il la mentionne.",
+      "Hors de vue, même moins probable.",
+      "Le chef regarde Bertrand, mais la remarque ne concerne pas son rôle de garde.",
+      "Hors de vue, donc très peu probable."
+    ],
+    "jetons": 919
+  },
+  "openai/gpt-oss-20b|Q3-12|e4c2ba3d17fb": {
+    "id": "Q3-12",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3,
+      0.2
+    ],
+    "liens": [
+      "Il vient de répondre à sa question sur le fer ou le cuivre, donc le chef l'adresse probablement.",
+      "Le chef le regarde mais n'a pas posé de question, donc moins probable.",
+      "Il est hors de vue et n'a pas interagi, donc faible probabilité."
+    ],
+    "jetons": 813
+  },
+  "openai/gpt-oss-20b|U4-2|294e521a52b7": {
+    "id": "U4-2",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.2,
+      0.6
+    ],
+    "liens": [
+      "Le chef parle de creepers, mais Mahaut est mineur et à 4 blocs, donc peu probable qu’il l’adresse directement.",
+      "Bertrand est guerrier, à 4 blocs, hors de vue du chef, mais la phrase concerne les creepers, donc il est probable que le chef l’ordonne de rester vigilant.",
+      "Clémence est mineur, à 4 blocs, hors de vue du chef, donc moins probable qu’il l’adresse.",
+      "Raoul est guerrier, à 11 blocs, hors de vue du chef, mais la phrase concerne les creepers, donc il est probable qu’il l’ordonne de surveiller."
+    ],
+    "jetons": 932
+  },
+  "openai/gpt-oss-20b|B8-11|aa81316eaaa2": {
+    "id": "B8-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7,
+      0.6,
+      0.1,
+      0.05
+    ],
+    "liens": [
+      "Il est hors de vue et à 2 blocs ; la phrase « Yes ! » ne semble pas l’appeler directement.",
+      "Il est à 4 blocs et le chef le regarde ; la phrase peut être un encouragement après un ordre ou une question liée à son travail.",
+      "À 15 blocs dans le champ de vision ; la phrase peut être un signal de réussite ou un ordre général.",
+      "Hors de vue à 11 blocs ; peu probable qu’elle soit ciblée par « Yes ! ».",
+      "À 12 blocs hors de vue ; la phrase ne semble pas l’adresser."
+    ],
+    "jetons": 949
+  },
+  "openai/gpt-oss-20b|V12-6|c3cf25bce9b6": {
+    "id": "V12-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Il l'appelle par son prénom, probablement pour lui demander de couper du bois."
+    ],
+    "jetons": 662
+  },
+  "openai/gpt-oss-20b|G8-10|8881a4abd809": {
+    "id": "G8-10",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7
+    ],
+    "liens": [
+      "La phrase est trop générale pour s’adresser spécifiquement à elle ; elle est hors de vue et le chef ne la regarde pas.",
+      "Le chef le regarde et l’adresse à un groupe proche ; la phrase peut l’inclure dans l’ordre collectif."
+    ],
+    "jetons": 705
+  },
+  "openai/gpt-oss-20b|S4-1|1c9bf898937e": {
+    "id": "S4-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, excluant Godefroy de l’invitation.",
+      "Le chef s’adresse au groupe, mais Clémence est hors de vue, donc moins probable qu’elle l’entende."
+    ],
+    "jetons": 708
+  },
+  "openai/gpt-oss-20b|M4-13|1647dcf219a3": {
+    "id": "M4-13",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.1,
+      0.7
+    ],
+    "liens": [
+      "Le chef l’appelle par son métier, mais Jehanne est hors de vue et à 6 blocs, donc peu probable qu’il l’adresse directement.",
+      "Amaury est hors de vue et à 6 blocs ; le chef ne l’appelle pas directement pour un ordre de coupe.",
+      "Bérengère est à 3 blocs, le chef la regarde, et le dernier échange était un ordre de rester. Il est donc probable qu’il l’appelle pour lui demander de revenir a…"
+    ],
+    "jetons": 849
+  },
+  "openai/gpt-oss-20b|R3-7|35ad56f6306a": {
+    "id": "R3-7",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.05,
+      0.15,
+      0.15,
+      0.1
+    ],
+    "liens": [
+      "Phrase non liée au métier de bûcheron, peu probable qu’il l’implique.",
+      "Phrase neutre, pas d’ordre de protection ou de garde.",
+      "Phrase ne concerne pas l’extraction de minerais, donc faible.",
+      "Même raison que Aymeric, pas d’ordre de mine.",
+      "Phrase ne demande pas de couper du bois, donc peu liée."
+    ],
+    "jetons": 963
+  },
+  "openai/gpt-oss-20b|K6-9|1bd98e21e309": {
+    "id": "K6-9",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Il n’est pas vu par le chef, donc peu probable qu’il s’adresse à lui.",
+      "Le chef la regarde, donc il est probable qu’il s’adresse à elle."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-20b|L7-4|1d93a0ed1228": {
+    "id": "L7-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.1
+    ],
+    "liens": [
+      "Le chef lève les yeux vers lui et lui indique de revenir dans cinq minutes pour reprendre le travail.",
+      "Le chef lève les yeux vers la zone où elle se trouve, mais elle est hors de vue, donc moins probable.",
+      "Le chef ne le regarde pas et il est hors de vue, donc très peu probable."
+    ],
+    "jetons": 797
+  },
+  "openai/gpt-oss-20b|J4-2|4ab8a6d1b071": {
+    "id": "J4-2",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05,
+      0.05,
+      0.05,
+      0.1,
+      0.05
+    ],
+    "liens": [
+      "Phrase à la troisième personne, sans lien direct",
+      "Phrase à la troisième personne, sans lien direct",
+      "Phrase à la troisième personne, sans lien direct",
+      "Chef regarde Bertrand, mais phrase ne concerne pas son métier",
+      "Phrase à la troisième personne, sans lien direct"
+    ],
+    "jetons": 929
+  },
+  "openai/gpt-oss-20b|Q3-13|5ddf38c7c42d": {
+    "id": "Q3-13",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef a répondu à la question de Ysolde (« Tu as besoin de moi ? ») avec un simple « Oui », indiquant qu’il accepte de l’aider ou qu’il lui donne un ordre lié…"
+    ],
+    "jetons": 691
+  },
+  "openai/gpt-oss-20b|U4-13|e77e7ef62f34": {
+    "id": "U4-13",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.3,
+      0.1
+    ],
+    "liens": [
+      "Le chef parle de creepers, mais Héloïse est mineur et à 4 blocs, donc peu probable qu’il l’adresse directement.",
+      "Renaud est guerrier, à 6 blocs hors vue, mais le chef peut l’appeler pour qu’il garde la base contre les creepers.",
+      "Gauthier est mineur, à 6 blocs hors vue, mais le chef pourrait l’appeler pour qu’il reste à l’écart des creepers.",
+      "Mahaut est bûcheron, à 3 blocs, pas lié à la menace des creepers, donc faible probabilité."
+    ],
+    "jetons": 945
+  },
+  "openai/gpt-oss-20b|B4-2|89cc07f86425": {
+    "id": "B4-2",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7
+    ],
+    "liens": [
+      "Le chef a crié « Aïe ! » sans s’adresser directement à lui, mais Aymeric est hors de vue et n’est pas impliqué dans l’incident.",
+      "Renaud est à 3 blocs, vu par le chef, et son rôle de garde de la base correspond à une situation où le chef pourrait s’exprimer à lui, même si la phrase est vag…"
+    ],
+    "jetons": 737
+  },
+  "openai/gpt-oss-20b|V4-9|97eb1f29f23d": {
+    "id": "V4-9",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85,
+      0.1
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom, mais la phrase ne correspond pas à son rôle de garde, donc faible probabilité.",
+      "La phrase s’adresse directement à Thibaut, lui rappelant son travail de mineur ; c’est un ordre clair lié à son métier.",
+      "Le chef ne mentionne pas le bois ni le rôle d’Aymeric, donc la probabilité est très faible."
+    ],
+    "jetons": 802
+  },
+  "openai/gpt-oss-20b|G8-6|7e44e30681df": {
+    "id": "G8-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.3,
+      0.5
+    ],
+    "liens": [
+      "Le chef ne lève pas la voix vers elle, elle est hors de vue et n’est pas directement concernée par l’ordre.",
+      "Elle est à 10 blocs mais hors de vue, donc le chef ne l’adresse pas directement, mais l’ordre pourrait lui être destiné.",
+      "Elle est dans le champ de vision et à 10 blocs, donc le chef peut l’adresser directement avec « les amis, au travail »."
+    ],
+    "jetons": 809
+  },
+  "openai/gpt-oss-20b|S4-12|ac688763e8c8": {
+    "id": "S4-12",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.2,
+      0.2,
+      0.7
+    ],
+    "liens": [
+      "Le chef ne l’appelle pas par son prénom et l’ordre ne concerne pas son rôle de garde.",
+      "L’ordre ne demande pas de couper du bois, donc pas ciblé.",
+      "Même raison que Blanche, pas de demande de bûcheron.",
+      "Le chef le regarde et l’exclut explicitement, indiquant qu’il s’adresse à elle."
+    ],
+    "jetons": 863
+  },
+  "openai/gpt-oss-20b|M4-4|1ed8c985dbf9": {
+    "id": "M4-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef ne l’appelle pas par son prénom et la phrase ne concerne pas le minage ; il est hors de vue, donc faible probabilité.",
+      "La phrase « suis‑moi ! » est un ordre d’escorter, correspondant à son rôle de guerrier.",
+      "Le chef l’a vu récemment et l’a déjà demandé d’arrêter de le suivre ; la phrase ne correspond pas à un ordre de coupe de bois, donc modérée."
+    ],
+    "jetons": 861
+  },
+  "openai/gpt-oss-20b|R3-12|59c6e6e43752": {
+    "id": "R3-12",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.3,
+      0.7
+    ],
+    "liens": [
+      "Le chef lève la voix pour lui rappeler de reprendre son travail de mineur, mais il ne le regarde pas directement, donc la probabilité est modérée.",
+      "Le chef s'adresse à Foulques, qui est hors de vue, pour lui demander de reprendre son poste de garde, ce qui correspond à son rôle de guerrier."
+    ],
+    "jetons": 724
+  },
+  "openai/gpt-oss-20b|K6-7|a54aa01b4e81": {
+    "id": "K6-7",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.05,
+      0.1
+    ],
+    "liens": [
+      "La phrase ne mentionne pas le bois ni un ordre de coupe, donc peu probable qu’il s’adresse à lui.",
+      "Il n’y a pas d’ordre de protection ou d’attaque, donc très peu probable.",
+      "Même raison que Raoul, aucune référence au bois ou à un ordre de coupe."
+    ],
+    "jetons": 779
+  },
+  "openai/gpt-oss-20b|L7-11|e7ad840c5a8a": {
+    "id": "L7-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef lève les yeux vers elle, la phrase indique qu’il reviendra bientôt, ce qui est pertinent pour un mineur qui doit rester proche de la base.",
+      "Le chef ne le regarde pas, mais la phrase peut s’adresser à l’ensemble des ouvriers, incluant le bûcheron, même s’il est hors de vue."
+    ],
+    "jetons": 739
+  },
+  "openai/gpt-oss-20b|J4-0|56b03719345a": {
+    "id": "J4-0",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05,
+      0.1,
+      0.08,
+      0.7,
+      0.06
+    ],
+    "liens": [
+      "Il est hors de vue et la phrase ne s’adresse pas à lui.",
+      "Il est hors de vue, la phrase ne cible pas un mineur.",
+      "Elle est hors de vue, pas de lien avec un bûcheron.",
+      "Le chef le regarde, la phrase pourrait être un commentaire sur son sommeil.",
+      "Il est hors de vue, pas de lien avec un bûcheron."
+    ],
+    "jetons": 946
+  },
+  "openai/gpt-oss-20b|Q3-11|c9e3ca6a2540": {
+    "id": "Q3-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Il n’y a pas de lien direct avec la phrase « Oui. » ; le chef ne l’appelle pas par son prénom ni ne lui donne d’ordre lié à la garde.",
+      "La phrase est probablement une réponse à la question précédente d’Oriane (« Tu veux du fer ou du cuivre, chef ? ») et le chef l’appelle par son prénom ou l’adre…"
+    ],
+    "jetons": 765
+  },
+  "openai/gpt-oss-20b|U4-0|2b687a325523": {
+    "id": "U4-0",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.1
+    ],
+    "liens": [
+      "La phrase ne concerne pas le bois, donc pas lié à son métier.",
+      "Il est en garde, la mention des creepers concerne son rôle de protection.",
+      "Il est hors de vue, donc peu probable qu’il l’entende."
+    ],
+    "jetons": 815
+  },
+  "openai/gpt-oss-20b|B8-5|d9e8d27af986": {
+    "id": "B8-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7,
+      0.55
+    ],
+    "liens": [
+      "Le chef ne le regarde pas, donc peu probable qu’il s’adresse directement à lui.",
+      "Le chef la regarde, et « Yes ! » peut être un encouragement ou un accord après une action de garde.",
+      "Raoul est dans le champ de vision, mais le chef ne le regarde pas; la phrase peut être un signal général, donc modérée."
+    ],
+    "jetons": 792
+  },
+  "openai/gpt-oss-20b|V8-7|32dcac95384f": {
+    "id": "V8-7",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef a juste félicité un ouvrier, mais la phrase ne correspond pas à une tâche de mineur ni à un échange récent. Il est donc peu probable que Perceval soit l…",
+      "Béatrix est la guerrière qui garde la base et a récemment échangé avec le chef. Le ton de la phrase (« Bien joué Béatrix. ») indique une félicitation directe à …"
+    ],
+    "jetons": 770
+  },
+  "openai/gpt-oss-20b|G4-13|f6149d22ce1d": {
+    "id": "G4-13",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom et lui donne un ordre général, ce qui est cohérent avec son rôle de bûcheron.",
+      "Le chef s’adresse à l’ensemble du groupe, mais l’ordre n’est pas spécifique à la garde, donc moins probable que pour Héloïse."
+    ],
+    "jetons": 754
+  },
+  "openai/gpt-oss-20b|S4-0|b1a50b270b7a": {
+    "id": "S4-0",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef l'adresse directement, l'ordonnant de rester là, car Guillaume est à portée et le chef le regarde.",
+      "Ysolde est hors de vue, mais le chef exclut son nom, donc il est moins probable qu'elle soit ciblée."
+    ],
+    "jetons": 714
+  },
+  "openai/gpt-oss-20b|M4-8|e3b8ef6ab3dd": {
+    "id": "M4-8",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.2,
+      0.7,
+      0.7
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom, mais la phrase ne concerne pas son métier de bûcheron.",
+      "La phrase est un ordre de retour au poste, correspondant à son rôle de guerrier.",
+      "La phrase est un ordre de retour au poste, correspondant à son rôle de guerrier."
+    ],
+    "jetons": 787
+  },
+  "openai/gpt-oss-20b|R7-6|2a5113babad6": {
+    "id": "R7-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.3
+    ],
+    "liens": [
+      "La phrase est une question générale qui pourrait s'adresser à n'importe quel ouvrier, mais elle n'est pas spécifique au métier de Jehanne (mineur)."
+    ],
+    "jetons": 672
+  },
+  "openai/gpt-oss-20b|K6-11|a6fd934136d1": {
+    "id": "K6-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05,
+      0.15
+    ],
+    "liens": [
+      "La phrase ne fait pas référence à son travail de mineur et il est hors de vue du chef, donc il est peu probable que le chef l'adresse.",
+      "Béatrix est proche et le chef la regarde, mais la phrase ne concerne pas le bois. Elle est donc légèrement plus probable que Tancrède, mais reste faible."
+    ],
+    "jetons": 737
+  },
+  "openai/gpt-oss-20b|L7-0|fd8dfdfec96c": {
+    "id": "L7-0",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.3,
+      0.3,
+      0.2,
+      0.2
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom ou un pluriel, et Ysolde est à 13 blocs, dans son champ de vision, donc il est probable qu’il l’adresse à elle.",
+      "Pétronille est hors de vue, mais proche ; le chef pourrait la mentionner si besoin de ressources, mais moins probable que Ysolde.",
+      "Baudouin est hors de vue, similaire à Pétronille, donc possibilité modérée.",
+      "Bertrand est hors de vue et son rôle est de protéger; le chef n’a pas besoin de lui dire « je reviens », donc faible probabilité.",
+      "Thierry est hors de vue, rôle similaire à Bertrand, donc faible probabilité."
+    ],
+    "jetons": 965
+  },
+  "openai/gpt-oss-20b|J8-4|484a840ef528": {
+    "id": "J8-4",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.1,
+      0.2,
+      0.15
+    ],
+    "liens": [
+      "La phrase ne concerne pas le bois, donc peu probable qu’il l’adresse à Ysolde.",
+      "Isabeau est visible, mais la phrase ne demande pas de bois ; faible lien.",
+      "Raoul est dans le champ de vision, mais la phrase ne concerne pas son métier ; modéré."
+    ],
+    "jetons": 809
+  },
+  "openai/gpt-oss-20b|Q3-6|5f984d6e568e": {
+    "id": "Q3-6",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.6,
+      0.15,
+      0.8
+    ],
+    "liens": [
+      "Le chef lève les yeux vers elle, lui demandant de continuer à couper du bois.",
+      "Le chef ne le regarde pas, donc peu probable qu’il s’adresse à lui.",
+      "Il vient de poser une question sur le bois, le chef répond probablement.",
+      "Le chef ne le regarde pas, donc faible probabilité.",
+      "Le chef est dans son champ de vision, donc très probable qu’il l’appelle."
+    ],
+    "jetons": 973
+  },
+  "openai/gpt-oss-20b|U4-11|47620f7dc010": {
+    "id": "U4-11",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.6
+    ],
+    "liens": [
+      "Le chef parle de creepers, danger proche, Ysolde est à 14 blocs et dans son champ de vision, donc il peut l’appeler pour qu’elle reste prudente.",
+      "Aymeric est hors de vue et à 15 blocs, donc moins probable qu’il soit ciblé, mais le chef pourrait l’avertir de façon générale.",
+      "Thibaut est à 8 blocs, dans le champ de vision, et a récemment répondu à un appel du chef, donc il est probable que le chef l’adresse directement."
+    ],
+    "jetons": 854
+  },
+  "openai/gpt-oss-20b|B4-8|cfaadbc255dc": {
+    "id": "B4-8",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.1
+    ],
+    "liens": [
+      "Le chef a peut‑être réagi à un bruit ou à un danger proche, mais « Aïe ! » ne s’adresse pas directement à lui.",
+      "« Aïe ! » n’est pas une instruction liée à l’extraction de minerais, donc il est peu probable que le chef l’emploie pour lui."
+    ],
+    "jetons": 710
+  },
+  "openai/gpt-oss-20b|V16-1|8b36349872a7": {
+    "id": "V16-1",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Il l'appelle par son prénom, indiquant qu'il s'adresse directement à lui."
+    ],
+    "jetons": 628
+  },
+  "openai/gpt-oss-20b|G8-0|a8e63780162c": {
+    "id": "G8-0",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.7,
+      0.25
+    ],
+    "liens": [
+      "Il est hors de vue, donc peu probable qu’il l’appelle directement.",
+      "Il est à 6 blocs et le chef le regarde, donc il est probable qu’il l’adresse à lui.",
+      "Elle est dans le champ de vision mais à 9 blocs, donc moins probable qu’il l’appelle directement."
+    ],
+    "jetons": 789
+  },
+  "openai/gpt-oss-20b|S4-2|01585e748618": {
+    "id": "S4-2",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7,
+      0.2,
+      0.1
+    ],
+    "liens": [
+      "Le chef l’appelle par son prénom et lui donne un ordre de couper du bois, métier de bûcheron.",
+      "La phrase ne s’adresse pas à elle, elle est hors de vue et n’est pas mentionnée.",
+      "Le chef ne l’adresse pas directement, elle est hors de vue et n’est pas mentionnée."
+    ],
+    "jetons": 788
+  },
+  "openai/gpt-oss-20b|M4-7|919bd76b7801": {
+    "id": "M4-7",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.05,
+      0.1,
+      0.85
+    ],
+    "liens": [
+      "Aucune raison pour un ordre de bois, le chef ne l'adresse pas.",
+      "Le chef ne donne pas d'ordre de bois à un guerrier, peu probable.",
+      "Le chef demande explicitement du chêne, rôle du bûcheron."
+    ],
+    "jetons": 783
+  },
+  "openai/gpt-oss-20b|R3-5|6ee635f8120f": {
+    "id": "R3-5",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.15,
+      0.1,
+      0.75
+    ],
+    "liens": [
+      "La phrase est neutre, pas de lien direct avec le métier de mineur.",
+      "Pas de demande de bois, donc peu probable.",
+      "Le chef regarde le guerrier et lui demande de rester en place, cohérent avec son rôle de garde."
+    ],
+    "jetons": 771
+  },
+  "openai/gpt-oss-120b|reel-1|b528153b0872": {
+    "id": "reel-1",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.2
+    ],
+    "liens": [
+      "Le chef le regarde mais la phrase semble parler d'un tiers (« ce mec »), pas d'Enguerrand."
+    ],
+    "jetons": 721
+  },
+  "openai/gpt-oss-120b|reel-2|fa3d4380fcb6": {
+    "id": "reel-2",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef le nomme directement et lui donne l'ordre d'aller quelque part."
+    ],
+    "jetons": 746
+  },
+  "openai/gpt-oss-120b|reel-3|7eb670f67961": {
+    "id": "reel-3",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef le regarde et lui parle directement, demandant de courir 50 blocs puis revenir, ce qui correspond à un ordre individuel adressé à Raoul."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-120b|reel-4|67425b94ecc9": {
+    "id": "reel-4",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.4
+    ],
+    "liens": [
+      "Le chef le regarde et vient de répondre à son dernier échange (« Oui chef, je surveille les alentours.. »). Le « Merci » peut être un remerciement pour la vigil…"
+    ],
+    "jetons": 712
+  },
+  "openai/gpt-oss-120b|reel-5|44f70e4be8b0": {
+    "id": "reel-5",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.85
+    ],
+    "liens": [
+      "Raoul est le guerrier chargé de la garde; la phrase lui donne un ordre direct de surveiller les environs."
+    ],
+    "jetons": 667
+  },
+  "openai/gpt-oss-120b|reel-6|a66cffa210a4": {
+    "id": "reel-6",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et lui donne un ordre correspondant à son rôle de guerrier (protéger la base).",
+      "Le chef ne le nomme pas et l'ordre ne correspond pas à son métier de mineur ; il est simplement présent mais non ciblé."
+    ],
+    "jetons": 766
+  },
+  "openai/gpt-oss-120b|reel-7|0c2f64ebe7ce": {
+    "id": "reel-7",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef parle de garder l'entrée, tâche typique d'un guerrier/garde, donc il s'adresse probablement à Raoul.",
+      "Bertrand est mineur, la phrase ne correspond pas à son métier ; il pourrait être entendu mais peu probable qu'il soit visé."
+    ],
+    "jetons": 754
+  },
+  "openai/gpt-oss-120b|reel-8|1c491b54e79b": {
+    "id": "reel-8",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.2,
+      0.1
+    ],
+    "liens": [
+      "Le chef dit « Les gars, on rentre » en s'adressant au groupe incluant le mineur proche, il le regarde et l'ordre de rentrer concerne aussi le mineur qui doit ce…",
+      "Raoul, guerrier à 6 blocs, entend la phrase mais n'est pas directement visé ; il pourrait comprendre l'ordre de rentrer pour sécuriser la base, mais le chef ne …",
+      "Odon, bûcheron à 9 blocs, est le plus éloigné et hors de vue ; la phrase ne correspond pas à son métier, donc il est peu probable d'être ciblé."
+    ],
+    "jetons": 912
+  },
+  "openai/gpt-oss-120b|reel-9|84caa056c275": {
+    "id": "reel-9",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.15,
+      0.05
+    ],
+    "liens": [
+      "Le chef mentionne \"Bertrand\" par son prénom, mais le sujet (diamant) correspond à la tâche du mineur. Bertrand est à 7 blocs, hors de vue, donc peu probable que…",
+      "Raoul est le guerrier proche du chef et le regarde, mais la question porte sur du diamant, ce qui n'est pas lié à son rôle de garde. Très improbable que le chef…"
+    ],
+    "jetons": 769
+  },
+  "openai/gpt-oss-120b|reel-10|de6cd2557bba": {
+    "id": "reel-10",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.15,
+      0.85
+    ],
+    "liens": [
+      "Le chef regarde Raoul, mais la demande de charbon correspond au rôle du mineur, pas du guerrier.",
+      "Bertrand est le mineur, chargé de rapporter les minerais ; la phrase « Ramène‑moi du charbon » correspond exactement à son métier."
+    ],
+    "jetons": 745
+  },
+  "openai/gpt-oss-120b|reel-11|c6d190bf1458": {
+    "id": "reel-11",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.1
+    ],
+    "liens": [
+      "Le chef le regarde et le nomme implicitement en demandant du charbon, tâche typique du mineur.",
+      "Raoul est hors de vue et son rôle de guerrier n'est pas lié à la collecte de charbon."
+    ],
+    "jetons": 743
+  },
+  "openai/gpt-oss-120b|reel-12|443d9f555ada": {
+    "id": "reel-12",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.68,
+      0.12
+    ],
+    "liens": [
+      "Phrase « Coupe‑moi du bouleau » correspond à son métier de bûcheron, il peut être l’interlocuteur visé pour obtenir du bois.",
+      "Aucun lien direct avec son rôle de guerrier ; la phrase ne concerne pas la garde ou le combat, donc très peu probable qu’il soit visé."
+    ],
+    "jetons": 780
+  },
+  "openai/gpt-oss-120b|reel-13|dcc5408d3840": {
+    "id": "reel-13",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.2,
+      0.7
+    ],
+    "liens": [
+      "Le chef le regarde, mais la phrase « Toi, suis‑moi » correspond davantage à un ordre d'escorte qu'à une tâche de bûcheron.",
+      "Raoul est le guerrier chargé d'escorter le chef et se trouve hors de la vue, ce qui correspond à l'ordre de le suivre."
+    ],
+    "jetons": 840
+  },
+  "openai/gpt-oss-120b|reel-14|8a10d3c452cb": {
+    "id": "reel-14",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3,
+      0.7
+    ],
+    "liens": [
+      "Phrase générique « Vous deux, suivez-moi » peut s'adresser à Odon et Raoul ensemble, mais Odon n'est pas directement concerné par l'ordre de suivre, il est loin…",
+      "Raoul, guerrier, est chargé d'escorter le chef. L'ordre « suivez‑moi » correspond à son rôle d'escorte, même s'il est hors de vue, le chef peut l'appeler spécif…"
+    ],
+    "jetons": 809
+  },
+  "openai/gpt-oss-120b|reel-15|10ed94144f0a": {
+    "id": "reel-15",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef l'appelle \"le guerrier\" qui correspond à son rôle de garde, même s'il est hors de vue.",
+      "Le chef le regarde mais la phrase ne correspond pas à son métier de mineur, donc peu probable qu'il s'adresse à lui."
+    ],
+    "jetons": 745
+  },
+  "openai/gpt-oss-120b|reel-16|04386d153db5": {
+    "id": "reel-16",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3,
+      0.2,
+      0.8
+    ],
+    "liens": [
+      "Le chef parle à l'ensemble des mineurs ; Bertrand est mineur mais hors de vue, donc il peut entendre l'ordre mais n'est pas directement ciblé.",
+      "Même raison que pour Bertrand, mais plus éloigné (8 blocs) donc légèrement moins probable d'être visé spécifiquement.",
+      "Raoul est le guerrier qui garde le poste, le chef le regarde et l'ordre « rentrez au poste » correspond à son rôle de garde."
+    ],
+    "jetons": 866
+  },
+  "openai/gpt-oss-120b|reel-17|d78f39cf43fa": {
+    "id": "reel-17",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.05,
+      0.7,
+      0.7
+    ],
+    "liens": [
+      "Il est explicitement exclu par la phrase (« sauf Odon »), donc le chef ne s'adresse pas à lui.",
+      "Le chef parle à « tout le monde » sauf Odon ; Raoul, guerrier, fait partie du groupe visé et doit suivre le chef.",
+      "Comme Raoul, il est inclus dans le « tout le monde » et doit suivre le chef, même si la tâche n'est pas spécifique à son métier."
+    ],
+    "jetons": 917
+  },
+  "openai/gpt-oss-120b|reel-18|701113695732": {
+    "id": "reel-18",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.85,
+      0.3,
+      0.9
+    ],
+    "liens": [
+      "Il prononce son prénom ; en tant que bûcheron, il pourrait être appelé pour travailler, même si la phrase ne mentionne pas explicitement le bois.",
+      "Pas nommé, mais la phrase « au travail ! » peut s'adresser à tous les ouvriers présents, incluant le guerrier qui garde la base.",
+      "Nommé directement dans la phrase ; le chef l'appelle à l'action, ce qui correspond à son rôle de mineur."
+    ],
+    "jetons": 884
+  },
+  "openai/gpt-oss-120b|reel-19|82ff29e69966": {
+    "id": "reel-19",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.45,
+      0.55
+    ],
+    "liens": [
+      "« les gars » peut inclure le bûcheron, mais la phrase ne fait pas référence à son métier (pas de demande de bois).",
+      "Le guerrier est souvent le dernier à quitter le poste le soir, donc « bonne nuit les gars » peut s'adresser à lui en tant que garde de la base."
+    ],
+    "jetons": 778
+  },
+  "openai/gpt-oss-120b|reel-20|66c9e0b6bd2c": {
+    "id": "reel-20",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3,
+      0.2,
+      0.4
+    ],
+    "liens": [
+      "La phrase « Allez hop, au travail tout le monde ! » peut s'adresser à lui en tant que bûcheron, l'incitant à couper du bois, même si le chef ne le nomme pas dir…",
+      "Le chef pourrait l'inclure dans le « tout le monde » pour qu'il garde la base ou escorte, mais la phrase ne mentionne pas spécifiquement la garde.",
+      "En tant que mineur, il est le plus susceptible d'être visé par un appel général au travail, surtout s'il doit extraire des ressources."
+    ],
+    "jetons": 899
+  },
+  "openai/gpt-oss-120b|reel-21|aef0c48aeb0d": {
+    "id": "reel-21",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.88,
+      0.87
+    ],
+    "liens": [
+      "Il l'appelle par son prénom et l'invite à l'aider, ce qui correspond à un appel direct au bûcheron présent.",
+      "Il l'appelle par son prénom et l'invite à l'aider, appel direct au mineur présent."
+    ],
+    "jetons": 783
+  },
+  "openai/gpt-oss-120b|reel-22|23a68c5c2bb0": {
+    "id": "reel-22",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.85
+    ],
+    "liens": [
+      "Le chef prononce un prénom proche du nom de l'ouvrier (Enguerrand) et pose une question sur son retour, ce qui indique qu'il s'adresse probablement à lui."
+    ],
+    "jetons": 686
+  },
+  "openai/gpt-oss-120b|reel-23|8b0522433a58": {
+    "id": "reel-23",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.85,
+      0.2
+    ],
+    "liens": [
+      "Le chef prononce son prénom (« Bérangère ») et l'ordre « au boulot » correspond à son métier de mineur qui doit travailler à extraire des ressources.",
+      "Le chef le regarde mais n'utilise pas son prénom ; la phrase ne correspond pas à la tâche de garde/guarde, donc il est peu probable que le chef s'adresse à lui."
+    ],
+    "jetons": 758
+  },
+  "openai/gpt-oss-120b|reel-24|ba3773ca2011": {
+    "id": "reel-24",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.15
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, il est à distance mais hors de vue, donc il peut répondre à son appel.",
+      "Pas de lien direct avec le nom \"Raoul\" ; Odon pourrait être confus ou penser que le chef parle à quelqu'un d'autre."
+    ],
+    "jetons": 756
+  },
+  "openai/gpt-oss-120b|reel-25|d3efb4a5db8e": {
+    "id": "reel-25",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, ce qui indique clairement que la phrase lui est destinée.",
+      "Odon entend la phrase mais n'est pas nommé ni visé ; il ne reçoit aucun ordre ou commentaire lié à son métier."
+    ],
+    "jetons": 770
+  },
+  "openai/gpt-oss-120b|reel-26|30a5ad8cf35f": {
+    "id": "reel-26",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.35,
+      0.12
+    ],
+    "liens": [
+      "Le chef le regarde et vient de dire « Salut ! » ; il s'agit probablement d'un simple salut adressé directement à Bertrand.",
+      "Odon est hors de la vue du chef ; le salut est peu susceptible d'être destiné à lui, sauf s'il s'agit d'un salut général."
+    ],
+    "jetons": 771
+  },
+  "openai/gpt-oss-120b|reel-27|5ece705c0a62": {
+    "id": "reel-27",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Aucun lien direct : la phrase « Va dormir un peu » ne concerne pas le métier de bûcheron et le chef ne le regarde pas en lui parlant."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-120b|reel-28|f12a07f5f0b2": {
+    "id": "reel-28",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.35,
+      0.12
+    ],
+    "liens": [
+      "Le chef le regarde et il est à proximité (3 blocs). La phrase pourrait être un ordre direct pour que le mineur donne le contenu de son sac, typiquement du miner…",
+      "Raoul est hors de la vue du chef (5 blocs) et son rôle de guerrier n'est pas lié à la collecte d'objets, donc il est peu probable que le chef s'adresse à lui av…"
+    ],
+    "jetons": 799
+  },
+  "openai/gpt-oss-120b|reel-29|f0e347db2202": {
+    "id": "reel-29",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3
+    ],
+    "liens": [
+      "Avertissement général : le chef prévient les creepers, ce n'est pas directement lié à la coupe de bois, mais il peut le dire à Odon puisqu'il le regarde, sans q…"
+    ],
+    "jetons": 723
+  },
+  "openai/gpt-oss-120b|reel-30|f71fb3f2784e": {
+    "id": "reel-30",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef le regarde et est à proximité ; « Prends ça » peut être un ordre de lui donner un objet (ex. un morceau de bois) ou un remerciement pour du bois apporté…",
+      "Raoul est plus éloigné et hors de la vue du chef, donc la phrase est moins susceptible de le viser directement, sauf si le chef s'adresse à l'ensemble des ouvri…"
+    ],
+    "jetons": 830
+  },
+  "openai/gpt-oss-120b|reel-31|51cae7c5e8c2": {
+    "id": "reel-31",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.1
+    ],
+    "liens": [
+      "Le chef regarde Odon et lui pose une question sur le bois, ce qui correspond à son rôle de bûcheron.",
+      "Bertrand est mineur, hors de vue du chef, et la question porte sur le bois, donc peu probable qu'il soit visé."
+    ],
+    "jetons": 776
+  },
+  "openai/gpt-oss-120b|reel-32|a370888a3f35": {
+    "id": "reel-32",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef le regarde et l'appelle directement, probablement pour le faire venir près de lui.",
+      "Lancelin est hors de vue; la phrase pourrait être une invitation générale, mais il est moins probable qu'elle le cible spécifiquement."
+    ],
+    "jetons": 787
+  },
+  "openai/gpt-oss-120b|reel-33|2297562dbbc7": {
+    "id": "reel-33",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12,
+      0.78
+    ],
+    "liens": [
+      "La phrase demande du fer et du charbon, ce qui ne correspond pas à son métier de bûcheron.",
+      "Il s'agit exactement du travail d'un mineur : extraire fer et charbon."
+    ],
+    "jetons": 767
+  },
+  "openai/gpt-oss-120b|reel-34|54bf59e0c3dc": {
+    "id": "reel-34",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Aucun lien direct : le chef ne le regarde pas, la phrase n'est pas un ordre de coupe de bois et ne répond à une interaction récente."
+    ],
+    "jetons": 678
+  },
+  "openai/gpt-oss-120b|reel-35|c6409f8da4b3": {
+    "id": "reel-35",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et lui donne un ordre direct de le suivre"
+    ],
+    "jetons": 698
+  },
+  "openai/gpt-oss-120b|reel-36|1525c86dd719": {
+    "id": "reel-36",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef le regarde et, en tant que guerrier chargé d'escorter, l'ordre « Suis‑moi » s'adresse directement à lui."
+    ],
+    "jetons": 736
+  },
+  "openai/gpt-oss-120b|reel-37|bd2406f9c3f4": {
+    "id": "reel-37",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Aucun lien direct : la phrase est un remerciement générique, pas un appel par prénom, ni un ordre lié à son métier de bûcheron."
+    ],
+    "jetons": 714
+  },
+  "openai/gpt-oss-120b|reel-38|da0b612f5c7d": {
+    "id": "reel-38",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.6
+    ],
+    "liens": [
+      "Le chef vient de dire « T'es où ? », Odon est à 15 blocs, hors de vue, et leur dernier échange portait sur du bois. Le chef pourrait vérifier où il se trouve av…"
+    ],
+    "jetons": 762
+  },
+  "openai/gpt-oss-120b|reel-39|064b107160bb": {
+    "id": "reel-39",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.35,
+      0.12
+    ],
+    "liens": [
+      "Il vient de poser une question (« Je reste ici, chef ? ») et le chef répond « Oui. »",
+      "Pas d'échange récent ni de lien direct avec la phrase « Oui. »"
+    ],
+    "jetons": 786
+  },
+  "openai/gpt-oss-120b|reel-40|dc035e954276": {
+    "id": "reel-40",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Pas de lien évident : la phrase « Non merci » ne répond pas à sa question sur la poursuite du minage et ne correspond à aucune instruction liée à son métier."
+    ],
+    "jetons": 699
+  },
+  "openai/gpt-oss-120b|reel-41|53e10b483086": {
+    "id": "reel-41",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.6,
+      0.2
+    ],
+    "liens": [
+      "Le chef vient de dire « Arrête de me suivre » juste après un échange récent où Lancelin a confirmé le suivi ; il est proche (2 blocs) et le chef pourrait s'adre…",
+      "Thibaut est plus éloigné (9 blocs) et n'a pas eu d'échange récent, donc il est moins probable que le chef le vise spécifiquement."
+    ],
+    "jetons": 830
+  },
+  "openai/gpt-oss-120b|reel-42|3d2f489a9530": {
+    "id": "reel-42",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.2
+    ],
+    "liens": [
+      "Le chef le regarde et est à 3 blocs, il pourrait lui parler directement en le tutoyant (« comment tu vas ? ») comme à un proche.",
+      "Raoul est hors de la vue du chef (6 blocs) ; il est possible que le chef s'adresse à tout le groupe (« les gars, comment vous allez ? »), mais la distance rend …"
+    ],
+    "jetons": 781
+  },
+  "openai/gpt-oss-120b|reel-43|64c08a729839": {
+    "id": "reel-43",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.05,
+      0.9
+    ],
+    "liens": [
+      "Le chef le regarde mais l'appelle par le prénom de Raoul, aucune corrélation avec le métier de bûcheron.",
+      "Le chef cite directement le prénom de Raoul, un guerrier, pour qu'il vienne, ce qui correspond à un ordre de déplacement."
+    ],
+    "jetons": 778
+  },
+  "openai/gpt-oss-120b|reel-44|f728880c25f8": {
+    "id": "reel-44",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.2,
+      0.75
+    ],
+    "liens": [
+      "Phrase orientée garde, métier de guerrier, pas de lien direct avec le mineur même si le chef le regarde.",
+      "Ordre de garder la base correspond exactement à la fonction de garde du guerrier, même hors de vue du chef."
+    ],
+    "jetons": 763
+  },
+  "openai/gpt-oss-120b|reel-45|9343b914170d": {
+    "id": "reel-45",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12,
+      0.08
+    ],
+    "liens": [
+      "Le chef le regarde à 3 blocs, mais la phrase « c'est un fainéant ce Raoul » ne le concerne pas directement ; il pourrait penser que le chef parle à quelqu'un d'…",
+      "Le nom « Raoul » apparaît dans la phrase, mais il est hors de la vue du chef (8 blocs) et aucune interaction récente n'est indiquée, rendant l'adressage direct …"
+    ],
+    "jetons": 810
+  },
+  "openai/gpt-oss-120b|reel-46|f5efef4c0e22": {
+    "id": "reel-46",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7,
+      0.3
+    ],
+    "liens": [
+      "Le chef le regarde et l'appelle « les gars » ; en tant que bûcheron, il pourrait être sollicité pour du bois, donc la phrase peut le viser.",
+      "Raoul est hors de la vue du chef et plus éloigné ; la phrase « les gars » peut néanmoins inclure le guerrier, mais la probabilité est moindre."
+    ],
+    "jetons": 791
+  },
+  "openai/gpt-oss-120b|reel-47|77a7fea3eeab": {
+    "id": "reel-47",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Odon est bûcheron (coupe du bois) alors que la demande porte sur des pierres ; aucune connexion métier, le chef le regarde mais ne lui parle pas directement."
+    ],
+    "jetons": 694
+  },
+  "openai/gpt-oss-120b|reel-48|044c9458b441": {
+    "id": "reel-48",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.85
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et le regarde, ce qui indique qu'il s'adresse directement à lui."
+    ],
+    "jetons": 676
+  },
+  "openai/gpt-oss-120b|reel-49|2e09047e8392": {
+    "id": "reel-49",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom (Niels) et ne le regarde pas, aucune référence à son métier de mineur."
+    ],
+    "jetons": 684
+  },
+  "openai/gpt-oss-120b|reel-50|4183a2c0a703": {
+    "id": "reel-50",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12,
+      0.15
+    ],
+    "liens": [
+      "Phrase neutre, pas d'ordre lié à la mine; le chef ne l'appelle pas par son prénom et ne parle pas de charbon.",
+      "Phrase neutre, pas d'ordre de coupe de bois; le chef ne le nomme pas, donc faible lien."
+    ],
+    "jetons": 749
+  },
+  "openai/gpt-oss-120b|reel-51|9b1b9e56f0c1": {
+    "id": "reel-51",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Pas de lien direct : la question sur l'heure n'est pas liée à son métier de mineur et il est hors de vue du chef."
+    ],
+    "jetons": 660
+  },
+  "openai/gpt-oss-120b|reel-52|2ab9da82479a": {
+    "id": "reel-52",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3
+    ],
+    "liens": [
+      "Le chef cite son prénom pour attirer l'attention sur ce qu'il a trouvé, mais il ne lui parle pas directement."
+    ],
+    "jetons": 749
+  },
+  "openai/gpt-oss-120b|reel-53|aad82cae9840": {
+    "id": "reel-53",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase « Mais qu'est-ce qu'il fabrique, celui-là ? » semble désigner une tierce personne, pas le mineur. Aucun lien avec le métier de mineur, et le chef ne l…"
+    ],
+    "jetons": 700
+  },
+  "openai/gpt-oss-120b|reel-54|8944b3ec1a35": {
+    "id": "reel-54",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.15,
+      0.65
+    ],
+    "liens": [
+      "Le chef le regarde mais la phrase parle de \"lui\" au sens de \"celui qui ne travaille pas\" ; Raoul est occupé à garder la base, pas lié à l'action de travailler s…",
+      "Odon est le bûcheron, hors de vue du chef, donc le chef pourrait se demander pourquoi il ne coupe pas de bois ; la phrase s'adresse potentiellement à lui."
+    ],
+    "jetons": 792
+  },
+  "openai/gpt-oss-120b|reel-55|df3962f3aa6b": {
+    "id": "reel-55",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Aucun lien direct : le chef mentionne le prénom Kalia, pas le rôle de guerrier de Raoul."
+    ],
+    "jetons": 687
+  },
+  "openai/gpt-oss-120b|reel-56|3d9abcacb86c": {
+    "id": "reel-56",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef parle du guerrier qui garde la base ; Raoul est le guerrier présent, le chef le regarde, donc la phrase peut le concerner directement."
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-120b|reel-57|10a2f4b0cd67": {
+    "id": "reel-57",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef vient de prononcer le prénom de Bertrand et le regarde, il s'agit très probablement d'un compliment adressé directement à lui sur sa rapidité."
+    ],
+    "jetons": 669
+  },
+  "openai/gpt-oss-120b|reel-58|98468ab57dde": {
+    "id": "reel-58",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef parle du manque de fer, ce qui concerne directement le mineur qui rapporte du fer."
+    ],
+    "jetons": 655
+  },
+  "openai/gpt-oss-120b|reel-59|1c38b0b6524c": {
+    "id": "reel-59",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef parle du bois disponible, ce qui correspond au métier d'Odon (bûcheron). Il peut donc s'adresser à lui pour lui dire qu'il n'a plus besoin de couper du …"
+    ],
+    "jetons": 690
+  },
+  "openai/gpt-oss-120b|reel-60|884a0c6fed29": {
+    "id": "reel-60",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Aucun lien apparent ; le chef remercie Nielscutt, pas le mineur qui le regarde."
+    ],
+    "jetons": 683
+  },
+  "openai/gpt-oss-120b|reel-61|3baa768b358f": {
+    "id": "reel-61",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.12
+    ],
+    "liens": [
+      "Aucun lien direct : la phrase « Attends‑moi, j'arrive ! » n'est ni un appel par prénom, ni un ordre lié à son métier de mineur, et le chef ne le regarde pas en …"
+    ],
+    "jetons": 712
+  },
+  "openai/gpt-oss-120b|reel-62|697a9cde4635": {
+    "id": "reel-62",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.3
+    ],
+    "liens": [
+      "Bertrand est mineur ; la phrase mentionne du diamant, une ressource qu'il peut extraire, mais le chef ne l'appelle pas directement."
+    ],
+    "jetons": 669
+  },
+  "openai/gpt-oss-120b|reel-63|015d82d31e74": {
+    "id": "reel-63",
+    "modele": "openai/gpt-oss-120b",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Aucun lien direct entre la phrase « Purée, il fait noir ici » et le métier de mineur ; le chef ne le regarde pas spécifiquement pour cette remarque."
+    ],
+    "jetons": 669
+  },
+  "openai/gpt-oss-20b|reel-2|95482a7deab1": {
+    "id": "reel-2",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Il est bûcheron et le chef l'appelle par son prénom pour lui donner un ordre de coupe de bois."
+    ],
+    "jetons": 699
+  },
+  "openai/gpt-oss-20b|reel-35|6e6a1d7b5ace": {
+    "id": "reel-35",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom et le regarde, indiquant qu'il s'adresse directement à lui."
+    ],
+    "jetons": 686
+  },
+  "openai/gpt-oss-20b|reel-36|f065f97b8d28": {
+    "id": "reel-36",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l’ordonne de le suivre, rôle de garde escortant le chef."
+    ],
+    "jetons": 704
+  },
+  "openai/gpt-oss-20b|reel-56|eb34ebe9cf88": {
+    "id": "reel-56",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef s'adresse à lui directement, car Raoul est le guerrier proche et le chef l'observe. La phrase « Mon guerrier est trop fort. » fait référence à son rôle …"
+    ],
+    "jetons": 726
+  },
+  "openai/gpt-oss-20b|reel-61|630aef024923": {
+    "id": "reel-61",
+    "modele": "openai/gpt-oss-20b",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef l'appelle par son prénom, lui demandant de continuer à miner."
+    ],
+    "jetons": 679
+  },
+  "openai/gpt-oss-120b#v2|reel-3|a562bfde9479": {
+    "id": "reel-3",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef le regarde et n'adresse aucun nom ; la question directe s'adresse probablement à l'ouvrier le plus proche, ici Raoul, même si la tâche n'est pas spécifi…"
+    ],
+    "jetons": 923
+  },
+  "openai/gpt-oss-120b#v2|reel-4|1ac19b6fa0a6": {
+    "id": "reel-4",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef le remercie pour sa surveillance et son dernier échange, il le regarde."
+    ],
+    "jetons": 877
+  },
+  "openai/gpt-oss-120b#v2|reel-8|aaf34ea4045e": {
+    "id": "reel-8",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8,
+      0.7,
+      0.7
+    ],
+    "liens": [
+      "Le chef s'adresse à l'ensemble du groupe (« Les gars ») et le regarde, donc il parle probablement à Bertrand.",
+      "« Les gars » s'adresse à tous les ouvriers, même hors de vue, donc Raoul est inclus.",
+      "De même, le pluriel « Les gars » inclut Odon malgré la distance."
+    ],
+    "jetons": 1064
+  },
+  "openai/gpt-oss-120b#v2|reel-9|ed638756991f": {
+    "id": "reel-9",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom et demande une ressource (diamant) propre au mineur.",
+      "Raoul n'est pas nommé dans la phrase ; il est simplement regardé par le chef, aucune référence à son rôle de guerrier."
+    ],
+    "jetons": 973
+  },
+  "openai/gpt-oss-120b#v2|reel-13|27525dbb122a": {
+    "id": "reel-13",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef le regarde à 3 blocs et l'ordre « Toi, suis‑moi » s'adresse à la personne devant lui.",
+      "Raoul est hors de vue et aucune interpellation de son nom n'est faite ; il n'est donc que très peu susceptible d'être visé."
+    ],
+    "jetons": 991
+  },
+  "openai/gpt-oss-120b#v2|reel-15|5268dd47c0e3": {
+    "id": "reel-15",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'appelle directement par son métier (« le guerrier »). Même s'il est hors de vue, le terme désigne le seul guerrier connu, donc très probable que le me…",
+      "Bertrand est mineur, aucune mention de son métier ou de ressources liées au minage dans la phrase. Il pourrait être inclus seulement si le chef parle à tout le …"
+    ],
+    "jetons": 1021
+  },
+  "openai/gpt-oss-120b#v2|reel-16|3f82f2eccfce": {
+    "id": "reel-16",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.05
+    ],
+    "liens": [
+      "Le chef s'adresse aux mineurs ; Bertrand est mineur, donc très probablement visé.",
+      "Même raison que pour Bertrand : le groupe des mineurs est appelé.",
+      "Raoul est guerrier, non inclus dans « les mineurs », il n'est donc que très peu concerné."
+    ],
+    "jetons": 1050
+  },
+  "openai/gpt-oss-120b#v2|reel-20|1679a0f2e13b": {
+    "id": "reel-20",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8,
+      0.8,
+      0.8
+    ],
+    "liens": [
+      "Le chef utilise « tout le monde » au pluriel, ce qui s’applique à chaque ouvrier, même hors de vue. Aucun nom n’est interpellé, donc Odon est visé comme membre …",
+      "Même raison que pour Odon : le groupe « tout le monde » inclut le guerrier. Aucun exclu, donc Raoul est très probablement concerné.",
+      "Le chef s’adresse à l’ensemble du groupe (« tout le monde »). Le mineur fait partie du groupe, donc il est très probablement inclus."
+    ],
+    "jetons": 1098
+  },
+  "openai/gpt-oss-120b#v2|reel-23|c45557f3de79": {
+    "id": "reel-23",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.1,
+      0.05
+    ],
+    "liens": [
+      "Le chef prononce « Bérangère », qui diffère légèrement du prénom de l'ouvrière (Bérengère). Ce n'est pas une interpellation claire, donc très faible probabilité…",
+      "Le nom « Raoul » n'est pas mentionné dans la phrase, aucune indication de groupe ou de tâche liée au guerrier, donc probabilité négligeable."
+    ],
+    "jetons": 1091
+  },
+  "openai/gpt-oss-120b#v2|reel-25|4190f15ef954": {
+    "id": "reel-25",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, donc très probable que le message lui soit destiné.",
+      "Le chef ne mentionne pas Odon ni son métier, il n'est donc que très peu susceptible d'être visé."
+    ],
+    "jetons": 948
+  },
+  "openai/gpt-oss-120b#v2|reel-28|c0143df07214": {
+    "id": "reel-28",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "Le chef le regarde directement et, sans interpellation, demande ce qu'il a dans son sac ; la phrase s'adresse donc très probablement à lui.",
+      "Raoul n'est pas visible et n'est pas nommé ; la demande générique pourrait néanmoins le concerner s'il s'agit d'un ordre collectif, mais la probabilité reste fa…"
+    ],
+    "jetons": 1014
+  },
+  "openai/gpt-oss-120b#v2|reel-48|276c2cd35747": {
+    "id": "reel-48",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      -1.0
+    ],
+    "liens": [
+      ""
+    ],
+    "jetons": 866
+  },
+  "openai/gpt-oss-120b#v2|reel-57|62df43011fdc": {
+    "id": "reel-57",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Le chef décrit la rapidité de Bertrand, il ne l'interpelle pas directement."
+    ],
+    "jetons": 887
+  },
+  "openai/gpt-oss-120b#v2|reel-59|a0d7f2dbe2e5": {
+    "id": "reel-59",
+    "modele": "openai/gpt-oss-120b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef indique qu'il y a assez de bois, ce qui concerne directement le bûcheron Odon qui coupe et rapporte du bois."
+    ],
+    "jetons": 887
+  },
+  "openai/gpt-oss-20b#v2|reel-3|48316eb3032f": {
+    "id": "reel-3",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef lui pose une question, sans nom, mais le regarde et est à 3 blocs, donc il s'adresse probablement à lui."
+    ],
+    "jetons": 895
+  },
+  "openai/gpt-oss-20b#v2|reel-4|a4f0a90642c5": {
+    "id": "reel-4",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef a dit « Merci. » sans nommer Raoul, mais il l’a vu à 3 blocs et a échangé récemment. Le regard et la proximité suggèrent qu’il s’adresse probablement à …"
+    ],
+    "jetons": 857
+  },
+  "openai/gpt-oss-20b#v2|reel-8|c21582dcce96": {
+    "id": "reel-8",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "adresse du groupe",
+      "adresse du groupe",
+      "adresse du groupe"
+    ],
+    "jetons": 957
+  },
+  "openai/gpt-oss-20b#v2|reel-9|634a2a5ebe08": {
+    "id": "reel-9",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      1.0,
+      0.05
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, demandant une ressource spécifique au métier de mineur.",
+      "Le chef ne l'interpelle pas et la phrase ne concerne pas son rôle de guerrier, donc il est peu probable qu’il soit visé."
+    ],
+    "jetons": 939
+  },
+  "openai/gpt-oss-20b#v2|reel-13|9a17fe3847e5": {
+    "id": "reel-13",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.85,
+      0.15
+    ],
+    "liens": [
+      "Le chef regarde Odon et lui donne l’ordre de le suivre.",
+      "Le chef ne l’interpelle pas directement, mais Raoul pourrait être inclus dans l’ordre général."
+    ],
+    "jetons": 944
+  },
+  "openai/gpt-oss-20b#v2|reel-15|6fb70274b2c1": {
+    "id": "reel-15",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef s'adresse directement au guerrier, donc Raoul.",
+      "La phrase ne mentionne pas le mineur, donc faible probabilité."
+    ],
+    "jetons": 917
+  },
+  "openai/gpt-oss-20b#v2|reel-16|b8bbfaf4feb3": {
+    "id": "reel-16",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Commande adressée aux mineurs pour rentrer au poste.",
+      "Commande adressée aux mineurs pour rentrer au poste.",
+      "Non ciblé par la phrase, il n’est pas mentionné."
+    ],
+    "jetons": 1014
+  },
+  "openai/gpt-oss-20b#v2|reel-20|00cad368b913": {
+    "id": "reel-20",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "La phrase s'adresse à tout le monde, incluant le bûcheron.",
+      "La phrase s'adresse à tout le monde, incluant le guerrier.",
+      "La phrase s'adresse à tout le monde, incluant le mineur."
+    ],
+    "jetons": 987
+  },
+  "openai/gpt-oss-20b#v2|reel-23|ed9d7a84d381": {
+    "id": "reel-23",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "interpellation directe du prénom, donc très probable qu’il lui parle",
+      "le prénom n’est pas mentionné, donc très peu probable qu’il lui parle"
+    ],
+    "jetons": 943
+  },
+  "openai/gpt-oss-20b#v2|reel-25|9005f078e01f": {
+    "id": "reel-25",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "Le chef s'adresse directement à Bertrand en l'appelant par son prénom.",
+      "Le prénom Bertrand est mentionné, Odon n'est pas ciblé ; seule possibilité est une référence indirecte ou un regard, donc très faible probabilité."
+    ],
+    "jetons": 956
+  },
+  "openai/gpt-oss-20b#v2|reel-28|79e2afcc5d74": {
+    "id": "reel-28",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "chef demande son sac à l’ouvrier le plus proche qu’il regarde",
+      "chef pourrait lui demander son sac, mais il est loin et hors de vue"
+    ],
+    "jetons": 979
+  },
+  "openai/gpt-oss-20b#v2|reel-48|b19c444698d6": {
+    "id": "reel-48",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      1.0
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, indiquant qu'il s'adresse à lui."
+    ],
+    "jetons": 895
+  },
+  "openai/gpt-oss-20b#v2|reel-57|77bc7b7cf1b1": {
+    "id": "reel-57",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef mentionne son prénom, donc il s'adresse directement à lui, même si le regard n'est pas explicitement indiqué."
+    ],
+    "jetons": 805
+  },
+  "openai/gpt-oss-20b#v2|reel-59|26383544ee3c": {
+    "id": "reel-59",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Le chef ne l'interpelle pas par son prénom, ne l'adresse pas en groupe, et la phrase ne mentionne pas de tâche spécifique au bûcheron. Il est hors de vue, donc …"
+    ],
+    "jetons": 843
+  },
+  "openai/gpt-oss-20b#v2|reel-1|6b06c5e0aaa5": {
+    "id": "reel-1",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef se plaint de la paresse d'Enguerrand, le qualifiant de chômeur."
+    ],
+    "jetons": 894
+  },
+  "openai/gpt-oss-20b#v2|reel-2|133c274b2d62": {
+    "id": "reel-2",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, indiquant qu'il lui confie la tâche."
+    ],
+    "jetons": 946
+  },
+  "openai/gpt-oss-20b#v2|reel-5|5b2bda637396": {
+    "id": "reel-5",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef l'interpelle directement en lui demandant de surveiller les alentours, ce qui correspond à son rôle de guerrier chargé de la ronde et de la protection."
+    ],
+    "jetons": 821
+  },
+  "openai/gpt-oss-20b#v2|reel-6|f75a32512407": {
+    "id": "reel-6",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "Le prénom \"Raoul\" est directement interpellé, indiquant que le chef s'adresse à lui, même s'il est hors de vue.",
+      "Le prénom n'est pas mentionné et la phrase ne contient pas de référence à son métier, donc il est très peu probable que le chef l'adresse."
+    ],
+    "jetons": 942
+  },
+  "openai/gpt-oss-20b#v2|reel-7|da8123a11a25": {
+    "id": "reel-7",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "La phrase demande de garder l'entrée, tâche typique du guerrier.",
+      "La phrase ne concerne pas la mine, donc peu probable qu'il soit ciblé."
+    ],
+    "jetons": 906
+  },
+  "openai/gpt-oss-20b#v2|reel-10|885d89069429": {
+    "id": "reel-10",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.9
+    ],
+    "liens": [
+      "Le chef demande du charbon, tâche typique du mineur, donc Raoul, guerrier, est peu concerné.",
+      "Le chef demande du charbon, tâche propre au mineur, donc Bertrand est très probable cible."
+    ],
+    "jetons": 928
+  },
+  "openai/gpt-oss-20b#v2|reel-11|57af92bd7aab": {
+    "id": "reel-11",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef demande du charbon, une ressource typiquement minée par Bertrand.",
+      "Raoul est un guerrier et n’est pas sollicité pour la collecte de charbon."
+    ],
+    "jetons": 913
+  },
+  "openai/gpt-oss-20b#v2|reel-12|6cf98af566a0": {
+    "id": "reel-12",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Le chef ordonne de couper du bouleau, tâche propre au bucheron.",
+      "Le chef ne mentionne pas le guerrier, donc faible probabilité qu’il s’adresse à lui."
+    ],
+    "jetons": 937
+  },
+  "openai/gpt-oss-20b#v2|reel-14|129019cadb2d": {
+    "id": "reel-14",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "Phrase « vous deux » adressée au groupe, donc Odon est très probable.",
+      "Phrase « vous deux » adressée au groupe, donc Raoul est très probable."
+    ],
+    "jetons": 933
+  },
+  "openai/gpt-oss-20b#v2|reel-17|70cfdeef9164": {
+    "id": "reel-17",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.0,
+      1.0,
+      1.0
+    ],
+    "liens": [
+      "Phrase exclut explicitement Odon.",
+      "Phrase s'adresse à tout le monde sauf Odon, donc Raoul est inclus.",
+      "Phrase s'adresse à tout le monde sauf Odon, donc Bertrand est inclus."
+    ],
+    "jetons": 987
+  },
+  "openai/gpt-oss-20b#v2|reel-18|a78c36f9f588": {
+    "id": "reel-18",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.05,
+      0.9
+    ],
+    "liens": [
+      "interpellation directe du prénom",
+      "non mentionné, donc faible probabilité",
+      "interpellation directe du prénom"
+    ],
+    "jetons": 1043
+  },
+  "openai/gpt-oss-20b#v2|reel-19|059e27bec327": {
+    "id": "reel-19",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "salutation collective à l'ensemble des ouvriers",
+      "salutation collective à l'ensemble des ouvriers"
+    ],
+    "jetons": 924
+  },
+  "openai/gpt-oss-20b#v2|reel-21|79cc6c0b1c15": {
+    "id": "reel-21",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7,
+      0.7
+    ],
+    "liens": [
+      "Le prénom est cité directement, indiquant qu’il est appelé, même s’il est hors de vue.",
+      "Le prénom est cité directement, indiquant qu’il est appelé, même s’il est hors de vue."
+    ],
+    "jetons": 889
+  },
+  "openai/gpt-oss-20b#v2|reel-22|39a222fe45f3": {
+    "id": "reel-22",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95
+    ],
+    "liens": [
+      "Le nom \"Enguerran\" est directement adressé, indiquant qu’il s’adresse à lui même, même s’il est hors de vue."
+    ],
+    "jetons": 881
+  },
+  "openai/gpt-oss-20b#v2|reel-24|f94c14bf5859": {
+    "id": "reel-24",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "interpellation directe du prénom",
+      "aucune mention, donc très peu probable"
+    ],
+    "jetons": 920
+  },
+  "openai/gpt-oss-20b#v2|reel-26|3a32be5976ae": {
+    "id": "reel-26",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      -1.0,
+      -1.0
+    ],
+    "liens": [
+      "",
+      ""
+    ],
+    "jetons": 979
+  },
+  "openai/gpt-oss-20b#v2|reel-27|b94bcc617374": {
+    "id": "reel-27",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Il s'adresse à l'ouvrier qu'il regarde, sans mentionner de tâche."
+    ],
+    "jetons": 864
+  },
+  "openai/gpt-oss-20b#v2|reel-29|b4dc7941ab68": {
+    "id": "reel-29",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne mentionne pas le bois ni un appel direct, donc il est peu probable que le chef l’adresse spécifiquement."
+    ],
+    "jetons": 814
+  },
+  "openai/gpt-oss-20b#v2|reel-30|c11de21373bf": {
+    "id": "reel-30",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "Demande de prendre un objet proche, probablement du bois, adressée à l’ouvrier le plus proche et regardé par le chef.",
+      "Pas de mention directe, mais possible si le chef a besoin d’un objet à distance ou si la phrase est entendue par le guerrier."
+    ],
+    "jetons": 1002
+  },
+  "openai/gpt-oss-20b#v2|reel-31|acc9a3eb801d": {
+    "id": "reel-31",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "La question porte sur les bûches, une ressource propre au bucheron, donc Odon est très probable.",
+      "Bertrand est mineur et la question ne concerne pas ses ressources, donc il est peu probable qu’il soit visé."
+    ],
+    "jetons": 945
+  },
+  "openai/gpt-oss-20b#v2|reel-32|cad76bcfb1f8": {
+    "id": "reel-32",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "chef le regarde et l'ordonne de venir",
+      "chef ne le voit pas, donc moins probable qu'il l'ordonne"
+    ],
+    "jetons": 985
+  },
+  "openai/gpt-oss-20b#v2|reel-33|f87e2ebb94ca": {
+    "id": "reel-33",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.9
+    ],
+    "liens": [
+      "non ciblé, tâche non liée au bûcheron",
+      "commande de minerai (fer et charbon) ciblant le mineur"
+    ],
+    "jetons": 966
+  },
+  "openai/gpt-oss-20b#v2|reel-34|8454caf97bc1": {
+    "id": "reel-34",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Il s'adresse à Lancelin, le bûcheron, car il le regarde."
+    ],
+    "jetons": 872
+  },
+  "openai/gpt-oss-20b#v2|reel-35|a28303251722": {
+    "id": "reel-35",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, indiquant qu'il lui parle."
+    ],
+    "jetons": 891
+  },
+  "openai/gpt-oss-20b#v2|reel-36|f3b6c0942843": {
+    "id": "reel-36",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef regarde Raoul et lui donne un ordre générique, donc il est très probable qu’il s’adresse à lui."
+    ],
+    "jetons": 936
+  },
+  "openai/gpt-oss-20b#v2|reel-37|bb662c1eaf1b": {
+    "id": "reel-37",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Réponse à son dernier échange"
+    ],
+    "jetons": 895
+  },
+  "openai/gpt-oss-20b#v2|reel-38|8451cf54d2e7": {
+    "id": "reel-38",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Question de localisation adressée à l’ouvrier avec qui le chef a échangé récemment (Odon)"
+    ],
+    "jetons": 899
+  },
+  "openai/gpt-oss-20b#v2|reel-39|ab9aab2d3d28": {
+    "id": "reel-39",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.1
+    ],
+    "liens": [
+      "La phrase est trop vague pour cibler un ouvrier spécifique, mais le chef pourrait répondre à la question de Raoul.",
+      "La phrase ne mentionne pas le métier de bûcheron, donc il est peu probable qu’il s’adresse à Odon."
+    ],
+    "jetons": 953
+  },
+  "openai/gpt-oss-20b#v2|reel-40|004b5c89274e": {
+    "id": "reel-40",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Réponse à sa question sur la poursuite du minage"
+    ],
+    "jetons": 881
+  },
+  "openai/gpt-oss-20b#v2|reel-41|20329bf3b270": {
+    "id": "reel-41",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "commande à l'ouvrier qui suit",
+      "commande à l'ouvrier qui suit"
+    ],
+    "jetons": 994
+  },
+  "openai/gpt-oss-20b#v2|reel-42|02a095c4b86d": {
+    "id": "reel-42",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "salut, question générale",
+      "question générale, hors de vue"
+    ],
+    "jetons": 931
+  },
+  "openai/gpt-oss-20b#v2|reel-43|e4fe18e55f25": {
+    "id": "reel-43",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.9
+    ],
+    "liens": [
+      "Le chef n'interpelle pas Odon, il s'adresse à Raoul.",
+      "Le chef appelle directement Raoul, même s'il est hors de vue."
+    ],
+    "jetons": 915
+  },
+  "openai/gpt-oss-20b#v2|reel-44|b75ed5ca0953": {
+    "id": "reel-44",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.9
+    ],
+    "liens": [
+      "le chef ne s'adresse pas directement au mineur, tâche non liée à son métier",
+      "le chef ordonne à garder la base, tâche typique du guerrier"
+    ],
+    "jetons": 913
+  },
+  "openai/gpt-oss-20b#v2|reel-45|7190ea390ffa": {
+    "id": "reel-45",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05,
+      0.1
+    ],
+    "liens": [
+      "phrase mentionne Raoul en troisième personne, donc peu probable que Bertrand soit ciblé",
+      "phrase mentionne Raoul en troisième personne, donc faible probabilité qu’il soit ciblé"
+    ],
+    "jetons": 941
+  },
+  "openai/gpt-oss-20b#v2|reel-46|025c534f4d6e": {
+    "id": "reel-46",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "Le chef s'adresse à l'ensemble des ouvriers avec \"les gars\", donc Odon, même à 3 blocs, est très probable d'être visé.",
+      "Le même appel collectif \"les gars\" inclut également Raoul, même s'il est à 6 blocs et hors de vue."
+    ],
+    "jetons": 929
+  },
+  "openai/gpt-oss-20b#v2|reel-47|bc17b0aad291": {
+    "id": "reel-47",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "commande de 64 pierres, métier non lié (bûcheron)"
+    ],
+    "jetons": 850
+  },
+  "openai/gpt-oss-20b#v2|reel-49|72520c6d7a1f": {
+    "id": "reel-49",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.2
+    ],
+    "liens": [
+      "Il est le seul ouvrier présent et le chef le regarde, mais la phrase ne l'interpelle pas directement."
+    ],
+    "jetons": 822
+  },
+  "openai/gpt-oss-20b#v2|reel-50|e9ae3ece330f": {
+    "id": "reel-50",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05,
+      0.05
+    ],
+    "liens": [
+      "phrase non ciblée",
+      "phrase non ciblée"
+    ],
+    "jetons": 898
+  },
+  "openai/gpt-oss-20b#v2|reel-51|b367b4aa2e7e": {
+    "id": "reel-51",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La question ne cible aucun métier ni personne, donc il est peu probable que le chef l'adresse directement."
+    ],
+    "jetons": 856
+  },
+  "openai/gpt-oss-20b#v2|reel-52|9e6c61fcbb0f": {
+    "id": "reel-52",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95
+    ],
+    "liens": [
+      "Le chef mentionne directement Bertrand, donc il s'adresse à lui."
+    ],
+    "jetons": 914
+  },
+  "openai/gpt-oss-20b#v2|reel-53|82defc7abe1a": {
+    "id": "reel-53",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne mentionne pas de métier ni un prénom, donc il n’est pas clairement ciblé. Le regard du chef pourrait l’indiquer, mais sans autre indice, la probabi…"
+    ],
+    "jetons": 828
+  },
+  "openai/gpt-oss-20b#v2|reel-54|db21e5d4748d": {
+    "id": "reel-54",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "Le chef regarde Raoul, donc la question s’adresse probablement à lui.",
+      "Odon est hors de vue et n’est pas mentionné, donc la probabilité qu’il soit ciblé est faible."
+    ],
+    "jetons": 946
+  },
+  "openai/gpt-oss-20b#v2|reel-55|010a536cfa94": {
+    "id": "reel-55",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Le chef demande si le guerrier (Raoul) est visible, donc il s'adresse à lui."
+    ],
+    "jetons": 967
+  },
+  "openai/gpt-oss-20b#v2|reel-56|faace4220903": {
+    "id": "reel-56",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "mention du métier de guerrier"
+    ],
+    "jetons": 911
+  },
+  "openai/gpt-oss-20b#v2|reel-58|92afb69bb2ff": {
+    "id": "reel-58",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.2
+    ],
+    "liens": [
+      "Le chef mentionne le fer, une ressource que le mineur collecte, donc il peut s'adresser à Thibaut, mais il n'interpelle pas son prénom et il n'y a pas de groupe…"
+    ],
+    "jetons": 849
+  },
+  "openai/gpt-oss-20b#v2|reel-60|cc79e52318b6": {
+    "id": "reel-60",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Le chef remercie Niels, donc Bertrand n’est pas ciblé."
+    ],
+    "jetons": 870
+  },
+  "openai/gpt-oss-20b#v2|reel-61|ef7a7b59a000": {
+    "id": "reel-61",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "chef le regarde, phrase générale, donc Bertrand est le plus probable"
+    ],
+    "jetons": 923
+  },
+  "openai/gpt-oss-20b#v2|reel-62|05302ecf023d": {
+    "id": "reel-62",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "Le chef n’interpelle pas Bertrand et ne mentionne pas de tâche spécifique au mineur ; la phrase ne cible pas un métier particulier. Il est hors de vue, donc la …"
+    ],
+    "jetons": 829
+  },
+  "openai/gpt-oss-20b#v2|reel-63|8156c7293d97": {
+    "id": "reel-63",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne mentionne pas le métier de mineur ni un prénom, donc il est peu probable que le chef l’adresse directement. Le regard du chef pourrait l’indiquer, …"
+    ],
+    "jetons": 830
+  },
+  "openai/gpt-oss-20b#v2|aveugle-1|efb42aff165c": {
+    "id": "aveugle-1",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "interpellation directe du prénom",
+      "non ciblé, pas mentionné ni groupe"
+    ],
+    "jetons": 968
+  },
+  "openai/gpt-oss-20b#v2|aveugle-2|bb2c42195924": {
+    "id": "aveugle-2",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05,
+      0.95
+    ],
+    "liens": [
+      "Le chef ne l'adresse pas directement ; il est à 3 blocs mais n'est pas mentionné.",
+      "Le chef l'interpelle directement par son prénom, lui demandant de couper du sapin."
+    ],
+    "jetons": 950
+  },
+  "openai/gpt-oss-20b#v2|aveugle-3|321d8c4bc23f": {
+    "id": "aveugle-3",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Merci à Ysolde, la bûcheronne."
+    ],
+    "jetons": 879
+  },
+  "openai/gpt-oss-20b#v2|aveugle-4|1517a2bcdd46": {
+    "id": "aveugle-4",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "La phrase s'adresse à tout le monde, incluant le mineur.",
+      "La phrase s'adresse à tout le monde, incluant le bucheron.",
+      "La phrase s'adresse à tout le monde, incluant le guerrier."
+    ],
+    "jetons": 978
+  },
+  "openai/gpt-oss-20b#v2|aveugle-5|51b841b44a71": {
+    "id": "aveugle-5",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "La phrase « Restez tous ici, je reviens. » s'adresse à l'ensemble des ouvriers, donc Gauthier est très susceptible d'être inclus dans l'instruction.",
+      "La même phrase s'adresse à l'ensemble des ouvriers, donc Ysolde est également très susceptible d'être inclus dans l'instruction."
+    ],
+    "jetons": 988
+  },
+  "openai/gpt-oss-20b#v2|aveugle-6|f7c32840052b": {
+    "id": "aveugle-6",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "appel à son métier de bûcheron",
+      "appel à son métier de bûcheron",
+      "phrase générale, pas ciblé"
+    ],
+    "jetons": 1061
+  },
+  "openai/gpt-oss-20b#v2|aveugle-7|563f525a3bb7": {
+    "id": "aveugle-7",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "demande de cuivre, métier de mineur",
+      "aucune référence à son métier, donc faible probabilité"
+    ],
+    "jetons": 929
+  },
+  "openai/gpt-oss-20b#v2|aveugle-8|3fb86a82209b": {
+    "id": "aveugle-8",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "La tâche de garder la porte correspond à son rôle de guerrier, même s’il est hors de vue.",
+      "La demande ne concerne pas la mine, donc il est peu probable qu’il soit ciblé."
+    ],
+    "jetons": 919
+  },
+  "openai/gpt-oss-20b#v2|aveugle-9|4cfa3715b1f9": {
+    "id": "aveugle-9",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.2
+    ],
+    "liens": [
+      "Le chef lève les yeux vers lui et l'invite à venir, même si la phrase est vague.",
+      "La phrase ne cible pas explicitement le bûcheron, donc la probabilité est faible."
+    ],
+    "jetons": 962
+  },
+  "openai/gpt-oss-20b#v2|aveugle-10|e0927ae3108a": {
+    "id": "aveugle-10",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Le chef demande si Ysolde a mangé, sans référence à son métier ou à un groupe, donc il s'adresse probablement à elle, surtout qu'il la regarde."
+    ],
+    "jetons": 868
+  },
+  "openai/gpt-oss-20b#v2|aveugle-11|943ade9f7cab": {
+    "id": "aveugle-11",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      -1.0,
+      -1.0
+    ],
+    "liens": [
+      "",
+      ""
+    ],
+    "jetons": 953
+  },
+  "openai/gpt-oss-20b#v2|aveugle-12|27d1ac0649a9": {
+    "id": "aveugle-12",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95,
+      0.05
+    ],
+    "liens": [
+      "Le chef l'interpelle directement par son prénom, même s'il est hors de vue.",
+      "Le prénom n'est pas mentionné, donc il n'est pas visé."
+    ],
+    "jetons": 931
+  },
+  "openai/gpt-oss-20b#v2|aveugle-13|0d0d526987d0": {
+    "id": "aveugle-13",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.8
+    ],
+    "liens": [
+      "interpellation directe",
+      "objet de protection"
+    ],
+    "jetons": 934
+  },
+  "openai/gpt-oss-20b#v2|aveugle-14|eac6b8ef207f": {
+    "id": "aveugle-14",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "Commande de s'arrêter et de rentrer, adressée à tous les ouvriers, y compris le mineur.",
+      "Commande de s'arrêter et de rentrer, adressée à tous les ouvriers, y compris le bûcheron."
+    ],
+    "jetons": 962
+  },
+  "openai/gpt-oss-20b#v2|aveugle-15|6d17d28a1145": {
+    "id": "aveugle-15",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8
+    ],
+    "liens": [
+      "Le chef demande 30 unités de ressources, ce qui correspond à la tâche habituelle du mineur (charbon, fer, etc.)."
+    ],
+    "jetons": 909
+  },
+  "openai/gpt-oss-20b#v2|aveugle-16|555c9fa1f016": {
+    "id": "aveugle-16",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.1
+    ],
+    "liens": [
+      "Il s'adresse au guerrier, donc Raoul.",
+      "Il n'est pas mentionné comme guerrier, donc peu probable."
+    ],
+    "jetons": 941
+  },
+  "openai/gpt-oss-20b#v2|aveugle-17|3e44608c5615": {
+    "id": "aveugle-17",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.8,
+      0.1
+    ],
+    "liens": [
+      "Le chef l'adresse directement, le regardant, lui demandant de venir.",
+      "Le chef ne l'interpelle pas, donc faible probabilité qu'il lui parle."
+    ],
+    "jetons": 936
+  },
+  "openai/gpt-oss-20b#v2|aveugle-18|255e9a0c80fe": {
+    "id": "aveugle-18",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05,
+      0.1
+    ],
+    "liens": [
+      "Le chef ne l'interpelle pas et ne l'adresse pas directement dans la phrase.",
+      "Le chef parle de Raoul mais pas à lui, il lui demande de transmettre l'ordre."
+    ],
+    "jetons": 1018
+  },
+  "openai/gpt-oss-20b#v2|aveugle-19|1e4f1ee3936a": {
+    "id": "aveugle-19",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1,
+      0.8
+    ],
+    "liens": [
+      "chef ne l'adresse pas, la phrase ne fait pas référence à son métier ou à son rôle",
+      "chef s'adresse directement à Gauthier, l'appelant par son prénom"
+    ],
+    "jetons": 1027
+  },
+  "openai/gpt-oss-20b#v2|aveugle-20|62255aea414e": {
+    "id": "aveugle-20",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.95
+    ],
+    "liens": [
+      "Le chef s'adresse directement à Gauthier en l'appelant par son prénom, indiquant qu'il parle à lui."
+    ],
+    "jetons": 926
+  },
+  "openai/gpt-oss-20b#v2|aveugle-21|ab5c5cb35702": {
+    "id": "aveugle-21",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Le chef ne l'interpelle pas, il s'adresse à Niels."
+    ],
+    "jetons": 946
+  },
+  "openai/gpt-oss-20b#v2|aveugle-22|fa40397861aa": {
+    "id": "aveugle-22",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Il est le mineur, donc la phrase l’invite à aller à la mine."
+    ],
+    "jetons": 943
+  },
+  "openai/gpt-oss-20b#v2|aveugle-23|0ea8221bc0a3": {
+    "id": "aveugle-23",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne s’adresse pas à lui, il n’est pas mentionné par prénom ni par métier, donc faible probabilité qu’il soit ciblé."
+    ],
+    "jetons": 817
+  },
+  "openai/gpt-oss-20b#v2|aveugle-24|b5cfa49270b9": {
+    "id": "aveugle-24",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne s’adresse pas à lui, il n’est pas mentionné par prénom ni par métier, donc faible probabilité qu’il soit ciblé."
+    ],
+    "jetons": 812
+  },
+  "openai/gpt-oss-20b#v2|aveugle-25|3299fd31bef2": {
+    "id": "aveugle-25",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "La question porte sur les torches, une ressource non liée au métier de mineur, donc peu probable que le chef s'adresse à Gauthier."
+    ],
+    "jetons": 867
+  },
+  "openai/gpt-oss-20b#v2|aveugle-26|737f63bc7765": {
+    "id": "aveugle-26",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "Demande de bois pour le toit, métier de bûcheron."
+    ],
+    "jetons": 981
+  },
+  "openai/gpt-oss-20b#v2|aveugle-27|e6f36fae1823": {
+    "id": "aveugle-27",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9
+    ],
+    "liens": [
+      "La question concerne l’emplacement d’une mine, tâche propre au mineur."
+    ],
+    "jetons": 905
+  },
+  "openai/gpt-oss-20b#v2|aveugle-28|c0b6d22ca609": {
+    "id": "aveugle-28",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.0
+    ],
+    "liens": [
+      "Commentaire général, pas ciblé"
+    ],
+    "jetons": 867
+  },
+  "openai/gpt-oss-20b#v2|aveugle-29|c8ff6634cf8a": {
+    "id": "aveugle-29",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.9,
+      0.9
+    ],
+    "liens": [
+      "Le chef salue et félicite le groupe d'ouvriers, incluant Gauthier.",
+      "Le chef salue et félicite le groupe d'ouvriers, incluant Ysolde."
+    ],
+    "jetons": 979
+  },
+  "openai/gpt-oss-20b#v2|aveugle-30|f26193f18261": {
+    "id": "aveugle-30",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.1
+    ],
+    "liens": [
+      "La phrase ne mentionne pas de prénom, de groupe, ni de tâche spécifique au mineur. Le chef ne semble pas s’adresser directement à Gauthier, donc la probabilité …"
+    ],
+    "jetons": 834
+  },
+  "openai/gpt-oss-20b#v2|aveugle-31|dd9558b834a4": {
+    "id": "aveugle-31",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.7
+    ],
+    "liens": [
+      "Il parle à Ysolde, car il le regarde et aucune autre indication n’ouvre la porte à un autre ouvrier."
+    ],
+    "jetons": 900
+  },
+  "openai/gpt-oss-20b#v2|aveugle-32|004c2dff3e65": {
+    "id": "aveugle-32",
+    "modele": "openai/gpt-oss-20b#v2",
+    "p": [
+      0.05
+    ],
+    "liens": [
+      "Le chef salue Kalia, donc Raoul n’est pas ciblé."
+    ],
+    "jetons": 881
+  }
+}

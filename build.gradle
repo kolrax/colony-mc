@@ -208,3 +208,10 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// L'entraînement de l'adressage (à qui le chef parle) : ./gradlew entrainer --args="code" (voir entrainement/ et Entrainement.java).
+tasks.register('entrainer', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'fr.lacolonie.pnj.Entrainement'
+    workingDir = projectDir
+}

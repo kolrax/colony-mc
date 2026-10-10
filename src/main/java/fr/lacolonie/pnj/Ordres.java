@@ -79,7 +79,9 @@ final class Ordres {
         guerrier.put("ronde", List.of("fais la ronde", "la ronde", "ronde", "patrouille", "patrouiller", "patrouilles"));
         guerrier.put("garder", List.of("garde le poste", "garde le bureau", "garde la base", "monte la garde", "surveille le poste", "surveille", "garder le poste",
                 "protege la base", "proteger la base", "protege le poste", "proteger le poste", "protege le bureau", "defends la base", "defendre la base",
-                "defends le poste", "defendre le poste", "protege le camp", "defends le camp", "garde le camp", "garde l entree", "protege l entree"));
+                "defends le poste", "defendre le poste", "protege le camp", "defends le camp", "garde le camp", "garde l entree", "protege l entree",
+                "garder la base", "garder le bureau", "garder l entree", "garder la porte", "garde la porte", "surveiller la base", "surveiller le poste",
+                "surveiller l entree", "proteger l entree", "defendre l entree", "defends l entree", "garder le camp", "monter la garde"));
         NOMS.put("guerrier", guerrier);
     }
 
@@ -189,7 +191,8 @@ final class Ordres {
             l.intentions.add(Intention.POURQUOI);
         if (dit(n, "aide", "que sais tu faire", "quels ordres", "qu est ce que tu comprends", "que comprends tu", "comment te parler"))
             l.intentions.add(Intention.AIDE);
-        if (dit(n, "bonjour", "salut", "coucou", "bonsoir", "hey", "yo", "hello", "bien le bonjour"))
+        if (dit(n, "bonjour", "salut", "coucou", "bonsoir", "hey", "yo", "hello", "bien le bonjour", "bonne nuit", "a demain", "au revoir", "a plus",
+                "bon courage", "bonne journee", "bonne soiree", "a tout a l heure", "a toute"))
             l.intentions.add(Intention.SALUT);
         if (dit(n, "merci", "bravo", "bien joue", "beau travail", "bon travail", "excellent", "parfait"))
             l.intentions.add(Intention.MERCI);
@@ -360,7 +363,8 @@ final class Ordres {
             "tous les deux", "tous les trois", "toutes les deux", "les amis", "mes amis", "les copains", "mes copains", "les hommes", "mes hommes",
             "les filles", "mesdames", "messieurs", "l equipe", "mon equipe", "les ouvriers", "mes ouvriers", "les compagnons", "mes compagnons",
             "compagnons", "camarades", "les camarades", "les enfants", "la compagnie", "tout le groupe", "tous ensemble", "venez tous", "allez tous",
-            "a tous", "vous autres", "la troupe", "les braves", "mes braves", "mes gaillards", "les gaillards");
+            "a tous", "vous autres", "la troupe", "les braves", "mes braves", "mes gaillards", "les gaillards", "tous sauf", "toutes sauf",
+            "tous a part", "tous excepte", "tous hormis", "restez tous", "venez tous", "rentrez tous");
     /** Les métiers par leur nom : singulier, pluriel ; les mots marqués d'une étoile ne comptent qu'avec un article (« garde » est aussi un verbe). */
     static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
             "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
@@ -368,8 +372,10 @@ final class Ordres {
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");
-    static final Set<String> INTERJECTIONS = Set.of("he", "eh", "oh", "ho", "ohe", "hey", "dis", "dites", "allez", "alors", "bon", "bien", "ecoute",
-            "ecoutez", "merci", "bravo", "salut", "bonjour", "bonsoir", "coucou", "yo", "oui", "non", "ok", "d", "accord", "tiens", "voyons", "toi");
+    // Pas « bien » : « il bosse bien, Bertrand » parle de lui. « joué », « travail », « nuit » : « bien joué Raoul », « bon travail Raoul », « bonne nuit Raoul ».
+    static final Set<String> INTERJECTIONS = Set.of("he", "eh", "oh", "ho", "ohe", "hey", "dis", "dites", "allez", "alors", "bon", "ecoute",
+            "ecoutez", "merci", "bravo", "salut", "bonjour", "bonsoir", "coucou", "yo", "oui", "non", "ok", "d", "accord", "tiens", "voyons", "toi",
+            "joue", "travail", "nuit", "courage", "revoir", "bonne", "demain");
     /** Après un prénom en tête de phrase, ces mots en font le sujet (« Raoul est où ? ») et non celui qu'on appelle. */
     static final Set<String> TROISIEME_PERSONNE = Set.of("est", "etait", "sera", "a", "avait", "aura", "n", "s", "il", "elle", "y", "lui");
     static final Set<String> SAUF = Set.of("sauf", "excepte", "hormis", "hors");
@@ -382,7 +388,9 @@ final class Ordres {
     /** Des mots qui interpellent (« salut Raoul », « merci les gars », « hé ! »). */
     static final Set<String> APPELS = Set.of("salut", "bonjour", "bonsoir", "coucou", "merci", "bravo", "he", "eh", "ohe", "hey", "yo", "ho", "oh",
             "allez", "dis", "dites", "ecoute", "ecoutez");
-    static final Set<String> SUJETS = Set.of("je", "j", "il", "elle", "on", "ils", "elles", "ca", "cela", "nous", "qu", "que", "qui", "ne", "n", "se", "s", "me", "m");
+    static final Set<String> DETERMINANTS = Set.of("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "ma", "ta", "sa", "mon", "ton", "son",
+            "mes", "tes", "ses", "ce", "cet", "cette", "ces", "au", "aux", "notre", "votre", "leur", "leurs");
+    static final Set<String> SUJETS = Set.of("je", "j", "il", "elle", "on", "ils", "elles", "ca", "cela", "nous", "qu", "que", "qui", "se", "s", "me", "m");
     static final Set<String> DEUXIEME_PERSONNE = Set.of("tu", "toi", "te", "t", "ton", "ta", "tes", "tien", "tienne", "tiens", "vous", "votre", "vos");
     static final Set<String> INTERROGATIFS = Set.of("ou", "quand", "comment", "pourquoi", "combien", "quel", "quelle", "quels", "quelles", "qui", "quoi");
     static final List<String> DEMANDES_FORMULES = List.of("peux tu", "pouvez vous", "tu peux", "vous pouvez", "tu pourrais", "vous pourriez",
@@ -413,6 +421,35 @@ final class Ordres {
             int[] t = avant; avant = ici; ici = t;
         }
         return avant[nom.length()] <= (nom.length() >= 9 ? 2 : 1);
+    }
+
+    /** Des mots qui font d'un groupe un complément (« viens voir mes ouvriers », « avec les gars ») et non un appel. */
+    static final Set<String> OBJETS = Set.of("voir", "aider", "appeler", "montrer", "presenter", "trouver", "chercher", "avec", "pour", "de", "des", "du",
+            "sur", "chez", "entre", "par", "contre", "que", "qu", "aux", "vers", "sans");
+
+    /** Un mot de groupe (« les gars », « tout le monde »…) qui n'est pas un complément (« viens voir mes ouvriers »). */
+    static boolean groupeAppele(List<String> j) {
+        for (String g : GROUPES) {
+            List<String> mots = List.of(g.split(" "));
+            for (int k = 0; k + mots.size() <= j.size(); k++)
+                if (j.subList(k, k + mots.size()).equals(mots) && (k == 0 || !OBJETS.contains(j.get(k - 1)))) return true;
+        }
+        return false;
+    }
+
+    /** Un mot de groupe (« les gars », « tout le monde »…) entre deux pauses : en début ou en fin de phrase, ou entre virgules. */
+    static boolean groupeEnAppel(List<String> j) {
+        for (String g : GROUPES) {
+            List<String> mots = List.of(g.split(" "));
+            for (int k = 0; k + mots.size() <= j.size(); k++) {
+                if (!j.subList(k, k + mots.size()).equals(mots)) continue;
+                int g0 = k - 1;
+                while (g0 >= 0 && INTERJECTIONS.contains(j.get(g0))) g0--;
+                boolean gauche = g0 < 0 || ponctuation(j.get(g0)), droite = k + mots.size() >= j.size() || ponctuation(j.get(k + mots.size()));
+                if (gauche && droite) return true;
+            }
+        }
+        return false;
     }
 
     /** Un nom (prénom ou métier) trouvé dans la phrase, des jetons {@code debut} à {@code fin} (exclu). */
@@ -473,18 +510,25 @@ final class Ordres {
         }
         cites.removeAll(appeles);
         String n = normaliser(texte);
-        boolean tous = GROUPES.stream().anyMatch(x -> dit(n, x));
+        boolean tous = groupeAppele(j);
         boolean pluriel = j.stream().anyMatch(w -> w.equals("vous") || w.equals("tous") || w.equals("toutes")
                 || w.length() > 3 && w.endsWith("ez") && !Set.of("chez", "assez", "allez").contains(w));
         // Un verbe à l'impératif, pas conjugué avec un sujet (« je mine », « il garde la base » ne sont pas des ordres).
         boolean demande = DEMANDES_FORMULES.stream().anyMatch(x -> dit(n, x));
-        for (int k = 0; k < j.size() && !demande; k++) demande = DEMANDES.contains(j.get(k)) && (k == 0 || !SUJETS.contains(j.get(k - 1)));
+        for (int k = 0; k < j.size() && !demande; k++) {
+            int s = k - 1;
+            if (s >= 0 && (j.get(s).equals("ne") || j.get(s).equals("n"))) s--; // « ne bouge pas » est un ordre, « je ne mine pas » non
+            // Après un sujet (« je mine »), ou un article (« à la mine », « la garde »), ce n'est pas un ordre.
+            demande = DEMANDES.contains(j.get(k)) && (s < 0 || !SUJETS.contains(j.get(s)) && !DETERMINANTS.contains(j.get(s)));
+        }
         boolean deuxieme = j.stream().anyMatch(DEUXIEME_PERSONNE::contains);
         boolean question = j.contains("?") || !j.isEmpty() && INTERROGATIFS.contains(j.get(0)) || dit(n, "est ce que", "est ce qu");
         // Un prénom ou « les gars » dans une phrase qui ne s'adresse à personne (« il est lent, Raoul ») : on parle d'eux, pas à eux.
         long noms = mentions.stream().mapToInt(m -> m.fin() - m.debut()).sum() + j.stream().filter(w -> ponctuation(w) || w.equals("et")).count();
         boolean adressee = deuxieme || demande || question || j.stream().anyMatch(APPELS::contains) || !lire(texte, "").intentions.isEmpty() || noms >= j.size();
-        if (!adressee) { cites.addAll(appeles); appeles.clear(); metiersTous.clear(); metiersUn.clear(); tous = false; }
+        // « Les gars », « tout le monde » placés comme un appel (« On bouge, tout le monde ! ») restent un appel ; sujets d'un verbe
+        // (« les gars sont partis »), ils parlent d'eux.
+        if (!adressee) { cites.addAll(appeles); appeles.clear(); metiersTous.clear(); metiersUn.clear(); tous = tous && groupeEnAppel(j); }
         return new Adresse(appeles, cites, exclus, tous, metiersTous, metiersUn, pluriel, demande, deuxieme, question);
     }
 }

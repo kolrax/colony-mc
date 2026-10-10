@@ -1,0 +1,2018 @@
+[
+{
+"texte": "C'est vraiment un chômeur ce mec.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Enguerrand",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "serveur : remarque sur lui",
+"id": "reel-1",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Orphan, Enguerrand, tu peux y aller.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Enguerrand",
+"metier": "bucheron",
+"distance": 5,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Orphan",
+"distance": 6,
+"regard": 0.2
+}
+],
+"attendu": [
+"Enguerrand"
+],
+"note": "serveur",
+"id": "reel-2",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Tu peux courir 50 blocs et revenir vers moi ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.98,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "serveur",
+"id": "reel-3",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Merci.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.97,
+"depuis": 10,
+"question": false,
+"fenetre": false,
+"derniers": [
+"Raoul : Oui chef, je surveille les alentours."
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "serveur",
+"id": "reel-4",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Surveille les alentours.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.98,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "serveur",
+"id": "reel-5",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Raoul, va protéger la base.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 10,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-6",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Il faudrait quelqu'un pour garder l'entrée.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 8,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-7",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Les gars, on rentre.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 9,
+"regard": -0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand",
+"Raoul",
+"Odon"
+],
+"note": "",
+"id": "reel-8",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Bertrand, t'as trouvé du diamant ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 7,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-9",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Ramène-moi du charbon.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 4,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-10",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Ramène-moi du charbon.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-11",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Coupe-moi du bouleau.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.5,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-12",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Toi, suis-moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-13",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Vous deux, suivez-moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon",
+"Raoul"
+],
+"note": "",
+"id": "reel-14",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Hé, le guerrier, viens par là !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 12,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-15",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Les mineurs, rentrez au poste.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.5,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 8,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 4,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand",
+"Thibaut"
+],
+"note": "",
+"id": "reel-16",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Tout le monde sauf Odon, suivez-moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul",
+"Bertrand"
+],
+"note": "",
+"id": "reel-17",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Odon, Bertrand, au travail !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon",
+"Bertrand"
+],
+"note": "",
+"id": "reel-18",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Bonne nuit les gars.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon",
+"Raoul"
+],
+"note": "",
+"id": "reel-19",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Allez hop, au travail tout le monde !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 9,
+"regard": 0.0,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon",
+"Raoul",
+"Bertrand"
+],
+"note": "",
+"id": "reel-20",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Lancelin, Thibaut, venez m'aider.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Lancelin",
+"metier": "bucheron",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 8,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Lancelin",
+"Thibaut"
+],
+"note": "",
+"id": "reel-21",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Enguerran, tu reviens quand ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Enguerrand",
+"metier": "bucheron",
+"distance": 14,
+"regard": -0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Enguerrand"
+],
+"note": "prénom mal transcrit",
+"id": "reel-22",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Bérangère, au boulot.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bérengère",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bérengère"
+],
+"note": "prénom mal transcrit",
+"id": "reel-23",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Raoul, Raoul !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 14,
+"regard": -0.5,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-24",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Bon travail, Bertrand.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.4,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-25",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Salut !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 7,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-26",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Va dormir un peu.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.98,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-27",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Donne-moi ce que tu as dans ton sac.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 2.5,
+"regard": 0.99,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-28",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Fais gaffe aux creepers.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-29",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Prends ça.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 2,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-30",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Combien t'as de bûches ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-31",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Viens par ici toi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Lancelin",
+"metier": "bucheron",
+"distance": 8,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Thibaut"
+],
+"note": "",
+"id": "reel-32",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Va chercher du fer et du charbon.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Lancelin",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 10,
+"regard": 0.0,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Thibaut"
+],
+"note": "",
+"id": "reel-33",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Tu peux me laisser tranquille ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Lancelin",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Lancelin"
+],
+"note": "",
+"id": "reel-34",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Raoul, suis-moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 6,
+"regard": 0.2
+}
+],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-35",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Suis-moi.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 6,
+"regard": 0.3
+}
+],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-36",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Ça marche, merci !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 5,
+"regard": 0.5,
+"depuis": 5,
+"question": false,
+"fenetre": false,
+"derniers": [
+"Odon : Je vais couper du chêne, chef."
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-37",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "T'es où ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 15,
+"regard": -0.3,
+"depuis": 20,
+"question": false,
+"fenetre": false,
+"derniers": [
+"Chef : Ramène du bouleau.",
+"Odon : J'y vais, chef."
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-38",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Oui.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": 5,
+"question": true,
+"fenetre": false,
+"derniers": [
+"Raoul : Je reste ici, chef ?"
+]
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-39",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Non merci.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 7,
+"regard": 0.1,
+"depuis": 8,
+"question": true,
+"fenetre": false,
+"derniers": [
+"Bertrand : Tu veux que je continue à miner ?"
+]
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-40",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Arrête de me suivre.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Lancelin",
+"metier": "bucheron",
+"distance": 2,
+"regard": 0.3,
+"depuis": 40,
+"question": false,
+"fenetre": false,
+"derniers": [
+"Chef : Suis-moi.",
+"Lancelin : Je te suis, chef."
+]
+},
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 9,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Lancelin"
+],
+"note": "",
+"id": "reel-41",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "comment tu vas ?",
+"micro": false,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-42",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Raoul viens ici",
+"micro": false,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-43",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "va garder la base",
+"micro": false,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 8,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Raoul"
+],
+"note": "",
+"id": "reel-44",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "c'est un fainéant ce Raoul",
+"micro": false,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 8,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Bertrand"
+],
+"note": "",
+"id": "reel-45",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "les gars venez",
+"micro": false,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+},
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 6,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon",
+"Raoul"
+],
+"note": "",
+"id": "reel-46",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "ramène 64 pierres",
+"micro": false,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 3,
+"regard": 0.97,
+"depuis": -1,
+"question": false,
+"fenetre": true,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [
+"Odon"
+],
+"note": "",
+"id": "reel-47",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Il bosse bien Bertrand, hein ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.93,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 5,
+"regard": 0.3
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-48",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Niels, viens voir mes ouvriers.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 6,
+"regard": 0.4
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-49",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Je vais au village, je reviens.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 8,
+"regard": 0.1,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-50",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Il est quelle heure ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-51",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Regarde ce que Bertrand a trouvé !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 4,
+"regard": 0.5
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-52",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Mais qu'est-ce qu'il fabrique, celui-là ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.96,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-53",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Pourquoi il ne travaille pas, lui ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 7,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+},
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 4,
+"regard": 0.2,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-54",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Kalia, t'as vu mon guerrier ?",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Kalia",
+"distance": 6,
+"regard": 0.3
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-55",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Mon guerrier est trop fort.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Raoul",
+"metier": "guerrier",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Kalia",
+"distance": 6,
+"regard": 0.3
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-56",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Bertrand est vraiment rapide.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-57",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Je crois qu'on va manquer de fer.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Thibaut",
+"metier": "mineur",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-58",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "On a assez de bois là.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Odon",
+"metier": "bucheron",
+"distance": 6,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-59",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Merci Niels !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.94,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 4,
+"regard": 0.6
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-60",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Attends-moi, j'arrive !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 4,
+"regard": 0.94,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [
+{
+"nom": "Nielscutt",
+"distance": 9,
+"regard": 0.92
+}
+],
+"attendu": [],
+"note": "",
+"id": "reel-61",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Ah, enfin du diamant !",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 5,
+"regard": 0.3,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-62",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+},
+{
+"texte": "Purée, il fait noir ici.",
+"micro": true,
+"pnj": [
+{
+"prenom": "Bertrand",
+"metier": "mineur",
+"distance": 3,
+"regard": 0.95,
+"depuis": -1,
+"question": false,
+"fenetre": false,
+"derniers": []
+}
+],
+"joueurs": [],
+"attendu": [],
+"note": "",
+"id": "reel-63",
+"categorie": "reel",
+"famille": "reel",
+"jeu": "reel"
+}
+]

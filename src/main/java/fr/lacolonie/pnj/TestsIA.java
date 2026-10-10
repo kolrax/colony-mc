@@ -83,11 +83,13 @@ public class TestsIA {
         if (!req.getAsJsonObject("response_format").get("type").getAsString().equals("json_schema")) return erreur(400, "schéma attendu");
         String systeme = req.getAsJsonArray("messages").get(0).getAsJsonObject().get("content").getAsString();
         String parole = req.getAsJsonArray("messages").get(1).getAsJsonObject().get("content").getAsString();
-        if (!systeme.contains("Missions possibles")) return erreur(400, "pas de catalogue");
-        if (parole.contains("PANNE")) return erreur(400, "The model does not exist");
         JsonObject schema = req.getAsJsonObject("response_format").getAsJsonObject("json_schema").getAsJsonObject("schema");
+        boolean ecoute = schema.getAsJsonObject("properties").has("ouvriers");
+        if (!ecoute && !systeme.contains("Missions possibles")) return erreur(400, "pas de catalogue");
+        if (parole.contains("PANNE") || systeme.contains("PANNE")) return erreur(400, "The model does not exist");
         String decision;
-        if (schema.getAsJsonObject("properties").has("destinataires")) decision = groupe(schema, systeme, parole);
+        if (ecoute) decision = ecoute(schema, systeme);
+        else if (schema.getAsJsonObject("properties").has("destinataires")) decision = groupe(schema, systeme, parole);
         else if (parole.contains("pioches"))
             decision = decision("Compris chef, je te ramène dix lingots de fer pour tes pioches.", "fier",
                     "{\"type\":\"missions\",\"missions\":[{\"id\":\"fer\",\"mode\":\"quantite\",\"nombre\":10}],\"ajouter\":false,\"debut\":0,\"fin\":0,\"jours\":0}");
@@ -150,6 +152,38 @@ public class TestsIA {
         d.add("destinataires", dest);
         d.add("reponses", reps);
         return d.toString();
+    }
+
+    /**
+     * Le faux avis d'écoute : la phrase est dans la consigne, entre « » ; chaque ouvrier y a sa ligne (« - Raoul : guerrier (… »),
+     * avec « le chef le regarde » s'il le regarde. Il répond comme le ferait le vrai, en plus simple.
+     */
+    static String ecoute(JsonObject schema, String systeme) {
+        java.util.List<String> qui = new java.util.ArrayList<>();
+        for (String ligne : systeme.split("\n")) if (ligne.startsWith("- ") && ligne.contains(" : ")) qui.add(ligne.substring(2, ligne.indexOf(" : ")));
+        String texte = systeme.substring(systeme.indexOf("« ") + 2, systeme.indexOf(" »"));
+        JsonArray l = new JsonArray();
+        for (int i = 0; i < qui.size(); i++) {
+            String q = qui.get(i);
+            String ligne = systeme.substring(systeme.indexOf("- " + q + " : "));
+            ligne = ligne.substring(0, ligne.indexOf('\n'));
+            int p;
+            if (texte.contains("chanson") || texte.contains("fredonne") || texte.contains("chômeur") || texte.contains("lent") || texte.contains("je mine")) p = 3;
+            else if (texte.startsWith(q)) p = 95;
+            else if (qui.stream().anyMatch(texte::startsWith)) p = 5;
+            else if (texte.contains("protège la base")) p = ligne.contains(": guerrier") ? 92 : 4;
+            else if (texte.contains("Les gars")) p = 90;
+            else if (ligne.contains("le chef le regarde")) p = 85;
+            else p = i == 0 ? 75 : 6;
+            JsonObject o = new JsonObject();
+            o.addProperty("qui", q);
+            o.addProperty("lien", p > 50 ? "la phrase s'adresse à lui" : "aucun lien avec lui");
+            o.addProperty("probabilite", p);
+            l.add(o);
+        }
+        JsonObject r = new JsonObject();
+        r.add("ouvriers", l);
+        return r.toString();
     }
 
     static JsonObject rep(String qui, String reponse, String humeur, String action) {
@@ -317,7 +351,7 @@ public class TestsIA {
         Travailleur t = TestsJeu.ouvrier(h, "guerrier", 2, 2, 4, ItemStack.EMPTY);
         t.chef = chef.getUUID();
         t.parler(chef, "Suis-moi ! PANNE");
-        h.assertTrue(t.reflechit, "il doit d'abord demander à l'IA");
+        h.assertTrue(t.reflechit, "il doit d'abord demander à l'IA (" + diag(chef, t) + ")");
         h.succeedWhen(() -> {
             h.assertTrue(!t.reflechit && t.mode == Travailleur.Mode.SUIVRE, "l'interpréteur doit avoir compris (" + t.mode + ")");
             h.assertFalse(IA.echange(t).contains("J'arrive, chef"), "ce n'est pas l'IA qui a répondu");
@@ -378,87 +412,136 @@ public class TestsIA {
     }
 
     /** Trois ouvriers autour du chef : Bertrand le mineur (celui qu'il regarde), Raoul le guerrier, Odon le bûcheron. */
-    static Travailleur[] equipe(GameTestHelper h, net.minecraft.server.level.ServerPlayer chef) {
-        sol(h);
-        Vec3 p = h.absoluteVec(new Vec3(4.5, 2, 4.5));
-        chef.moveTo(p.x, p.y, p.z);
-        Travailleur[] e = {TestsJeu.ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY), TestsJeu.ouvrier(h, "guerrier", 6, 2, 4, ItemStack.EMPTY),
-                TestsJeu.ouvrier(h, "bucheron", 4, 2, 7, ItemStack.EMPTY)};
+    static Travailleur[] equipe(GameTestHelper h, net.minecraft.server.level.ServerPlayer chef, int coin) {
+        BlockPos base = TestsJeu.sol(h, coin * 400, 60000);
+        Vec3 c = Vec3.atBottomCenterOf(base);
+        chef.moveTo(c.x, c.y, c.z);
+        Travailleur[] e = {TestsJeu.employe(h, "mineur", base, c.add(-2.5, 0, -0.5), ItemStack.EMPTY),
+                TestsJeu.employe(h, "guerrier", base, c.add(1.5, 0, -0.5), ItemStack.EMPTY),
+                TestsJeu.employe(h, "bucheron", base, c.add(-0.5, 0, 2.5), ItemStack.EMPTY)};
         String[] noms = {"Bertrand", "Raoul", "Odon"};
-        for (int i = 0; i < 3; i++) { e[i].chef = chef.getUUID(); e[i].prenom = noms[i]; }
+        for (int i = 0; i < 3; i++) { e[i].chef = chef.getUUID(); e[i].prenom = noms[i]; e[i].forcerChunk(); }
         return e;
+    }
+
+    /**
+     * Un test d'équipe, étape par étape : d'abord attendre que les ouvriers soient visibles du chef (dans un tronçon tout
+     * juste chargé, ils ne le sont qu'au tick suivant), puis chaque étape dans l'ordre. Une étape qui échoue est retentée
+     * au tick suivant (une vérification) ; au bout du délai, le test échoue avec son message.
+     */
+    static void etapes(GameTestHelper h, net.minecraft.server.level.ServerPlayer chef, Travailleur[] e, Runnable... etapes) {
+        int[] n = {0};
+        h.succeedWhen(() -> {
+            if (n[0] == 0 && Dialogue.autour(chef, null).size() < e.length)
+                throw new net.minecraft.gametest.framework.GameTestAssertException("ouvriers pas encore visibles");
+            while (n[0] < etapes.length) {
+                etapes[n[0]].run();
+                n[0]++;
+            }
+        });
+    }
+
+    /** Une étape qui attend {@code ticks} ticks. */
+    static Runnable attendre(GameTestHelper h, int ticks) {
+        long[] debut = {-1};
+        return () -> {
+            if (debut[0] < 0) debut[0] = h.getTick();
+            if (h.getTick() - debut[0] < ticks) throw new net.minecraft.gametest.framework.GameTestAssertException("attente");
+        };
+    }
+
+    /** Pour comprendre un échec : qui le chef entend, ce que le journal d'écoute a retenu, s'il attend l'IA. */
+    static String diag(net.minecraft.server.level.ServerPlayer chef, Travailleur vise) {
+        return "autour=" + Dialogue.autour(chef, vise).size() + " attente=" + Dialogue.EN_ATTENTE.contains(chef.getUUID())
+                + " conversation=" + IA.conversationDisponible() + " écoute=" + IA.ecouteIADisponible()
+                + " journal=" + Dialogue.journal().stream().filter(x -> chef.getName().getString().equals(x.get("joueur"))).findFirst().map(Object::toString).orElse("-");
+    }
+
+    /** Le chef regarde cet ouvrier droit dans les yeux. */
+    static void regarder(net.minecraft.server.level.ServerPlayer chef, Travailleur t) {
+        Vec3 d = t.getEyePosition().subtract(chef.getEyePosition()); // sans paquet envoyé : le faux joueur n'a pas de vraie connexion
+        chef.setXRot((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+        chef.setYRot((float) Math.toDegrees(Math.atan2(d.z, d.x)) - 90f);
+        chef.setYHeadRot(chef.getYRot());
     }
 
     /** Sans prénom : l'IA comprend que « protéger la base », c'est pour le guerrier, même quand on regarde le mineur. */
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
     public static void iaDevineLeDestinataire(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
-        Dialogue.parler(chef, "Il faudrait que quelqu'un protège la base", e[0], true);
-        h.assertTrue(e[0].reflechit && e[1].reflechit && e[2].reflechit, "les trois doivent être décrits à l'IA");
-        h.succeedWhen(() -> {
-            h.assertTrue(e[1].missions.stream().anyMatch(m -> m.id.equals("garder")), "Raoul doit garder la base");
-            h.assertTrue(IA.echange(e[1]).contains("personne ne passera"), "c'est Raoul qui répond : " + IA.echange(e[1]));
-            h.assertTrue(IA.echange(e[0]).isEmpty() && e[0].missions.isEmpty(), "Bertrand n'était pas concerné : " + IA.echange(e[0]));
-            for (Travailleur t : e) t.discard();
-        });
+        Travailleur[] e = equipe(h, chef, 1);
+        etapes(h, chef, e,
+                () -> { regarder(chef, e[0]); Dialogue.parler(chef, "Il faudrait que quelqu'un protège la base", e[0], true); },
+                () -> h.assertTrue(e[0].reflechit && e[1].reflechit && e[2].reflechit, "les trois doivent être décrits à l'IA (" + diag(chef, e[0]) + ")"),
+                () -> {
+                    h.assertTrue(e[1].missions.stream().anyMatch(m -> m.id.equals("garder")), "Raoul doit garder la base");
+                    h.assertTrue(IA.echange(e[1]).contains("personne ne passera"), "c'est Raoul qui répond : " + IA.echange(e[1]));
+                    h.assertTrue(IA.echange(e[0]).isEmpty() && e[0].missions.isEmpty(), "Bertrand n'était pas concerné : " + IA.echange(e[0]));
+                },
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** « Les gars » : le mod l'a compris seul ; l'IA répond pour chacun, un seul parle, tous obéissent. */
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
     public static void iaLesGars(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
-        Dialogue.parler(chef, "Les gars, suivez-moi !", null, true);
-        h.succeedWhen(() -> {
-            for (Travailleur t : e) h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, t.prenom + " doit suivre (" + t.mode + ")");
-            h.assertTrue(IA.echange(e[0]).contains("On te suit, chef"), "un seul répond : " + IA.echange(e[0]));
-            h.assertTrue(IA.echange(e[2]).contains("Chef (à Bertrand, Raoul, Odon)"), "la phrase était pour tous : " + IA.echange(e[2]));
-            for (Travailleur t : e) t.discard();
-        });
+        Travailleur[] e = equipe(h, chef, 2);
+        etapes(h, chef, e,
+                () -> Dialogue.parler(chef, "Les gars, suivez-moi !", null, true),
+                () -> {
+                    for (Travailleur t : e) h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, t.prenom + " doit suivre (" + t.mode + ")");
+                    long parlent = java.util.Arrays.stream(e).filter(t -> IA.echange(t).contains("On te suit, chef")).count();
+                    h.assertTrue(parlent == 1, "un seul répond (" + parlent + ")");
+                    String vu = IA.echange(e[2]);
+                    h.assertTrue(vu.contains("Chef (à ") && vu.contains("Bertrand") && vu.contains("Raoul") && vu.contains("Odon"), "la phrase était pour tous : " + vu);
+                },
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** Au micro, sans regarder personne, une phrase qui ne leur est pas adressée : personne ne répond ni ne bouge. */
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 200)
     public static void iaPasPourEux(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
-        Dialogue.parler(chef, "Je fredonne une vieille chanson", null, true);
-        h.assertTrue(!e[0].reflechit, "sans demande ni prénom, l'IA n'est même pas sollicitée");
-        Dialogue.parler(chef, "Qui peut me chanter une chanson ?", null, true);
-        h.runAfterDelay(100, () -> {
-            for (Travailleur t : e) h.assertTrue(IA.echange(t).isEmpty() && t.mode == Travailleur.Mode.TRAVAIL, t.prenom + " ne doit pas répondre : " + IA.echange(t));
-            for (Travailleur t : e) t.discard();
-            h.succeed();
-        });
+        Travailleur[] e = equipe(h, chef, 3);
+        etapes(h, chef, e,
+                () -> Dialogue.parler(chef, "Je fredonne une vieille chanson", null, true),
+                () -> h.assertTrue(!e[0].reflechit, "le code est sûr que ce n'est pas pour eux : l'IA n'est même pas sollicitée"),
+                () -> Dialogue.parler(chef, "Qui peut me chanter une chanson ?", null, true),
+                attendre(h, 80),
+                () -> { for (Travailleur t : e) h.assertTrue(IA.echange(t).isEmpty() && t.mode == Travailleur.Mode.TRAVAIL, t.prenom + " ne doit pas répondre : " + IA.echange(t)); },
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** Sans IA : le mod trouve seul à qui on parle (prénom, « les gars », « sauf », le métier qui comprend la demande). */
     @GameTest(template = "vide", timeoutTicks = 100)
     public static void destinatairesSansIA(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
+        Travailleur[] e = equipe(h, chef, 4);
         Travailleur bertrand = e[0], raoul = e[1], odon = e[2];
-        bertrand.parler(chef, "Raoul, suis-moi"); // écrit dans la fenêtre de Bertrand
-        h.assertTrue(raoul.mode == Travailleur.Mode.SUIVRE && bertrand.mode == Travailleur.Mode.TRAVAIL, "seul Raoul suit");
-        bertrand.parler(chef, "Les gars, attendez ici");
-        for (Travailleur t : e) h.assertTrue(t.mode == Travailleur.Mode.ATTENDRE, t.prenom + " doit attendre");
-        bertrand.parler(chef, "Tout le monde sauf Raoul, au travail");
-        h.assertTrue(bertrand.mode == Travailleur.Mode.TRAVAIL && odon.mode == Travailleur.Mode.TRAVAIL && raoul.mode == Travailleur.Mode.ATTENDRE, "sauf Raoul");
-        bertrand.parler(chef, "Va protéger la base");
-        h.assertTrue(raoul.missions.stream().anyMatch(m -> m.id.equals("garder")) && bertrand.missions.isEmpty(), "c'est le travail du guerrier");
-        bertrand.parler(chef, "Ramène-moi dix fers");
-        h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer") && m.nombre == 10), "le fer, c'est pour Bertrand");
-        Dialogue.parler(chef, "Je fredonne une vieille chanson", null, true);
-        h.assertTrue(odon.mode == Travailleur.Mode.TRAVAIL, "au micro, ce qui ne leur est pas adressé est ignoré");
-        for (Travailleur t : e) t.discard();
-        h.succeed();
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Raoul, suis-moi"); }, // écrit dans la fenêtre de Bertrand
+                () -> h.assertTrue(raoul.mode == Travailleur.Mode.SUIVRE && bertrand.mode == Travailleur.Mode.TRAVAIL, "seul Raoul suit"),
+                () -> bertrand.parler(chef, "Les gars, attendez ici"),
+                () -> { for (Travailleur t : e) h.assertTrue(t.mode == Travailleur.Mode.ATTENDRE, t.prenom + " doit attendre"); },
+                () -> bertrand.parler(chef, "Tout le monde sauf Raoul, au travail"),
+                () -> h.assertTrue(bertrand.mode == Travailleur.Mode.TRAVAIL && odon.mode == Travailleur.Mode.TRAVAIL && raoul.mode == Travailleur.Mode.ATTENDRE, "sauf Raoul"),
+                () -> bertrand.parler(chef, "Va protéger la base"),
+                () -> h.assertTrue(raoul.missions.stream().anyMatch(m -> m.id.equals("garder")) && bertrand.missions.isEmpty(), "c'est le travail du guerrier"),
+                () -> bertrand.parler(chef, "Ramène-moi dix fers"),
+                () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer") && m.nombre == 10), "le fer, c'est pour Bertrand"),
+                () -> Dialogue.parler(chef, "Je fredonne une vieille chanson", null, true),
+                () -> h.assertTrue(odon.mode == Travailleur.Mode.TRAVAIL, "au micro, ce qui ne leur est pas adressé est ignoré"),
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** Chacun son timbre : une voix différente tant qu'il en reste, puis la même voix à une autre hauteur ; et il le garde. */
     @GameTest(template = "vide", timeoutTicks = 100)
     public static void chacunSaVoix(GameTestHelper h) {
         sol(h);
+        // Des ouvriers restés d'un essai précédent (un test raté ne les retire pas) fausseraient le décompte des voix prises.
+        java.util.List<Travailleur> restes = new java.util.ArrayList<>();
+        for (var x : h.getLevel().getAllEntities()) if (x instanceof Travailleur t && t.memoire.contains("voix_hauteur")) restes.add(t);
+        restes.forEach(Travailleur::discard);
         java.util.List<Travailleur> l = new java.util.ArrayList<>();
         java.util.Set<String> timbres = new java.util.HashSet<>(), voix = new java.util.HashSet<>();
         for (int i = 0; i < 20; i++) {
@@ -466,10 +549,21 @@ public class TestsIA {
             t.prenom = "Raoul";
             t.temperament = "calme";
             l.add(t);
+        }
+        h.runAfterDelay(5, () -> chacunSaVoixSuite(h, l, timbres, voix));
+    }
+
+    static void chacunSaVoixSuite(GameTestHelper h, java.util.List<Travailleur> l, java.util.Set<String> timbres, java.util.Set<String> voix) {
+        for (int i = 0; i < l.size(); i++) {
+            Travailleur t = l.get(i);
             Voix.Timbre tb = Voix.timbre(t);
             h.assertFalse(tb.femme(), "Raoul est un homme");
             h.assertTrue(timbres.add(tb.voix() + "@" + tb.hauteur()), "timbre en double : " + tb);
-            if (i < Voix.VOIX_HOMMES.size()) h.assertTrue(voix.add(tb.voix()), "tant qu'il reste des voix libres, chacun la sienne : " + tb.voix());
+            if (i < Voix.VOIX_HOMMES.size()) {
+                long vus = 0;
+                for (var e : h.getLevel().getAllEntities()) if (e instanceof Travailleur x && x.memoire.contains("voix_hauteur")) vus++;
+                h.assertTrue(voix.add(tb.voix()), "tant qu'il reste des voix libres, chacun la sienne : " + tb.voix() + " (n° " + i + ", " + vus + " timbres visibles, déjà " + voix + ")");
+            }
         }
         for (Travailleur t : l) h.assertTrue(Voix.timbre(t).equals(Voix.timbre(t)), "il garde son timbre");
         Travailleur blanche = TestsJeu.ouvrier(h, "bucheron", 7, 2, 7, ItemStack.EMPTY);
@@ -489,23 +583,24 @@ public class TestsIA {
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 200)
     public static void iaRemarqueSurEux(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
-        Dialogue.parler(chef, "C'est vraiment un chômeur ce mec.", e[0], true);
-        Dialogue.parler(chef, "Il est lent, Raoul.", null, true);
-        Dialogue.parler(chef, "Bon, je mine encore un peu et je rentre.", e[1], true);
-        for (Travailleur t : e) h.assertFalse(t.reflechit, t.prenom + " n'était pas concerné");
-        h.runAfterDelay(60, () -> {
-            for (Travailleur t : e) h.assertTrue(IA.echange(t).isEmpty(), t.prenom + " ne doit pas répondre : " + IA.echange(t));
-            for (Travailleur t : e) t.discard();
-            h.succeed();
-        });
+        Travailleur[] e = equipe(h, chef, 5);
+        // Une phrase à la fois (le chef attend la réponse de l'IA avant d'être de nouveau écouté).
+        etapes(h, chef, e,
+                () -> { regarder(chef, e[0]); Dialogue.parler(chef, "C'est vraiment un chômeur ce mec.", e[0], true); },
+                attendre(h, 20),
+                () -> Dialogue.parler(chef, "Il est lent, Raoul.", null, true),
+                attendre(h, 20),
+                () -> { regarder(chef, e[1]); Dialogue.parler(chef, "Bon, je mine encore un peu et je rentre.", e[1], true); },
+                attendre(h, 60),
+                () -> { for (Travailleur t : e) h.assertTrue(IA.echange(t).isEmpty(), t.prenom + " ne doit pas répondre : " + IA.echange(t)); },
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** Sans casque, la voix du PNJ revient par le micro du joueur : on ne l'écoute pas pendant que le PNJ parle, et on reconnaît l'écho. */
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 100)
     public static void iaPasDEcho(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef);
+        Travailleur[] e = equipe(h, chef, 6);
         java.util.UUID u = chef.getUUID();
         Voix.cibles = java.util.Map.of(u, e[1].getId());
         Voix.paquet(u, new byte[]{1, 2, 3});

@@ -35,6 +35,8 @@ public class ReglagesIA {
     /** Adresse compatible OpenAI : on peut changer de fournisseur sans toucher au mod (Groq par défaut). */
     public String url_conversation = "https://api.groq.com/openai/v1/chat/completions";
     public String modele_conversation = "openai/gpt-oss-120b";
+    /** Le modèle qui juge à qui le chef parle (une consigne courte : un modèle rapide suffit, et son quota est à part). */
+    public String modele_ecoute = "openai/gpt-oss-20b";
     public String url_transcription = "https://api.groq.com/openai/v1/audio/transcriptions";
     public String modele_transcription = "whisper-large-v3-turbo";
     public String url_voix = "https://generativelanguage.googleapis.com/v1beta/interactions";
@@ -45,6 +47,8 @@ public class ReglagesIA {
 
     /** Garde-fous, sous les quotas gratuits (Groq : 1 000 conversations et 2 000 transcriptions par jour). */
     public int max_conversations_jour = 900;
+    /** Les avis d'écoute (à qui parle le chef) : un autre modèle, sous son propre quota gratuit (1 000 demandes par jour). */
+    public int max_ecoutes_jour = 900;
     public int max_transcriptions_jour = 1800;
     public int max_voix_jour = 200;
     /** À combien de blocs de son ouvrier (et en le regardant) on peut lui parler au micro. */
@@ -85,12 +89,14 @@ public class ReglagesIA {
         gemini_cle = gemini_cle == null ? "" : gemini_cle.strip();
         if (url_conversation == null || url_conversation.isBlank()) url_conversation = new ReglagesIA().url_conversation;
         if (modele_conversation == null || modele_conversation.isBlank()) modele_conversation = new ReglagesIA().modele_conversation;
+        if (modele_ecoute == null || modele_ecoute.isBlank()) modele_ecoute = new ReglagesIA().modele_ecoute;
         if (url_transcription == null || url_transcription.isBlank()) url_transcription = new ReglagesIA().url_transcription;
         if (modele_transcription == null || modele_transcription.isBlank()) modele_transcription = new ReglagesIA().modele_transcription;
         if (url_voix == null || url_voix.isBlank()) url_voix = new ReglagesIA().url_voix;
         if (modele_voix == null || modele_voix.isBlank()) modele_voix = new ReglagesIA().modele_voix;
         if (modeles_voix_secours == null) modeles_voix_secours = new java.util.ArrayList<>(DEFAUT_SECOURS);
         max_conversations_jour = Math.max(0, max_conversations_jour);
+        max_ecoutes_jour = Math.max(0, max_ecoutes_jour);
         max_transcriptions_jour = Math.max(0, max_transcriptions_jour);
         max_voix_jour = Math.max(0, max_voix_jour);
         distance_ecoute = Math.clamp(distance_ecoute, 2, 16);
@@ -112,10 +118,12 @@ public class ReglagesIA {
         m.put("groq_cle", masque(groq_cle));
         m.put("gemini_cle", masque(gemini_cle));
         m.put("modele_conversation", modele_conversation);
+        m.put("modele_ecoute", modele_ecoute);
         m.put("modele_transcription", modele_transcription);
         m.put("modele_voix", modele_voix);
         m.put("modeles_voix_secours", String.join(", ", modeles_voix_secours));
         m.put("max_conversations_jour", max_conversations_jour);
+        m.put("max_ecoutes_jour", max_ecoutes_jour);
         m.put("max_transcriptions_jour", max_transcriptions_jour);
         m.put("max_voix_jour", max_voix_jour);
         m.put("distance_ecoute", distance_ecoute);
@@ -132,11 +140,13 @@ public class ReglagesIA {
         if (c.has("voix")) r.voix = c.get("voix").getAsBoolean();
         if (c.has("ecoute")) r.ecoute = c.get("ecoute").getAsBoolean();
         if (c.has("modele_conversation")) r.modele_conversation = c.get("modele_conversation").getAsString();
+        if (c.has("modele_ecoute")) r.modele_ecoute = c.get("modele_ecoute").getAsString();
         if (c.has("modele_transcription")) r.modele_transcription = c.get("modele_transcription").getAsString();
         if (c.has("modele_voix")) r.modele_voix = c.get("modele_voix").getAsString();
         if (c.has("modeles_voix_secours")) r.modeles_voix_secours = new java.util.ArrayList<>(java.util.Arrays.stream(c.get("modeles_voix_secours").getAsString()
                 .split(",")).map(String::strip).filter(x -> !x.isEmpty()).toList());
         if (c.has("max_conversations_jour")) r.max_conversations_jour = c.get("max_conversations_jour").getAsInt();
+        if (c.has("max_ecoutes_jour")) r.max_ecoutes_jour = c.get("max_ecoutes_jour").getAsInt();
         if (c.has("max_transcriptions_jour")) r.max_transcriptions_jour = c.get("max_transcriptions_jour").getAsInt();
         if (c.has("max_voix_jour")) r.max_voix_jour = c.get("max_voix_jour").getAsInt();
         if (c.has("distance_ecoute")) r.distance_ecoute = c.get("distance_ecoute").getAsDouble();

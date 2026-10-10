@@ -1,26 +1,29 @@
 package fr.lacolonie.pnj;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * Le chef parle à voix haute (fenêtre de conversation ou micro) devant certains de ses ouvriers : à qui parle-t-il,
- * et qui répond ?
+ * Le chef parle (fenêtre de conversation ou micro) devant certains de ses ouvriers : à qui parle-t-il, et qui répond ?
  * <ol>
- * <li>Le mod lit la phrase ({@link Ordres#adresse}) : un prénom qui interpelle (« Raoul, … »), « les gars »,
- *   « les mineurs », « sauf Raoul »… Ce qu'il y trouve est sûr : ce sont les destinataires.</li>
- * <li>Sinon, l'IA choisit parmi les ouvriers présents, d'après la demande et le métier de chacun
- *   (« va protéger la base » : le guerrier), et celui que le chef regarde.</li>
- * <li>Sans IA, le mod devine : le métier qui comprend la mission demandée, sinon celui qu'il regarde.</li>
+ * <li>Le code donne à chaque ouvrier une probabilité d'être visé ({@link Adressage}) : prénom, « les gars », regard,
+ *   distance, tutoiement, ordre, métier concerné, vrais joueurs proches, conversation récente…</li>
+ * <li>S'il est sûr (personne n'est visé, ou la phrase désigne elle-même ses destinataires), il tranche seul. Sinon,
+ *   l'IA lit la phrase et le contexte et donne sa propre probabilité ; les deux sont croisées.</li>
+ * <li>Les destinataires appliquent ce qui les concerne (revérifié comme un ordre écrit) et répondent chacun à leur tour.</li>
  * </ol>
- * Chaque destinataire applique ce qui le concerne (revérifié comme un ordre écrit), et ils répondent chacun à leur tour.
  */
 final class Dialogue {
     private Dialogue() {}
@@ -40,6 +43,31 @@ final class Dialogue {
         if (vise != null && l.remove(vise)) l.add(0, vise);
         // ponytail: au-delà de MAX ouvriers, les plus loin n'entendent pas ; à revoir si une colonie en aligne davantage.
         return l.size() > MAX ? new ArrayList<>(l.subList(0, MAX)) : l;
+    }
+
+    /** Ce que voit et entend le code : la phrase, chaque ouvrier (distance, regard du chef, échange récent), les vrais joueurs proches. */
+    static Adressage.Situation situation(ServerPlayer p, String dit, List<Travailleur> autour, Travailleur vise, boolean auMicro) {
+        Vec3 oeil = p.getEyePosition(), regard = p.getLookAngle();
+        long maintenant = System.currentTimeMillis();
+        List<Adressage.Pnj> pnj = new ArrayList<>();
+        for (Travailleur t : autour) {
+            Vec3 v = t.getEyePosition().subtract(oeil);
+            double d = v.length();
+            double depuis = t.memoire.contains("echange_t") ? Math.max(0, (maintenant - t.memoire.getLong("echange_t")) / 1000.0) : -1;
+            List<String> derniers = new ArrayList<>(List.of(IA.echange(t, 2).split("\n")));
+            derniers.removeIf(String::isBlank);
+            pnj.add(new Adressage.Pnj(t.prenom, t.metier, d, d < 0.01 ? 1 : v.scale(1 / d).dot(regard), depuis,
+                    t.memoire.getLong("question_t") > maintenant - 60_000, !auMicro && t == vise, derniers));
+        }
+        List<Adressage.Joueur> joueurs = new ArrayList<>();
+        for (ServerPlayer x : p.serverLevel().players()) {
+            if (x == p || x.isSpectator() || x instanceof net.neoforged.neoforge.common.util.FakePlayer) continue;
+            Vec3 v = x.getEyePosition().subtract(oeil);
+            double d = v.length();
+            if (d > 32) continue;
+            joueurs.add(new Adressage.Joueur(x.getName().getString(), d, d < 0.01 ? 1 : v.scale(1 / d).dot(regard)));
+        }
+        return new Adressage.Situation(dit, auMicro, pnj, joueurs);
     }
 
     /**
@@ -64,86 +92,67 @@ final class Dialogue {
                 }
             }
 
-        Ordres.Adresse a = Ordres.adresse(dit, autour.stream().map(t -> t.prenom).toList(), autour.stream().map(t -> t.metier).toList());
-        List<Travailleur> imposes = imposes(a, autour);
-        // Au micro, le chef parle aussi aux autres joueurs, réfléchit tout haut, parle d'eux (« c'est un chômeur, ce mec ») :
-        // on ne retient que ce qui leur est visiblement adressé.
-        if (auMicro && !pourEux(dit, a, imposes, vise)) return;
-
-        if (IA.conversationDisponible()) avecIA(p, dit, autour, vise, auMicro, imposes);
-        else repondre(p, dit, imposes.isEmpty() ? deviner(dit, autour, vise, a) : imposes, null);
-    }
-
-    /**
-     * Une phrase dite au micro leur est-elle adressée ? Un prénom qui interpelle, « les gars », un ordre, « tu » ou
-     * « vous » ; et, s'il regarde l'un d'eux, une question, un salut ou un merci. Sinon, ce n'est pas pour eux.
-     */
-    static boolean pourEux(String dit, Ordres.Adresse a, List<Travailleur> imposes, Travailleur vise) {
-        if (!imposes.isEmpty() || a.demande() || a.deuxiemePersonne()) return true;
-        if (vise == null) return false;
-        Ordres.Lecture l = Ordres.lire(dit, vise.metier);
-        return a.question() || dit.split("\\s+").length <= 5 && (l.intentions.contains(Ordres.Intention.SALUT) || l.intentions.contains(Ordres.Intention.MERCI));
-    }
-
-    /** Les destinataires que la phrase désigne elle-même (vide si elle n'en désigne pas). */
-    static List<Travailleur> imposes(Ordres.Adresse a, List<Travailleur> autour) {
-        Set<Travailleur> r = new LinkedHashSet<>();
-        if (a.tous()) r.addAll(autour);
-        for (int i : a.appeles()) r.add(autour.get(i));
-        for (String m : a.metiersTous()) autour.stream().filter(t -> t.metier.equals(m)).forEach(r::add);
-        for (String m : a.metiersUn()) autour.stream().filter(t -> t.metier.equals(m)).findFirst().ifPresent(r::add); // celui qu'il regarde, sinon le plus proche
-        for (int i : a.exclus()) r.remove(autour.get(i));
-        return new ArrayList<>(r);
-    }
-
-    /**
-     * Sans IA, et sans destinataire dans la phrase : ceux dont le métier comprend la mission demandée (« va protéger
-     * la base » : le guerrier ; un seul, sauf au pluriel), sinon celui qu'il regarde, sinon le plus proche qui comprend.
-     */
-    static List<Travailleur> deviner(String dit, List<Travailleur> autour, Travailleur vise, Ordres.Adresse a) {
-        List<Travailleur> concernes = autour.stream().filter(t -> !Ordres.lire(dit, t.metier).missions.isEmpty()).toList();
-        if (!concernes.isEmpty()) return a.pluriel() ? concernes : List.of(concernes.contains(vise) ? vise : concernes.get(0));
-        if (vise != null) return List.of(vise);
-        return autour.stream().filter(t -> !Ordres.lire(dit, t.metier).vide()).limit(a.pluriel() ? MAX : 1).toList();
-    }
-
-    /**
-     * Face à un ouvrier, la phrase pourrait-elle viser quelqu'un d'autre ? Sinon, inutile de décrire tout le monde à
-     * l'IA (son quota se compte en jetons) : « ramène dix fers » au mineur, « comment ça va ? », c'est pour lui.
-     */
-    static boolean pourUnAutre(String dit, List<Travailleur> autour, Travailleur vise, Ordres.Adresse a) {
-        if (autour.size() < 2) return false;
-        if (!a.cites().isEmpty() || a.pluriel()) return true;
-        Ordres.Lecture lui = Ordres.lire(dit, vise.metier);
-        boolean pourAutre = autour.stream().anyMatch(t -> !t.metier.equals(vise.metier) && !Ordres.lire(dit, t.metier).missions.isEmpty());
-        return pourAutre || a.demande() && lui.missions.isEmpty() && lui.intentions.isEmpty();
-    }
-
-    static void avecIA(ServerPlayer p, String dit, List<Travailleur> autour, Travailleur vise, boolean auMicro, List<Travailleur> imposes) {
+        Adressage.Situation s = situation(p, dit, autour, vise, auMicro);
+        Adressage.Parametres pa = Adressage.P;
+        double[] pc = Adressage.code(s);
+        // Le code est sûr de lui (ou l'IA n'est pas là) : il tranche seul.
+        if (Adressage.sur(s, pc, pa) || !IA.ecouteIADisponible()) {
+            List<Integer> choisis = Adressage.choisir(s, pc, pa.seuilCode());
+            journal(p, s, pc, null, pc, null, choisis, Adressage.sur(s, pc, pa) ? "code sûr" : "code seul (IA indisponible)");
+            if (!choisis.isEmpty()) repondreAvec(p, dit, indices(autour, choisis), vise, auMicro, false);
+            return;
+        }
+        // Sinon, l'avis de l'IA, croisé avec celui du code.
         if (!EN_ATTENTE.add(p.getUUID())) { Travailleur.signaler(p, "Tes ouvriers réfléchissent encore à ce que tu viens de dire…"); return; }
-        List<Travailleur> envoyes = !imposes.isEmpty() ? imposes : vise != null && !pourUnAutre(dit, autour, vise, Ordres.adresse(dit,
-                autour.stream().map(t -> t.prenom).toList(), autour.stream().map(t -> t.metier).toList())) ? List.of(vise) : autour;
-        envoyes.forEach(t -> t.reflechit = true);
-        Travailleur.signaler(p, envoyes.size() == 1 ? envoyes.get(0).prenom + " réfléchit…" : "Ils réfléchissent…");
+        autour.forEach(t -> t.reflechit = true);
+        if (!auMicro && vise != null) Travailleur.signaler(p, vise.prenom + " réfléchit…");
         var serveur = p.server;
-        List<String> etiquettes = IA.etiquettes(envoyes);
-        java.util.concurrent.CompletableFuture<ReponsesIA.Groupe> f;
-        try { f = IA.converserGroupe(envoyes, vise, !imposes.isEmpty(), !auMicro, dit); }
-        catch (RuntimeException e) { f = java.util.concurrent.CompletableFuture.failedFuture(e); } // jamais bloqué « en attente »
+        CompletableFuture<Adressage.Avis> f;
+        try { f = IA.ecouter(s); }
+        catch (RuntimeException e) { f = CompletableFuture.failedFuture(e); } // jamais bloqué « en attente »
+        f.whenComplete((avis, err) -> serveur.execute(() -> {
+            autour.forEach(t -> t.reflechit = false);
+            double[] pi = avis == null ? null : avis.p();
+            double[] pf = new double[pc.length];
+            boolean remarque = Adressage.remarque(s);
+            for (int i = 0; i < pc.length; i++) pf[i] = pi == null ? pc[i] : Adressage.fusion(pc[i], pi[i], pa, remarque);
+            List<Integer> choisis = Adressage.choisir(s, pf, pi == null ? pa.seuilCode() : pa.seuil());
+            journal(p, s, pc, pi, pf, avis == null ? null : avis.liens(), choisis, pi == null ? "code seul (l'IA n'a pas répondu)" : "code × IA");
+            if (choisis.isEmpty()) { EN_ATTENTE.remove(p.getUUID()); return; }
+            repondreAvec(p, dit, indices(autour, choisis), vise, auMicro, true);
+        }));
+    }
+
+    static List<Travailleur> indices(List<Travailleur> autour, List<Integer> l) {
+        List<Travailleur> r = new ArrayList<>();
+        for (int i : l) r.add(autour.get(i));
+        return r;
+    }
+
+    /**
+     * Les destinataires répondent : avec l'IA (une seule demande pour eux tous), sinon avec l'interpréteur.
+     * {@code tenu} : ce chef est déjà marqué « en attente » (par l'avis de l'IA).
+     */
+    static void repondreAvec(ServerPlayer p, String dit, List<Travailleur> dest, Travailleur vise, boolean auMicro, boolean tenu) {
+        if (!IA.conversationDisponible()) {
+            if (tenu) EN_ATTENTE.remove(p.getUUID());
+            repondre(p, dit, dest, null);
+            return;
+        }
+        if (!tenu && !EN_ATTENTE.add(p.getUUID())) { Travailleur.signaler(p, "Tes ouvriers réfléchissent encore à ce que tu viens de dire…"); return; }
+        dest.forEach(t -> t.reflechit = true);
+        Travailleur.signaler(p, dest.size() == 1 ? dest.get(0).prenom + " réfléchit…" : "Ils réfléchissent…");
+        var serveur = p.server;
+        List<String> etiquettes = IA.etiquettes(dest);
+        CompletableFuture<ReponsesIA.Groupe> f;
+        try { f = IA.converserGroupe(dest, dest.contains(vise) ? vise : null, !auMicro, dit); }
+        catch (RuntimeException e) { f = CompletableFuture.failedFuture(e); }
         f.whenComplete((g, err) -> serveur.execute(() -> {
             EN_ATTENTE.remove(p.getUUID());
-            envoyes.forEach(t -> t.reflechit = false);
-            if (g == null) { // l'IA ne répond pas : le mod devine seul
-                repondre(p, dit, imposes.isEmpty() ? deviner(dit, autour, vise, Ordres.adresse(dit, autour.stream().map(t -> t.prenom).toList(),
-                        autour.stream().map(t -> t.metier).toList())) : imposes, null);
-                return;
-            }
-            List<Travailleur> dest = new ArrayList<>(imposes);
-            if (dest.isEmpty()) for (String e : g.destinataires()) dest.add(envoyes.get(etiquettes.indexOf(e)));
-            // Dans la fenêtre de conversation, on parle au moins à celui à qui on écrit.
-            if (dest.isEmpty() && vise != null && !auMicro) dest.add(vise);
+            dest.forEach(t -> t.reflechit = false);
+            if (g == null) { repondre(p, dit, dest, null); return; } // l'IA ne répond pas : l'interpréteur
             List<ReponsesIA.Decision> decisions = new ArrayList<>();
-            for (Travailleur t : dest) decisions.add(g.reponses().get(etiquettes.get(envoyes.indexOf(t))));
+            for (int i = 0; i < dest.size(); i++) decisions.add(g.reponses().get(etiquettes.get(i)));
             repondre(p, dit, dest, decisions);
         }));
     }
@@ -156,6 +165,7 @@ final class Dialogue {
         ServerPlayer enFace = p.hasDisconnected() ? null : p;
         List<Voix.Replique> parlent = new ArrayList<>(), suivent = new ArrayList<>();
         String chef = dest.size() > 1 ? "Chef (à " + String.join(", ", dest.stream().map(t -> t.prenom).toList()) + ")" : "Chef";
+        long maintenant = System.currentTimeMillis();
         for (int i = 0; i < dest.size(); i++) {
             Travailleur t = dest.get(i);
             if (!t.isAlive() || t.aTerre) continue;
@@ -173,11 +183,39 @@ final class Dialogue {
                 humeur = d.humeur();
             }
             IA.noter(t, chef, dit);
+            // Le contexte pour la prochaine fois : quand ils se sont parlé, et s'il attend une réponse à sa question.
+            t.memoire.putLong("echange_t", maintenant);
+            if (r.strip().endsWith("?")) t.memoire.putLong("question_t", maintenant);
+            else t.memoire.remove("question_t");
             if (r.isEmpty()) continue;
             IA.noter(t, "Toi", r);
             (ia || decisions == null ? parlent : suivent).add(new Voix.Replique(t, r, humeur));
         }
         parlent.addAll(suivent);
         Voix.direEnSuite(parlent);
+    }
+
+    // --- Le journal d'écoute (pour le panneau, en mémoire seulement) ---------------------------------------------
+
+    /** Les dernières phrases entendues et ce qui a été décidé, avec les probabilités du code, de l'IA et la finale. */
+    static final Deque<Map<String, Object>> JOURNAL = new ArrayDeque<>();
+
+    static void journal(ServerPlayer p, Adressage.Situation s, double[] pc, double[] pi, double[] pf, String[] liens, List<Integer> choisis, String comment) {
+        Map<String, Object> e = new LinkedHashMap<>();
+        e.put("heure", java.time.LocalTime.now().withNano(0).toString());
+        e.put("joueur", p.getName().getString());
+        e.put("mode", s.micro() ? "micro" : "écrit");
+        e.put("texte", s.texte());
+        e.put("decision", comment);
+        e.put("autres_joueurs", s.joueurs().size());
+        e.putAll(Adressage.resume(s, pc, pi, pf, liens, choisis));
+        synchronized (JOURNAL) {
+            JOURNAL.addFirst(e);
+            while (JOURNAL.size() > 60) JOURNAL.removeLast();
+        }
+    }
+
+    static List<Map<String, Object>> journal() {
+        synchronized (JOURNAL) { return new ArrayList<>(JOURNAL); }
     }
 }
