@@ -173,10 +173,14 @@ public final class Client {
             ps.scale(0.025f, -0.025f, 0.025f);
             Matrix4f m = ps.last().pose();
             int fond = (int) (Minecraft.getInstance().options.getBackgroundOpacity(0.25f) * 255) << 24;
+            // Comme les noms au-dessus des têtes : d'abord le fond (et un texte pâle, vu à travers les murs), puis le texte
+            // seul. Fond et lettres dessinés ensemble à la même profondeur se masquaient au hasard (« res, chef ! »).
+            // En pleine lumière : la bulle se lit aussi la nuit.
             for (int i = 0; i < lignes.size(); i++) {
                 FormattedCharSequence l = lignes.get(i);
-                float y = -12 - (lignes.size() - i) * 10;
-                font.drawInBatch(l, -font.width(l) / 2f, y, 0xFFFFFFFF, false, m, buf, Font.DisplayMode.NORMAL, fond | 0x101010, lumiere);
+                float x = -font.width(l) / 2f, y = -12 - (lignes.size() - i) * 10;
+                font.drawInBatch(l, x, y, 0x20FFFFFF, false, m, buf, Font.DisplayMode.SEE_THROUGH, fond, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
+                font.drawInBatch(l, x, y, 0xFFFFFFFF, false, m, buf, Font.DisplayMode.NORMAL, 0, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
             }
             ps.popPose();
         }
