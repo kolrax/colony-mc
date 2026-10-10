@@ -122,6 +122,29 @@ final class Audio {
         return false; // « merci » seul peut être vrai : le volume de la voix a déjà été vérifié avant de transcrire
     }
 
+    /**
+     * Whisper recopie parfois les mots qu'on lui donne en indice (« Raoul, les gars, chef, mineur… ») quand il n'entend
+     * rien de clair : plusieurs morceaux de la phrase, séparés par des virgules, sont des mots de l'indice.
+     */
+    static boolean recopieIndice(String texte, String indice) {
+        java.util.Set<String> mots = new java.util.HashSet<>();
+        for (String m : indice.split("[,.]")) mots.add(normaliser(m));
+        String[] morceaux = texte.split("[,.!?;:]");
+        int pris = 0, total = 0;
+        for (String m : morceaux) {
+            String n = normaliser(m);
+            if (n.isEmpty()) continue;
+            total++;
+            if (mots.contains(n)) pris++;
+        }
+        return pris >= 2 && pris * 2 >= total;
+    }
+
+    static String normaliser(String s) {
+        return Normalizer.normalize(s.toLowerCase(java.util.Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .replaceAll("[^a-z0-9 ]+", " ").replaceAll("\\s+", " ").trim();
+    }
+
     static byte[] concat(byte[]... parties) {
         ByteArrayOutputStream o = new ByteArrayOutputStream();
         for (byte[] p : parties) o.writeBytes(p);

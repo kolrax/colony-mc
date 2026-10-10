@@ -66,11 +66,23 @@ final class Dialogue {
 
         Ordres.Adresse a = Ordres.adresse(dit, autour.stream().map(t -> t.prenom).toList(), autour.stream().map(t -> t.metier).toList());
         List<Travailleur> imposes = imposes(a, autour);
-        // Au micro, sans regarder personne : seulement ce qui s'adresse visiblement à eux (sinon il parle peut-être à quelqu'un d'autre).
-        if (vise == null && imposes.isEmpty() && !a.demande() && autour.stream().allMatch(t -> Ordres.lire(dit, t.metier).vide())) return;
+        // Au micro, le chef parle aussi aux autres joueurs, réfléchit tout haut, parle d'eux (« c'est un chômeur, ce mec ») :
+        // on ne retient que ce qui leur est visiblement adressé.
+        if (auMicro && !pourEux(dit, a, imposes, vise)) return;
 
         if (IA.conversationDisponible()) avecIA(p, dit, autour, vise, auMicro, imposes);
         else repondre(p, dit, imposes.isEmpty() ? deviner(dit, autour, vise, a) : imposes, null);
+    }
+
+    /**
+     * Une phrase dite au micro leur est-elle adressée ? Un prénom qui interpelle, « les gars », un ordre, « tu » ou
+     * « vous » ; et, s'il regarde l'un d'eux, une question, un salut ou un merci. Sinon, ce n'est pas pour eux.
+     */
+    static boolean pourEux(String dit, Ordres.Adresse a, List<Travailleur> imposes, Travailleur vise) {
+        if (!imposes.isEmpty() || a.demande() || a.deuxiemePersonne()) return true;
+        if (vise == null) return false;
+        Ordres.Lecture l = Ordres.lire(dit, vise.metier);
+        return a.question() || dit.split("\\s+").length <= 5 && (l.intentions.contains(Ordres.Intention.SALUT) || l.intentions.contains(Ordres.Intention.MERCI));
     }
 
     /** Les destinataires que la phrase désigne elle-même (vide si elle n'en désigne pas). */
@@ -116,7 +128,7 @@ final class Dialogue {
         var serveur = p.server;
         List<String> etiquettes = IA.etiquettes(envoyes);
         java.util.concurrent.CompletableFuture<ReponsesIA.Groupe> f;
-        try { f = IA.converserGroupe(envoyes, vise, !imposes.isEmpty(), dit); }
+        try { f = IA.converserGroupe(envoyes, vise, !imposes.isEmpty(), !auMicro, dit); }
         catch (RuntimeException e) { f = java.util.concurrent.CompletableFuture.failedFuture(e); } // jamais bloqué « en attente »
         f.whenComplete((g, err) -> serveur.execute(() -> {
             EN_ATTENTE.remove(p.getUUID());

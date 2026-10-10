@@ -87,8 +87,49 @@ final class Voix {
             Travailleur t = p.r().t();
             if (!t.isAlive()) continue;
             t.dire(p.r().texte());
-            if (p.pcm() != null && p.pcm().length > 0 && pret) VoixSvc.jouer(t, p.pcm());
+            if (p.pcm() != null && p.pcm().length > 0 && pret) {
+                VoixSvc.jouer(t, p.pcm());
+                assourdir(t, p.r().texte(), maintenant + p.pcm().length * 1000L / Audio.FREQ_VOIX);
+            }
         }
+    }
+
+    // --- L'écho : un joueur sans casque renvoie la voix du PNJ dans son micro ----------------------------
+
+    /** Jusqu'à quand on n'écoute pas ce joueur : un PNJ lui parle (et le temps que le son lui arrive). */
+    static final Map<UUID, Long> SOURDINE = new ConcurrentHashMap<>();
+    /** Ce que les PNJ ont dit à voix haute près de chaque joueur, récemment (pour reconnaître l'écho qui passerait quand même). */
+    static final Map<UUID, List<Prevue>> ENTENDU = new ConcurrentHashMap<>();
+    /** Le son met un moment à arriver chez le joueur et à revenir par son micro. */
+    static final long MARGE_ECHO = 1500;
+
+    /** Le PNJ parle jusqu'à {@code fin} : les joueurs qui l'entendent ne sont pas écoutés pendant ce temps (sa voix dans leur micro). */
+    static void assourdir(Travailleur t, String texte, long fin) {
+        for (var joueur : t.level().players()) {
+            if (!(joueur instanceof ServerPlayer j) || j.distanceTo(t) > 32) continue;
+            SOURDINE.merge(j.getUUID(), fin + MARGE_ECHO, Math::max);
+            EN_COURS.remove(j.getUUID()); // ce qu'il disait en même temps contient sa voix
+            List<Prevue> l = ENTENDU.computeIfAbsent(j.getUUID(), k -> Collections.synchronizedList(new ArrayList<>()));
+            synchronized (l) {
+                l.add(new Prevue(fin, new Replique(t, texte, ""), null));
+                l.removeIf(x -> x.quand() < fin - 60_000);
+            }
+        }
+    }
+
+    /** Ce texte transcrit reprend-il ce qu'un PNJ vient de dire près de lui ? (La plupart de ses mots, dans la dernière minute.) */
+    static boolean echo(UUID joueur, String texte) {
+        List<String> mots = java.util.Arrays.stream(Audio.normaliser(texte).split(" ")).filter(m -> m.length() > 1).toList();
+        if (mots.size() < 3) return false; // « oui chef », « merci » : trop court pour dire que c'est un écho
+        List<Prevue> l = ENTENDU.getOrDefault(joueur, List.of());
+        synchronized (l) {
+            for (Prevue x : l) {
+                if (x.quand() < System.currentTimeMillis() - 60_000) continue;
+                Set<String> dits = new java.util.HashSet<>(java.util.Arrays.asList(Audio.normaliser(x.r().texte()).split(" "))); // des mots répétés
+                if (mots.stream().filter(dits::contains).count() * 10 >= mots.size() * 6L) return true;
+            }
+        }
+        return false;
     }
 
     // --- Le timbre de chacun ------------------------------------------------------------------------------
@@ -211,6 +252,7 @@ final class Voix {
     /** Une trame de micro (fil de Simple Voice Chat) : on ne garde que ce qui peut s'adresser à ses ouvriers. */
     static void paquet(UUID joueur, byte[] opus) {
         if (opus == null || opus.length == 0 || !ReglagesIA.actuel.ecoutePossible()) return;
+        if (SOURDINE.getOrDefault(joueur, 0L) > System.currentTimeMillis()) return; // un PNJ lui parle : c'est sa voix qui revient
         Enonce e = EN_COURS.get(joueur);
         if (e == null) {
             Integer cible = cibles.get(joueur);
@@ -292,12 +334,15 @@ final class Voix {
         }
         byte[] wav = Audio.ecrire(Audio.reechantillonner(pcm, Audio.FREQ_VOIX, 16_000), 16_000);
         Travailleur.signaler(p, vise != null ? "🎙 " + vise.prenom + " t'écoute…" : "🎙 …");
-        IA.transcrire(wav, indice(autour)).whenComplete((texte, err) -> s.execute(() -> {
+        String indice = indice(autour);
+        IA.transcrire(wav, indice).whenComplete((texte, err) -> s.execute(() -> {
             if (err != null) {
                 if (vise != null) Travailleur.signaler(p, vise.prenom + " n'a pas pu t'entendre (service indisponible) : écris-lui (clic droit).");
                 return;
             }
-            if (texte == null || texte.isBlank() || Audio.inventee(texte) || p.hasDisconnected()) return;
+            // Rien d'entendu, une phrase inventée par Whisper (ou recopiée de l'indice), ou la voix d'un PNJ revenue par son micro.
+            if (texte == null || texte.isBlank() || Audio.inventee(texte) || Audio.recopieIndice(texte, indice) || echo(p.getUUID(), texte)
+                    || p.hasDisconnected()) return;
             Travailleur.signaler(p, "Tu dis : « " + texte + " »");
             Dialogue.parler(p, texte, vise != null && vise.isAlive() ? vise : null, true);
         }));

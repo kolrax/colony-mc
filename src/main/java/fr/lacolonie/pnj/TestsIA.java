@@ -170,9 +170,13 @@ public class TestsIA {
     static Reponse whisper(HttpExchange x) throws IOException {
         if (!("Bearer " + CLE_GROQ).equals(x.getRequestHeaders().getFirst("Authorization"))) return erreur(401, "Invalid API Key");
         String corps = new String(x.getRequestBody().readAllBytes(), StandardCharsets.ISO_8859_1);
-        if (!corps.contains("name=\"model\"") || !corps.contains("\r\n\r\nfr\r\n") || !corps.contains("RIFF") || !corps.contains("filename=\"voix.wav\""))
+        if (!corps.contains("name=\"model\"") || !corps.contains("\r\n\r\nfr\r\n") || !corps.contains("RIFF") || !corps.contains("filename=\"voix.wav\"")
+                || !corps.contains("\r\n\r\nverbose_json\r\n"))
             return erreur(400, "formulaire incomplet");
-        return new Reponse(200, "{\"text\":\" Suis-moi, s'il te plaît.\",\"x_groq\":{\"id\":\"req_1\"}}");
+        return new Reponse(200, "{\"text\":\" Sous-titrage ST' 501 Suis-moi, s'il te plaît.\",\"segments\":["
+                + "{\"id\":0,\"text\":\" Sous-titrage ST' 501\",\"avg_logprob\":-1.4,\"compression_ratio\":1.1,\"no_speech_prob\":0.93},"
+                + "{\"id\":1,\"text\":\" Suis-moi, s'il te plaît.\",\"avg_logprob\":-0.21,\"compression_ratio\":0.9,\"no_speech_prob\":0.01}],"
+                + "\"x_groq\":{\"id\":\"req_1\"}}");
     }
 
     /** Le faux Gemini : une demi-seconde de silence puis une seconde de « voix » (un son pur), en WAV 24 kHz. */
@@ -478,6 +482,45 @@ public class TestsIA {
         h.assertTrue(Math.abs(aigu * 1.1 - normal) < 100, normal + " / " + aigu);
         l.forEach(Travailleur::discard);
         blanche.discard();
+        h.succeed();
+    }
+
+    /** Au micro, une remarque sur eux (pas à eux) : personne ne répond, et l'IA n'est même pas sollicitée. */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 200)
+    public static void iaRemarqueSurEux(GameTestHelper h) {
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef);
+        Dialogue.parler(chef, "C'est vraiment un chômeur ce mec.", e[0], true);
+        Dialogue.parler(chef, "Il est lent, Raoul.", null, true);
+        Dialogue.parler(chef, "Bon, je mine encore un peu et je rentre.", e[1], true);
+        for (Travailleur t : e) h.assertFalse(t.reflechit, t.prenom + " n'était pas concerné");
+        h.runAfterDelay(60, () -> {
+            for (Travailleur t : e) h.assertTrue(IA.echange(t).isEmpty(), t.prenom + " ne doit pas répondre : " + IA.echange(t));
+            for (Travailleur t : e) t.discard();
+            h.succeed();
+        });
+    }
+
+    /** Sans casque, la voix du PNJ revient par le micro du joueur : on ne l'écoute pas pendant que le PNJ parle, et on reconnaît l'écho. */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 100)
+    public static void iaPasDEcho(GameTestHelper h) {
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef);
+        java.util.UUID u = chef.getUUID();
+        Voix.cibles = java.util.Map.of(u, e[1].getId());
+        Voix.paquet(u, new byte[]{1, 2, 3});
+        h.assertTrue(Voix.EN_COURS.containsKey(u), "sans PNJ qui parle, on l'écoute");
+        String dit = "Chef, je comprends pas trop, tu peux préciser ce que tu veux que je fasse ?";
+        Voix.assourdir(e[1], dit, System.currentTimeMillis() + 2000);
+        h.assertFalse(Voix.EN_COURS.containsKey(u), "ce qu'il disait pendant que Raoul parlait est jeté");
+        Voix.paquet(u, new byte[]{1, 2, 3});
+        h.assertFalse(Voix.EN_COURS.containsKey(u), "pendant que Raoul parle, on ne l'écoute pas");
+        h.assertTrue(Voix.echo(u, "Chef, je comprends pas trop. Tu peux préciser ce que tu veux que je fasse ? Surveille les alentours."), "l'écho est reconnu");
+        h.assertFalse(Voix.echo(u, "Suis-moi, Raoul."), "une vraie phrase passe");
+        h.assertFalse(Voix.echo(u, "Oui, chef."), "trop court pour juger");
+        Voix.SOURDINE.remove(u);
+        Voix.ENTENDU.remove(u);
+        for (Travailleur t : e) t.discard();
         h.succeed();
     }
 }

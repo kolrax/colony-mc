@@ -205,4 +205,19 @@ class OrdresTest {
         assertTrue(adr("Il faudrait que quelqu'un défende l'entrée").demande());
         assertFalse(adr("Bon, je crois que je vais manger").demande());
     }
+
+    @Test
+    void remarquesQuiNeLeurSontPasAdressees() {
+        for (String p : List.of("C'est vraiment un chômeur ce mec.", "Il est lent, Raoul.", "Bon, je mine encore un peu.", "Il garde la base, lui ?",
+                "On rentre bientôt.")) {
+            Ordres.Adresse a = adr(p);
+            assertFalse(a.explicite() || a.demande() || a.deuxiemePersonne(), p);
+        }
+        assertTrue(adr("Il garde la base, lui ?").question());
+        assertTrue(adr("Tu peux courir 50 blocs ?").deuxiemePersonne());
+        assertTrue(adr("Tu peux courir 50 blocs ?").question());
+        assertTrue(adr("Où est Raoul ?").question());
+        assertTrue(adr("Mine du fer").demande());
+        assertTrue(adr("Ton sac est plein ?").deuxiemePersonne());
+    }
 }

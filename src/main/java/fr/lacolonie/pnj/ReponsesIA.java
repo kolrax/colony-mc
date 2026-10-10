@@ -246,8 +246,24 @@ final class ReponsesIA {
         return o.toByteArray();
     }
 
+    /**
+     * Le texte de la transcription. Avec les segments (verbose_json), on ne garde que ceux où Whisper a vraiment
+     * entendu une voix : sur du bruit ou du silence, il invente (probabilité de non-parole haute, confiance basse).
+     */
     static String transcription(String corps) {
         JsonObject o = JsonParser.parseString(corps).getAsJsonObject();
+        if (o.has("segments") && o.get("segments").isJsonArray()) {
+            StringBuilder b = new StringBuilder();
+            for (JsonElement e : o.getAsJsonArray("segments")) {
+                if (!e.isJsonObject()) continue;
+                JsonObject s = e.getAsJsonObject();
+                double rien = s.has("no_speech_prob") ? s.get("no_speech_prob").getAsDouble() : 0;
+                double confiance = s.has("avg_logprob") ? s.get("avg_logprob").getAsDouble() : 0;
+                double repetition = s.has("compression_ratio") ? s.get("compression_ratio").getAsDouble() : 1;
+                if (rien < 0.6 && confiance > -1.0 && repetition < 2.4) b.append(texte(s, "text")).append(' ');
+            }
+            return b.toString().strip().replaceAll("\\s+", " ");
+        }
         return o.has("text") ? o.get("text").getAsString().strip() : "";
     }
 

@@ -206,4 +206,18 @@ class IATest {
         assertTrue(s.toString().contains("\"destinataires\"") && s.toString().contains("\"qui\""));
         assertEquals(2, s.getAsJsonArray("required").size());
     }
+
+    @Test
+    void whisperSansSesInventions() {
+        String v = "{\"text\":\" Merci d'avoir regardé. Ramène dix fers.\",\"segments\":["
+                + "{\"text\":\" Merci d'avoir regardé.\",\"avg_logprob\":-0.9,\"compression_ratio\":1.2,\"no_speech_prob\":0.82},"
+                + "{\"text\":\" Ramène dix fers.\",\"avg_logprob\":-0.3,\"compression_ratio\":1.0,\"no_speech_prob\":0.02},"
+                + "{\"text\":\" fers fers fers fers fers fers fers\",\"avg_logprob\":-0.4,\"compression_ratio\":3.1,\"no_speech_prob\":0.1}]}";
+        assertEquals("Ramène dix fers.", ReponsesIA.transcription(v));
+        assertEquals("", ReponsesIA.transcription("{\"text\":\" ...\",\"segments\":[{\"text\":\" ...\",\"avg_logprob\":-1.6,\"no_speech_prob\":0.97}]}"));
+        String indice = "Minecraft. Raoul, Enguerrand, les gars, chef, mineur, bûcheron, guerrier, poste, dépôt, base, fer.";
+        assertTrue(Audio.recopieIndice("Raoul, les gars, chef, mineur, c'est un peu de temps.", indice));
+        assertFalse(Audio.recopieIndice("Raoul, suis-moi.", indice));
+        assertFalse(Audio.recopieIndice("Les gars, au travail !", indice));
+    }
 }

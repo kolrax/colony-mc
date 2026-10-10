@@ -344,11 +344,14 @@ final class Ordres {
      * <li>{@code tous} : « les gars », « tout le monde », « vous tous »… ;</li>
      * <li>{@code metiersTous} / {@code metiersUn} : « les mineurs, rentrez » / « le guerrier, viens » ;</li>
      * <li>{@code pluriel} : un verbe au pluriel ou « vous » (un indice, pas une certitude) ;</li>
-     * <li>{@code demande} : on leur demande quelque chose (« va… », « il faut… », « quelqu'un peut… »).</li>
+     * <li>{@code demande} : on leur demande quelque chose (« va… », « il faut… », « quelqu'un peut… ») ;</li>
+     * <li>{@code deuxiemePersonne} : on s'adresse à quelqu'un (« tu », « toi », « vous », « ton »…) ;</li>
+     * <li>{@code question} : une question (« ? », « où », « comment »…).</li>
      * </ul>
+     * Une phrase sans rien de tout ça (« c'est vraiment un chômeur ce mec ») parle d'eux, ou à quelqu'un d'autre.
      */
     record Adresse(Set<Integer> appeles, Set<Integer> cites, Set<Integer> exclus, boolean tous, Set<String> metiersTous, Set<String> metiersUn,
-                   boolean pluriel, boolean demande) {
+                   boolean pluriel, boolean demande, boolean deuxiemePersonne, boolean question) {
         /** La phrase désigne elle-même ses destinataires. */
         boolean explicite() { return tous || !appeles.isEmpty() || !metiersTous.isEmpty() || !metiersUn.isEmpty(); }
     }
@@ -376,6 +379,12 @@ final class Ordres {
             "travaille", "travaillez", "arrete", "arretez", "aide", "aidez", "montre", "montrez", "donne", "donnez", "occupe", "occupez", "surveille",
             "surveillez", "patrouille", "patrouillez", "escorte", "escortez", "descends", "descendez", "monte", "montez", "creuse", "creusez", "abats",
             "abattez", "retourne", "retournez", "reviens", "revenez", "approche", "approchez", "bouge", "bougez", "pars", "partez", "file", "filez");
+    /** Des mots qui interpellent (« salut Raoul », « merci les gars », « hé ! »). */
+    static final Set<String> APPELS = Set.of("salut", "bonjour", "bonsoir", "coucou", "merci", "bravo", "he", "eh", "ohe", "hey", "yo", "ho", "oh",
+            "allez", "dis", "dites", "ecoute", "ecoutez");
+    static final Set<String> SUJETS = Set.of("je", "j", "il", "elle", "on", "ils", "elles", "ca", "cela", "nous", "qu", "que", "qui", "ne", "n", "se", "s", "me", "m");
+    static final Set<String> DEUXIEME_PERSONNE = Set.of("tu", "toi", "te", "t", "ton", "ta", "tes", "tien", "tienne", "tiens", "vous", "votre", "vos");
+    static final Set<String> INTERROGATIFS = Set.of("ou", "quand", "comment", "pourquoi", "combien", "quel", "quelle", "quels", "quelles", "qui", "quoi");
     static final List<String> DEMANDES_FORMULES = List.of("peux tu", "pouvez vous", "tu peux", "vous pouvez", "tu pourrais", "vous pourriez",
             "il faut", "il faudrait", "il me faut", "j ai besoin", "quelqu un", "qui peut", "qui veut", "je veux que", "je voudrais que");
 
@@ -467,7 +476,15 @@ final class Ordres {
         boolean tous = GROUPES.stream().anyMatch(x -> dit(n, x));
         boolean pluriel = j.stream().anyMatch(w -> w.equals("vous") || w.equals("tous") || w.equals("toutes")
                 || w.length() > 3 && w.endsWith("ez") && !Set.of("chez", "assez", "allez").contains(w));
-        boolean demande = j.stream().anyMatch(DEMANDES::contains) || DEMANDES_FORMULES.stream().anyMatch(x -> dit(n, x));
-        return new Adresse(appeles, cites, exclus, tous, metiersTous, metiersUn, pluriel, demande);
+        // Un verbe à l'impératif, pas conjugué avec un sujet (« je mine », « il garde la base » ne sont pas des ordres).
+        boolean demande = DEMANDES_FORMULES.stream().anyMatch(x -> dit(n, x));
+        for (int k = 0; k < j.size() && !demande; k++) demande = DEMANDES.contains(j.get(k)) && (k == 0 || !SUJETS.contains(j.get(k - 1)));
+        boolean deuxieme = j.stream().anyMatch(DEUXIEME_PERSONNE::contains);
+        boolean question = j.contains("?") || !j.isEmpty() && INTERROGATIFS.contains(j.get(0)) || dit(n, "est ce que", "est ce qu");
+        // Un prénom ou « les gars » dans une phrase qui ne s'adresse à personne (« il est lent, Raoul ») : on parle d'eux, pas à eux.
+        long noms = mentions.stream().mapToInt(m -> m.fin() - m.debut()).sum() + j.stream().filter(w -> ponctuation(w) || w.equals("et")).count();
+        boolean adressee = deuxieme || demande || question || j.stream().anyMatch(APPELS::contains) || !lire(texte, "").intentions.isEmpty() || noms >= j.size();
+        if (!adressee) { cites.addAll(appeles); appeles.clear(); metiersTous.clear(); metiersUn.clear(); tous = false; }
+        return new Adresse(appeles, cites, exclus, tous, metiersTous, metiersUn, pluriel, demande, deuxieme, question);
     }
 }
