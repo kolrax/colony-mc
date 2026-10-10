@@ -108,6 +108,7 @@ public class ColoniePnj {
 
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
+            ReglagesIA.charger();
             PanneauWeb.demarrer(e.getServer());
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
@@ -123,6 +124,7 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> {
             if (e.getServer().getTickCount() % 100 == 0) for (Travailleur t : tous(e.getServer())) t.forcerChunk();
             if (e.getServer().getTickCount() % 20 == 0) Courrier.tick(e.getServer()); // les corbeaux arrivés livrent leur lettre
+            Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
         });
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
@@ -146,6 +148,15 @@ public class ColoniePnj {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
             long n = Courrier.de(p.server).nonLues(p.getUUID());
             if (n > 0) Travailleur.signaler(p, "✉ " + n + (n > 1 ? " lettres t'attendent" : " lettre t'attend") + " à ton poste de travail.");
+            // Une fois par joueur : on peut parler à ses ouvriers au micro, et ce que ça implique (sa voix part vers un service en ligne).
+            var donnees = p.getPersistentData();
+            if (Voix.pret && ReglagesIA.actuel.ecoutePossible() && !donnees.getBoolean("colonie_pnj_micro")) {
+                donnees.putBoolean("colonie_pnj_micro", true);
+                p.sendSystemMessage(Component.literal("🎙 Nouveau : tu peux parler à tes ouvriers au micro (Simple Voice Chat). Regarde l'un d'eux, de près, et parle : "
+                        + "il te répond à voix haute. Seul ce que tu dis ou écris à tes propres ouvriers part vers un service en ligne (Groq), pour qu'ils te comprennent ; "
+                        + "leurs réponses sont mises en voix par Google. Rien d'autre n'est envoyé.")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
+            }
         });
     }
 
@@ -244,6 +255,22 @@ public class ColoniePnj {
                     for (Travailleur t : l) for (String ligne : Itineraire.diagnostic(t)) c.getSource().sendSuccess(() -> Component.literal(ligne), false);
                     return 1;
                 })))
+                .then(Commands.literal("ia")
+                        .executes(c -> { for (String l : etatIA()) c.getSource().sendSuccess(() -> Component.literal(l), false); return 1; })
+                        .then(Commands.literal("recharger").executes(c -> {
+                            ReglagesIA.charger();
+                            c.getSource().sendSuccess(() -> Component.literal("Réglages de l'IA rechargés (config/colonie_pnj/ia.json)."), true);
+                            return 1;
+                        }))
+                        .then(Commands.literal("test").executes(c -> {
+                            var source = c.getSource();
+                            source.sendSuccess(() -> Component.literal("Essai des clés en cours…"), false);
+                            IA.tester().whenComplete((l, err) -> source.getServer().execute(() -> {
+                                if (l != null) for (String x : l) source.sendSuccess(() -> Component.literal(x), false);
+                                else source.sendFailure(Component.literal("Essai impossible : " + err));
+                            }));
+                            return 1;
+                        })))
                 .then(Commands.literal("panneau").executes(c -> {
                     String url = PanneauWeb.adresse();
                     c.getSource().sendSuccess(() -> Component.literal("Panneau : " + url + "  (mot de passe : clique pour le copier)")
@@ -251,6 +278,21 @@ public class ColoniePnj {
                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copier le mot de passe")))), false);
                     return 1;
                 })));
+    }
+
+    /** /pnj ia : ce qui marche, ce qui manque, et la consommation du jour (jamais les clés). */
+    static List<String> etatIA() {
+        ReglagesIA r = ReglagesIA.actuel;
+        List<String> l = new ArrayList<>();
+        l.add("IA " + (r.active ? "active" : "désactivée") + " · clé Groq " + (r.groq_cle.isEmpty() ? "absente" : "présente") + " · clé Gemini "
+                + (r.gemini_cle.isEmpty() ? "absente" : "présente") + " · Simple Voice Chat " + (Voix.pret ? "prêt" : "absent"));
+        for (var s : List.of(IA.CONVERSATION, IA.TRANSCRIPTION, IA.VOIX)) {
+            int max = s == IA.CONVERSATION ? r.max_conversations_jour : s == IA.TRANSCRIPTION ? r.max_transcriptions_jour : r.max_voix_jour;
+            var e = s.etat(max);
+            l.add(" - " + s.nom + " : " + e.get("demandes") + "/" + max + " aujourd'hui" + ((long) e.get("pause") > 0 ? ", en pause " + e.get("pause") + " s" : "")
+                    + (((String) e.get("erreur")).isEmpty() ? "" : " · dernière erreur : " + e.get("erreur")));
+        }
+        return l;
     }
 
     static int chercheur(CommandContext<CommandSourceStack> c, int niveau, String skin) throws com.mojang.brigadier.exceptions.CommandSyntaxException {

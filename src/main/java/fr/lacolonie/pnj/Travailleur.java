@@ -193,6 +193,8 @@ public class Travailleur extends PathfinderMob {
     public final List<Courrier.Lettre> lettresADeposer = new ArrayList<>(), lettresALire = new ArrayList<>();
     /** Une lettre arrivée par corbeau, qu'il est en train de lire (il s'arrête un instant). */
     Courrier.Lettre lettreEnMain;
+    /** Il attend la réponse de l'IA (il « réfléchit ») : on ne lui en redemande pas une autre en même temps. */
+    boolean reflechit;
     int lectureTicks;
     /** Où ses affaires ont été mises à sa mort (pour l'avis de décès). */
     String lieuAffaires = "";
@@ -507,8 +509,27 @@ public class Travailleur extends PathfinderMob {
         setItemSlot(EquipmentSlot.OFFHAND, getOffhandItem().isEmpty() ? new ItemStack(Items.PAPER) : getOffhandItem());
     }
 
-    /** Il lit une lettre de son chef : il exécute ce qu'il en comprend et répond, avec de ses nouvelles. */
+    /**
+     * Il lit une lettre de son chef : il exécute ce qu'il en comprend et répond, avec de ses nouvelles. Avec l'IA,
+     * c'est elle qui comprend et qui écrit la réponse ; sans elle (ou si elle ne répond pas), l'interpréteur.
+     */
     void lireLettre(Courrier.Lettre l) {
+        if (IA.conversationDisponible() && level().getServer() != null) {
+            var serveur = level().getServer();
+            IA.converser(this, l.texte, false).whenComplete((d, err) -> serveur.execute(() -> {
+                if (!isAlive()) return;
+                if (d == null || d.reponse().isEmpty()) { lireLettreSansIA(l); return; }
+                appliquer(d.lecture(), null);
+                IA.noter(this, "Lettre du chef", l.texte);
+                IA.noter(this, "Ta réponse", d.reponse());
+                Courrier.ecrireTexte(this, "Réponse à ta lettre", d.reponse(), false);
+            }));
+            return;
+        }
+        lireLettreSansIA(l);
+    }
+
+    void lireLettreSansIA(Courrier.Lettre l) {
         String compris = appliquer(Ordres.lire(l.texte, metier), null);
         Courrier.ecrire(this, "nouvelles", compris.isEmpty() ? "" : compris + " ", Messages.ou(this), activite(), Messages.etat(this));
     }
@@ -908,15 +929,55 @@ public class Travailleur extends PathfinderMob {
         if (ordre.equals("embaucher")) embaucher(p);
     }
 
-    /** Son chef lui parle (fenêtre de conversation) : il comprend ce qu'il peut, obéit et répond. */
+    /**
+     * Son chef lui parle (fenêtre de conversation, ou au micro) : il comprend ce qu'il peut, obéit et répond.
+     * <p>
+     * Avec l'IA, c'est elle qui répond à sa place et choisit son action dans une liste fermée, que le mod applique
+     * comme un ordre écrit (avec les mêmes vérifications). Sans clé, sans quota, ou si le service ne répond pas,
+     * l'interpréteur sans IA prend le relais. La réponse est dite à voix haute si la voix est disponible.
+     */
     void parler(ServerPlayer p, String texte) {
         if (aTerre || !p.getUUID().equals(chef) || p.distanceToSqr(this) > 16 * 16) return;
-        texte = texte.strip();
-        if (texte.isEmpty() || texte.length() > 256) return;
+        String dit = texte.strip();
+        if (dit.isEmpty() || dit.length() > 256) return;
         getLookControl().setLookAt(p);
-        String r = appliquer(Ordres.lire(texte, metier), p);
-        if (!r.isEmpty()) dire(r);
+        Ordres.Lecture regles = Ordres.lire(dit, metier);
+        // Une confirmation de renvoi (« oui » / « non ») reste une affaire de règles : pas de place pour une interprétation.
+        boolean confirmation = memoire.getLong("renvoi") > level().getGameTime()
+                && (regles.intentions.contains(Ordres.Intention.OUI) || regles.intentions.contains(Ordres.Intention.NON));
+        if (confirmation || !IA.conversationDisponible() || level().getServer() == null) {
+            String r = appliquer(regles, p);
+            if (!r.isEmpty()) repondre(r, "calme");
+            return;
+        }
+        if (reflechit) { signaler(p, prenom + " réfléchit encore à ce que tu viens de dire…"); return; }
+        reflechit = true;
+        signaler(p, prenom + " réfléchit…");
+        var serveur = level().getServer();
+        IA.converser(this, dit, true).whenComplete((d, err) -> serveur.execute(() -> {
+            reflechit = false;
+            if (!isAlive() || aTerre) return;
+            ServerPlayer enFace = p.hasDisconnected() ? null : p;
+            String r;
+            String humeur = "calme";
+            if (d == null) r = appliquer(regles, enFace); // l'IA ne répond pas : l'interpréteur
+            else {
+                long renvoiAvant = memoire.getLong("renvoi");
+                String reglesTexte = appliquer(d.lecture(), enFace);
+                // Un renvoi demande toujours confirmation : on pose la question clairement.
+                r = memoire.getLong("renvoi") != renvoiAvant || d.reponse().isEmpty() ? reglesTexte : d.reponse();
+                humeur = d.humeur();
+            }
+            IA.noter(this, "Chef", dit);
+            if (!r.isEmpty()) {
+                IA.noter(this, "Toi", r);
+                repondre(r, humeur);
+            }
+        }));
     }
+
+    /** Sa réponse à son chef : en bulle, et à voix haute si la voix est disponible. */
+    void repondre(String texte, String humeur) { Voix.dire(this, texte, humeur); }
 
     /**
      * Applique ce qu'il a compris (de vive voix si {@code enFace} n'est pas nul, sinon par lettre) et renvoie sa réponse.

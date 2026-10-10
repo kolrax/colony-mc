@@ -78,6 +78,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
       <button data-tab="pnj" aria-selected="true">PNJ</button>
       <button data-tab="metiers">Métiers</button>
       <button data-tab="economie">Économie</button>
+      <button data-tab="ia">IA</button>
       <button data-tab="journal">Journal</button>
     </nav>
 
@@ -132,6 +133,46 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
           <tr><td>Au plus … chercheurs autour d'un même joueur</td><td><input type="number" min="0" id="c-max"></td></tr>
         </tbody></table></div>
         <div class="row" style="margin-top:12px"><button id="eco-enregistrer" class="go">Enregistrer l'économie</button><span id="eco-msg" class="sub"></span></div>
+      </div>
+    </section>
+
+    <section id="ia" hidden>
+      <div class="grid2">
+        <div class="card">
+          <h2>Les clés</h2>
+          <p class="sub">Les clés ne passent jamais par ce panneau. Elles sont dans le fichier <code>config/colonie_pnj/ia.json</code> du serveur :
+            ouvre-le avec le gestionnaire de fichiers de l'hébergeur, colle chaque clé entre les guillemets de <code>"groq_cle"</code> et
+            <code>"gemini_cle"</code>, enregistre, puis clique « Relire ia.json ».</p>
+          <table><tbody>
+            <tr><td>Groq (conversation, micro)</td><td id="ia-groq"></td></tr>
+            <tr><td>Gemini (voix des PNJ)</td><td id="ia-gemini"></td></tr>
+            <tr><td>Simple Voice Chat</td><td id="ia-svc"></td></tr>
+          </tbody></table>
+          <div class="row" style="margin-top:12px"><button id="ia-tester" class="go">Tester les clés</button><button id="ia-relire">Relire ia.json</button></div>
+          <pre id="ia-test" class="journal" style="margin-top:10px"></pre>
+          <p class="sub">Clé Groq : <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> ·
+            clé Gemini : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
+        </div>
+        <div class="card">
+          <h2>Réglages</h2>
+          <table><tbody>
+            <tr><td><label><input type="checkbox" id="ia-active"> IA active</label></td><td class="sub">Interrupteur général. Sans IA, les PNJ comprennent quand même les ordres simples.</td></tr>
+            <tr><td><label><input type="checkbox" id="ia-conversation"> Conversation et lettres</label></td><td class="sub">Groq répond à leur place et choisit leurs actions.</td></tr>
+            <tr><td><label><input type="checkbox" id="ia-voix"> Voix des PNJ</label></td><td class="sub">Ils répondent à voix haute (Gemini, via Simple Voice Chat).</td></tr>
+            <tr><td><label><input type="checkbox" id="ia-ecoute"> Leur parler au micro</label></td><td class="sub">Regarder un de ses ouvriers et parler (transcription par Groq).</td></tr>
+            <tr><td>Modèle de conversation</td><td><input id="ia-m-conv" style="width:100%"></td></tr>
+            <tr><td>Modèle de transcription</td><td><input id="ia-m-trans" style="width:100%"></td></tr>
+            <tr><td>Modèle de voix</td><td><input id="ia-m-voix" style="width:100%"></td></tr>
+            <tr><td>Conversations par jour, au plus</td><td><input type="number" min="0" id="ia-max-conv"></td></tr>
+            <tr><td>Transcriptions par jour, au plus</td><td><input type="number" min="0" id="ia-max-trans"></td></tr>
+            <tr><td>Phrases dites à voix haute par jour, au plus</td><td><input type="number" min="0" id="ia-max-voix"></td></tr>
+            <tr><td>Distance pour leur parler au micro (blocs)</td><td><input type="number" min="2" max="16" step="0.5" id="ia-dist"></td></tr>
+          </tbody></table>
+          <div class="row" style="margin-top:12px"><button id="ia-enregistrer" class="go">Enregistrer</button><span id="ia-msg" class="sub"></span></div>
+          <h3>Aujourd'hui</h3>
+          <div class="tablewrap"><table><thead><tr><th>Service</th><th>Demandes</th><th>Réussies</th><th>Jetons</th><th>État</th></tr></thead><tbody id="ia-conso"></tbody></table></div>
+          <p class="sub">Quand un quota est atteint ou qu'un service refuse, les PNJ continuent sans lui (interpréteur, bulles) jusqu'au lendemain ou à la fin de la pause.</p>
+        </div>
       </div>
     </section>
 
@@ -280,6 +321,41 @@ $("#eco-enregistrer").addEventListener("click", async () => {
   try { const x = await api("/api/reglages", r); $("#eco-msg").textContent = x.ok ? "Enregistré." : x.erreur; if (x.ok) { ecoRempli = false; await charger(); } }
   catch (e) { $("#eco-msg").textContent = e.message; }
 });
+
+// IA
+let iaRempli = false;
+function cle(c) { return c ? el("span", { class: "pill ok", text: "présente " + c }) : el("span", { class: "pill ko", text: "absente" }); }
+async function chargerIA() {
+  const e = await api("/api/ia"), r = e.reglages;
+  $("#ia-groq").replaceChildren(cle(r.groq_cle)); $("#ia-gemini").replaceChildren(cle(r.gemini_cle));
+  $("#ia-svc").replaceChildren(el("span", { class: "pill " + (e.simpleVoiceChat ? "ok" : "ko"), text: e.simpleVoiceChat ? "prêt" : "absent" }));
+  if (!iaRempli) {
+    $("#ia-active").checked = r.active; $("#ia-conversation").checked = r.conversation; $("#ia-voix").checked = r.voix; $("#ia-ecoute").checked = r.ecoute;
+    $("#ia-m-conv").value = r.modele_conversation; $("#ia-m-trans").value = r.modele_transcription; $("#ia-m-voix").value = r.modele_voix;
+    $("#ia-max-conv").value = r.max_conversations_jour; $("#ia-max-trans").value = r.max_transcriptions_jour; $("#ia-max-voix").value = r.max_voix_jour; $("#ia-dist").value = r.distance_ecoute;
+    iaRempli = true;
+  }
+  const NOMS = { conversation: "Conversation (Groq)", transcription: "Micro (Whisper, Groq)", voix: "Voix (Gemini)" };
+  $("#ia-conso").replaceChildren(...["conversation", "transcription", "voix"].map(k => { const s = e[k];
+    return el("tr", {}, el("td", { text: NOMS[k] }), el("td", { class: "num", text: s.demandes + " / " + s.max }), el("td", { class: "num", text: s.reussites }),
+      el("td", { class: "num", text: s.jetons || "" }),
+      el("td", {}, s.pause > 0 ? el("span", { class: "pill ko", text: "pause " + s.pause + " s" }) : null, el("div", { class: "sub", text: s.erreur || "" }))); }));
+}
+document.querySelector('[data-tab="ia"]').addEventListener("click", () => chargerIA().catch(e => flash(e.message)));
+$("#ia-enregistrer").addEventListener("click", async () => {
+  const c = { active: $("#ia-active").checked, conversation: $("#ia-conversation").checked, voix: $("#ia-voix").checked, ecoute: $("#ia-ecoute").checked,
+    modele_conversation: $("#ia-m-conv").value.trim(), modele_transcription: $("#ia-m-trans").value.trim(), modele_voix: $("#ia-m-voix").value.trim(),
+    max_conversations_jour: +$("#ia-max-conv").value, max_transcriptions_jour: +$("#ia-max-trans").value, max_voix_jour: +$("#ia-max-voix").value, distance_ecoute: +$("#ia-dist").value };
+  try { const x = await api("/api/ia/reglages", c); $("#ia-msg").textContent = x.ok ? "Enregistré." : x.erreur; iaRempli = false; await chargerIA(); }
+  catch (e) { $("#ia-msg").textContent = e.message; }
+});
+$("#ia-tester").addEventListener("click", async () => {
+  $("#ia-test").textContent = "Essai en cours (jusqu'à 30 secondes)…";
+  try { const x = await api("/api/ia/tester", {}); $("#ia-test").textContent = x.resultats.join("\n"); await chargerIA(); }
+  catch (e) { $("#ia-test").textContent = "Essai impossible : " + e.message; }
+});
+$("#ia-relire").addEventListener("click", async () => { try { await api("/api/recharger", {}); iaRempli = false; await chargerIA(); flash("ia.json relu."); } catch (e) { flash(e.message); } });
+setInterval(() => { if (!$("#ia").hidden && !document.hidden) chargerIA().catch(() => {}); }, 5000);
 
 $("#recharger").addEventListener("click", async () => { try { await api("/api/recharger", {}); flash("Réglages rechargés."); await charger(); } catch (e) { flash(e.message); } });
 

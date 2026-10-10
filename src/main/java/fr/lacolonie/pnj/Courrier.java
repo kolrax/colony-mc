@@ -286,13 +286,17 @@ final class Courrier extends SavedData {
      * de vie, il apporte la lettre au poste à pied ; plus loin, ou si c'est urgent, un corbeau la porte.
      */
     static void ecrire(Travailleur t, String type, Object... vals) {
+        ecrireTexte(t, Messages.objet(type), Messages.corps(t, type, vals), Messages.URGENTES.contains(type));
+    }
+
+    /** Pareil, avec son propre texte (une réponse écrite par l'IA, par exemple). */
+    static void ecrireTexte(Travailleur t, String objet, String corps, boolean urgent) {
         if (t.chef == null || !(t.level() instanceof ServerLevel sl)) return;
-        String corps = Messages.corps(t, type, vals);
         ServerPlayer chef = t.chefJoueur();
         if (chef != null && chef.level() == t.level() && chef.distanceTo(t) < 12 && t.hasLineOfSight(chef)) { t.dire(corps); return; }
         Courrier c = de(sl.getServer());
-        Lettre l = c.nouvelle(t.prenom, t.getUUID(), t.chef, Messages.objet(type), Messages.lettre(t, corps), t.level());
-        c.expedier(t, l, Messages.URGENTES.contains(type));
+        Lettre l = c.nouvelle(t.prenom, t.getUUID(), t.chef, objet, Messages.lettre(t, corps), t.level());
+        c.expedier(t, l, urgent);
     }
 
     /** Proche et rien d'urgent : il la garde pour la poser au poste en passant. Sinon : un corbeau. */
