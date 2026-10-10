@@ -139,4 +139,70 @@ class OrdresTest {
         assertEquals(5, lire("Tu peux partir en expédition 5 jours", "bucheron").jours);
         assertEquals(10, lire("expéditions de dix jours max", "bucheron").jours);
     }
+
+    // --- À qui le chef parle -----------------------------------------------------------------------
+
+    static final List<String> PRENOMS = List.of("Bertrand", "Raoul", "Bérengère", "Blanche", "Enguerrand");
+    static final List<String> METIERS = List.of("mineur", "guerrier", "mineur", "bucheron", "bucheron");
+
+    static Ordres.Adresse adr(String texte) { return Ordres.adresse(texte, PRENOMS, METIERS); }
+
+    @Test
+    void appelesParLeurPrenom() {
+        assertEquals(java.util.Set.of(1), adr("Raoul, va protéger la base").appeles());
+        assertEquals(java.util.Set.of(1), adr("Raoul va protéger la base").appeles());
+        assertEquals(java.util.Set.of(1), adr("Viens ici, Raoul.").appeles());
+        assertEquals(java.util.Set.of(1), adr("Merci Raoul !").appeles());
+        assertEquals(java.util.Set.of(0, 1), adr("Hé Bertrand et Raoul, venez par ici").appeles());
+        assertEquals(java.util.Set.of(0, 1), adr("Bertrand, Raoul, avec moi").appeles());
+        assertEquals(java.util.Set.of(2), adr("Bérangère, rentre au poste").appeles(), "Whisper écrit mal les prénoms");
+        assertEquals(java.util.Set.of(4), adr("Enguerran, coupe du bouleau").appeles());
+    }
+
+    @Test
+    void citesSansEtreAppeles() {
+        Ordres.Adresse a = adr("Va aider Raoul à la mine");
+        assertTrue(a.appeles().isEmpty());
+        assertEquals(java.util.Set.of(1), a.cites());
+        assertTrue(adr("Raoul est où ?").appeles().isEmpty());
+        assertTrue(adr("Ramène-moi de la pierre blanche").appeles().isEmpty(), "« blanche » n'est pas Blanche");
+        assertFalse(adr("Ramène-moi de la pierre blanche").explicite());
+        assertTrue(adr("Ramène dix fers").appeles().isEmpty() && adr("Ramène dix fers").cites().isEmpty());
+    }
+
+    @Test
+    void groupesEtExclus() {
+        assertTrue(adr("Les gars, suivez-moi").tous());
+        assertTrue(adr("Tout le monde au travail !").tous());
+        assertTrue(adr("Rentrez au poste, vous tous").tous());
+        Ordres.Adresse a = adr("Tout le monde sauf Raoul, rentrez au poste");
+        assertTrue(a.tous());
+        assertEquals(java.util.Set.of(1), a.exclus());
+        assertTrue(a.appeles().isEmpty());
+        assertEquals(java.util.Set.of(0, 1), adr("Tous à part Bertrand et Raoul, au travail").exclus());
+        assertFalse(adr("Suis-moi").tous());
+        assertTrue(adr("Suivez-moi").pluriel());
+        assertFalse(adr("Suis-moi").pluriel());
+    }
+
+    @Test
+    void parLeurMetier() {
+        assertEquals(java.util.Set.of("mineur"), adr("Les mineurs, rentrez").metiersTous());
+        assertEquals(java.util.Set.of("guerrier"), adr("Le guerrier, viens avec moi").metiersUn());
+        assertEquals(java.util.Set.of("bucheron"), adr("Bûcherons, coupez du chêne").metiersTous());
+        assertEquals(java.util.Set.of("guerrier"), adr("Les gardes, surveillez le poste").metiersTous());
+        assertTrue(adr("Garde 32 charbons au dépôt").metiersUn().isEmpty(), "« garde » est ici un verbe");
+        assertTrue(adr("Va aider le mineur").metiersUn().isEmpty());
+    }
+
+    @Test
+    void demandeSansDestinataire() {
+        Ordres.Adresse a = adr("Va protéger la base");
+        assertFalse(a.explicite());
+        assertTrue(a.demande());
+        assertEquals(List.of(new Mission("garder", "stock", 64)), lire("Va protéger la base", "guerrier").missions);
+        assertTrue(lire("Va protéger la base", "mineur").missions.isEmpty());
+        assertTrue(adr("Il faudrait que quelqu'un défende l'entrée").demande());
+        assertFalse(adr("Bon, je crois que je vais manger").demande());
+    }
 }

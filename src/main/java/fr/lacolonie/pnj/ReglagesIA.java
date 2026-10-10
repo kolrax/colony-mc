@@ -39,6 +39,9 @@ public class ReglagesIA {
     public String modele_transcription = "whisper-large-v3-turbo";
     public String url_voix = "https://generativelanguage.googleapis.com/v1beta/interactions";
     public String modele_voix = "gemini-3.8-flash-tts";
+    /** Quand le quota gratuit du modèle de voix est atteint (il se compte par modèle), ceux-ci prennent le relais, dans l'ordre. */
+    public java.util.List<String> modeles_voix_secours = new java.util.ArrayList<>(DEFAUT_SECOURS);
+    static final java.util.List<String> DEFAUT_SECOURS = java.util.List.of("gemini-3.8-flash-lite-tts", "gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts");
 
     /** Garde-fous, sous les quotas gratuits (Groq : 1 000 conversations et 2 000 transcriptions par jour). */
     public int max_conversations_jour = 900;
@@ -86,6 +89,7 @@ public class ReglagesIA {
         if (modele_transcription == null || modele_transcription.isBlank()) modele_transcription = new ReglagesIA().modele_transcription;
         if (url_voix == null || url_voix.isBlank()) url_voix = new ReglagesIA().url_voix;
         if (modele_voix == null || modele_voix.isBlank()) modele_voix = new ReglagesIA().modele_voix;
+        if (modeles_voix_secours == null) modeles_voix_secours = new java.util.ArrayList<>(DEFAUT_SECOURS);
         max_conversations_jour = Math.max(0, max_conversations_jour);
         max_transcriptions_jour = Math.max(0, max_transcriptions_jour);
         max_voix_jour = Math.max(0, max_voix_jour);
@@ -110,6 +114,7 @@ public class ReglagesIA {
         m.put("modele_conversation", modele_conversation);
         m.put("modele_transcription", modele_transcription);
         m.put("modele_voix", modele_voix);
+        m.put("modeles_voix_secours", String.join(", ", modeles_voix_secours));
         m.put("max_conversations_jour", max_conversations_jour);
         m.put("max_transcriptions_jour", max_transcriptions_jour);
         m.put("max_voix_jour", max_voix_jour);
@@ -129,6 +134,8 @@ public class ReglagesIA {
         if (c.has("modele_conversation")) r.modele_conversation = c.get("modele_conversation").getAsString();
         if (c.has("modele_transcription")) r.modele_transcription = c.get("modele_transcription").getAsString();
         if (c.has("modele_voix")) r.modele_voix = c.get("modele_voix").getAsString();
+        if (c.has("modeles_voix_secours")) r.modeles_voix_secours = new java.util.ArrayList<>(java.util.Arrays.stream(c.get("modeles_voix_secours").getAsString()
+                .split(",")).map(String::strip).filter(x -> !x.isEmpty()).toList());
         if (c.has("max_conversations_jour")) r.max_conversations_jour = c.get("max_conversations_jour").getAsInt();
         if (c.has("max_transcriptions_jour")) r.max_transcriptions_jour = c.get("max_transcriptions_jour").getAsInt();
         if (c.has("max_voix_jour")) r.max_voix_jour = c.get("max_voix_jour").getAsInt();

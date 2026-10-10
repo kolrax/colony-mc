@@ -174,4 +174,36 @@ class IATest {
         assertTrue(r.toString().contains("\"voice\":\"Kore\"") && r.toString().contains("Bonjour chef."));
         assertTrue(ReponsesIA.requeteVoixAncienne("Bonjour", "Puck", "calm").contains("\"voiceName\":\"Puck\""));
     }
+
+    @Test
+    void attenteApresUnQuota() {
+        assertEquals(30_000, ReponsesIA.attente("30", ""));
+        String google = "{\"error\":{\"code\":429,\"message\":\"Rate limit exceeded for model gemini-3.8-flash-tts (limit: 10 requests per day on Free Tier). "
+                + "Please retry in 6h51m50s or upgrade your tier.\",\"details\":[{\"retryDelay\":\"24710s\"}]}}";
+        assertEquals(24_710_000, ReponsesIA.attente("", google));
+        assertEquals((6 * 3600 + 51 * 60 + 50) * 1000L, ReponsesIA.attente("", "Please retry in 6h51m50s or upgrade"));
+        assertEquals(12_500, ReponsesIA.attente("", "Please retry in 12.5s."));
+        assertEquals(3_600_000, ReponsesIA.attente("", "{}"));
+    }
+
+    @Test
+    void reponseDeGroupe() {
+        Map<String, Set<String>> ids = new java.util.LinkedHashMap<>();
+        ids.put("Bertrand", Set.of("fer", "charbon"));
+        ids.put("Raoul", Set.of("garder", "ronde"));
+        String c = """
+                {"destinataires":["Raoul","Gontran","Raoul"],"reponses":[
+                 {"qui":"Raoul","reponse":"J'y vais, chef.","humeur":"fier","actions":[
+                   {"type":"missions","missions":[{"id":"garder","mode":"stock","nombre":1},{"id":"fer","mode":"quantite","nombre":10}],"ajouter":false,"debut":0,"fin":0,"jours":0}]},
+                 {"qui":"Gontran","reponse":"Moi aussi !","humeur":"calme","actions":[]},
+                 {"qui":"Raoul","reponse":"Encore moi","humeur":"calme","actions":[]}]}""";
+        ReponsesIA.Groupe g = ReponsesIA.decisionGroupe(c, ids);
+        assertEquals(List.of("Raoul"), g.destinataires(), "inconnus et doublons écartés");
+        assertEquals(Set.of("Raoul"), g.reponses().keySet());
+        assertEquals("J'y vais, chef.", g.reponses().get("Raoul").reponse());
+        assertEquals(List.of(new Ordres.Mission("garder", "stock", 1)), g.reponses().get("Raoul").lecture().missions, "le fer n'est pas du métier de Raoul");
+        JsonObject s = ReponsesIA.schemaGroupe(List.of("Bertrand", "Raoul"), List.of("fer", "garder"));
+        assertTrue(s.toString().contains("\"destinataires\"") && s.toString().contains("\"qui\""));
+        assertEquals(2, s.getAsJsonArray("required").size());
+    }
 }

@@ -150,51 +150,143 @@ final class IA {
     }
 
     static final Map<String, String> TEMPERAMENTS = Map.of(
-            "calme", "posé, patient, fiable ; tu parles simplement",
-            "peureux", "craintif, prudent, tu t'inquiètes vite et tu le montres",
+            "calme", "posé, patient, fiable, parle simplement",
+            "peureux", "craintif, prudent, s'inquiète vite et le montre",
             "fourbe", "rusé et flatteur, un brin malhonnête mais jamais ouvertement déloyal",
-            "colerique", "bourru, prompt à s'emporter, mais tu restes au service de ton chef");
+            "colerique", "bourru, prompt à s'emporter, mais reste au service de son chef");
 
-    /** Qui il est et ce qu'il sait, en quelques lignes (le moins de jetons possible : le quota gratuit en compte 200 000 par jour). */
-    static String systeme(Travailleur t, boolean enFace) {
-        Metier m = Metier.de(t.metier);
-        String catalogue = m == null ? "" : m.commandes.stream().map(c -> c.id + " = " + c.nom).collect(Collectors.joining(", "));
+    static int heure(Travailleur t) { return (int) ((t.level().getDayTime() + 6000) % 24000 / 1000); }
+
+    /** Ce qu'il sait de lui, en une ligne (le moins de jetons possible : le quota gratuit en compte 200 000 par jour). */
+    static String etat(Travailleur t) {
         String missions = t.missions.isEmpty() ? "aucune" : t.missions.stream().map(x -> Metier.avancementTexte(t, x)).collect(Collectors.joining(" ; "));
-        int heure = (int) ((t.level().getDayTime() + 6000) % 24000 / 1000);
+        return t.statut() + " ; " + t.activite() + " Position : " + Messages.ou(t) + ". Santé " + (int) Math.ceil(t.getHealth()) + "/" + (int) t.getMaxHealth()
+                + ", faim " + t.faim + "/20, fatigue " + t.fatigue + "/100. Missions : " + missions + ". Horaires : de " + t.debut + " h à " + t.fin
+                + " h ; expéditions de " + t.joursExpedition + " jours au plus. Salaire : " + Reglages.texte(t.salaireVerse()) + " par paie"
+                + (t.impayes > 0 ? ", " + t.impayes + " paie(s) en retard" : "") + (t.besoin.isEmpty() ? "" : ". Il lui manque : " + t.besoin) + ".";
+    }
+
+    static String catalogue(Travailleur t) {
+        Metier m = Metier.de(t.metier);
+        return m == null ? "" : m.commandes.stream().map(c -> c.id + " = " + c.nom).collect(Collectors.joining(", "));
+    }
+
+    static List<String> idsMissions(Travailleur t) {
+        Metier m = Metier.de(t.metier);
+        return m == null ? List.of() : m.commandes.stream().map(c -> c.id).toList();
+    }
+
+    static final String CORRECT = "Ne dis jamais que tu es une IA ou un programme, ne parle pas du monde réel, reste correct (rien de choquant), même en colère.";
+
+    static String actions(boolean enFace) {
+        StringBuilder b = new StringBuilder("Actions (champ actions, seulement si le chef le demande clairement ; sinon liste vide) : ");
+        if (enFace) b.append("suivre (suivre le chef) ; arreter_suivre (cesser de le suivre et retourner au travail) ; attendre (rester sur place) ; montrer_sac ; ")
+                .append("renvoyer (seulement si le chef le renvoie clairement) ; ");
+        return b.append("travailler (retourner au travail) ; rentrer (revenir au poste de travail) ; missions (missions : id parmi les possibles de son métier, mode quantite = en rapporter nombre puis arrêter, ")
+                .append("ou stock = en garder nombre au dépôt en permanence ; ajouter = vrai si le chef dit « aussi » ou « en plus », sinon elles remplacent les anciennes) ; ")
+                .append("horaires (debut et fin, de 0 à 23 ; même heure = toute la journée) ; expedition (jours : 1 à 30). ")
+                .append("Dans une action, mets 0, faux ou [] aux champs inutiles. Ce que son métier ne fait pas, il le dit, sans action ; ")
+                .append("s'il ne comprend pas, il demande de préciser. humeur : le ton de la réponse.").toString();
+    }
+
+    /** Le PNJ seul, qui répond à une lettre de son chef. */
+    static String systeme(Travailleur t, boolean enFace) {
         StringBuilder b = new StringBuilder();
         b.append("Tu es ").append(t.prenom).append(", ").append(Metier.nom(t.metier).toLowerCase()).append(" (").append(t.niveau)
-                .append(" étoiles sur 5) au service de ton chef ").append(t.chefNom.isEmpty() ? "" : t.chefNom)
+                .append(" étoiles sur 5) au service de ton chef ").append(t.chefNom)
                 .append(", dans La Colonie : un monde médiéval qui s'industrialise (Minecraft). Ton tempérament : ")
                 .append(t.temperament).append(" (").append(TEMPERAMENTS.getOrDefault(t.temperament, "")).append(").\n")
                 .append("Parle français, tutoie ton chef et appelle-le « chef ». ")
                 .append(enFace ? "Réponds en une ou deux phrases courtes et naturelles, comme à l'oral, dans ton personnage. "
                         : "Ton chef t'a écrit : réponds par une courte lettre (2 à 4 phrases) avec ce que tu vas faire et de tes nouvelles (où tu es, ce que tu fais, comment tu vas), sans formule d'appel ni signature (elles sont ajoutées). ")
-                .append("Ne dis jamais que tu es une IA ou un programme, ne parle pas du monde réel, reste correct (rien de choquant), même en colère.\n")
-                .append("Ce que tu sais de toi : ").append(t.statut()).append(" ; ").append(t.activite()).append(" Tu es ").append(Messages.ou(t)).append(". ")
-                .append("Santé ").append((int) Math.ceil(t.getHealth())).append("/").append((int) t.getMaxHealth()).append(", faim ").append(t.faim)
-                .append("/20, fatigue ").append(t.fatigue).append("/100. Missions : ").append(missions).append(". Horaires : de ").append(t.debut)
-                .append(" h à ").append(t.fin).append(" h ; expéditions de ").append(t.joursExpedition).append(" jours au plus. Salaire : ")
-                .append(Reglages.texte(t.salaireVerse())).append(" par paie").append(t.impayes > 0 ? ", " + t.impayes + " paie(s) en retard" : "")
-                .append(t.besoin.isEmpty() ? "" : ". Il te manque : " + t.besoin).append(". Il est ").append(heure).append(" h.\n")
-                .append("Ton métier : ").append(Metier.description(t.metier)).append(" Missions possibles (id = nom) : ").append(catalogue).append(".\n")
-                .append("Actions (champ actions, seulement si le chef le demande clairement ; sinon liste vide) : ");
-        if (enFace) b.append("suivre (le suivre) ; arreter_suivre (cesser de le suivre et retourner au travail) ; attendre (rester sur place) ; montrer_sac ; ")
-                .append("renvoyer (seulement s'il te renvoie clairement) ; ");
-        b.append("travailler (retourner au travail) ; rentrer (revenir au poste de travail) ; missions (missions : id parmi les possibles, mode quantite = en rapporter nombre puis arrêter, ")
-                .append("ou stock = en garder nombre au dépôt en permanence ; ajouter = vrai s'il dit « aussi » ou « en plus », sinon elles remplacent les anciennes) ; ")
-                .append("horaires (debut et fin, de 0 à 23 ; même heure = toute la journée) ; expedition (jours : 1 à 30). ")
-                .append("Dans une action, mets 0, faux ou [] aux champs inutiles. Si on te demande ce que ton métier ne fait pas, dis-le sans action ; ")
-                .append("si tu ne comprends pas, demande de préciser. humeur : le ton de ta réponse.");
-        String echange = echange(t);
+                .append(CORRECT).append("\n")
+                .append("Ce que tu sais de toi : ").append(etat(t)).append(" Il est ").append(heure(t)).append(" h.\n")
+                .append("Ton métier : ").append(Metier.description(t.metier)).append(" Missions possibles (id = nom) : ").append(catalogue(t)).append(".\n")
+                .append(actions(enFace));
+        String echange = echange(t, 8);
         if (!echange.isEmpty()) b.append("\nVos derniers échanges :\n").append(echange);
         return b.toString();
     }
 
+    /**
+     * Le chef parle à voix haute devant certains de ses ouvriers : l'IA dit à qui il s'adresse (sauf si le mod l'a
+     * déjà compris : {@code imposes}), puis répond et agit pour chacun.
+     */
+    static String systemeGroupe(List<Travailleur> ouvriers, List<String> etiquettes, Travailleur vise, boolean imposes) {
+        Travailleur t0 = ouvriers.get(0);
+        net.minecraft.world.entity.player.Player chef = t0.chefJoueur();
+        StringBuilder b = new StringBuilder();
+        b.append("Tu fais parler les ouvriers de ").append(t0.chefNom.isEmpty() ? "leur chef" : t0.chefNom)
+                .append(" dans La Colonie : un monde médiéval qui s'industrialise (Minecraft). Il est ").append(heure(t0)).append(" h. Le chef vient de parler à voix haute ; ")
+                .append(ouvriers.size() == 1 ? "voici l'ouvrier qui l'entend :\n" : "voici ceux de ses ouvriers qui l'entendent, du plus proche au plus loin :\n");
+        for (int i = 0; i < ouvriers.size(); i++) {
+            Travailleur t = ouvriers.get(i);
+            b.append("- ").append(etiquettes.get(i)).append(" : ").append(Metier.nom(t.metier).toLowerCase()).append(", ").append(t.niveau)
+                    .append(" étoiles, tempérament ").append(t.temperament).append(" (").append(TEMPERAMENTS.getOrDefault(t.temperament, "")).append(")");
+            if (chef != null) b.append(", à ").append((int) Math.round(t.distanceTo(chef))).append(" blocs");
+            if (t == vise) b.append(", le chef le regarde");
+            b.append(". ").append(etat(t)).append(" Missions possibles de son métier (id = nom) : ").append(catalogue(t)).append('.');
+            String e = echange(t, 4);
+            if (!e.isEmpty()) b.append(" Derniers échanges avec le chef : ").append(e.replace("\n", " / ")).append('.');
+            b.append('\n');
+        }
+        if (imposes) b.append("destinataires : tous ceux de la liste (le chef s'adresse à eux, c'est sûr).\n");
+        else b.append("D'abord, destinataires : à qui le chef s'adresse. Un prénom par lequel il interpelle quelqu'un (« Raoul, viens ») : celui-là. ")
+                .append("« Les gars », « tout le monde », « vous tous » : tous ceux que ça concerne. « Les mineurs », « le guerrier » : ceux de ce métier. ")
+                .append("Sinon, devine d'après ce qu'il demande et le métier de chacun (« va protéger la base » : un guerrier ; « ramène du fer » : un mineur ; ")
+                .append("« coupe du bois » : un bûcheron) : au singulier, un seul (celui qu'il regarde s'il convient, sinon le plus proche qui convient) ; ")
+                .append("au pluriel, tous ceux qui conviennent. Une question ou une remarque sans prénom : celui qu'il regarde, sinon le plus proche. ")
+                .append("S'il ne s'adresse visiblement pas à ses ouvriers (il parle à quelqu'un d'autre, chante, se parle à lui-même) : liste vide.\n");
+        b.append("Puis reponses : une par destinataire au plus (qui = son nom, écrit comme ci-dessus). Chacun parle dans son personnage : en français, ")
+                .append("il tutoie le chef et l'appelle « chef », en une ou deux phrases courtes et naturelles, comme à l'oral. À plusieurs, un ou deux seulement ")
+                .append("prennent la parole, très brièvement ; les autres laissent reponse vide mais font quand même leur action. ").append(CORRECT).append("\n")
+                .append(actions(true));
+        return b.toString();
+    }
+
+    /** Une étiquette par ouvrier pour l'IA : son prénom (avec son métier si deux ouvriers ont le même). */
+    static List<String> etiquettes(List<Travailleur> l) {
+        List<String> r = new java.util.ArrayList<>();
+        for (Travailleur t : l) {
+            String e = l.stream().filter(x -> x.prenom.equals(t.prenom)).count() > 1 ? t.prenom + " le " + Metier.nom(t.metier).toLowerCase() : t.prenom;
+            while (r.contains(e)) e += " bis";
+            r.add(e);
+        }
+        return r;
+    }
+
+    /** Ce que répondent ces ouvriers à ce que le chef vient de dire devant eux (et à qui il parlait). À appeler sur le fil du serveur. */
+    static CompletableFuture<ReponsesIA.Groupe> converserGroupe(List<Travailleur> ouvriers, Travailleur vise, boolean imposes, String parole) {
+        if (!r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour))
+            return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
+        List<String> etiquettes = etiquettes(ouvriers), tous = new java.util.ArrayList<>();
+        Map<String, Set<String>> ids = new LinkedHashMap<>();
+        for (int i = 0; i < ouvriers.size(); i++) {
+            List<String> x = idsMissions(ouvriers.get(i));
+            ids.put(etiquettes.get(i), Set.copyOf(x));
+            x.forEach(id -> { if (!tous.contains(id)) tous.add(id); });
+        }
+        String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, imposes),
+                "Le chef dit : « " + parole + " »", ReponsesIA.schemaGroupe(etiquettes, tous));
+        HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
+                .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(corps)).build();
+        // Groq rate parfois son JSON (« Failed to generate JSON ») : une seconde chance, puis l'interpréteur.
+        return envoyer(CONVERSATION, req).exceptionallyCompose(e -> String.valueOf(racine(e)).contains("generate JSON") && CONVERSATION.prendre(r().max_conversations_jour)
+                ? envoyer(CONVERSATION, req) : CompletableFuture.failedFuture(e)).thenApply(rep -> {
+            ReponsesIA.Groupe g = ReponsesIA.decisionGroupe(ReponsesIA.contenu(rep), ids);
+            CONVERSATION.reussite(ReponsesIA.jetons(rep));
+            return g;
+        });
+    }
+
     /** Les derniers échanges avec son chef (gardés dans sa mémoire), pour qu'il suive la conversation. */
-    static String echange(Travailleur t) {
+    static String echange(Travailleur t) { return echange(t, 8); }
+
+    static String echange(Travailleur t, int n) {
         ListTag l = t.memoire.getList("conv", Tag.TAG_STRING);
         StringBuilder b = new StringBuilder();
-        for (Tag x : l) b.append(x.getAsString()).append('\n');
+        for (int i = Math.max(0, l.size() - n); i < l.size(); i++) b.append(l.getString(i)).append('\n');
         return b.toString().strip();
     }
 
@@ -237,37 +329,104 @@ final class IA {
     });
 
     /** La phrase, dite par cette voix et sur ce ton : du son à 48 kHz, prêt pour Simple Voice Chat. */
-    static CompletableFuture<short[]> voix(String texte, String voix, String style) {
-        String cle = voix + "|" + style + "|" + texte;
+    static CompletableFuture<short[]> voix(String texte, String voix, String style, float hauteur) {
+        String cle = voix + "|" + style + "|" + hauteur + "|" + texte;
         short[] deja = CACHE_VOIX.get(cle);
         if (deja != null) return CompletableFuture.completedFuture(deja);
         if (!r().voixPossible() || !VOIX.prendre(r().max_voix_jour))
             return CompletableFuture.failedFuture(new IllegalStateException("voix indisponible"));
-        return envoyer(VOIX, requeteVoix(texte, voix, style)).thenApply(rep -> {
-            short[] s = enVoix(ReponsesIA.audio(rep));
+        return essayerVoix(modelesVoix(), 0, false, texte, voix, style).thenApply(octets -> {
+            short[] s = enVoix(octets, hauteur);
             CACHE_VOIX.put(cle, s);
             VOIX.reussite(0);
             return s;
+        }).whenComplete((v, e) -> {
+            if (e != null && racineErreur(e) instanceof java.io.IOException io) VOIX.echec("injoignable — " + io, 15_000);
         });
     }
 
     /**
-     * La requête à Gemini. Par défaut l'API « interactions » ; si url_voix se termine par « :generateContent »
-     * (un ancien modèle de voix, le modèle est alors dans l'adresse), l'ancienne forme.
+     * Le quota gratuit de Gemini se compte par modèle (une dizaine de phrases par jour pour chacun) : quand l'un est
+     * épuisé, on passe au suivant. Ici, chaque modèle épuisé, et jusqu'à quand.
      */
-    static HttpRequest requeteVoix(String texte, String voix, String style) {
-        boolean ancienne = r().url_voix.endsWith(":generateContent");
-        return HttpRequest.newBuilder(URI.create(r().url_voix)).timeout(Duration.ofSeconds(30))
-                .header("x-goog-api-key", r().gemini_cle).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(ancienne ? ReponsesIA.requeteVoixAncienne(texte, voix, style)
-                        : ReponsesIA.requeteVoix(r().modele_voix, texte, voix, style))).build();
+    static final Map<String, Long> EPUISES = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Les modèles qui refusent l'API « interactions » mais acceptent l'ancienne forme (découvert à leur premier refus). */
+    static final Set<String> ANCIENS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Les modèles de voix encore disponibles aujourd'hui : le principal, puis ceux de secours. */
+    static List<String> modelesVoix() {
+        long t = System.currentTimeMillis();
+        List<String> l = new java.util.ArrayList<>();
+        java.util.stream.Stream.concat(java.util.stream.Stream.of(r().modele_voix), r().modeles_voix_secours.stream())
+                .filter(m -> m != null && !m.isBlank() && !l.contains(m) && EPUISES.getOrDefault(m, 0L) <= t).forEach(l::add);
+        return l;
     }
 
-    /** Du son de Gemini (WAV ou brut, 24 kHz) au son de Simple Voice Chat (48 kHz), sans les silences autour. */
-    static short[] enVoix(byte[] octets) {
+    /**
+     * Demande la voix au modèle {@code i} : quota atteint, on passe au suivant ; refus de l'API « interactions », on
+     * réessaie le même avec l'ancienne forme ; modèle inconnu, on passe au suivant. Rend le son tel que Gemini l'envoie.
+     */
+    static CompletableFuture<byte[]> essayerVoix(List<String> modeles, int i, boolean ancienneForcee, String texte, String voix, String style) {
+        long t = System.currentTimeMillis();
+        if (i >= modeles.size()) {
+            long fin = EPUISES.values().stream().mapToLong(Long::longValue).filter(x -> x > t).min().orElse(t + 3_600_000);
+            VOIX.echec("quota du jour atteint pour tous les modèles de voix — la voix revient dans "
+                    + java.time.Duration.ofMillis(fin - t).toMinutes() + " min", fin - t);
+            return CompletableFuture.failedFuture(new IllegalStateException("plus de modèle de voix disponible"));
+        }
+        String modele = modeles.get(i);
+        boolean ancienne = ancienneForcee || ANCIENS.contains(modele) || r().url_voix.endsWith(":generateContent");
+        return HTTP.sendAsync(requeteVoix(modele, texte, voix, style, ancienne), HttpResponse.BodyHandlers.ofString()).thenCompose(rep -> {
+            int code = rep.statusCode();
+            if (code / 100 == 2) {
+                if (ancienneForcee) ANCIENS.add(modele);
+                return CompletableFuture.completedFuture(ReponsesIA.audio(rep.body()));
+            }
+            String msg = "HTTP " + code + " : " + ReponsesIA.erreur(rep.body());
+            if (code == 429) {
+                long attente = ReponsesIA.attente(rep.headers().firstValue("retry-after").orElse(""), rep.body());
+                EPUISES.put(modele, t + attente);
+                ColoniePnj.LOG.info("IA (voix) : {} a atteint son quota, on passe au modèle suivant ({})", modele, msg);
+                return essayerVoix(modeles, i + 1, false, texte, voix, style);
+            }
+            if ((code == 400 || code == 404) && !ancienne) return essayerVoix(modeles, i, true, texte, voix, style);
+            if (code == 400 || code == 404) {
+                EPUISES.put(modele, t + 86_400_000L); // modèle inconnu ou retiré : on n'y revient que demain
+                VOIX.echec("modèle de voix " + modele + " refusé — " + msg, 0);
+                return essayerVoix(modeles, i + 1, false, texte, voix, style);
+            }
+            if (code == 401 || code == 403) VOIX.echec("clé refusée — vérifie-la dans ia.json (" + msg + ")", 600_000);
+            else VOIX.echec("le service a un problème — " + msg, 30_000);
+            return CompletableFuture.failedFuture(new IllegalStateException(msg));
+        });
+    }
+
+    /**
+     * La requête à Gemini : l'API « interactions », ou l'ancienne forme (generateContent, le modèle dans l'adresse)
+     * pour les modèles qui l'exigent, ou si url_voix se termine déjà par « :generateContent ».
+     */
+    static HttpRequest requeteVoix(String modele, String texte, String voix, String style, boolean ancienne) {
+        String url = r().url_voix;
+        if (ancienne && !url.endsWith(":generateContent")) url = url.substring(0, url.lastIndexOf('/')) + "/models/" + modele + ":generateContent";
+        return HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(30))
+                .header("x-goog-api-key", r().gemini_cle).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(ancienne ? ReponsesIA.requeteVoixAncienne(texte, voix, style)
+                        : ReponsesIA.requeteVoix(modele, texte, voix, style))).build();
+    }
+
+    static Throwable racineErreur(Throwable e) {
+        while (e.getCause() != null && e.getCause() != e) e = e.getCause();
+        return e;
+    }
+
+    /**
+     * Du son de Gemini (WAV ou brut, 24 kHz) au son de Simple Voice Chat (48 kHz), sans les silences autour.
+     * {@code hauteur} : sa variation de voix (1,05 : 5 % plus aiguë et plus rapide, 0,95 : plus grave et plus lente).
+     */
+    static short[] enVoix(byte[] octets, float hauteur) {
         Audio.Son s = Audio.lire(octets, 24_000);
         short[] r = Audio.rogner(s.echantillons(), s.frequence());
-        return Audio.reechantillonner(r, s.frequence(), Audio.FREQ_VOIX);
+        return Audio.reechantillonner(r, Math.round(s.frequence() * hauteur), Audio.FREQ_VOIX);
     }
 
     // --- Pour le panneau et /pnj ia ----------------------------------------------------------------------
@@ -293,9 +452,9 @@ final class IA {
                 .thenApply(rep -> "Groq : OK (" + r().modele_conversation + " répond « " + ReponsesIA.contenu(rep).strip() + " »)")
                 .exceptionally(e -> "Groq : ÉCHEC — " + racine(e));
         CompletableFuture<String> gemini = r().gemini_cle.isEmpty() ? CompletableFuture.completedFuture("Gemini : pas de clé dans ia.json")
-                : envoyer(VOIX, requeteVoix("Bonjour chef.", "Kore", "calm"))
+                : envoyer(VOIX, requeteVoix(r().modele_voix, "Bonjour chef.", "Kore", "calm", false))
                 .thenApply(rep -> { VOIX.reprendre(); return rep; })
-                .thenApply(rep -> "Gemini : OK (" + r().modele_voix + ", " + String.format("%.1f", IA.enVoix(ReponsesIA.audio(rep)).length / 48000.0) + " s de voix)")
+                .thenApply(rep -> "Gemini : OK (" + r().modele_voix + ", " + String.format("%.1f", IA.enVoix(ReponsesIA.audio(rep), 1f).length / 48000.0) + " s de voix)")
                 .exceptionally(e -> "Gemini : ÉCHEC — " + racine(e));
         return groq.thenCombine(gemini, (a, b) -> List.of(a, b, "Simple Voice Chat : " + (Voix.pret ? "prêt" : "absent ou pas encore démarré")));
     }

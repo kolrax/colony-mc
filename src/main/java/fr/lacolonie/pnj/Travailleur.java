@@ -930,54 +930,10 @@ public class Travailleur extends PathfinderMob {
     }
 
     /**
-     * Son chef lui parle (fenêtre de conversation, ou au micro) : il comprend ce qu'il peut, obéit et répond.
-     * <p>
-     * Avec l'IA, c'est elle qui répond à sa place et choisit son action dans une liste fermée, que le mod applique
-     * comme un ordre écrit (avec les mêmes vérifications). Sans clé, sans quota, ou si le service ne répond pas,
-     * l'interpréteur sans IA prend le relais. La réponse est dite à voix haute si la voix est disponible.
+     * Son chef lui écrit dans la fenêtre de conversation. C'est {@link Dialogue} qui trouve à qui il parle vraiment
+     * (« Raoul, viens » s'adresse à Raoul, « les gars » à tous ceux qui l'entendent) et qui fait répondre chacun.
      */
-    void parler(ServerPlayer p, String texte) {
-        if (aTerre || !p.getUUID().equals(chef) || p.distanceToSqr(this) > 16 * 16) return;
-        String dit = texte.strip();
-        if (dit.isEmpty() || dit.length() > 256) return;
-        getLookControl().setLookAt(p);
-        Ordres.Lecture regles = Ordres.lire(dit, metier);
-        // Une confirmation de renvoi (« oui » / « non ») reste une affaire de règles : pas de place pour une interprétation.
-        boolean confirmation = memoire.getLong("renvoi") > level().getGameTime()
-                && (regles.intentions.contains(Ordres.Intention.OUI) || regles.intentions.contains(Ordres.Intention.NON));
-        if (confirmation || !IA.conversationDisponible() || level().getServer() == null) {
-            String r = appliquer(regles, p);
-            if (!r.isEmpty()) repondre(r, "calme");
-            return;
-        }
-        if (reflechit) { signaler(p, prenom + " réfléchit encore à ce que tu viens de dire…"); return; }
-        reflechit = true;
-        signaler(p, prenom + " réfléchit…");
-        var serveur = level().getServer();
-        IA.converser(this, dit, true).whenComplete((d, err) -> serveur.execute(() -> {
-            reflechit = false;
-            if (!isAlive() || aTerre) return;
-            ServerPlayer enFace = p.hasDisconnected() ? null : p;
-            String r;
-            String humeur = "calme";
-            if (d == null) r = appliquer(regles, enFace); // l'IA ne répond pas : l'interpréteur
-            else {
-                long renvoiAvant = memoire.getLong("renvoi");
-                String reglesTexte = appliquer(d.lecture(), enFace);
-                // Un renvoi demande toujours confirmation : on pose la question clairement.
-                r = memoire.getLong("renvoi") != renvoiAvant || d.reponse().isEmpty() ? reglesTexte : d.reponse();
-                humeur = d.humeur();
-            }
-            IA.noter(this, "Chef", dit);
-            if (!r.isEmpty()) {
-                IA.noter(this, "Toi", r);
-                repondre(r, humeur);
-            }
-        }));
-    }
-
-    /** Sa réponse à son chef : en bulle, et à voix haute si la voix est disponible. */
-    void repondre(String texte, String humeur) { Voix.dire(this, texte, humeur); }
+    void parler(ServerPlayer p, String texte) { Dialogue.parler(p, texte, this, false); }
 
     /**
      * Applique ce qu'il a compris (de vive voix si {@code enFace} n'est pas nul, sinon par lettre) et renvoie sa réponse.

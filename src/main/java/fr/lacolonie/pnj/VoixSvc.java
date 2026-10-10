@@ -55,7 +55,7 @@ public class VoixSvc implements VoicechatPlugin {
         });
         r.registerEvent(MicrophonePacketEvent.class, e -> {
             VoicechatConnection c = e.getSenderConnection();
-            if (c == null || c.getPlayer() == null) return;
+            if (c == null || c.getPlayer() == null || c.isInGroup()) return; // en groupe, sa voix ne va qu'au groupe : ses ouvriers ne l'entendent pas
             if (c.getPlayer().getPlayer() instanceof net.minecraft.server.level.ServerPlayer p)
                 Voix.paquet(p.getUUID(), e.getPacket().getOpusEncodedData());
         });

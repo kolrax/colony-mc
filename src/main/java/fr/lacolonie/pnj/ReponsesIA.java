@@ -66,18 +66,31 @@ final class ReponsesIA {
 
     /** Le schéma imposé à la réponse (mode strict : tous les champs obligatoires, rien d'autre). */
     static JsonObject schema(List<String> idsMissions, boolean enFace) {
+        return objet(Map.of("reponse", type("string"), "humeur", enumeration(HUMEURS), "actions", tableau(action(idsMissions, enFace))));
+    }
+
+    /**
+     * Le schéma d'une réponse de groupe : à qui le chef parle ({@code destinataires}, parmi les présents), puis la
+     * réponse et les actions de chacun ({@code qui} : l'étiquette de l'ouvrier).
+     */
+    static JsonObject schemaGroupe(List<String> etiquettes, List<String> idsMissions) {
+        JsonObject reponse = objet(Map.of("qui", enumeration(etiquettes), "reponse", type("string"), "humeur", enumeration(HUMEURS),
+                "actions", tableau(action(idsMissions, true))));
+        return objet(Map.of("destinataires", tableau(enumeration(etiquettes)), "reponses", tableau(reponse)));
+    }
+
+    static JsonObject action(List<String> idsMissions, boolean enFace) {
         JsonObject mission = objet(Map.of(
                 "id", enumeration(idsMissions.isEmpty() ? List.of("aucune") : idsMissions),
                 "mode", enumeration(List.of("quantite", "stock")),
                 "nombre", type("integer")));
-        JsonObject action = objet(Map.of(
+        return objet(Map.of(
                 "type", enumeration(enFace ? ACTIONS_FACE : ACTIONS_LETTRE),
                 "missions", tableau(mission),
                 "ajouter", type("boolean"),
                 "debut", type("integer"),
                 "fin", type("integer"),
                 "jours", type("integer")));
-        return objet(Map.of("reponse", type("string"), "humeur", enumeration(HUMEURS), "actions", tableau(action)));
     }
 
     static JsonObject type(String t) { JsonObject o = new JsonObject(); o.addProperty("type", t); return o; }
@@ -149,9 +162,37 @@ final class ReponsesIA {
      * pas trop longue. Ce qui ne va pas est simplement ignoré.
      */
     static Decision decision(String contenuJson, Set<String> idsMissions, boolean enFace) {
+        return decision(objetJson(contenuJson), idsMissions, enFace);
+    }
+
+    /** Le JSON de la réponse, même si le modèle l'entoure de texte. */
+    static JsonObject objetJson(String contenuJson) {
         String s = contenuJson.strip();
-        int a = s.indexOf('{'), b = s.lastIndexOf('}'); // au cas où le modèle entoure son JSON de texte
-        JsonObject o = JsonParser.parseString(a >= 0 && b > a ? s.substring(a, b + 1) : s).getAsJsonObject();
+        int a = s.indexOf('{'), b = s.lastIndexOf('}');
+        return JsonParser.parseString(a >= 0 && b > a ? s.substring(a, b + 1) : s).getAsJsonObject();
+    }
+
+    /** Ce que l'IA a décidé pour un groupe : à qui le chef parle, et la décision de chacun (par étiquette). */
+    record Groupe(List<String> destinataires, Map<String, Decision> reponses) {}
+
+    /** Lit et revérifie une réponse de groupe : étiquettes connues seulement, une décision par ouvrier, revérifiée comme une seule. */
+    static Groupe decisionGroupe(String contenuJson, Map<String, Set<String>> idsParQui) {
+        JsonObject o = objetJson(contenuJson);
+        List<String> dest = new ArrayList<>();
+        if (o.has("destinataires") && o.get("destinataires").isJsonArray())
+            for (JsonElement e : o.getAsJsonArray("destinataires"))
+                if (e.isJsonPrimitive() && idsParQui.containsKey(e.getAsString()) && !dest.contains(e.getAsString())) dest.add(e.getAsString());
+        Map<String, Decision> reponses = new java.util.LinkedHashMap<>();
+        if (o.has("reponses") && o.get("reponses").isJsonArray())
+            for (JsonElement e : o.getAsJsonArray("reponses")) {
+                if (!e.isJsonObject()) continue;
+                String qui = texte(e.getAsJsonObject(), "qui");
+                if (idsParQui.containsKey(qui) && !reponses.containsKey(qui)) reponses.put(qui, decision(e.getAsJsonObject(), idsParQui.get(qui), true));
+            }
+        return new Groupe(dest, reponses);
+    }
+
+    static Decision decision(JsonObject o, Set<String> idsMissions, boolean enFace) {
         String reponse = o.has("reponse") && o.get("reponse").isJsonPrimitive() ? o.get("reponse").getAsString().strip() : "";
         if (reponse.length() > 400) reponse = reponse.substring(0, 400).replaceAll("\\s+\\S*$", "") + "…";
         String humeur = o.has("humeur") ? o.get("humeur").getAsString() : "calme";
@@ -296,6 +337,23 @@ final class ReponsesIA {
             return o.get("data").getAsString();
         for (String k : o.keySet()) { String s = chercherAudio(o.get(k)); if (s != null) return s; }
         return null;
+    }
+
+    /**
+     * Combien de temps attendre après un refus pour quota (en ms) : l'en-tête retry-after, sinon le « retryDelay »
+     * de Google, sinon son « Please retry in 6h51m50s », sinon une heure.
+     */
+    static long attente(String retryAfter, String corps) {
+        try { if (!retryAfter.isBlank()) return (long) (Double.parseDouble(retryAfter.strip()) * 1000); } catch (NumberFormatException ignore) {}
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"retryDelay\"\\s*:\\s*\"([\\d.]+)s\"").matcher(corps);
+        if (m.find()) return (long) (Double.parseDouble(m.group(1)) * 1000);
+        m = java.util.regex.Pattern.compile("retry in (?:(\\d+)h)?(?:(\\d+)m)?(?:([\\d.]+)s)?").matcher(corps);
+        if (m.find() && m.group(0).length() > "retry in ".length()) {
+            double s = (m.group(1) == null ? 0 : Integer.parseInt(m.group(1)) * 3600) + (m.group(2) == null ? 0 : Integer.parseInt(m.group(2)) * 60)
+                    + (m.group(3) == null ? 0 : Double.parseDouble(m.group(3)));
+            return (long) (s * 1000);
+        }
+        return 3_600_000;
     }
 
     /** Le message d'erreur d'un service (error.message), pour le panneau. */

@@ -163,6 +163,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
             <tr><td>Modèle de conversation</td><td><input id="ia-m-conv" style="width:100%"></td></tr>
             <tr><td>Modèle de transcription</td><td><input id="ia-m-trans" style="width:100%"></td></tr>
             <tr><td>Modèle de voix</td><td><input id="ia-m-voix" style="width:100%"></td></tr>
+            <tr><td>Modèles de voix de secours<div class="sub">quand le quota gratuit du précédent est atteint (il se compte par modèle)</div></td><td><input id="ia-m-secours" style="width:100%"></td></tr>
             <tr><td>Conversations par jour, au plus</td><td><input type="number" min="0" id="ia-max-conv"></td></tr>
             <tr><td>Transcriptions par jour, au plus</td><td><input type="number" min="0" id="ia-max-trans"></td></tr>
             <tr><td>Phrases dites à voix haute par jour, au plus</td><td><input type="number" min="0" id="ia-max-voix"></td></tr>
@@ -331,7 +332,7 @@ async function chargerIA() {
   $("#ia-svc").replaceChildren(el("span", { class: "pill " + (e.simpleVoiceChat ? "ok" : "ko"), text: e.simpleVoiceChat ? "prêt" : "absent" }));
   if (!iaRempli) {
     $("#ia-active").checked = r.active; $("#ia-conversation").checked = r.conversation; $("#ia-voix").checked = r.voix; $("#ia-ecoute").checked = r.ecoute;
-    $("#ia-m-conv").value = r.modele_conversation; $("#ia-m-trans").value = r.modele_transcription; $("#ia-m-voix").value = r.modele_voix;
+    $("#ia-m-conv").value = r.modele_conversation; $("#ia-m-trans").value = r.modele_transcription; $("#ia-m-voix").value = r.modele_voix; $("#ia-m-secours").value = r.modeles_voix_secours;
     $("#ia-max-conv").value = r.max_conversations_jour; $("#ia-max-trans").value = r.max_transcriptions_jour; $("#ia-max-voix").value = r.max_voix_jour; $("#ia-dist").value = r.distance_ecoute;
     iaRempli = true;
   }
@@ -344,7 +345,7 @@ async function chargerIA() {
 document.querySelector('[data-tab="ia"]').addEventListener("click", () => chargerIA().catch(e => flash(e.message)));
 $("#ia-enregistrer").addEventListener("click", async () => {
   const c = { active: $("#ia-active").checked, conversation: $("#ia-conversation").checked, voix: $("#ia-voix").checked, ecoute: $("#ia-ecoute").checked,
-    modele_conversation: $("#ia-m-conv").value.trim(), modele_transcription: $("#ia-m-trans").value.trim(), modele_voix: $("#ia-m-voix").value.trim(),
+    modele_conversation: $("#ia-m-conv").value.trim(), modele_transcription: $("#ia-m-trans").value.trim(), modele_voix: $("#ia-m-voix").value.trim(), modeles_voix_secours: $("#ia-m-secours").value,
     max_conversations_jour: +$("#ia-max-conv").value, max_transcriptions_jour: +$("#ia-max-trans").value, max_voix_jour: +$("#ia-max-voix").value, distance_ecoute: +$("#ia-dist").value };
   try { const x = await api("/api/ia/reglages", c); $("#ia-msg").textContent = x.ok ? "Enregistré." : x.erreur; iaRempli = false; await chargerIA(); }
   catch (e) { $("#ia-msg").textContent = e.message; }

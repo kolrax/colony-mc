@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,7 +77,9 @@ final class Ordres {
         Map<String, List<String>> guerrier = new LinkedHashMap<>();
         guerrier.put("escorter", List.of("escorte moi", "escorte", "escorter", "protege moi", "garde du corps"));
         guerrier.put("ronde", List.of("fais la ronde", "la ronde", "ronde", "patrouille", "patrouiller", "patrouilles"));
-        guerrier.put("garder", List.of("garde le poste", "garde le bureau", "garde la base", "monte la garde", "surveille le poste", "surveille", "garder le poste"));
+        guerrier.put("garder", List.of("garde le poste", "garde le bureau", "garde la base", "monte la garde", "surveille le poste", "surveille", "garder le poste",
+                "protege la base", "proteger la base", "protege le poste", "proteger le poste", "protege le bureau", "defends la base", "defendre la base",
+                "defends le poste", "defendre le poste", "protege le camp", "defends le camp", "garde le camp", "garde l entree", "protege l entree"));
         NOMS.put("guerrier", guerrier);
     }
 
@@ -328,5 +331,143 @@ final class Ordres {
             }
         }
         return meilleur;
+    }
+
+    // --- À qui le chef parle ---------------------------------------------------------------------------
+
+    /**
+     * Ce qu'une phrase dite devant plusieurs ouvriers dit de ses destinataires (indices dans la liste des prénoms) :
+     * <ul>
+     * <li>{@code appeles} : interpellés par leur prénom (« Raoul, viens », « Viens ici, Raoul », « Merci Raoul ») ;</li>
+     * <li>{@code cites} : nommés sans être interpellés (« va aider Raoul », « Raoul est où ? ») ;</li>
+     * <li>{@code exclus} : « tout le monde sauf Raoul » ;</li>
+     * <li>{@code tous} : « les gars », « tout le monde », « vous tous »… ;</li>
+     * <li>{@code metiersTous} / {@code metiersUn} : « les mineurs, rentrez » / « le guerrier, viens » ;</li>
+     * <li>{@code pluriel} : un verbe au pluriel ou « vous » (un indice, pas une certitude) ;</li>
+     * <li>{@code demande} : on leur demande quelque chose (« va… », « il faut… », « quelqu'un peut… »).</li>
+     * </ul>
+     */
+    record Adresse(Set<Integer> appeles, Set<Integer> cites, Set<Integer> exclus, boolean tous, Set<String> metiersTous, Set<String> metiersUn,
+                   boolean pluriel, boolean demande) {
+        /** La phrase désigne elle-même ses destinataires. */
+        boolean explicite() { return tous || !appeles.isEmpty() || !metiersTous.isEmpty() || !metiersUn.isEmpty(); }
+    }
+
+    static final List<String> GROUPES = List.of("les gars", "tout le monde", "vous tous", "vous toutes", "vous deux", "vous trois", "vous quatre",
+            "tous les deux", "tous les trois", "toutes les deux", "les amis", "mes amis", "les copains", "mes copains", "les hommes", "mes hommes",
+            "les filles", "mesdames", "messieurs", "l equipe", "mon equipe", "les ouvriers", "mes ouvriers", "les compagnons", "mes compagnons",
+            "compagnons", "camarades", "les camarades", "les enfants", "la compagnie", "tout le groupe", "tous ensemble", "venez tous", "allez tous",
+            "a tous", "vous autres", "la troupe", "les braves", "mes braves", "mes gaillards", "les gaillards");
+    /** Les métiers par leur nom : singulier, pluriel ; les mots marqués d'une étoile ne comptent qu'avec un article (« garde » est aussi un verbe). */
+    static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
+            "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
+            "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),
+            "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
+                    new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
+    static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");
+    static final Set<String> INTERJECTIONS = Set.of("he", "eh", "oh", "ho", "ohe", "hey", "dis", "dites", "allez", "alors", "bon", "bien", "ecoute",
+            "ecoutez", "merci", "bravo", "salut", "bonjour", "bonsoir", "coucou", "yo", "oui", "non", "ok", "d", "accord", "tiens", "voyons", "toi");
+    /** Après un prénom en tête de phrase, ces mots en font le sujet (« Raoul est où ? ») et non celui qu'on appelle. */
+    static final Set<String> TROISIEME_PERSONNE = Set.of("est", "etait", "sera", "a", "avait", "aura", "n", "s", "il", "elle", "y", "lui");
+    static final Set<String> SAUF = Set.of("sauf", "excepte", "hormis", "hors");
+    static final Set<String> DEMANDES = Set.of("va", "vas", "allez", "viens", "venez", "fais", "faites", "prends", "prenez", "apporte", "apportez",
+            "ramene", "ramenez", "rapporte", "rapportez", "rentre", "rentrez", "suis", "suivez", "attends", "attendez", "reste", "restez", "protege",
+            "protegez", "defends", "defendez", "garde", "gardez", "coupe", "coupez", "mine", "minez", "cherche", "cherchez", "recolte", "recoltez",
+            "travaille", "travaillez", "arrete", "arretez", "aide", "aidez", "montre", "montrez", "donne", "donnez", "occupe", "occupez", "surveille",
+            "surveillez", "patrouille", "patrouillez", "escorte", "escortez", "descends", "descendez", "monte", "montez", "creuse", "creusez", "abats",
+            "abattez", "retourne", "retournez", "reviens", "revenez", "approche", "approchez", "bouge", "bougez", "pars", "partez", "file", "filez");
+    static final List<String> DEMANDES_FORMULES = List.of("peux tu", "pouvez vous", "tu peux", "vous pouvez", "tu pourrais", "vous pourriez",
+            "il faut", "il faudrait", "il me faut", "j ai besoin", "quelqu un", "qui peut", "qui veut", "je veux que", "je voudrais que");
+
+    /** Les mots et la ponctuation (pour les virgules qui isolent un prénom), en minuscules, sans accents. */
+    static List<String> jetons(String s) {
+        String n = Normalizer.normalize(s.toLowerCase(java.util.Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .replace("œ", "oe").replace("æ", "ae");
+        List<String> r = new ArrayList<>();
+        Matcher m = Pattern.compile("[a-z0-9]+|[,.;:!?]").matcher(n);
+        while (m.find()) r.add(m.group());
+        return r;
+    }
+
+    static boolean ponctuation(String w) { return w.length() == 1 && ",.;:!?".contains(w); }
+
+    /** Deux mots presque pareils (Whisper écrit parfois « Enguerran » ou « Bérangère ») : un écart par 5 lettres, deux à partir de 9. */
+    static boolean proche(String mot, String nom) {
+        if (mot.equals(nom)) return true;
+        if (nom.length() < 5 || Math.abs(mot.length() - nom.length()) > 1 || mot.charAt(0) != nom.charAt(0)) return false;
+        int[] avant = new int[nom.length() + 1], ici = new int[nom.length() + 1];
+        for (int j = 0; j <= nom.length(); j++) avant[j] = j;
+        for (int i = 1; i <= mot.length(); i++) {
+            ici[0] = i;
+            for (int j = 1; j <= nom.length(); j++)
+                ici[j] = Math.min(Math.min(ici[j - 1] + 1, avant[j] + 1), avant[j - 1] + (mot.charAt(i - 1) == nom.charAt(j - 1) ? 0 : 1));
+            int[] t = avant; avant = ici; ici = t;
+        }
+        return avant[nom.length()] <= (nom.length() >= 9 ? 2 : 1);
+    }
+
+    /** Un nom (prénom ou métier) trouvé dans la phrase, des jetons {@code debut} à {@code fin} (exclu). */
+    record Mention(int qui, String metier, boolean pluriel, int debut, int fin) {}
+
+    /** À qui s'adresse cette phrase, dite devant ces ouvriers (leurs prénoms et leurs métiers, dans le même ordre). */
+    static Adresse adresse(String texte, List<String> prenoms, List<String> metiers) {
+        List<String> j = jetons(texte);
+        List<Mention> mentions = new ArrayList<>();
+        for (int q = 0; q < prenoms.size(); q++) {
+            List<String> nom = jetons(prenoms.get(q)).stream().filter(w -> !ponctuation(w)).toList();
+            if (nom.isEmpty()) continue;
+            for (int k = 0; k + nom.size() <= j.size(); k++) {
+                boolean ok = true;
+                for (int x = 0; x < nom.size() && ok; x++) ok = nom.size() == 1 ? proche(j.get(k), nom.get(0)) : j.get(k + x).equals(nom.get(x));
+                if (ok) mentions.add(new Mention(q, null, false, k, k + nom.size()));
+            }
+        }
+        for (var e : NOMS_METIERS.entrySet()) {
+            if (!metiers.contains(e.getKey())) continue;
+            for (String[] formes : e.getValue())
+                for (int f = 0; f < 2; f++) {
+                    boolean article = formes[f].startsWith("*");
+                    List<String> mots = List.of(formes[f].replace("*", "").split(" "));
+                    for (int k = 0; k + mots.size() <= j.size(); k++) {
+                        if (!j.subList(k, k + mots.size()).equals(mots)) continue;
+                        int debut = k > 0 && ARTICLES.contains(j.get(k - 1)) ? k - 1 : k;
+                        if (article && debut == k) continue;
+                        if (f == 0 && k + 1 < j.size() && j.get(k + 1).equals("du") && formes[0].equals("*garde")) continue; // « garde du corps » : ci-dessus
+                        mentions.add(new Mention(-1, e.getKey(), f == 1 || debut < k && j.get(debut).matches("les|mes|nos"), debut, k + mots.size()));
+                    }
+                }
+        }
+        mentions.sort(java.util.Comparator.comparingInt(Mention::debut));
+
+        Set<Integer> appeles = new TreeSet<>(), cites = new TreeSet<>(), exclus = new TreeSet<>();
+        Set<String> metiersTous = new TreeSet<>(), metiersUn = new TreeSet<>();
+        boolean[] vocatif = new boolean[mentions.size()];
+        for (int i = 0; i < mentions.size(); i++) {
+            Mention m = mentions.get(i);
+            // À gauche : un début de phrase, une ponctuation ou une interjection (« hé », « merci »), ou une liste de noms appelés (« Bertrand et Raoul »).
+            int g = m.debut() - 1;
+            while (g >= 0 && INTERJECTIONS.contains(j.get(g))) g--;
+            boolean gauche = g < 0 || ponctuation(j.get(g)) || g < m.debut() - 1 && INTERJECTIONS.contains(j.get(g + 1));
+            if (!gauche && i > 0 && vocatif[i - 1] && (j.get(g).equals("et") || j.get(g).equals(",")) && mentions.get(i - 1).fin() == g) gauche = true;
+            // À droite : pas un verbe dont il serait le sujet (« Raoul est où ? »).
+            boolean droite = m.fin() >= j.size() || !TROISIEME_PERSONNE.contains(j.get(m.fin()));
+            vocatif[i] = gauche && droite;
+            // « sauf Raoul », « à part Raoul » : juste avant (ou dans une liste qui suit « sauf »).
+            boolean sauf = false;
+            for (int k = Math.max(0, m.debut() - 4); k < m.debut(); k++)
+                if (SAUF.contains(j.get(k)) || j.get(k).equals("part") && k > 0 && j.get(k - 1).equals("a")) sauf = true;
+            if (m.qui() >= 0) {
+                if (sauf) exclus.add(m.qui());
+                else if (vocatif[i]) appeles.add(m.qui());
+                else cites.add(m.qui());
+            } else if (vocatif[i] && !sauf) (m.pluriel() ? metiersTous : metiersUn).add(m.metier());
+        }
+        cites.removeAll(appeles);
+        String n = normaliser(texte);
+        boolean tous = GROUPES.stream().anyMatch(x -> dit(n, x));
+        boolean pluriel = j.stream().anyMatch(w -> w.equals("vous") || w.equals("tous") || w.equals("toutes")
+                || w.length() > 3 && w.endsWith("ez") && !Set.of("chez", "assez", "allez").contains(w));
+        boolean demande = j.stream().anyMatch(DEMANDES::contains) || DEMANDES_FORMULES.stream().anyMatch(x -> dit(n, x));
+        return new Adresse(appeles, cites, exclus, tous, metiersTous, metiersUn, pluriel, demande);
     }
 }

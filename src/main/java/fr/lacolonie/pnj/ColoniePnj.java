@@ -150,10 +150,12 @@ public class ColoniePnj {
             if (n > 0) Travailleur.signaler(p, "✉ " + n + (n > 1 ? " lettres t'attendent" : " lettre t'attend") + " à ton poste de travail.");
             // Une fois par joueur : on peut parler à ses ouvriers au micro, et ce que ça implique (sa voix part vers un service en ligne).
             var donnees = p.getPersistentData();
-            if (Voix.pret && ReglagesIA.actuel.ecoutePossible() && !donnees.getBoolean("colonie_pnj_micro")) {
-                donnees.putBoolean("colonie_pnj_micro", true);
-                p.sendSystemMessage(Component.literal("🎙 Nouveau : tu peux parler à tes ouvriers au micro (Simple Voice Chat). Regarde l'un d'eux, de près, et parle : "
-                        + "il te répond à voix haute. Seul ce que tu dis ou écris à tes propres ouvriers part vers un service en ligne (Groq), pour qu'ils te comprennent ; "
+            if (Voix.pret && ReglagesIA.actuel.ecoutePossible() && !donnees.getBoolean("colonie_pnj_micro2")) {
+                donnees.putBoolean("colonie_pnj_micro2", true);
+                p.sendSystemMessage(Component.literal("🎙 Tu peux parler à tes ouvriers au micro (Simple Voice Chat) : regarde celui à qui tu parles, "
+                        + "ou appelle-le par son prénom ; « les gars » s'adresse à tous ceux qui t'entendent. Ils répondent à voix haute. "
+                        + "Quand un autre joueur est près de toi, il faut regarder un de tes ouvriers pour qu'ils t'écoutent. "
+                        + "Seul ce que tu dis ou écris à tes propres ouvriers part vers un service en ligne (Groq), pour qu'ils te comprennent ; "
                         + "leurs réponses sont mises en voix par Google. Rien d'autre n'est envoyé.")
                         .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
             }
