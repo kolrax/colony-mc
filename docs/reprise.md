@@ -1,9 +1,9 @@
 # Reprise : où on en est
 
-Mise à jour : 11/10/2026 soir. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 11/10/2026, 21 h UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.8.0** (`mod-npc/gradle.properties`, `mod_version`). C'est aussi la version installée sur le serveur.
+- Mod `colonie_pnj` : **0.8.2** dans le dépôt (commité, testé, PAS ENCORE RELU ni livré). Sur le serveur : **0.8.1** (livrée le 11/10 à 19 h 21 UTC).
 - Modpack : **0.4.8** (d'après `docs/journal.md`). Il n'a pas à changer tant que le client ne change pas (canal réseau toujours `"6"`).
 - Serveur : MintServers, monde de test **`test-andesite`** (jetable, génération finale). Le vrai monde sera créé à l'ouverture (vendredi 16/10 au soir ou samedi).
 
@@ -18,23 +18,22 @@ Mise à jour : 11/10/2026 soir. Une page à lire en début de session, avec `doc
 - **IA en option** (Groq pour la conversation et l'écoute, Whisper pour le micro, Gemini pour la voix), avec quotas gratuits ; sans clé, tout marche sans IA. Micro et voix par Simple Voice Chat. « À qui parle le chef » : formule apprise croisée avec l'IA.
 - **Admin** : commande `/pnj` (chercheur, liste, diag, ia, panneau, recharger) et panneau web intégré au serveur (port 25776).
 
-## Tests (au 11/10)
-- 52 tests JUnit verts (`./gradlew build`).
-- 65 tests en jeu verts (`rm -rf run/world && ./gradlew runGameTestServer`) : 36 TestsJeu, 16 TestsIA, 13 TestsRepertoire.
+## Tests (au 11/10, 21 h UTC)
+- 60 tests JUnit verts (`./gradlew build`).
+- 71 tests en jeu verts (`rm -rf run/world && ./gradlew runGameTestServer`) : 38 TestsJeu, 16 TestsIA, 14 TestsRepertoire, 3 TestsCharge. 5 passages verts de suite.
+- Mesure (monde plat de test, 200 ticks) : part du mod ≈ 1,6 à 2,4 ms/tick en moyenne à 50 PNJ (pire 6 à 17 ms) ; à 100 PNJ 2,2 à 4,4 ms, mais 2 pics à ~100 ms sur 4 passages (non analysés).
 
-## Prochaine étape (lot 1 de `docs/plan.md` : fiabilité et performance)
-1. **Banc de charge** : une commande de test qui fait apparaître N ouvriers au travail et mesure le temps par tick (MSPT) et la part du mod.
-2. **50 PNJ sans ralentissement** : objectif, la part du mod sous 10 ms par tick pour 50 PNJ.
-3. **Déblocage** : il creuse ou pose des blocs pour sortir ; en dernier recours, téléportation au poste avec un message (exception accordée le 11/10).
-4. Plus de morts dues à un bug (chutes, noyade, lave, faim).
+## Prochaine étape (exacte)
+1. **Relire puis livrer la 0.8.2** : faire relire par le `relecteur` le dernier commit (Corbeau.arrivee/envol, Travailleur.ecouter, Consignes Faire.message, ColoniePnj.banc/finBanc, Monnaie.paieEnRetard). Puis livrer sur le serveur (pas de modpack : le client ne change pas).
+   - **Envoi du jar depuis le cloud** : `panel.py upload` échoue (connexion coupée vers le nœud). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods.
+2. **Vraie mesure sur test-andesite** : `python3 tools/panel.py cmd "pnj banc 50 tous X Y Z"` (près du spawn, sur une case d'air sans coffre voisin), attendre ~1 min, `pnj charge`, lire le journal, puis `pnj banc fin`. Personne ne doit être connecté.
+3. Analyser les pics (~100 ms à 100 PNJ, pire du cerveau et des chemins) et optimiser (points chauds : `Actions.chercherArbre` rayon 24, `Monde.chercherBloc`, `ColoniePnj.tous()`, chunks forcés par PNJ).
+4. Puis lot 1 suite : déblocage, morts dues à un bug.
 
-## Fichiers à ouvrir pour cette étape
-- `mod-npc/src/main/java/fr/lacolonie/pnj/Travailleur.java` : `customServerAiStep()` (la boucle de tick du PNJ), `tickCorps()`, `forcerChunk()`.
-- `mod-npc/src/main/java/fr/lacolonie/pnj/Cerveau.java` : `penser()` et `decider()` (toutes les 10 ticks).
-- `mod-npc/src/main/java/fr/lacolonie/pnj/ColoniePnj.java` : `commandes()` (la commande `/pnj`, où ajouter le banc), le `ServerTickEvent.Post`, `tous()`.
-- `mod-npc/src/main/java/fr/lacolonie/pnj/TestsJeu.java` : `employe()` et `sol()` pour faire apparaître des ouvriers en test.
-- `mod-npc/src/main/java/fr/lacolonie/pnj/Monde.java` et `Itineraire.java` : recherches de blocs et chemins, suspects pour la charge ; `Actions.java` (`Aller.coince()`) pour le déblocage.
+## Fichiers à ouvrir
+- Mesure : `Charge.java`, `TestsCharge.java`, `ColoniePnj.java` (`banc`, `finBanc`, `charge`).
+- Points chauds : `Actions.java` (`chercherArbre`), `Monde.java`, `Cerveau.java`, `Itineraire.java`, `Travailleur.java` (`forcerChunk`).
 - `docs/carte-du-code.md` pour le reste.
 
 ## Session en cours
-- 11/10 19 h UTC : correction de l'erreur IA HTTP 400 (schéma Groq) en cours.
+- aucune.

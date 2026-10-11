@@ -29,3 +29,15 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Le JDK Windows est retiré de `mod-npc/gradle.properties` (réglé dans `~/.gradle/gradle.properties` sur le PC) : plus besoin de `-Dorg.gradle.java.home` dans le cloud.
 - Routine « Colonie - développement autonome du mod » : toutes les 3 heures (à hh:59 UTC), modèle Sonnet 5.5, environnement « La Colonie », sans connecteur. Verrou `docs/EN-COURS` contre deux sessions en même temps.
 - Prochaine étape : lot 1 (banc de charge, 50 PNJ sans lag, déblocage).
+
+## 2026-10-11 19 h - 21 h UTC : session routine (cloud)
+- **Carte du code** (`docs/carte-du-code.md`) et **fiche de reprise** (`docs/reprise.md`) écrites.
+- **Incident corrigé, version 0.8.1 livrée** : cet après-midi, une dizaine de conversations IA perdues (Groq HTTP 400, « le JSON ne suit pas le schéma » : le modèle mettait un id du répertoire dans `type`). Maintenant la réponse est rattrapée (`failed_generation`), un id du répertoire dans `type` devient `faire`, un type vraiment inconnu renvoie à l'interpréteur sans IA, et la consigne est précisée. Relu, corrigé après relecture. 55 JUnit, 65 en jeu.
+  - Livrée à 19 h 21 UTC (personne connecté), « Done » sans erreur. `panel.py upload` est bloqué depuis le cloud (connexion coupée vers le nœud) : jar envoyé par `panel.py write` dans /mods-off, taille vérifiée (578 910 octets), puis `mv`. Modpack inchangé.
+- **Lot 1, banc de charge fait** (commité, version 0.8.2, pas encore relu dans sa dernière forme ni livré) : classe `Charge` (mesure par fenêtre de 100 ticks, découpée par partie), `/pnj banc <N> [metier|tous] [x y z]`, `/pnj banc fin`, `/pnj charge`, tests en jeu à 10/50/100 PNJ. Première relecture : 5 corrections faites (fin sans envol de corbeaux, « sans paie » qui débordait et mettait les PNJ en grève, second banc refusé, emplacement vérifié, pas de ramassage).
+  - Mesures (monde plat de test, 200 ticks, JIT froid, donc un minimum) : part du mod à 10 PNJ 0,3-0,4 ms ; à 50 PNJ 1,6-2,4 ms en moyenne, pire 6-17 ms ; à 100 PNJ 2,2-4,4 ms, avec 2 pics vers 100 ms sur 4 passages.
+- **Deux tests en jeu instables, causes trouvées et corrigées** (pas des « flakes ») :
+  - le corbeau apparaissait dans un tronçon inactif et restait figé : il part maintenant d'un point dont tout le trajet est actif, sinon la lettre est livrée tout de suite ;
+  - un messager ne rattrapait jamais un ouvrier qui marche : l'ouvrier hélé s'arrête maintenant pour écouter. Stress 40 copies : 2 à 8 échecs sur 40 avant, 0 après.
+  - 2 nouveaux tests, qui échouaient sur l'ancien code. Total : 60 JUnit, 71 en jeu, 5 passages verts de suite.
+- Reste / prochaine étape exacte : voir `docs/reprise.md` (relire puis livrer 0.8.2, vraie mesure avec `/pnj banc 50` sur test-andesite, analyser les pics).
