@@ -41,3 +41,4 @@ Aucun code du mod touché, aucune action sur le serveur.
   - un messager ne rattrapait jamais un ouvrier qui marche : l'ouvrier hélé s'arrête maintenant pour écouter. Stress 40 copies : 2 à 8 échecs sur 40 avant, 0 après.
   - 2 nouveaux tests, qui échouaient sur l'ancien code. Total : 60 JUnit, 71 en jeu, 5 passages verts de suite.
 - Reste / prochaine étape exacte : voir `docs/reprise.md` (relire puis livrer 0.8.2, vraie mesure avec `/pnj banc 50` sur test-andesite, analyser les pics).
+- Point du jour envoyé 2026-10-11
