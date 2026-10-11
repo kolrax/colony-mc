@@ -38,6 +38,15 @@ ORDRES_PL = ["suivez-moi", "venez avec moi", "attendez ici", "restez là", "rent
              "venez ici", "arrêtez de me suivre", "au boulot", "revenez au poste"]
 QUESTIONS = ["ça va ?", "tu as faim ?", "t'en es où ?", "qu'est-ce que tu fais ?", "pourquoi tu ne travailles pas ?", "tu es fatigué ?",
              "t'as besoin de quelque chose ?", "tout va bien ?", "tu as fini ?", "où tu vas ?", "tu as combien de fer ?"]
+# Les actions du répertoire (0.8.0) : pour tous, et propres à un métier.
+ACTIONS = ["danse", "garde à vous", "assieds-toi", "fais le cochon", "raconte une blague", "siffle un air", "mets-toi derrière moi", "tais-toi",
+           "fais des pompes", "va là-bas", "salue-moi", "fais coucou", "lève les mains", "chante-nous quelque chose", "fige-toi", "regarde-moi",
+           "fais la poule", "à genoux", "joue de la flûte", "tourne-toi", "fais le mort", "donne-moi ton pain", "allonge-toi", "fais une révérence"]
+ACTIONS_PL = ["dansez", "garde à vous", "asseyez-vous", "en rang", "applaudissez", "en file indienne", "faites un cercle autour de moi",
+              "taisez-vous", "repos", "rompez", "à genoux", "marchez au pas", "faites des pompes", "mettez-vous en rang"]
+ACTIONS_METIER = {"mineur": ["mine ce bloc", "creuse un tunnel par là", "pose des torches", "creuse un trou ici", "éclaire le coin"],
+                  "bucheron": ["abats cet arbre", "replante des arbres", "coupe les arbres autour", "débroussaille un peu"],
+                  "guerrier": ["lève ton bouclier", "en garde", "attaque ce zombie", "tiens la position", "charge", "présentez armes"]}
 POLITESSE = ["Merci !", "Merci beaucoup.", "Bien joué.", "Bravo !", "Beau travail.", "Salut !", "Bonjour !", "Bonsoir."]
 
 
@@ -165,6 +174,27 @@ def familles():
                            "Et ensuite, reviens me voir.", "Merci, et dépêche-toi."]):
         ajoute("suite", f"U{i + 1}", lambda e, c, t=t: (t, "suite"))
 
+    # Les actions du répertoire (0.8.0) : en le regardant, par son prénom, au groupe, au métier, et les remarques sur elles.
+    ajoute("rep_regard", "AR1", lambda e, c: (cap(fin(R.choice(ACTIONS))), "regarde"))
+    ajoute("rep_regard", "AR2", lambda e, c: (f"Allez, {fin(R.choice(ACTIONS))}", "regarde"))
+    ajoute("rep_regard", "AR3", lambda e, c: (f"{cap(R.choice(ACTIONS))}, s'il te plaît.", "regarde"))
+    ajoute("rep_regard", "AR4", lambda e, c: (f"Tu peux {R.choice(['danser', 'te mettre au garde-à-vous', 't asseoir', 'faire le cochon', 'chanter', 'siffler'])} ?", "regarde"))
+    ajoute("rep_vocatif", "AV1", lambda e, c: (f"{c['prenom']}, {fin(R.choice(ACTIONS + ACTIONS_METIER[c['metier']]))}", "cible"))
+    ajoute("rep_vocatif", "AV2", lambda e, c: (f"{cap(R.choice(ACTIONS))}, {c['prenom']} !", "cible"))
+    ajoute("rep_vocatif", "AV3", lambda e, c: (f"Hé {c['prenom']}, {R.choice(ACTIONS)} !", "cible"))
+    ajoute("rep_vocatif", "AV4", lambda e, c: (f"{c['prenom']} ! {cap(fin(R.choice(ACTIONS)))}", "cible"))
+    ajoute("rep_groupe", "AG1", lambda e, c: (f"Les gars, {fin(R.choice(ACTIONS_PL))}", "tous"))
+    ajoute("rep_groupe", "AG2", lambda e, c: (f"Tout le monde, {fin(R.choice(ACTIONS_PL))}", "tous"))
+    ajoute("rep_groupe", "AG3", lambda e, c: (f"{cap(R.choice(ACTIONS_PL))}, les gars !", "tous"))
+    ajoute("rep_groupe", "AG4", lambda e, c: (cap(fin(R.choice(["dansez", "asseyez-vous", "applaudissez", "taisez-vous", "faites des pompes", "mettez-vous en rang"]))), "tous"))
+    ajoute("rep_metier", "AM1", lambda e, c: (cap(fin(R.choice(ACTIONS_METIER[c['metier']]))), "metier_un"))
+    ajoute("rep_metier", "AM2", lambda e, c: (f"Il faudrait que quelqu'un {R.choice({'mineur': ['pose des torches', 'creuse un tunnel'], 'bucheron': ['abatte cet arbre', 'replante des arbres'], 'guerrier': ['lève son bouclier', 'tienne la position']}[c['metier']])}.", "metier_un"))
+    ajoute("rep_autre", "AA1", lambda e, c: (cap(fin(R.choice(ACTIONS_METIER[c['autre']]))), "metier_autre"))
+    for i, t in enumerate(["Il danse comme un pied, celui-là.", "{N} chante faux, c'est terrible.", "Regarde-le faire le pitre.", "{N} fait encore le cochon.",
+                           "Elle siffle tout le temps, celle-là.", "Il est toujours au garde-à-vous, {N}.", "Je vais danser un peu.", "Je m'assieds deux minutes.",
+                           "Je chante faux, hein ?", "Il raconte des blagues nulles."]):
+        ajoute("rep_remarque", f"AK{i + 1}", lambda e, c, t=t: (t.replace("{N}", c["prenom"]), "personne"))
+
     # Des bruits, des chansons.
     for i, t in enumerate(["La la la.", "Allez allez allez !", "Oh non !", "Aïe !", "Ah ah ah !", "Hmm.", "Ouais ouais.", "Yes !", "Oh là là."]):
         ajoute("bruit", f"B{i + 1}", lambda e, c, t=t: (t, "personne"))
@@ -192,23 +222,24 @@ def joueurs(n, pres=False):
 def situation(cat, regle, fn):
     """Une situation de cette catégorie, ou None si elle n'a pas de sens (pas assez d'ouvriers, etc.)."""
     n = R.choices([1, 2, 3, 4, 5], weights=[12, 28, 30, 18, 12])[0]
-    if cat in ("deux_noms", "groupe_sauf", "autre_metier", "pluriel") and n < 2:
+    if cat in ("deux_noms", "groupe_sauf", "autre_metier", "pluriel", "rep_autre") and n < 2:
         n = R.choice([2, 3, 4])
     e = equipe(n)
     cible = R.choice(e)
     micro = R.random() < 0.85
     js = joueurs(R.choices([0, 1, 2], weights=[60, 30, 10])[0])
     vu = None
-    if cat in ("regard", "autre_metier"):
+    if cat in ("regard", "autre_metier", "rep_regard", "rep_autre"):
         vu = cible
-    elif cat in ("vocatif", "groupe", "groupe_sauf", "deux_noms", "metier", "pluriel", "remarque", "soliloque", "bruit", "reponse", "suite"):
+    elif cat in ("vocatif", "groupe", "groupe_sauf", "deux_noms", "metier", "pluriel", "remarque", "soliloque", "bruit", "reponse", "suite",
+                 "rep_vocatif", "rep_groupe", "rep_remarque"):
         vu = R.choice([None, None, cible, R.choice(e)])
-    if cat == "autre_metier":
+    if cat in ("autre_metier", "rep_autre"):
         autres = [m for m in METIERS if m != cible["metier"]]
         cible["autre"] = R.choice(autres)
         if R.random() < 0.8 and not any(x["metier"] == cible["autre"] for x in e if x is not cible):
             R.choice([x for x in e if x is not cible])["metier"] = cible["autre"]
-    if cat == "sans_regard":
+    if cat in ("sans_regard", "rep_metier"):
         js, vu = [], None
         micro = True
     if cat == "autre_joueur":
@@ -240,10 +271,10 @@ def situation(cat, regle, fn):
             regarder(e, vu)
     # Écrit dans la fenêtre d'un ouvrier (celui sur qui il a cliqué : il le regarde).
     if not micro:
-        if cat in ("autre_joueur", "bruit", "soliloque", "sans_regard"):
+        if cat in ("autre_joueur", "bruit", "soliloque", "sans_regard", "rep_metier"):
             micro = True
         else:
-            fen = cible if cat in ("regard", "autre_metier", "reponse", "suite") else R.choice(e)
+            fen = cible if cat in ("regard", "autre_metier", "reponse", "suite", "rep_regard", "rep_autre") else R.choice(e)
             fen["fenetre"] = True
             if vu is None or vu is not fen:
                 for x in e:

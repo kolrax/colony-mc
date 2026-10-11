@@ -64,6 +64,14 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Banc photo des gestes des ouvriers (développement) : un monde solo, une capture par rangée de gestes, puis il quitte.
+        photos {
+            client()
+            gameDirectory = project.file('run-photos')
+            programArguments.addAll '--quickPlaySingleplayer', 'photos', '--width', '1280', '--height', '720'
+            systemProperty 'colonie.photos', 'true'
+        }
+
         server {
             server()
             programArgument '--nogui'

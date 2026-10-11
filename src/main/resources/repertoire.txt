@@ -174,7 +174,7 @@ guetter | tous | guetter l'horizon, la main en visière | geste guetter duree=8s
 ne_regarde_pas | tous | détourner le regard | regarder dos duree=5s | ne me regarde pas ; arrête de me regarder ; détourne les yeux ; regarde ailleurs
 
 ## Déplacements
-aller_la | tous | aller là où regarde le chef, puis y rester | aller la tenu | va là bas ; va là ; allez là bas ; va ici ; place toi là ; mets toi là ; va par là ; vas y ; file là bas ; poste toi là bas ; installe toi là | J'y vais.
+aller_la | tous | aller là où regarde le chef, puis y rester | aller la tenu | va là bas ; va là ; allez là bas ; va ici ; place toi là ; mets toi là ; va par là ; file là bas ; poste toi là bas ; installe toi là | J'y vais.
 aller_voir_la | tous | aller voir ce qu'il y a là où regarde le chef, puis revenir à ce qu'il faisait | aller la | va voir là bas ; va voir ce que c'est ; va jeter un oeil ; va inspecter ; va vérifier là bas ; va voir ce qui se passe | Je vais voir.
 venir_pres | tous | venir tout près du chef | aller chef | approche ; approchez ; viens plus près ; rapproche toi ; avance vers moi ; colle moi ; viens à côté de moi ; à mes côtés | Me voilà.
 derriere | tous | se placer derrière le chef et y rester | aller derriere tenu | derrière moi ; mets toi derrière moi ; place toi derrière moi ; reste derrière moi ; passe derrière moi ; à l'arrière | Derrière toi, chef.
@@ -344,7 +344,7 @@ heure | tous | dire l'heure qu'il est | info heure | quelle heure est il ; il es
 meteo | tous | dire le temps qu'il fait | info meteo geste=guetter | quel temps fait il ; il fait beau ? ; il pleut ? ; il fait quel temps ; il y a de l'orage ? ; il neige ? ; comment est le ciel | Voyons…
 jour | tous | dire depuis combien de jours dure le monde et s'il fait jour | info jour | quel jour sommes nous ; on est quel jour ; quel jour on est ; combien de jours ; c'est le jour ou la nuit |
 lune | tous | dire la phase de la lune | info lune geste=pointer regard=ciel | la lune ; quelle lune ; c'est la pleine lune ; phase de la lune ; nouvelle lune |
-ou_poste | tous | dire où est le poste et le montrer du doigt | info poste geste=pointer | où est le poste ; où est le bureau ; c'est par où le poste ; dans quelle direction est le poste ; la base est où ; on est loin du poste ; où est la base ; où est la maison | Le poste…
+ou_poste | tous | dire où est le poste et le montrer du doigt | info poste geste=pointer | où est le poste ; où se trouve le poste ; où est le bureau ; c'est par où le poste ; dans quelle direction est le poste ; la base est où ; on est loin du poste ; où est la base ; où est la maison | Le poste…
 ou_lit | tous | dire où est son lit | info lit geste=pointer | où est ton lit ; tu as un lit ; où dors tu ; tu dors où |
 ou_cible | tous | dire où est un autre ouvrier ou un joueur, et le montrer du doigt | info cible geste=pointer | où est @ ; tu as vu @ ; sais tu où est @ ; où est passé @ ; où est passée @ ; il est où @ ; elle est où @ ; où sont les autres ; où sont mes ouvriers |
 ou_chef | tous | dire au chef où il se trouve | info position geste=pointer | où sommes nous ; où on est ; où suis je ; on est où ; nos coordonnées ; ta position ; donne ta position |
@@ -356,7 +356,7 @@ animaux | tous | dire quels animaux il voit alentour | info animaux geste=guette
 joueurs_proches | tous | dire quels autres joueurs sont dans les parages | info joueurs geste=guetter | il y a quelqu'un ; tu vois quelqu'un ; qui est là ; il y a des joueurs ; on est seuls |
 lumiere | tous | dire s'il fait assez clair pour être à l'abri des monstres | info lumiere geste=guetter | il fait sombre ; il fait noir ; on y voit assez ; c'est assez éclairé ; il fait clair |
 eau_proche | tous | dire où est l'eau la plus proche | info eau geste=pointer | il y a de l'eau ; où est l'eau ; où boire ; une rivière par ici ; un lac par ici |
-sac | tous | dire ce qu'il a dans son sac | info sac geste=montrer remplace=sac | qu'est ce que tu portes ; que transportes tu ; qu'as tu sur toi ; tu as quoi sur toi ; inventaire à voix haute ; dis moi ce que tu as ; liste tes affaires |
+sac | tous | dire ce qu'il a dans son sac | info sac geste=montrer remplace=sac | qu'est ce que tu portes ; qu'est ce que tu as sur toi ; que transportes tu ; qu'as tu sur toi ; tu as quoi sur toi ; inventaire à voix haute ; dis moi ce que tu as ; liste tes affaires |
 sante | tous | dire comment il va (vie, faim, fatigue) | info sante | tu es blessé ; tu as mal ; tu es en forme ; ta santé ; tu saignes ; tes blessures ; tu as besoin de soins |
 outil_etat | tous | dire dans quel état est son outil | info outil geste=montrer | ton outil est usé ; dans quel état est ton outil ; ta pioche est usée ; ta hache est usée ; ton épée est usée ; il te faut un nouvel outil |
 armure | tous | dire quelle armure il porte | info armure geste=fier | tu as une armure ; quelle armure ; ton armure ; tu es protégé |

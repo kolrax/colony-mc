@@ -141,6 +141,12 @@ public class TestsIA {
             dest.add(qui.get(0));
             reps.add(rep(qui.get(0), "Compris chef, je te ramène dix lingots de fer pour tes pioches.", "fier",
                     "{\"type\":\"missions\",\"missions\":[{\"id\":\"fer\",\"mode\":\"quantite\",\"nombre\":10}],\"ajouter\":false,\"debut\":0,\"fin\":0,\"jours\":0}"));
+        } else if (parole.contains("piquet")) {
+            // Le répertoire doit lui avoir été proposé (dans la consigne et dans le schéma), comme au vrai Groq.
+            boolean propose = systeme.contains("garde_a_vous") && schema.toString().contains("\"garde_a_vous\"");
+            dest.add(qui.get(0));
+            reps.add(rep(qui.get(0), propose ? "À vos ordres, chef !" : "Hein ?", "fier", propose
+                    ? "{\"type\":\"faire\",\"faire\":\"garde_a_vous\",\"cible\":\"\",\"nombre\":0,\"duree\":0,\"missions\":[],\"ajouter\":false,\"debut\":0,\"fin\":0,\"jours\":0}" : ""));
         } else if (parole.contains("Suis-moi")) {
             dest.add(qui.get(0));
             reps.add(rep(qui.get(0), "J'arrive, chef, je te suis !", "joyeux", "{\"type\":\"suivre\",\"missions\":[],\"ajouter\":false,\"debut\":0,\"fin\":0,\"jours\":0}"));
@@ -455,6 +461,18 @@ public class TestsIA {
         return "autour=" + Dialogue.autour(chef, vise).size() + " attente=" + Dialogue.EN_ATTENTE.contains(chef.getUUID())
                 + " conversation=" + IA.conversationDisponible() + " écoute=" + IA.ecouteIADisponible()
                 + " journal=" + Dialogue.journal().stream().filter(x -> chef.getName().getString().equals(x.get("joueur"))).findFirst().map(Object::toString).orElse("-");
+    }
+
+    /** Une phrase qu'aucune formule du répertoire ne reconnaît : l'IA y voit le garde-à-vous et le déclenche. */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
+    public static void iaDeclencheUneActionDuRepertoire(GameTestHelper h) {
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 34);
+        etapes(h, chef, e,
+                () -> { regarder(chef, e[1]); Dialogue.parler(chef, "Mets-toi droit comme un piquet", e[1], true); },
+                () -> h.assertTrue(e[1].consigne != null && e[1].consigne.id.equals("garde_a_vous"), "garde-à-vous par l'IA : " + IA.echange(e[1]) + " (" + diag(chef, e[1]) + ")"),
+                () -> h.assertTrue(e[1].geste().equals("garde_a_vous"), "et il le fait : " + e[1].geste()),
+                () -> { for (Travailleur t : e) t.discard(); });
     }
 
     /** Le chef regarde cet ouvrier droit dans les yeux. */

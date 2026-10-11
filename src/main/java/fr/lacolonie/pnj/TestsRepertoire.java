@@ -1,0 +1,270 @@
+package fr.lacolonie.pnj;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import static fr.lacolonie.pnj.TestsIA.attendre;
+import static fr.lacolonie.pnj.TestsIA.equipe;
+import static fr.lacolonie.pnj.TestsIA.etapes;
+import static fr.lacolonie.pnj.TestsIA.regarder;
+
+/**
+ * Les actions du répertoire, jouées pour de vrai (sans IA : l'interpréteur les reconnaît ; un test avec l'IA est dans
+ * le lot « ia »). Chaque test a son coin de monde plat, loin des autres (TestsIA.equipe).
+ */
+@GameTestHolder(ColoniePnj.MODID)
+@PrefixGameTestTemplate(false)
+public class TestsRepertoire {
+
+    static String c(Travailleur t) { return t.consigne == null ? "aucune" : t.consigne.id; }
+
+    static void fin(Travailleur[] e) { for (Travailleur t : e) t.discard(); }
+
+    /** L'exemple de KOLRAX : « garde à vous », il se fige au garde-à-vous jusqu'à « repos ». */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void gardeAVousPuisRepos(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 21);
+        Travailleur raoul = e[1];
+        Vec3[] avant = new Vec3[1];
+        etapes(h, chef, e,
+                () -> { regarder(chef, raoul); raoul.parler(chef, "Garde à vous !"); },
+                () -> h.assertTrue(c(raoul).equals("garde_a_vous") && raoul.geste().equals("garde_a_vous"), "garde-à-vous : " + c(raoul) + " / " + raoul.geste()),
+                () -> avant[0] = raoul.position(),
+                attendre(h, 80),
+                () -> h.assertTrue(raoul.position().distanceTo(avant[0]) < 0.3 && raoul.geste().equals("garde_a_vous"), "il ne bouge plus : " + raoul.position().distanceTo(avant[0])),
+                () -> raoul.parler(chef, "Repos !"),
+                () -> h.assertTrue(raoul.consigne == null && raoul.geste().isEmpty(), "repos : " + c(raoul) + " / " + raoul.geste()),
+                () -> fin(e));
+    }
+
+    /** Un salut pendant le garde-à-vous : il salue, puis reprend la posture. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void unGesteDansUnePosture(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 22);
+        Travailleur raoul = e[1];
+        etapes(h, chef, e,
+                () -> { regarder(chef, raoul); raoul.parler(chef, "Garde à vous !"); },
+                () -> h.assertTrue(c(raoul).equals("garde_a_vous"), "garde-à-vous : " + c(raoul)),
+                () -> raoul.parler(chef, "Salue-moi"),
+                () -> h.assertTrue(c(raoul).equals("salut_militaire") && raoul.geste().equals("salut_militaire"), "salut : " + c(raoul) + " / " + raoul.geste()),
+                attendre(h, 80),
+                () -> h.assertTrue(c(raoul).equals("garde_a_vous") && raoul.geste().equals("garde_a_vous"), "de retour au garde-à-vous : " + c(raoul) + " / " + raoul.geste()),
+                () -> fin(e));
+    }
+
+    /** « Fige-toi » : il arrête tout jusqu'à nouvel ordre ; « au travail » l'en libère. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void figeToiPuisAuTravail(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 23);
+        Travailleur bertrand = e[0];
+        Vec3[] avant = new Vec3[1];
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Fige-toi !"); },
+                () -> h.assertTrue(c(bertrand).equals("arret") && bertrand.action instanceof Consignes.Faire, "figé : " + c(bertrand) + " " + bertrand.action),
+                () -> avant[0] = bertrand.position(),
+                attendre(h, 100),
+                () -> h.assertTrue(bertrand.position().distanceTo(avant[0]) < 0.3, "il ne bouge plus"),
+                () -> bertrand.parler(chef, "Au travail !"),
+                () -> h.assertTrue(bertrand.consigne == null && bertrand.mode == Travailleur.Mode.TRAVAIL, "au travail : " + c(bertrand) + " " + bertrand.mode),
+                () -> fin(e));
+    }
+
+    /** « Mets-toi derrière moi » : il y va et y reste. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void derriereMoi(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 24);
+        Travailleur odon = e[2];
+        Vec3[] place = new Vec3[1];
+        etapes(h, chef, e,
+                () -> {
+                    chef.setYRot(0); // face au sud : derrière lui, c'est au nord
+                    chef.setXRot(0);
+                    place[0] = chef.position().add(0, 0, -2);
+                    odon.parler(chef, "Mets-toi derrière moi");
+                },
+                () -> h.assertTrue(c(odon).equals("derriere"), "consigne : " + c(odon)),
+                () -> h.assertTrue(odon.position().distanceTo(place[0]) < 2.2, "derrière le chef : à " + odon.position().distanceTo(place[0])),
+                attendre(h, 60),
+                () -> h.assertTrue(odon.position().distanceTo(place[0]) < 2.2 && c(odon).equals("derriere"), "il y reste"),
+                () -> fin(e));
+    }
+
+    /** « Donne-moi ton pain » : il le met dans le sac du chef. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void donneMoiTonPain(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 25);
+        Travailleur odon = e[2];
+        odon.inventaire.addItem(new ItemStack(Items.BREAD, 6));
+        etapes(h, chef, e,
+                () -> { regarder(chef, odon); odon.parler(chef, "Donne-moi ton pain"); },
+                () -> h.assertTrue(chef.getInventory().countItem(Items.BREAD) == 6, "le chef a " + chef.getInventory().countItem(Items.BREAD) + " pains (" + c(odon) + ")"),
+                () -> h.assertTrue(odon.compter(Actions.Filtre.de("minecraft:bread")) == 0, "Odon n'en a plus"),
+                () -> fin(e));
+    }
+
+    /** « Attaque ce zombie » (en le regardant) : le guerrier va le tuer. */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void attaqueCeZombie(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 26);
+        Travailleur raoul = e[1];
+        raoul.inventaire.addItem(new ItemStack(Items.IRON_SWORD));
+        raoul.mode = Travailleur.Mode.ATTENDRE; // sans l'ordre, il resterait là (le zombie est hors de sa portée de garde)
+        Zombie[] z = new Zombie[1];
+        etapes(h, chef, e,
+                () -> {
+                    z[0] = EntityType.ZOMBIE.create(h.getLevel());
+                    Vec3 p = chef.position().add(0, 0, 16);
+                    z[0].moveTo(p.x, p.y, p.z, 180, 0);
+                    z[0].setNoAi(true); // il attend sagement qu'on vienne le chercher
+                    z[0].setPersistenceRequired();
+                    h.getLevel().addFreshEntity(z[0]);
+                },
+                () -> h.assertTrue(Monde.hostile(z[0]), "zombie prêt"),
+                () -> {
+                    Vec3 d = z[0].getEyePosition().subtract(chef.getEyePosition());
+                    chef.setXRot((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+                    chef.setYRot((float) Math.toDegrees(Math.atan2(d.z, d.x)) - 90f);
+                    raoul.parler(chef, "Attaque ce zombie !");
+                },
+                () -> h.assertTrue(c(raoul).equals("attaquer_la") || !z[0].isAlive(), "consigne : " + c(raoul)),
+                () -> h.assertTrue(!z[0].isAlive(), "le zombie est mort (vie " + z[0].getHealth() + ", " + c(raoul) + ")"),
+                () -> fin(e));
+    }
+
+    /** « Mine ce bloc » (en le regardant) : le mineur le casse et le ramasse. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void mineCeBloc(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 27);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.IRON_PICKAXE));
+        BlockPos[] b = new BlockPos[1];
+        etapes(h, chef, e,
+                () -> {
+                    b[0] = BlockPos.containing(chef.position().add(0, 0, 4));
+                    h.getLevel().setBlockAndUpdate(b[0], Blocks.STONE.defaultBlockState());
+                    Vec3 d = Vec3.atCenterOf(b[0]).subtract(chef.getEyePosition());
+                    chef.setXRot((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+                    chef.setYRot((float) Math.toDegrees(Math.atan2(d.z, d.x)) - 90f);
+                    bertrand.parler(chef, "Mine ce bloc");
+                },
+                () -> h.assertTrue(h.getLevel().getBlockState(b[0]).isAir(), "le bloc est cassé (" + c(bertrand) + ")"),
+                () -> h.assertTrue(bertrand.compter(Actions.Filtre.de("minecraft:cobblestone")) >= 1, "et ramassé"),
+                () -> fin(e));
+    }
+
+    /** « Les gars, en rang ! » au micro : chacun prend une place différente face au chef. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void enRang(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 28);
+        etapes(h, chef, e,
+                () -> { chef.setYRot(0); chef.setXRot(0); Dialogue.parler(chef, "Les gars, en rang !", null, true); },
+                () -> { for (Travailleur t : e) h.assertTrue(c(t).equals("en_rang"), t.prenom + " : " + c(t)); },
+                () -> {
+                    for (Travailleur t : e) h.assertTrue(t.consigne.lieu != null && t.position().distanceTo(Vec3.atBottomCenterOf(t.consigne.lieu)) < 1.5,
+                            t.prenom + " à sa place : " + t.position().distanceTo(Vec3.atBottomCenterOf(t.consigne.lieu)));
+                },
+                () -> {
+                    for (int i = 0; i < e.length; i++) for (int j = i + 1; j < e.length; j++)
+                        h.assertTrue(!e[i].consigne.lieu.equals(e[j].consigne.lieu), "des places différentes");
+                    h.assertTrue(e[1].geste().equals("garde_a_vous"), "au garde-à-vous dans le rang : " + e[1].geste());
+                },
+                () -> fin(e));
+    }
+
+    /** « Tais-toi » : plus un mot ; « tu peux parler » : il reparle. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void taisToi(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 29);
+        Travailleur bertrand = e[0];
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Tais-toi"); },
+                () -> h.assertTrue(bertrand.muet(), "il se tait"),
+                () -> bertrand.parler(chef, "Tu peux parler"),
+                () -> h.assertTrue(!bertrand.muet(), "il reparle"),
+                () -> fin(e));
+    }
+
+    /** Ce qu'il sait : l'heure, et où est le poste (il le montre du doigt). */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void questions(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 30);
+        Travailleur odon = e[2];
+        etapes(h, chef, e,
+                () -> { regarder(chef, odon); odon.parler(chef, "Quelle heure est-il ?"); },
+                () -> h.assertTrue(IA.echange(odon).contains("Il est"), "l'heure : " + IA.echange(odon)),
+                () -> odon.parler(chef, "Où est le poste ?"),
+                () -> h.assertTrue(IA.echange(odon).contains("Le poste est"), "le poste : " + IA.echange(odon)),
+                () -> h.assertTrue(odon.geste().equals("pointer"), "il le montre du doigt : " + odon.geste()),
+                () -> fin(e));
+    }
+
+    /** « Ouvre la porte » : il va à la porte la plus proche et l'ouvre. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void ouvreLaPorte(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 31);
+        Travailleur bertrand = e[0];
+        BlockPos[] p = new BlockPos[1];
+        etapes(h, chef, e,
+                () -> {
+                    p[0] = BlockPos.containing(bertrand.position().add(0, 0, -4));
+                    h.getLevel().setBlockAndUpdate(p[0], Blocks.OAK_DOOR.defaultBlockState());
+                    h.getLevel().setBlockAndUpdate(p[0].above(), Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+                    regarder(chef, bertrand);
+                    bertrand.parler(chef, "Ouvre la porte");
+                },
+                () -> h.assertTrue(h.getLevel().getBlockState(p[0]).getValue(DoorBlock.OPEN), "la porte est ouverte (" + c(bertrand) + ")"),
+                attendre(h, 40),
+                // Ouverte pour de bon (un ouvrier qui passe par une porte la referme derrière lui).
+                () -> h.assertTrue(h.getLevel().getBlockState(p[0]).getValue(DoorBlock.OPEN), "elle reste ouverte"),
+                () -> fin(e));
+    }
+
+    /** « Dis à Odon que le repas est prêt » : Bertrand va le lui dire. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void porterUnMessage(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 32);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
+                () -> h.assertTrue(c(bertrand).equals("message") || IA.echange(odon).contains("repas"), "consigne : " + c(bertrand)),
+                () -> h.assertTrue(IA.echange(odon).contains("le repas est prêt"), "Odon l'a appris : " + IA.echange(odon)),
+                () -> fin(e));
+    }
+
+    /** « Danse ! » : il danse dix secondes, puis reprend son travail tout seul. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void danseUnMoment(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 33);
+        Travailleur odon = e[2];
+        etapes(h, chef, e,
+                () -> { regarder(chef, odon); odon.parler(chef, "Danse !"); },
+                () -> h.assertTrue(odon.geste().equals("danser"), "il danse : " + odon.geste()),
+                attendre(h, 230),
+                () -> h.assertTrue(odon.consigne == null && !odon.geste().equals("danser"), "la danse est finie : " + c(odon)),
+                () -> fin(e));
+    }
+}

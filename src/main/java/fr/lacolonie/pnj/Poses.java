@@ -108,10 +108,14 @@ final class Poses {
             case "assis" -> { assis(c); c.brasD.rot(-0.6f, 0, 0.1f); c.brasG.rot(-0.6f, 0, -0.1f); }
             case "a_genoux" -> { genoux(c); c.brasD.rot(-0.2f, 0, 0.05f); c.brasG.rot(-0.2f, 0, -0.05f); }
             case "accroupi" -> {
-                pencher(c, 0.5f);
-                c.jambeD.rot(-0.9f, 0, 0.1f); c.jambeG.rot(-0.9f, 0, -0.1f);
-                c.brasD.rot(-0.9f, 0, 0.05f); c.brasG.rot(-0.9f, 0, -0.05f);
-                c.dy = -0.3f;
+                // Comme un joueur accroupi (les valeurs du jeu), un peu plus bas.
+                c.corps.xRot = 0.5f; c.corps.y = 3.2f;
+                c.tete.y = 4.2f;
+                c.brasD.y = c.brasG.y = 5.2f;
+                c.brasD.rot(0.4f, 0, 0.1f); c.brasG.rot(0.4f, 0, -0.1f);
+                c.jambeD.z = c.jambeG.z = 4f; c.jambeD.y = c.jambeG.y = 12.2f;
+                c.jambeD.rot(0, 0, 0.05f); c.jambeG.rot(0, 0, -0.05f);
+                c.dy = -0.2f;
             }
             case "allonge", "dormir" -> {
                 droit(c);
@@ -143,7 +147,7 @@ final class Poses {
             case "montrer" -> { c.brasD.rot(-1.1f, -0.25f, 0); c.brasG.rot(-1.1f, 0.25f, 0); }
             case "zombie" -> { c.brasD.rot(-PI / 2 + 0.05f * s2, 0, 0); c.brasG.rot(-PI / 2 - 0.05f * s2, 0, 0); c.tete.zRot = 0.15f; }
             case "salut_epee" -> { droit(c); viser(c.brasD, -0.5f, -2f, -7f); c.tete.xRot = 0; }
-            case "statue" -> { c.brasD.rot(PI - 0.15f, 0, 0.3f); c.brasG.rot(-0.2f, 0, -0.35f); c.tete.xRot = -0.4f; c.jambeG.rot(-0.25f, 0, -0.05f); }
+            case "statue" -> { c.brasD.rot(PI - 0.15f, 0, -0.35f); c.brasG.rot(-0.2f, 0, -0.35f); c.tete.xRot = -0.4f; c.jambeG.rot(-0.25f, 0, -0.05f); }
             case "chut" -> { viser(c.brasD, -0.5f, -2.5f, -5f); }
             case "calin" -> { c.brasD.rot(-1.3f, 0.5f, 0); c.brasG.rot(-1.3f, -0.5f, 0); }
             case "crier" -> { viser(c.brasD, -2f, -2.5f, -5.5f); viser(c.brasG, 2f, -2.5f, -5.5f); c.brasD.yRot = -0.5f; c.brasG.yRot = 0.5f; c.tete.xRot = -0.3f; }
@@ -246,9 +250,9 @@ final class Poses {
             case "moulinet" -> { c.brasD.rot(-PI + 0.3f, 0, 0); c.brasD.yRot = t * 0.6f; c.tete.xRot = -0.3f; }
             case "victoire" -> { c.brasD.rot(PI - 0.15f - 0.35f * Math.max(0, s4), 0, -0.1f); c.brasG.rot(-0.1f, 0, -0.1f); c.tete.xRot = -0.25f; }
             case "compter" -> { c.brasD.rot(-1.0f, -0.3f, 0); c.brasG.rot(-1.0f + 0.15f * Math.max(0, sin(t * 0.8f)), 0.3f, 0); c.tete.xRot = 0.45f; }
-            case "s_incliner" -> { pencher(c, 0.7f * Math.min(1, Math.max(0, sin(t * 0.25f)) * 1.6f)); c.brasD.rot(0, 0, 0.05f); c.brasG.rot(0, 0, -0.05f); }
+            case "s_incliner" -> { pencher(c, 0.7f * incline(t)); c.brasD.rot(0, 0, 0.05f); c.brasG.rot(0, 0, -0.05f); }
             case "reverence" -> {
-                float h = Math.min(1, Math.max(0, sin(t * 0.2f)) * 1.5f);
+                float h = incline(t);
                 pencher(c, 0.8f * h);
                 c.brasD.rot(-0.9f * h, 0.6f * h, 0); c.brasG.rot(0.4f * h, 0, -0.5f * h);
                 c.jambeD.rot(-0.35f * h, 0, 0); c.jambeG.rot(0.25f * h, 0, 0);
@@ -318,6 +322,9 @@ final class Poses {
             default -> {}
         }
     }
+
+    /** Le salut qui s'incline : penché les trois quarts du temps, il se redresse un instant puis recommence (un cycle de 4 s). */
+    static float incline(float t) { return Math.clamp(1.6f * (0.5f + 0.5f * sin(t * 0.08f)) - 0.1f, 0f, 1f); }
 
     /** Ces gestes font tourner le corps entier sur lui-même (en degrés, selon le temps). */
     static float tourne(float t) { return (t * 18) % 360; }

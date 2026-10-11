@@ -497,6 +497,14 @@ final class Ordres {
         return false;
     }
 
+    /** Les mots sans « garde à vous » (son « vous » ne désigne personne). */
+    static List<String> sansGardeAVous(List<String> j) {
+        List<String> r = new ArrayList<>(j);
+        for (int k = 0; k + 2 < r.size(); k++)
+            if (r.get(k).equals("garde") && r.get(k + 1).equals("a") && r.get(k + 2).equals("vous")) { r.remove(k + 2); r.remove(k + 1); }
+        return r;
+    }
+
     /** Un nom (prénom ou métier) trouvé dans la phrase, des jetons {@code debut} à {@code fin} (exclu). */
     record Mention(int qui, String metier, boolean pluriel, int debut, int fin) {}
 
@@ -556,7 +564,8 @@ final class Ordres {
         cites.removeAll(appeles);
         String n = normaliser(texte);
         boolean tous = groupeAppele(j);
-        boolean pluriel = j.stream().anyMatch(w -> w.equals("vous") || w.equals("tous") || w.equals("toutes")
+        List<String> jv = sansGardeAVous(j);
+        boolean pluriel = jv.stream().anyMatch(w -> w.equals("vous") || w.equals("tous") || w.equals("toutes")
                 || w.length() > 3 && w.endsWith("ez") && !Set.of("chez", "assez", "allez").contains(w));
         // Un verbe à l'impératif, pas conjugué avec un sujet (« je mine », « il garde la base » ne sont pas des ordres).
         boolean demande = DEMANDES_FORMULES.stream().anyMatch(x -> dit(n, x));
@@ -566,7 +575,7 @@ final class Ordres {
             // Après un sujet (« je mine »), ou un article (« à la mine », « la garde »), ce n'est pas un ordre.
             demande = DEMANDES.contains(j.get(k)) && (s < 0 || !SUJETS.contains(j.get(s)) && !DETERMINANTS.contains(j.get(s)));
         }
-        boolean deuxieme = j.stream().anyMatch(DEUXIEME_PERSONNE::contains);
+        boolean deuxieme = jv.stream().anyMatch(DEUXIEME_PERSONNE::contains);
         boolean question = j.contains("?") || !j.isEmpty() && INTERROGATIFS.contains(j.get(0)) || dit(n, "est ce que", "est ce qu");
         // Un prénom ou « les gars » dans une phrase qui ne s'adresse à personne (« il est lent, Raoul ») : on parle d'eux, pas à eux.
         long noms = mentions.stream().mapToInt(m -> m.fin() - m.debut()).sum() + j.stream().filter(w -> ponctuation(w) || w.equals("et")).count();

@@ -1,0 +1,88 @@
+# Jeu à l'aveugle du répertoire : écrit après la mise au point, mesuré une seule fois, jamais corrigé dessus.
+# phrase | métier | action attendue (sans IA) — « - » : rien du répertoire. « ? » en fin d'attendu : l'IA seule peut comprendre (on mesure seulement si elle se la voit proposer).
+
+Allez hop, garde-à-vous ! | guerrier | garde_a_vous
+Au garde à vous, et que ça saute | guerrier | garde_a_vous
+Bon, repos | guerrier | annuler
+Ne bouge plus d'un poil | mineur | -
+Arrête tout ce que tu fais | mineur | arret
+Assis ! | bucheron | assis
+Pose-toi un peu, tu l'as mérité | mineur | assis
+Allonge-toi là | mineur | allonge
+Fais-nous une petite danse | mineur | danser
+Vas-y, danse pour voir | bucheron | danser
+Danse la gigue ! | mineur | gigue
+Chante-moi quelque chose de joyeux | mineur | chanter
+Une chanson à boire, allez ! | bucheron | chanson_a_boire
+Joue-moi un air de luth | mineur | luth
+Fais un peu de musique | guerrier | musique
+Imite le cochon, pour rire | mineur | imiter_cochon
+Fais le mouton | bucheron | imiter_mouton
+Miaule ! | mineur | imiter_chat
+Fais le loup | guerrier | imiter_loup
+Un petit rot ? | mineur | roter
+Mets-toi en garde ! | guerrier | en_garde
+Lève le bouclier ! | guerrier | bouclier
+Tue-le ! | guerrier | attaquer_la
+Nettoie le coin des monstres | guerrier | nettoyer
+Protège Odon | guerrier | proteger_cible
+Défends Bertrand | guerrier | proteger_cible
+Couvre-moi | guerrier | garde_du_corps
+Sus à l'ennemi ! | guerrier | attaquer_la
+Bats en retraite | guerrier | repli
+Creuse ici | mineur | miner_la
+Fais-moi un tunnel | mineur | tunnel
+Éclaire un peu, il fait noir ici | mineur | torches
+Abats-moi cet arbre | bucheron | abattre_la
+Replante, s'il te plaît | bucheron | planter
+Viens plus près | mineur | venir_pres
+Place-toi derrière moi | guerrier | derriere
+Recule un peu, tu me gênes | bucheron | reculer
+Grimpe là-haut | mineur | monter
+Abrite-toi, il pleut | mineur | s_abriter
+Va voir là-bas | guerrier | aller_voir_la
+Va rejoindre Raoul | mineur | aller_voir_cible
+Suis Odon | guerrier | suivre_cible
+Mettez-vous en rang | guerrier | en_rang
+En cercle autour de moi | mineur | en_cercle
+Passe-moi du pain | mineur | donner_nourriture
+File-moi ta hache | bucheron | donner_chef
+Vide tes poches | mineur | donner_tout
+Va déposer tout ça au poste | mineur | deposer
+Mange un morceau | bucheron | manger
+Sors ton épée | guerrier | montrer_arme
+Ouvrez la porte | mineur | ouvrir_porte
+Sonnez la cloche | guerrier | sonner_cloche
+Va te coucher | mineur | dormir
+Fais une petite sieste | bucheron | sieste
+Chut, tais-toi | mineur | silence
+Raconte-nous une blague | mineur | blague
+Une histoire, s'il te plaît | bucheron | histoire
+Un poème ! | mineur | poeme
+Un proverbe ? | bucheron | dicton
+Présente-toi à moi | mineur | presentation
+Il est quelle heure ? | mineur | heure
+Où se trouve le poste ? | mineur | ou_poste
+Où est passé Raoul ? | mineur | ou_cible
+Qu'est-ce que tu as sur toi ? | mineur | sac
+Tu as mal quelque part ? | guerrier | sante
+Dis à Raoul de venir | mineur | message
+Va dire bonjour à Odon | mineur | dire_bonjour_cible
+Applaudis Bertrand | mineur | applaudir_cible
+Arrête de chanter, par pitié | mineur | chanter (fin)
+Stop la musique | mineur | musique (fin)
+Tiens-toi droit comme un soldat | mineur | garde_a_vous ?
+Montre-moi comment tu te bats | guerrier | boxe
+Fais une prière pour nous | mineur | priere
+
+Il a l'air content, Odon | mineur | -
+On danse ce soir à la taverne | mineur | -
+J'ai envie de chanter | mineur | -
+Ce zombie là-bas, il est bizarre | guerrier | -
+Il pleut des cordes | mineur | -
+Je vais me coucher | mineur | -
+Où est-ce que j'ai mis ma pioche ? | mineur | -
+Ramène-moi vingt bûches de chêne | bucheron | -
+Garde toujours 64 charbons au dépôt | mineur | -
+Viens avec moi | mineur | -
+Rentre au poste, on a fini | mineur | -

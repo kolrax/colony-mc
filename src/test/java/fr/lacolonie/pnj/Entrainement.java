@@ -52,7 +52,7 @@ public class Entrainement {
 
     public static void main(String[] a) throws Exception {
         switch (a.length == 0 ? "code" : a[0]) {
-            case "code" -> code();
+            case "code" -> code(a.length > 1 ? Double.parseDouble(a[1]) : -1);
             case "ia" -> ia(a[1], Integer.parseInt(a[2]), a.length > 3 ? a[3] : "");
             case "fusion" -> fusion(a[1], a.length > 2 && a[2].equals("reels"), !(a.length > 2 && a[2].equals("essai")));
             case "bilan" -> bilan(a.length > 1 ? a[1] : "");
@@ -251,7 +251,8 @@ public class Entrainement {
                 seuilCode, bas, haut);
     }
 
-    static void code() throws Exception {
+    /** {@code force} : la régularisation imposée (-1 : choisie par validation croisée). */
+    static void code(double force) throws Exception {
         List<Cas> tous = charger("scenarios.json"), reels = charger("reels.json");
         List<Cas> ent = tous.stream().filter(c -> c.jeu().equals("entrainement")).toList(), test = tous.stream().filter(c -> c.jeu().equals("test")).toList();
         System.out.printf("%d situations d'entraînement, %d de test (familles jamais vues), %d réelles ; %d indices%n", ent.size(), test.size(), reels.size(),
@@ -274,6 +275,7 @@ public class Entrainement {
             System.out.printf("  régularisation %.1f : perte en validation croisée %.4f%n", lambda, perte / 5);
             if (perte < meilleurPerte) { meilleurPerte = perte; meilleurL = lambda; }
         }
+        if (force > 0) meilleurL = force;
         List<double[]> X = new ArrayList<>();
         List<Integer> y = new ArrayList<>();
         paires(ent, X, y);

@@ -159,6 +159,15 @@ public class ColoniePnj {
                         + "leurs réponses sont mises en voix par Google. Rien d'autre n'est envoyé.")
                         .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
             }
+            // Une fois par joueur : la nouveauté de la 0.8.0.
+            if (!donnees.getBoolean("colonie_pnj_repertoire")) {
+                donnees.putBoolean("colonie_pnj_repertoire", true);
+                p.sendSystemMessage(Component.literal("✦ Tes ouvriers savent maintenant faire " + Repertoire.TOUTES.size() + " actions en plus de leur travail : "
+                        + "« garde à vous », « repos », « assieds-toi », « danse », « fais le cochon », « mets-toi derrière moi », « donne-moi ton pain », "
+                        + "« raconte une blague », « où est le poste ? »… Le guerrier se bat sur ordre, le mineur creuse où tu regardes, le bûcheron abat l'arbre "
+                        + "que tu regardes. Demande-leur « que sais-tu faire ? ».")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
+            }
         });
     }
 

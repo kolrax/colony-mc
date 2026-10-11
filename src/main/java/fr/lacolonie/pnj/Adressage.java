@@ -60,7 +60,8 @@ final class Adressage {
             "proche_sans_regard", "distance", "nb_pnj",
             "joueur_proche", "regarde_joueur", "joueur_appele",
             "recent", "recent_x_adresse", "recent_autre", "question_pnj", "court_x_question_pnj",
-            "fenetre", "fenetre_autre", "micro", "seul_x_adresse", "fenetre_x_pas_son_metier", "son_metier_x_fenetre_autre");
+            "fenetre", "fenetre_autre", "micro", "seul_x_adresse", "fenetre_x_pas_son_metier", "son_metier_x_fenetre_autre",
+            "pluriel_x_adresse");
 
     static final Set<Ordres.Intention> ORDRES = EnumSet.of(Ordres.Intention.SUIVRE, Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE,
             Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER, Ordres.Intention.SAC, Ordres.Intention.RENVOYER);
@@ -108,7 +109,10 @@ final class Adressage {
         boolean politesse = general.intentions.contains(Ordres.Intention.SALUT) || general.intentions.contains(Ordres.Intention.MERCI);
         boolean troisieme = !a.deuxiemePersonne() && troisieme(j, norm);
         // « Pourquoi il ne travaille pas, lui ? » : à la troisième personne, un verbe d'ordre décrit quelqu'un, il ne commande rien.
-        boolean ordre = !troisieme && general.intentions.stream().anyMatch(ORDRES::contains);
+        // Une action du répertoire est un ordre aussi (« garde à vous ! », « fais le cochon »).
+        boolean ordre = !troisieme && (general.intentions.stream().anyMatch(ORDRES::contains) || Repertoire.commande(s.texte()));
+        // Une action du répertoire réservée à certains métiers (« abats cet arbre » : le bûcheron) les concerne comme une mission.
+        Set<String> concernes = troisieme ? Set.of() : Repertoire.metiersConcernes(s.texte());
         boolean adresse = a.deuxiemePersonne() || a.demande() || a.question() || politesse || ordre;
         boolean je = mots.contains("je") || mots.contains("j");
         boolean court = mots.size() <= 4;
@@ -116,8 +120,8 @@ final class Adressage {
         boolean missionQuelquUn = false;
         for (int i = 0; i < n; i++) {
             Ordres.Lecture x = Ordres.lire(s.texte(), metiers.get(i));
-            mission[i] = !x.missions.isEmpty();
-            hors[i] = !mission[i] && !x.horsMetier.isEmpty();
+            mission[i] = !x.missions.isEmpty() || concernes.contains(metiers.get(i));
+            hors[i] = !mission[i] && (!x.horsMetier.isEmpty() || !concernes.isEmpty());
             missionQuelquUn |= mission[i];
         }
         int vu = -1, proche = -1, fenetre = -1;
@@ -168,7 +172,9 @@ final class Adressage {
                     nx * recence[i], nx * b(adresse) * recence[i], nx * recentAutre, nx * b(question), nx * b(court && question),
                     b(fenetre == i), b(fenetre >= 0 && fenetre != i), b(s.micro()), nx * b(seul && adresse),
                     // Écrit dans la fenêtre du mineur : « va protéger la base » relève du guerrier présent.
-                    nx * b(fenetre == i && !mission[i] && missionQuelquUn), nx * b(mission[i] && demandeQuelqueChose && fenetre >= 0 && fenetre != i)};
+                    nx * b(fenetre == i && !mission[i] && missionQuelquUn), nx * b(mission[i] && demandeQuelqueChose && fenetre >= 0 && fenetre != i),
+                    // « Dansez ! », « Asseyez-vous » : un ordre au pluriel, sans « les gars », vise tous ceux qui l'entendent.
+                    nx * b(a.pluriel() && adresse && !troisieme)};
         }
         return f;
     }
@@ -346,9 +352,9 @@ final class Adressage {
 
     /** Ce que sait faire chaque métier, en quelques mots (pour que l'IA relie la demande au bon ouvrier). */
     static final Map<String, String> CAPACITES = Map.of(
-            "mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre",
-            "bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle",
-            "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres");
+            "mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre ; creuse, perce des tunnels, pose des torches",
+            "bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle ; abat les arbres, replante",
+            "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge");
 
     /** Une étiquette par ouvrier : son prénom (avec son métier si deux ouvriers ont le même). */
     static List<String> etiquettes(Situation s) {

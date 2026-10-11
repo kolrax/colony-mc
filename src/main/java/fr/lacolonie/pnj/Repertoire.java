@@ -76,7 +76,7 @@ final class Repertoire {
     static final Set<String> GENRES_CALCULES = Set.of("presentation", "rapport", "compter", "alphabet");
 
     record Entree(String id, Set<String> metiers, String nom, String categorie, String comportement, String arg, Map<String, String> options,
-                  List<String> dits, List<String> reponses) {
+                  List<String> dits, List<String> reponses, List<String> exemples) {
         /** Ce métier peut la faire (pas de métier précisé : tout le monde). */
         boolean pour(String metier) { return metiers.isEmpty() || metiers.contains(metier); }
 
@@ -178,14 +178,15 @@ final class Repertoire {
             else opts.put(prog[i], "");
         }
         if (COMPORTEMENTS.get(comp) && arg.isEmpty()) throw new IllegalStateException("repertoire.txt ligne " + n + " : « " + comp + " » attend un argument");
-        List<String> dits = new ArrayList<>();
+        List<String> dits = new ArrayList<>(), exemples = new ArrayList<>();
         for (String d : c[4].split(";")) {
+            if (!d.isBlank() && exemples.size() < 4) exemples.add(d.strip());
             String x = Ordres.normaliser(d.replace("@", " zzpersonnezz ")).strip().replace("zzpersonnezz", "@");
             if (!x.isEmpty() && !dits.contains(x)) dits.add(x);
         }
         List<String> reponses = new ArrayList<>();
         if (c.length > 5) for (String r : c[5].split(";")) if (!r.isBlank()) reponses.add(r.strip());
-        return new Entree(id, metiers, c[2].strip(), categorie, comp, arg, opts, dits, reponses);
+        return new Entree(id, metiers, c[2].strip(), categorie, comp, arg, opts, dits, reponses, exemples);
     }
 
     // --- Trouver ce que demande une phrase ------------------------------------------------------------------
@@ -201,6 +202,14 @@ final class Repertoire {
     /** Avant l'action, ces mots l'arrêtent (« arrête de danser », « ça suffit les chansons »). */
     static final Set<String> FINS = Set.of("arrete", "arretez", "arreter", "cesse", "cessez", "stoppe", "stoppez", "finis", "finissez", "assez",
             "suffit", "fini", "termine");
+    /** Entre un sujet et l'action, ces mots la gardent à son sujet (« je vais danser », « il ne chante », « on se couche »). */
+    static final Set<String> AUXILIAIRES = Set.of("ne", "n", "me", "m", "te", "t", "se", "s", "vais", "va", "vas", "allons", "vont", "veux", "veut",
+            "voulons", "compte", "comptes", "aime", "aimes", "adore", "sais");
+
+    /** Ces mots font d'un « tu » ou d'un « il » une demande (« tu peux danser ? », « il faut que tu chantes »). */
+    static final Set<String> MODAUX = Set.of("peux", "pourrais", "pouvez", "pourriez", "veux", "voudrais", "sais", "savez", "dois", "faut", "faudrait",
+            "peut", "pourrait", "merci");
+
     /** Les mots qui arrêtent ou nient une action (« arrête de », « ne… plus ») : ils ne l'éloignent pas d'une formule. */
     static final Set<String> NEUTRES = new HashSet<>();
 
@@ -346,8 +355,15 @@ final class Repertoire {
                         if (m.get(i).equals("pas") || m.get(i).equals("jamais")) nie = true;
                     }
                 }
-                // « il danse », « je chante » : on parle de quelqu'un ; « qui danse ? » : une question sur quelqu'un.
-                if (!fin && k > 0 && SUJETS.contains(m.get(k - 1)) && !formule.startsWith(m.get(k - 1) + " ")) nie = true;
+                // « il danse », « je vais poser une torche » : on parle de quelqu'un, ou de soi ; « qui danse ? » : une question
+                // sur quelqu'un. Mais « tu peux danser ? », « il faut que tu chantes » : une demande.
+                if (!fin && !formule.startsWith(k > 0 ? m.get(k - 1) + " " : "\0")) {
+                    // Le sujet tient au verbe : juste devant (« il danse »), ou devant un auxiliaire (« je vais danser »).
+                    boolean sujet = k > 0 && SUJETS.contains(m.get(k - 1)) || k > 1 && SUJETS.contains(m.get(k - 2)) && AUXILIAIRES.contains(m.get(k - 1)),
+                            demande = false;
+                    for (int i = Math.max(0, k - 3); i < k; i++) if (MODAUX.contains(m.get(i))) demande = true;
+                    if (sujet && !demande) nie = true;
+                }
             }
             r.add(new Trouve(meilleur.e, meilleur.score, k, fin, nie));
         }
@@ -425,7 +441,7 @@ final class Repertoire {
             x.put("nom", e.nom);
             x.put("categorie", e.categorie);
             x.put("metiers", e.metiers.isEmpty() ? List.of() : List.copyOf(e.metiers));
-            x.put("exemples", e.dits.subList(0, Math.min(4, e.dits.size())));
+            x.put("exemples", e.exemples());
             x.put("tenue", e.tenue());
             r.add(x);
         }

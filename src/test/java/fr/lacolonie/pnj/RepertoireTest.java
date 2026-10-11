@@ -174,6 +174,33 @@ class RepertoireTest {
         assertTrue(rappel >= pos * 0.98, "proposé à l'IA : " + rappel + "/" + pos);
     }
 
+    /** Le jeu à l'aveugle (écrit après la mise au point, jamais corrigé dessus) : on l'affiche, sans seuil. */
+    @Test
+    void leJeuALAveugle() throws Exception {
+        List<String> lignes = java.nio.file.Files.readAllLines(java.nio.file.Path.of(RepertoireTest.class.getResource("/repertoire_aveugle.txt").toURI()));
+        int pos = 0, bonsPos = 0, neg = 0, bonsNeg = 0, rappel = 0, pourIA = 0;
+        List<String> erreurs = new ArrayList<>();
+        for (String l : lignes) {
+            if (l.isBlank() || l.startsWith("#")) continue;
+            String[] c = l.split("\\|");
+            String phrase = c[0].strip(), metier = c[1].strip(), attendu = c[2].strip(), vu = action(phrase, metier);
+            boolean iaSeule = attendu.endsWith(" ?");
+            attendu = attendu.replace(" ?", "");
+            String id = attendu.replace(" (fin)", "");
+            if (!attendu.equals("-")) {
+                pourIA++;
+                if (Repertoire.candidats(phrase, List.of(metier), 14).stream().anyMatch(e -> e.id().equals(id))) rappel++;
+                else erreurs.add("pas proposé à l'IA : " + phrase + " (" + id + ")");
+            }
+            if (iaSeule) continue;
+            if (attendu.equals("-")) { neg++; if (vu.equals("-")) bonsNeg++; else erreurs.add("déclenche à tort : " + phrase + " → " + vu); }
+            else { pos++; if (vu.equals(attendu)) bonsPos++; else erreurs.add(phrase + " → " + vu + " (attendu " + attendu + ")"); }
+        }
+        System.out.printf("À L'AVEUGLE — sans IA : %d/%d justes (%.1f %%), %d/%d phrases sans action laissées tranquilles. Proposé à l'IA : %d/%d (%.1f %%).%n",
+                bonsPos, pos, 100.0 * bonsPos / pos, bonsNeg, neg, rappel, pourIA, 100.0 * rappel / pourIA);
+        erreurs.forEach(x -> System.out.println("  " + x));
+    }
+
     @Test
     void lesCandidatsPourLIA() {
         List<String> c = Repertoire.candidats("Mets-toi droit comme un piquet", List.of("guerrier"), 12).stream().map(Repertoire.Entree::id).toList();

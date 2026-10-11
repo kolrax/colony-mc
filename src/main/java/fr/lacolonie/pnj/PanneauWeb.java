@@ -90,6 +90,7 @@ public final class PanneauWeb {
                 case "/api/pnj/action" -> surServeur(() -> actionPnj(corps));
                 case "/api/recharger" -> surServeur(() -> { Reglages.charger(); ReglagesIA.charger(); return resultat(null); });
                 case "/api/ia" -> IA.etat();
+                case "/api/repertoire" -> Map.of("actions", Repertoire.tableau());
                 case "/api/ia/ecoute" -> Map.of("journal", Dialogue.journal(), "parametres", Adressage.ecrire(Adressage.P).toString());
                 case "/api/ia/reglages" -> { ReglagesIA.modifier(corps); yield resultat(null); }
                 case "/api/ia/tester" -> Map.of("resultats", IA.tester().get(40, TimeUnit.SECONDS));
@@ -149,7 +150,7 @@ public final class PanneauWeb {
             x.put("faim", t.faim);
             x.put("impayes", t.impayes);
             x.put("besoin", t.besoin);
-            x.put("action", t.action == null ? "" : t.action.nom);
+            x.put("action", t.consigne != null && t.consigne.entree() != null ? "« " + t.consigne.entree().nom() + " »" : t.action == null ? "" : t.action.nom);
             x.put("resultat", t.resultat);
             x.put("bureau", t.bureau == null ? "" : t.bureau.toShortString());
             x.put("commande", Metier.avancementTexte(t));

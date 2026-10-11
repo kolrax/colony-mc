@@ -77,6 +77,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <nav id="tabs">
       <button data-tab="pnj" aria-selected="true">PNJ</button>
       <button data-tab="metiers">Métiers</button>
+      <button data-tab="actions">Actions</button>
       <button data-tab="economie">Économie</button>
       <button data-tab="ia">IA</button>
       <button data-tab="journal">Journal</button>
@@ -107,6 +108,26 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <h2>Métiers</h2>
         <p class="sub">Les métiers sont codés dans le mod. Un métier désactivé ne se présente plus à l'embauche ; ceux déjà embauchés continuent.</p>
         <div id="metiers-liste"></div>
+      </div>
+    </section>
+
+    <section id="actions" hidden>
+      <div class="card">
+        <h2>Répertoire d'actions</h2>
+        <p class="sub">Tout ce qu'un ouvrier sait faire quand tu le lui demandes, en plus de son travail : dans sa fenêtre de conversation ou au micro.
+          Sans IA, il reconnaît les phrases données en exemple (et leurs variantes : « danse », « dansez », « tu peux danser ? ») ; avec l'IA, il comprend
+          aussi les tournures libres (« mets-toi droit comme un piquet »). Une action « jusqu'à nouvel ordre » dure jusqu'à « repos », « au travail » ou un autre ordre.</p>
+        <div class="row" style="margin:10px 0 4px">
+          <input id="act-cherche" type="search" placeholder="Chercher (ex. : danse, épée, poste…)" style="flex:1;min-width:200px" aria-label="Chercher une action">
+          <select id="act-metier" aria-label="Métier">
+            <option value="">Tous les métiers</option><option value="mineur">Mineur</option><option value="bucheron">Bûcheron</option><option value="guerrier">Guerrier</option>
+          </select>
+          <span id="act-compte" class="sub"></span>
+        </div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Action</th><th>Qui</th><th>Ce qu'on peut dire</th><th>Durée</th></tr></thead>
+          <tbody id="act-liste"></tbody>
+        </table></div>
       </div>
     </section>
 
@@ -330,6 +351,32 @@ $("#eco-enregistrer").addEventListener("click", async () => {
   try { const x = await api("/api/reglages", r); $("#eco-msg").textContent = x.ok ? "Enregistré." : x.erreur; if (x.ok) { ecoRempli = false; await charger(); } }
   catch (e) { $("#eco-msg").textContent = e.message; }
 });
+
+// Répertoire d'actions
+let repertoire = null;
+const METIER_NOM = { mineur: "Mineur", bucheron: "Bûcheron", guerrier: "Guerrier" };
+async function chargerActions() {
+  if (!repertoire) repertoire = (await api("/api/repertoire")).actions;
+  const q = $("#act-cherche").value.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""), m = $("#act-metier").value;
+  const plat = s => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const l = repertoire.filter(a => (!m || !a.metiers.length || a.metiers.includes(m))
+    && (!q || plat(a.nom + " " + a.id + " " + a.exemples.join(" ") + " " + a.categorie).includes(q)));
+  $("#act-compte").textContent = l.length + " action" + (l.length > 1 ? "s" : "") + " sur " + repertoire.length;
+  const lignes = [];
+  let cat = null;
+  for (const a of l) {
+    if (a.categorie !== cat) { cat = a.categorie; lignes.push(el("tr", {}, el("td", { colspan: "4" }, el("h3", { text: cat, style: "margin:12px 0 2px" })))); }
+    lignes.push(el("tr", {},
+      el("td", {}, el("b", { text: a.nom.charAt(0).toUpperCase() + a.nom.slice(1) })),
+      el("td", {}, ...(a.metiers.length ? a.metiers.map(x => el("span", { class: "pill or", text: METIER_NOM[x] || x })) : [el("span", { class: "pill", text: "Tous" })])),
+      el("td", { class: "sub", text: a.exemples.map(x => "« " + x.replace(/@/g, "Raoul") + " »").join(", ") }),
+      el("td", {}, a.tenue ? el("span", { class: "pill ok", text: "jusqu'à nouvel ordre" }) : el("span", { class: "sub", text: "le temps de le faire" }))));
+  }
+  $("#act-liste").replaceChildren(...lignes);
+}
+document.querySelector('[data-tab="actions"]').addEventListener("click", () => chargerActions().catch(e => flash(e.message)));
+$("#act-cherche").addEventListener("input", () => chargerActions().catch(() => {}));
+$("#act-metier").addEventListener("change", () => chargerActions().catch(() => {}));
 
 // IA
 let iaRempli = false;
