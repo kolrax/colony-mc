@@ -53,6 +53,7 @@ cd mod-npc
 ./gradlew build                 # compile + tests JUnit (pur Java : Ordres, Adressage, Repertoire, IA…)
 ./gradlew runGameTestServer     # tests en jeu (TestsJeu, TestsIA, TestsRepertoire…), serveur sans écran
 ```
+- Dans le cloud : JDK 21 déjà présent. Ajouter `-Dorg.gradle.java.home=/usr/lib/jvm/java-21-openjdk-amd64` à chaque commande gradlew (le `gradle.properties` pointe un JDK Windows) : `./gradlew build --no-daemon -Dorg.gradle.java.home=/usr/lib/jvm/java-21-openjdk-amd64`. Si Maven répond 429, attendre 45 s et réessayer. Pillow : `python3 -m pip install pillow`.
 - Sur le PC Windows, il faut `JAVA_HOME` = JDK 21 et `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:/Users/utilisateur/.gradle/tmp`. Supprimer d'abord `build/classes build/resources build/libs build/generated/jarJar build/generated/sources/modMetadata` si Gradle refuse de les nettoyer.
 - `rm -rf run/world` avant les tests en jeu : le serveur de test garde le monde et ses PNJ.
 - **Un nouveau test doit d'abord échouer sur l'ancien code**. Sinon il ne prouve rien. Vérifie-le à chaque fois.
