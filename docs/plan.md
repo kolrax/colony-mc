@@ -11,8 +11,8 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 0. Infrastructure
 - [x] Dépôt public, manuel `CLAUDE.md`, cahier des charges, agents
-- [ ] CI verte sur GitHub (compilation, JUnit, tests en jeu)
-- [ ] Session cloud capable de compiler et de lancer les tests en jeu
+- [ ] CI verte sur GitHub (compilation, JUnit, tests en jeu) : bloquée tant que le compte GitHub de KOLRAX est bloqué pour facturation ; en attendant, tests lancés par la session cloud avant chaque push
+- [x] Session cloud capable de compiler et de lancer les tests en jeu (essai du 11/10 : 52 JUnit et 65 GameTests verts)
 - [ ] Déploiement du panneau Supabase par la ligne de commande (sans Chrome)
 
 ## 1. Fiabilité et performance (indispensable)

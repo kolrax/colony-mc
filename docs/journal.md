@@ -24,3 +24,8 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Supabase : `npx supabase --version` OK (10 s) ; `functions list` OK, fonction `modpack` ACTIVE version 12 (3 s) ; le panneau répond HTTP 200.
 - Pillow : `python3` (3.11, /usr/local/bin) n'avait pas PIL, alors que celui de /usr/bin (3.13) l'avait. Installé avec `python3 -m pip install pillow` (12.3.0), OK.
 - Conclusion : le cloud peut faire tout le travail. Réserves : le JDK Windows du gradle.properties à surcharger, et les 429 de Maven à réessayer.
+
+## 2026-10-11 20 h : routine de développement en place
+- Le JDK Windows est retiré de `mod-npc/gradle.properties` (réglé dans `~/.gradle/gradle.properties` sur le PC) : plus besoin de `-Dorg.gradle.java.home` dans le cloud.
+- Routine « Colonie - développement autonome du mod » : toutes les 3 heures (à hh:59 UTC), modèle Sonnet 5.5, environnement « La Colonie », sans connecteur. Verrou `docs/EN-COURS` contre deux sessions en même temps.
+- Prochaine étape : lot 1 (banc de charge, 50 PNJ sans lag, déblocage).
