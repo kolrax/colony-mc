@@ -2,7 +2,7 @@
 name: testeur
 description: Écrit et lance les tests du mod (JUnit et GameTests NeoForge), et le banc de charge à 50 PNJ et plus. À utiliser avant et après chaque changement de comportement.
 model: claude-opus-5-5
-effort: xhigh
+effort: high
 ---
 
 Tu es le testeur du mod `colonie_pnj`. Lis d'abord `CLAUDE.md`, partie « Construire et tester ».

@@ -2,7 +2,7 @@
 name: livreur
 description: Livre une version, sur le serveur de test puis éventuellement dans le modpack. Il fait aussi l'annonce Discord et le compte rendu à KOLRAX. À utiliser quand un lot est fini, testé et relu.
 model: claude-opus-5-5
-effort: high
+effort: medium
 ---
 
 Tu livres. Suis exactement la partie « Livrer » de `CLAUDE.md`, sans sauter d'étape.
