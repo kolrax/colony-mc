@@ -35,6 +35,8 @@ import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
@@ -460,13 +462,39 @@ public class Travailleur extends PathfinderMob {
 
     // --- Tick serveur ---------------------------------------------------------------------------
 
+    /** Le tick entier, mesuré pour le banc de charge ({@link Charge}). */
+    @Override
+    public void tick() {
+        if (level().isClientSide) { super.tick(); return; }
+        long debut = System.nanoTime();
+        super.tick();
+        Charge.ICI.pnj(System.nanoTime() - debut);
+    }
+
+    /** Le calcul des chemins, mesuré pour le banc de charge (tous les appels passent par ici). */
+    @Override
+    protected PathNavigation createNavigation(Level lvl) {
+        return new GroundPathNavigation(this, lvl) {
+            @Override
+            protected Path createPath(java.util.Set<BlockPos> cibles, int decalage, boolean auDessus, int precision, float portee) {
+                if (level.isClientSide) return super.createPath(cibles, decalage, auDessus, precision, portee);
+                long debut = System.nanoTime();
+                try { return super.createPath(cibles, decalage, auDessus, precision, portee); }
+                finally { Charge.ICI.mesurer(Charge.Partie.CHEMINS, debut); }
+            }
+        };
+    }
+
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
-        if (tickCount % 20 == 0) forcerChunk();
-        if (aTerre) { tickATerre(); return; }
+        Charge mesure = Charge.ICI;
+        long h = System.nanoTime();
+        if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
+        if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         if (tickCount % 20 == 0) tickCourrier();
+        h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null) {
             getNavigation().stop();
             getLookControl().setLookAt(getX(), getEyeY() - 1, getZ());
@@ -486,9 +514,10 @@ public class Travailleur extends PathfinderMob {
             catch (RuntimeException ex) { ColoniePnj.LOG.error("Action {} de {} en erreur", a.nom, prenom, ex); e = Actions.Etat.ECHEC; a.raison = "erreur"; }
             a.age++;
             if (e != Actions.Etat.EN_COURS && action == a) finirAction(e == Actions.Etat.OK ? "ok" : a.raison.isEmpty() ? "echec" : a.raison);
+            h = mesure.mesurer(Charge.Partie.ACTION, h);
         }
         if (pauseCerveau > 0) pauseCerveau--;
-        else if ((tickCount + getId()) % 10 == 0) Cerveau.penser(this);
+        else if ((tickCount + getId()) % 10 == 0) { Cerveau.penser(this); mesure.mesurer(Charge.Partie.CERVEAU, h); }
     }
 
     /**
@@ -1120,6 +1149,27 @@ public class Travailleur extends PathfinderMob {
         finirAction("licencie");
         libererChunk();
         majNom();
+    }
+
+    /**
+     * Un ouvrier ★★★★★ déjà embauché par {@code chef}, en service toute la journée et sans paie, rattaché à un bureau
+     * posé en {@code bureau} (tests de jeu et banc de charge).
+     */
+    static Travailleur auTravail(ServerLevel l, String metier, BlockPos bureau, net.minecraft.world.phys.Vec3 p, UUID chef, ItemStack outil) {
+        l.setBlockAndUpdate(bureau, ColoniePnj.BUREAU.get().defaultBlockState());
+        Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
+        t.moveTo(p.x, p.y, p.z, -90, 0);
+        t.tirerAuSort(metier, 5);
+        t.mode = Mode.TRAVAIL;
+        t.chef = chef;
+        t.prochainePaie = Long.MAX_VALUE;
+        t.debut = 0;
+        t.fin = 0; // de 0 h à 0 h : en service toute la journée
+        if (l.getBlockEntity(bureau) instanceof Bureau.Entite b) b.proprietaire = chef;
+        t.bureau = bureau;
+        if (!outil.isEmpty()) t.inventaire.addItem(outil);
+        l.addFreshEntity(t);
+        return t;
     }
 
     void embaucher(ServerPlayer p) {

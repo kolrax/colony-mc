@@ -121,10 +121,21 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
         // Filet de sécurité : un PNJ arrivé dans un chunk inactif (poussé, ou figé avant la 0.3.0) ne peut plus
         // déplacer ses chunks lui-même ; le serveur les recale toutes les 5 secondes.
+        // Chaque partie est mesurée pour le banc de charge, et le tick se clôt ici (après celui des PNJ).
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> {
-            if (e.getServer().getTickCount() % 100 == 0) for (Travailleur t : tous(e.getServer())) t.forcerChunk();
-            if (e.getServer().getTickCount() % 20 == 0) Courrier.tick(e.getServer()); // les corbeaux arrivés livrent leur lettre
+            Charge mesure = Charge.ICI;
+            long h = System.nanoTime();
+            if (e.getServer().getTickCount() % 100 == 0) {
+                for (Travailleur t : tous(e.getServer())) t.forcerChunk();
+                h = mesure.mesurer(Charge.Partie.FILET, h);
+            }
+            if (e.getServer().getTickCount() % 20 == 0) { // les corbeaux arrivés livrent leur lettre
+                Courrier.tick(e.getServer());
+                h = mesure.mesurer(Charge.Partie.COURRIER, h);
+            }
             Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
+            mesure.mesurer(Charge.Partie.VOIX, h);
+            mesure.clore();
         });
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
@@ -282,6 +293,21 @@ public class ColoniePnj {
                             }));
                             return 1;
                         })))
+                .then(Commands.literal("banc")
+                        .then(Commands.literal("fin").executes(c -> {
+                            int n = finBanc(c.getSource().getServer());
+                            c.getSource().sendSuccess(() -> Component.literal(n + " ouvriers du banc de charge retirés."), true);
+                            return n;
+                        }))
+                        .then(Commands.argument("nombre", IntegerArgumentType.integer(1, 300))
+                                .executes(c -> banc(c, ""))
+                                .then(Commands.argument("metier", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Metier.TOUS.keySet(), b))
+                                        .executes(c -> banc(c, StringArgumentType.getString(c, "metier"))))))
+                .then(Commands.literal("charge").executes(c -> {
+                    for (String l : charge(c.getSource().getServer())) c.getSource().sendSuccess(() -> Component.literal(l), false);
+                    return 1;
+                }))
                 .then(Commands.literal("panneau").executes(c -> {
                     String url = PanneauWeb.adresse();
                     c.getSource().sendSuccess(() -> Component.literal("Panneau : " + url + "  (mot de passe : clique pour le copier)")
@@ -289,6 +315,90 @@ public class ColoniePnj {
                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copier le mot de passe")))), false);
                     return 1;
                 })));
+    }
+
+    // --- Banc de charge : /pnj banc, /pnj charge ----------------------------------------------------------
+
+    /** Le chef fictif des ouvriers du banc (aucun joueur) : leurs lettres et leur poste sont effacés à la fin. */
+    static final UUID CHEF_BANC = UUID.nameUUIDFromBytes("colonie_pnj:banc".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    static final String MARQUE_BANC = "colonie_pnj_banc";
+
+    static int banc(CommandContext<CommandSourceStack> c, String metier) {
+        if (!metier.isEmpty() && !Metier.existe(metier)) {
+            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : " + String.join(", ", Metier.TOUS.keySet())));
+            return 0;
+        }
+        int n = IntegerArgumentType.getInteger(c, "nombre");
+        var l = banc(c.getSource().getLevel(), BlockPos.containing(c.getSource().getPosition()), n, metier);
+        c.getSource().sendSuccess(() -> Component.literal(l.size() + " ouvriers du banc de charge au travail autour du poste. "
+                + "« /pnj charge » pour la mesure (attendre 5 s), « /pnj banc fin » pour les retirer."), true);
+        return l.size();
+    }
+
+    /**
+     * Fait apparaître {@code n} ouvriers au travail (mineurs, bûcherons et guerriers à tour de rôle, sauf métier donné),
+     * en grille tous les 3 blocs au sud de {@code centre}, rattachés à un poste posé 3 blocs au nord. Ils sont marqués.
+     */
+    static List<Travailleur> banc(ServerLevel l, BlockPos centre, int n, String metier) {
+        Courrier courrier = Courrier.de(l.getServer());
+        int cote = (int) Math.ceil(Math.sqrt(n));
+        BlockPos bureau = surface(l, centre.getX(), centre.getZ() - 3);
+        courrier.definirPoste(CHEF_BANC, l, bureau);
+        List<String> metiers = metier.isEmpty() ? List.of("mineur", "bucheron", "guerrier") : List.of(metier);
+        List<Travailleur> r = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            String m = metiers.get(i % metiers.size());
+            BlockPos p = surface(l, centre.getX() + (i % cote - cote / 2) * 3, centre.getZ() + 2 + (i / cote) * 3);
+            var outil = new net.minecraft.world.item.ItemStack(switch (m) {
+                case "mineur" -> net.minecraft.world.item.Items.IRON_PICKAXE;
+                case "bucheron" -> net.minecraft.world.item.Items.IRON_AXE;
+                case "guerrier" -> net.minecraft.world.item.Items.IRON_SWORD;
+                default -> net.minecraft.world.item.Items.AIR;
+            });
+            Travailleur t = Travailleur.auTravail(l, m, bureau, net.minecraft.world.phys.Vec3.atBottomCenterOf(p), CHEF_BANC, outil);
+            t.addTag(MARQUE_BANC);
+            // Du vrai travail : le fer pour le mineur (un escalier à creuser), la ronde pour le guerrier, n'importe quel bois sinon.
+            if (m.equals("mineur")) t.missions.add(new Travailleur.Mission("fer", "quantite", 100_000));
+            if (m.equals("guerrier")) t.missions.add(new Travailleur.Mission("ronde", "quantite", 100_000));
+            t.forcerChunk();
+            r.add(t);
+        }
+        return r;
+    }
+
+    /** Le sol en (x, z), chunk chargé d'abord (sinon la hauteur vaut le fond du monde). */
+    static BlockPos surface(ServerLevel l, int x, int z) {
+        l.getChunk(x >> 4, z >> 4);
+        return new BlockPos(x, l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+    }
+
+    /** Retire les ouvriers du banc (eux seuls), leurs postes, leurs lettres et leur effectif. */
+    static int finBanc(MinecraftServer s) {
+        int n = 0;
+        for (Travailleur t : tous(s)) {
+            if (!t.getTags().contains(MARQUE_BANC)) continue;
+            if (t.bureau != null && t.level().getBlockEntity(t.bureau) instanceof Bureau.Entite b && CHEF_BANC.equals(b.proprietaire)) {
+                b.caisse.clearContent(); // ce qu'ils y ont déposé disparaît avec eux
+                b.depot.clearContent();
+                t.level().removeBlock(t.bureau, false);
+            }
+            t.discard();
+            n++;
+        }
+        Courrier c = Courrier.de(s);
+        c.postes.remove(CHEF_BANC);
+        c.boites.remove(CHEF_BANC);
+        c.effectifs.remove(CHEF_BANC);
+        c.vols.removeIf(v -> CHEF_BANC.equals(v.chef));
+        c.setDirty();
+        return n;
+    }
+
+    /** /pnj charge : le tick du serveur et la part du mod, sur les 100 derniers ticks. */
+    static List<String> charge(MinecraftServer s) {
+        long pire = 0;
+        for (long t : s.getTickTimesNanos()) pire = Math.max(pire, t);
+        return Charge.ICI.lignes(s.getAverageTickTimeNanos() / 1e6, pire / 1e6);
     }
 
     /** /pnj ia : ce qui marche, ce qui manque, et la consommation du jour (jamais les clés). */

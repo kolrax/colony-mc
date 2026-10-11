@@ -33,22 +33,8 @@ public class TestsJeu {
 
     /** Pareil en coordonnées absolues. */
     static Travailleur employe(GameTestHelper h, String metier, BlockPos bureau, Vec3 p, ItemStack outil) {
-        ServerLevel l = h.getLevel();
-        l.setBlockAndUpdate(bureau, ColoniePnj.BUREAU.get().defaultBlockState());
-        Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
-        t.moveTo(p.x, p.y, p.z, -90, 0);
-        t.tirerAuSort(metier, 5);
-        t.mode = Travailleur.Mode.TRAVAIL;
-        t.chef = java.util.UUID.randomUUID();
-        t.prochainePaie = Long.MAX_VALUE; // pas de paie pendant les tests (sauf ceux qui la testent)
-        t.debut = 0;
-        t.fin = 0; // de 0 h à 0 h : en service toute la journée
-        Bureau.Entite b = (Bureau.Entite) l.getBlockEntity(bureau);
-        b.proprietaire = t.chef;
-        t.bureau = bureau;
-        if (!outil.isEmpty()) t.inventaire.addItem(outil);
-        l.addFreshEntity(t);
-        return t;
+        // Pas de paie pendant les tests (sauf ceux qui la testent).
+        return Travailleur.auTravail(h.getLevel(), metier, bureau, p, java.util.UUID.randomUUID(), outil);
     }
 
     // --- Loin des tests, sur le monde plat : sorties et expéditions -----------------------------------

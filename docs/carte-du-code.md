@@ -25,6 +25,7 @@ rm -rf run/world && ./gradlew runGameTestServer  # 65 tests en jeu (36 TestsJeu,
 ## Pour telle tâche, ouvrir tels fichiers
 - **Banc de charge, performance** :
   - fichiers : `Travailleur` (`customServerAiStep`, `tickCorps`, `forcerChunk`), `Cerveau` (`penser`, `decider`), `ColoniePnj` (`ServerTickEvent.Post`, `tous()`, commande `/pnj`), `Monde` (recherches de blocs), `Courrier.tick`, `Voix.tick`, `TestsJeu` (`employe`, `sol`) et `TestsIA` (`equipe`, `etapes`).
+  - **mesure** : `Charge` (fenêtre de 100 ticks, parties TOTAL/ENTITE/MOTEUR/CHUNKS/CORPS/ACTION/CERVEAU/CHEMINS/FILET/COURRIER/VOIX), `TestsCharge` (10/50/100 PNJ, lots séparés), commandes op `/pnj banc <N> [metier]`, `/pnj banc fin`, `/pnj charge`. `Travailleur.auTravail(...)` fait apparaître un ouvrier au travail (tests et banc).
 - **Déblocage, chemins** :
   - fichiers : `Itineraire` (étapes, sortie de sous terre, creusage, bateau), `Actions.Aller` (`coince()`), `Cerveau` (réaction au résultat `bloque`, lettre « perdu »), `Monde`, `Travailleur` (saut d'à-pic, fin du fichier).
   - tests : `TestsJeu` (`sortParLesGaleries`, `creuseVersLaSurface`, `sortDuPuits`, `traverseALaNage`…).
@@ -105,11 +106,11 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Reseau** (110) : les paquets `Fiche`, `Commande`, `Conversation`, `Parler`, `Parole`, `Poste`, `ActionBureau`. Canal `registrar("6")` : le changer oblige à publier un modpack. Piège : vérifier `connection.hasChannel` avant d'envoyer (faux joueurs de test).
 
 ## Démarrage, réglages, admin
-- **ColoniePnj** (326) : point d'entrée du mod : enregistrements (entités `TRAVAILLEUR`, `CORBEAU`, bloc `BUREAU`, menus, `TICKETS` pour forcer les chunks), événements, `tous(server)` (tous les PNJ vivants, parcourt toutes les entités), tick serveur (recale les chunks toutes les 100 ticks, `Courrier.tick`, `Voix.tick`), arrivée des chercheurs d'emploi, **commande `/pnj`** (op niveau 2) : `chercheur <metier> [niveau] [skin]`, `recharger`, `liste`, `diag <prenom>`, `ia [recharger|test]`, `panneau`.
+- **ColoniePnj** (326) : point d'entrée du mod : enregistrements (entités `TRAVAILLEUR`, `CORBEAU`, bloc `BUREAU`, menus, `TICKETS` pour forcer les chunks), événements, `tous(server)` (tous les PNJ vivants, parcourt toutes les entités), tick serveur (recale les chunks toutes les 100 ticks, `Courrier.tick`, `Voix.tick`), arrivée des chercheurs d'emploi, **commande `/pnj`** (op niveau 2) : `chercheur <metier> [niveau] [skin]`, `recharger`, `liste`, `diag <prenom>`, `ia [recharger|test]`, `panneau`, `banc <N> [metier]` / `banc fin`, `charge`.
 - **Reglages** (169) : `config/colonie_pnj/reglages.json` : monnaie, paie, grève, `pnj_max_par_joueur` (5), chercheurs, métiers inactifs, `port_panneau`, `jeton_panneau` (ne jamais l'afficher).
 - **PanneauWeb** (258) : serveur HTTP intégré (port 25776) : état, réglages, faire apparaître un PNJ, actions sur un PNJ. Protégé par `jeton_panneau`. Sert `web/index.html`.
 
-## Tests JUnit (`src/test`, pur Java, 52 tests)
+## Tests JUnit (`src/test`, pur Java, 59 tests ; `ChargeTest` : la fenêtre de mesure)
 - **OrdresTest** (227, 17 tests) : lecture des ordres et missions.
 - **IATest** (223, 14) : son et lecture des réponses d'IA, sans réseau.
 - **RepertoireTest** (212, 11) : trouver les actions dans une phrase.
@@ -117,7 +118,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **MonnaieTest** (48, 5) : paiements en pièces.
 - **Entrainement** (577, 0 test) : outil, pas un test : entraîne l'adressage (`./gradlew entrainer`). Écrit `adressage.json`.
 
-## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 65 tests)
+## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 68 tests ; `TestsCharge` : banc à 10/50/100 PNJ)
 - **TestsJeu** (727, 36 tests) : cerveau et métiers pour de vrai (retour à temps, expédition, mineur, bûcheron, guerrier, dépôt, lit, à terre, grève, panneau, sorties de sous terre, nage…). Outils : `ouvrier(h, metier, x, y, z, outil)` et `employe(h, metier, bureau, pos, outil)` font apparaître un PNJ employé en service toute la journée, sans paie ; `sol(h, dx, dz)` : sol plat loin des autres tests.
 - **TestsIA** (639, 16 tests) : IA contre un faux Groq et un faux Gemini (serveur local `avant`/`apres`). Outils : `equipe(h, chef, coin)` (3 ouvriers autour d'un faux chef), `etapes(...)` (attendre qu'ils soient visibles puis enchaîner), `attendre(h, ticks)`.
 - **TestsRepertoire** (270, 13 tests) : actions du répertoire jouées sans IA, chacune dans son coin de monde plat.
