@@ -42,3 +42,15 @@ Aucun code du mod touché, aucune action sur le serveur.
   - 2 nouveaux tests, qui échouaient sur l'ancien code. Total : 60 JUnit, 71 en jeu, 5 passages verts de suite.
 - Reste / prochaine étape exacte : voir `docs/reprise.md` (relire puis livrer 0.8.2, vraie mesure avec `/pnj banc 50` sur test-andesite, analyser les pics).
 - Point du jour envoyé 2026-10-11
+
+## 2026-10-11 22 h - minuit UTC : session routine (cloud)
+- **0.8.2 relue** (rien de bloquant) **et livrée** à 22 h 12 UTC (personne connecté), démarrage sans erreur du mod. Jar envoyé par `panel.py write` puis `mv`, taille vérifiée.
+- **Première vraie mesure sur test-andesite** (0.8.2, 50 PNJ du banc + Raoul, 100 ticks, `/pnj charge` deux fois) : part du mod **30-32 ms/tick** en moyenne, 59 ms au pire ; tick serveur 33-36 ms (spark : 78,5 ms au pire sur 1 min), 20 TPS. Dont **calcul des chemins 27 ms**, mouvement vanilla 2,3 ms, cerveau 0,5-1,8 ms. L'objectif (< 10 ms) n'est pas tenu. Le monde plat des tests ne montrait que 2 ms : il ne représente pas un vrai terrain.
+- **Analyse des chemins** (agent Plan, lecture du code) : `Itineraire.choisirEtape` lançait jusqu'à 23 recherches de 1024 nœuds dans le même tick, presque toutes en échec, relancées au tick suivant ; chemin direct recalculé à chaque tick quand la navigation était finie ; aucune mémoire des blocs inaccessibles.
+- **0.8.3 relue et livrée** à 22 h 33 UTC (corrections de la relecture de la 0.8.2) :
+  - un PNJ frappé par un joueur (autre que son chef) ne riposte plus : il fuit et dit « Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef. » ; un guerrier n'attaque plus un joueur qui frappe son chef sans ordre (réponses 3.10 et 14.6 ; `Cerveau.decider`, `Monde.cibles`). Décision prise seul, dans l'esprit du cahier ;
+  - l'ouvrier hélé par un messager ne reste plus figé s'il est frappé, en combat ou près d'un monstre ; on ne hèle que les ouvriers du même chef ;
+  - panneau web : ne remet plus la paie des ouvriers du banc ; `TestsCharge` appelle toujours `finBanc` ; contrôle du coffre voisin du banc par le bon côté.
+  - 3 nouveaux tests, qui échouaient sur l'ancien code. 60 JUnit, 74 en jeu.
+- **0.8.4 « chemins sobres »** (commitée, testée, relecture en cours, pas encore livrée) : compteurs de recherches dans `Charge` et `/pnj charge` ; délai de 20 ticks après un échec complet ; au plus 4 recherches par tick et par PNJ ; budget de 16 recherches d'étape par tick serveur ; recalcul direct au plus toutes les 10 ticks ; mémoire des blocs inaccessibles (bûcheron). Nouveau test `TestsCharge.cheminsSobres` (échouait avant : bûcheron à 77 recherches sur 200 ticks, prisonnier à 19 recherches sur un tick ; après : 6 et 4). Deux tests de fuite rendus stables (ils dépendaient du numéro d'entité). 61 JUnit, 75 en jeu (2 passes vertes chez le développeur, 1 chez moi).
+  - Sur le monde plat, rien ne bouge (2-5 ms avant comme après) : **seule la mesure sur test-andesite dira si l'on passe sous 10 ms**.
