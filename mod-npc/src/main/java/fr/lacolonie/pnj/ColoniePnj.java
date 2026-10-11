@@ -365,7 +365,8 @@ public class ColoniePnj {
         if (bureau == null || !l.getBlockState(bureau).isAir())
             throw new IllegalStateException("Pas de place pour le poste 3 blocs au nord : il faut une case d'air posée sur un sol.");
         for (var d : net.minecraft.core.Direction.values())
-            if (l.getCapability(Capabilities.ItemHandler.BLOCK, bureau.relative(d), null) != null)
+            if (l.getCapability(Capabilities.ItemHandler.BLOCK, bureau.relative(d), d.getOpposite()) != null // le côté que voit le poste (Bureau.voisins)
+                    || l.getCapability(Capabilities.ItemHandler.BLOCK, bureau.relative(d), null) != null)
                 throw new IllegalStateException("Un coffre ou une machine touche la place du poste (" + bureau.toShortString() + ") : choisis un autre endroit.");
         l.setBlockAndUpdate(bureau, BUREAU.get().defaultBlockState());
         Courrier.de(l.getServer()).definirPoste(CHEF_BANC, l, bureau);

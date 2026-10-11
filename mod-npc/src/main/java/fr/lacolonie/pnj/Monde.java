@@ -143,7 +143,8 @@ final class Monde {
     /**
      * Ce qu'un PNJ combattant peut frapper : les créatures hostiles proches, celui qui l'a attaqué, celui qui a
      * attaqué son chef, et ce que son chef combat s'il s'agit d'une créature hostile ou de son agresseur.
-     * Jamais un villageois, un golem, un animal ou un joueur qui ne s'en est pris à personne.
+     * Jamais un villageois, un golem, un animal ni un joueur, même agresseur : un joueur, seulement sur ordre du chef
+     * (une consigne, voir Consignes.combat).
      */
     static List<LivingEntity> cibles(Travailleur t, double rayon) {
         // Comme un joueur : les monstres qu'il voit, à sa hauteur (pas un zombie au fond d'une grotte sous ses pieds,
@@ -153,11 +154,11 @@ final class Monde {
         List<LivingEntity> l = new ArrayList<>(t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(rayon),
                 e -> hostile(e) && Math.abs(e.getY() - t.getY()) < 6 && t.getSensing().hasLineOfSight(e)));
         LivingEntity mien = t.getLastHurtByMob();
-        if (mien != null && mien.isAlive() && recent(t, t.getLastHurtByMobTimestamp()) && !t.estDe(mien) && !l.contains(mien)) l.add(mien);
+        if (mien != null && mien.isAlive() && !(mien instanceof Player) && recent(t, t.getLastHurtByMobTimestamp()) && !t.estDe(mien) && !l.contains(mien)) l.add(mien);
         ServerPlayer c = t.chefJoueur();
         if (c != null && c.level() == t.level() && c.distanceTo(t) < rayon * 2) {
             LivingEntity agresseur = c.getLastHurtByMob();
-            if (agresseur != null && agresseur.isAlive() && agresseur != t && recent(c, c.getLastHurtByMobTimestamp()) && !l.contains(agresseur)) l.add(agresseur);
+            if (agresseur != null && agresseur.isAlive() && agresseur != t && !(agresseur instanceof Player) && recent(c, c.getLastHurtByMobTimestamp()) && !l.contains(agresseur)) l.add(agresseur);
             LivingEntity vise = c.getLastHurtMob();
             if (vise != null && vise.isAlive() && vise != t && !(vise instanceof Player) && recent(c, c.getLastHurtMobTimestamp()) && !l.contains(vise)
                     && (hostile(vise) || vise instanceof Mob m && m.getTarget() == c)) l.add(vise);

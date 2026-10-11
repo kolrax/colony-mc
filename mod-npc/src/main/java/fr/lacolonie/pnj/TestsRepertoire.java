@@ -284,6 +284,29 @@ public class TestsRepertoire {
                 () -> fin(e));
     }
 
+    /**
+     * Le messager ne hèle pas l'ouvrier d'un autre chef (sinon, on pourrait figer à volonté les ouvriers d'un autre) :
+     * il va jusqu'à lui. Ici, Odon change de chef pendant que Bertrand vient lui parler.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void messagerNeFigePasLOuvrierDUnAutre(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 36);
+        Travailleur bertrand = e[0], odon = e[2];
+        Vec3 depart = odon.position(), but = depart.add(0, 0, 15);
+        int[] ecoute = {-1}; // le plus long arrêt d'Odon depuis son changement de chef
+        h.onEachTick(() -> { if (ecoute[0] >= 0) ecoute[0] = Math.max(ecoute[0], odon.ecouteTicks); });
+        etapes(h, chef, e,
+                () -> Cerveau.lancer(odon, new Actions.Aller(but, 1)),
+                () -> h.assertTrue(odon.position().distanceTo(depart) >= 3, "Odon doit être en route"),
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
+                () -> h.assertTrue(c(bertrand).equals("message"), "consigne : " + c(bertrand)),
+                () -> { odon.chef = java.util.UUID.randomUUID(); odon.ecouteTicks = 0; ecoute[0] = 0; },
+                attendre(h, 40),
+                () -> h.assertTrue(ecoute[0] == 0, "Odon ne doit pas être hélé par l'ouvrier d'un autre chef (arrêté " + ecoute[0] + " ticks)"),
+                () -> fin(e));
+    }
+
     /** « Danse ! » : il danse dix secondes, puis reprend son travail tout seul. */
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void danseUnMoment(GameTestHelper h) {

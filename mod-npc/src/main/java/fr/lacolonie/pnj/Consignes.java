@@ -1515,7 +1515,8 @@ final class Consignes {
             if (vise == null) vise = entite(t, c.entite);
             if (vise == null) return rate(t, "Je ne le trouve pas, chef.");
             // À portée de voix, il le hèle : l'autre l'attend sur place, et l'écoute jusqu'à la fin (s'il marchait, il ne le rattrapait jamais).
-            if (vise instanceof Travailleur w && t.distanceTo(w) <= 16 && t.hasLineOfSight(w)) w.ecouter(t, 20);
+            // Seulement un ouvrier du même chef : sinon, on pourrait figer à volonté les ouvriers d'un autre. Celui-là, il va jusqu'à lui.
+            if (vise instanceof Travailleur w && t.chef != null && t.chef.equals(w.chef) && t.distanceTo(w) <= 16 && t.hasLineOfSight(w)) w.ecouter(t, 20);
             if (t.distanceTo(vise) > 3) {
                 if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(vise.position()) > 4) { sous.fin(t); sous = null; }
                 Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5));

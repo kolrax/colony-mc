@@ -184,7 +184,7 @@ public final class PanneauWeb {
             Reglages.remplacer(Reglages.GSON.fromJson(corps, Reglages.class));
             // Un délai entre paies raccourci s'applique tout de suite (sinon la paie suivante resterait au lendemain).
             long max = System.currentTimeMillis() + Travailleur.periodePaie();
-            for (Travailleur t : ColoniePnj.tous(serveur)) if (t.prochainePaie > max) t.prochainePaie = max;
+            for (Travailleur t : ColoniePnj.tous(serveur)) if (t.prochainePaie > max && t.prochainePaie != Monnaie.SANS_PAIE) t.prochainePaie = max; // pas les ouvriers sans paie (banc)
         } catch (Exception e) {
             return resultat("réglages invalides : " + e.getMessage());
         }

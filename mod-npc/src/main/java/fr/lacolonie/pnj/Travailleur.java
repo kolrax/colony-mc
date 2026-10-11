@@ -504,6 +504,7 @@ public class Travailleur extends PathfinderMob {
             if (--lectureTicks <= 0) { Courrier.Lettre l = lettreEnMain; lettreEnMain = null; lireLettre(l); }
             return;
         }
+        if (ecouteTicks > 0 && vientDEtreFrappe()) { ecouteTicks = 0; ecoutePar = null; } // frappé : il cesse d'écouter pour riposter ou fuir
         if (ecouteTicks > 0) { // un messager le hèle : il l'attend sur place, puis reprend son action là où il l'a laissée
             ecouteTicks--;
             getNavigation().stop();
@@ -557,13 +558,20 @@ public class Travailleur extends PathfinderMob {
 
     /**
      * Un messager le hèle (« Odon, attends ! ») : il s'arrête {@code ticks} ticks pour l'écouter. Sans ça, quand il
-     * marchait, le messager qui va aussi vite que lui ne le rattrapait jamais. Pas au combat, ni en fuite, ni à terre.
+     * marchait, le messager qui va aussi vite que lui ne le rattrapait jamais. Pas au combat, ni en fuite (même pour une
+     * consigne du chef), ni à terre, ni tout juste frappé, ni avec un monstre à quelques pas : il resterait sans défense.
      */
     void ecouter(net.minecraft.world.entity.Entity qui, int ticks) {
-        if (aTerre || action instanceof Actions.Attaquer || action instanceof Actions.Fuir) return;
+        if (aTerre || vientDEtreFrappe() || enCombat(action) || action instanceof Consignes.Faire f && enCombat(f.sous)) return;
+        if (!level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(8), Monde::hostile).isEmpty()) return;
         ecouteTicks = Math.max(ecouteTicks, ticks);
         ecoutePar = qui;
     }
+
+    static boolean enCombat(Actions.Action a) { return a instanceof Actions.Attaquer || a instanceof Actions.Fuir; }
+
+    /** Une créature (monstre, joueur, son chef…) l'a frappé il y a moins de 10 secondes. */
+    boolean vientDEtreFrappe() { return getLastHurtByMob() != null && Monde.recent(this, getLastHurtByMobTimestamp()); }
 
     /** Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. */
     void recevoirLettre(Courrier.Lettre l) {

@@ -3,6 +3,7 @@ package fr.lacolonie.pnj;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 import java.time.LocalTime;
@@ -65,10 +66,15 @@ final class Cerveau {
             return;
         }
 
-        // Attaqué : un combattant riposte, les autres s'enfuient.
+        // Attaqué : un combattant riposte, les autres s'enfuient. Frappé par un joueur, personne ne riposte : il ne frappe un
+        // joueur que sur ordre de son chef (une consigne, en guerre). Il recule.
         LivingEntity agresseur = t.getLastHurtByMob();
         if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
-            if (m.combattant) lancer(t, new Actions.Attaquer(agresseur));
+            if (agresseur instanceof Player && m.combattant) {
+                dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
+                lancer(t, new Actions.Fuir(agresseur));
+            }
+            else if (m.combattant) lancer(t, new Actions.Attaquer(agresseur));
             else { dire(t, "fuite", 30, "À l'aide ! On m'attaque !"); lancer(t, new Actions.Fuir(agresseur)); }
             return;
         }

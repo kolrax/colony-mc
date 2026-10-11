@@ -431,6 +431,67 @@ public class TestsJeu {
         });
     }
 
+    /**
+     * Un joueur qui n'est pas son chef frappe un guerrier : il ne riposte pas (il ne frappe un joueur que sur ordre de
+     * son chef), il recule. Avant la 0.8.3, il l'attaquait comme un monstre.
+     */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void guerrierNeRipostePasAUnJoueur(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "guerrier", 2, 2, 4, new ItemStack(Items.IRON_SWORD));
+        Guerrier.armer(t);
+        var joueur = h.makeMockServerPlayerInLevel();
+        joueur.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // en créatif, il ne prendrait aucun coup
+        Vec3 p = h.absoluteVec(new Vec3(3.5, 2, 4.5));
+        joueur.moveTo(p.x, p.y, p.z);
+        boolean[] vu = {false, false}; // il a lancé une attaque contre lui ; il a reculé
+        h.onEachTick(() -> {
+            if (t.action instanceof Actions.Attaquer a && a.cible == joueur) vu[0] = true;
+            if (t.action instanceof Actions.Fuir) vu[1] = true;
+        });
+        h.runAtTickTime(h.getTick() + 5, () -> t.hurt(t.damageSources().playerAttack(joueur), 1));
+        h.runAtTickTime(h.getTick() + 120, () -> {
+            h.assertFalse(vu[0], "il ne doit pas attaquer le joueur");
+            h.assertTrue(joueur.getHealth() == joueur.getMaxHealth(), "le joueur ne doit prendre aucun coup (vie " + joueur.getHealth() + ")");
+            h.assertTrue(vu[1], "il doit reculer (" + (t.action == null ? "-" : t.action.nom) + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
+
+    /**
+     * Un messager le hèle, puis un monstre le frappe : il cesse d'écouter tout de suite et s'enfuit ; hélé de nouveau,
+     * il ne s'arrête pas. Avant la 0.8.3, il restait figé sans défense jusqu'au bout de l'écoute.
+     */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void ouvrierFrappeNeResteFigePas(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
+        Travailleur messager = ouvrier(h, "bucheron", 6, 2, 4, ItemStack.EMPTY);
+        boolean[] fui = {false};
+        h.onEachTick(() -> { if (t.action instanceof Actions.Fuir) fui[0] = true; });
+        net.minecraft.world.entity.monster.Zombie[] z = new net.minecraft.world.entity.monster.Zombie[1];
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            t.ecouter(messager, 100);
+            h.assertTrue(t.ecouteTicks == 100, "sans danger, il doit écouter le messager (" + t.ecouteTicks + ")");
+            z[0] = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 2, 2, 7);
+            z[0].setNoAi(true);
+            t.setLastHurtByMob(z[0]);
+        });
+        h.runAtTickTime(h.getTick() + 7, () -> {
+            h.assertTrue(t.ecouteTicks == 0, "frappé, il doit cesser d'écouter (encore " + t.ecouteTicks + " ticks)");
+            t.ecouter(messager, 20);
+            h.assertTrue(t.ecouteTicks == 0, "frappé, il ne doit pas s'arrêter pour écouter (" + t.ecouteTicks + " ticks)");
+        });
+        h.runAtTickTime(h.getTick() + 60, () -> {
+            h.assertTrue(fui[0], "il doit s'enfuir (" + (t.action == null ? "-" : t.action.nom) + ")");
+            t.discard();
+            messager.discard();
+            z[0].discard();
+            h.succeed();
+        });
+    }
+
     /** Un zombie enfermé sous ses pieds, hors de vue (Raoul le 6 octobre) : le guerrier ne tourne pas en rond au-dessus. */
     @GameTest(template = "grand", timeoutTicks = 300)
     public static void guerrierNeTournePasEnRond(GameTestHelper h) {
