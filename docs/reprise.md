@@ -1,38 +1,46 @@
 # Reprise : où on en est
 
-Mise à jour : 11/10/2026, 21 h UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 11/10/2026, ~23 h 45 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.8.2** dans le dépôt (commité, testé, PAS ENCORE RELU ni livré). Sur le serveur : **0.8.1** (livrée le 11/10 à 19 h 21 UTC).
-- Modpack : **0.4.8** (d'après `docs/journal.md`). Il n'a pas à changer tant que le client ne change pas (canal réseau toujours `"6"`).
-- Serveur : MintServers, monde de test **`test-andesite`** (jetable, génération finale). Le vrai monde sera créé à l'ouverture (vendredi 16/10 au soir ou samedi).
+- Mod `colonie_pnj` : **0.8.4** dans le dépôt et sur le serveur (livrée le 11/10 vers 23 h 25 UTC, relue, 62 JUnit et 77 tests en jeu verts).
+- Modpack : **0.4.8**. Il n'a pas à changer tant que le client ne change pas (canal réseau toujours `"6"`).
+- Serveur : MintServers, monde de test **`test-andesite`** (jetable). Le vrai monde sera créé à l'ouverture (vendredi 16/10 au soir ou samedi).
 
 ## Ce que le mod sait faire aujourd'hui
-- **Recrutement** : des chercheurs d'emploi arrivent à pied près des joueurs ; on les embauche par une fiche (prime prise dans l'inventaire), salaire en pièces Numismatics touché à la caisse du poste. Plafond : 5 PNJ par joueur (réglable).
-- **Un poste de travail par joueur** (le bloc bureau) : caisse, dépôt agrandi par les coffres voisins, écran du chef (ouvriers, missions, horaires, paie, durée d'expédition, lettres).
-- **Trois métiers codés** : mineur (filons, escalier en colimaçon, galeries), bûcheron (arbres naturels, replante, va au bon biome), guerrier (garde, ronde, escorte, ne frappe que les hostiles et les agresseurs).
-- **Autonomie** : espace de vie de 50 blocs, sorties à la journée et expéditions avec camp la nuit, retour à l'heure, repos au lit, faim, fatigue, paie, grève après 2 paies manquées, « à terre » au lieu de mourir tout de suite, tombe à la mort.
-- **Déplacements** : longues distances par étapes vérifiées, retour par la trace, sortie de sous terre, escalier creusé vers la surface, nage, bateau. Chaque PNJ garde 3 x 3 chunks actifs.
-- **Courrier** : plus de chat ; le PNJ parle en bulle face à face, sinon il écrit une lettre, portée à pied ou par un corbeau. Le chef écrit aussi des missions et des ordres.
-- **Ordres en français sans IA** (« suis-moi », « ramène 10 fers ») et un répertoire de nombreuses actions (gestes, postures, gardes, tâches, sons, formations).
-- **IA en option** (Groq pour la conversation et l'écoute, Whisper pour le micro, Gemini pour la voix), avec quotas gratuits ; sans clé, tout marche sans IA. Micro et voix par Simple Voice Chat. « À qui parle le chef » : formule apprise croisée avec l'IA.
-- **Admin** : commande `/pnj` (chercheur, liste, diag, ia, panneau, recharger) et panneau web intégré au serveur (port 25776).
+- **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
+- **Un poste de travail par joueur** (bloc bureau) : caisse, dépôt agrandi par les coffres voisins, écran du chef.
+- **Trois métiers** : mineur, bûcheron, guerrier.
+- **Autonomie** : espace de vie, sorties et expéditions, repos, faim, paie, grève, « à terre », tombe.
+- **Déplacements** par étapes vérifiées, sortie de sous terre, nage, bateau, 3 x 3 chunks par PNJ. Depuis la 0.8.4 : recherches de chemin étalées et limitées (au plus 4 par PNJ et par tick, 16 recherches d'étape par tick serveur, délai de 20 ticks après un échec complet), jamais de pas tout droit au bout d'un chemin direct incomplet (lave, vide).
+- **Combat** (0.8.3/0.8.4) : un PNJ frappé par un joueur ne riposte jamais sans ordre, il fuit ; un guerrier n'attaque pas un joueur qui frappe son chef sans ordre ; un PNJ frappé en pleine action réagit tout de suite (une fois par coup).
+- **Courrier**, **ordres en français sans IA**, **répertoire d'actions**, **IA en option** (Groq, Whisper, Gemini), **admin** `/pnj` et panneau web (port 25776).
 
-## Tests (au 11/10, 21 h UTC)
-- 60 tests JUnit verts (`./gradlew build`).
-- 71 tests en jeu verts (`rm -rf run/world && ./gradlew runGameTestServer`) : 38 TestsJeu, 16 TestsIA, 14 TestsRepertoire, 3 TestsCharge. 5 passages verts de suite.
-- Mesure (monde plat de test, 200 ticks) : part du mod ≈ 1,6 à 2,4 ms/tick en moyenne à 50 PNJ (pire 6 à 17 ms) ; à 100 PNJ 2,2 à 4,4 ms, mais 2 pics à ~100 ms sur 4 passages (non analysés).
+## Mesures réelles (test-andesite, 50 PNJ du banc + Raoul)
+- 0.8.2 : part du mod 30-32 ms/tick (pire 59), dont chemins 27 ms ; tick serveur 33-36 ms.
+- 0.8.4 : voir la fin de `docs/journal.md`.
 
 ## Prochaine étape (exacte)
-1. **Relire puis livrer la 0.8.2** : faire relire par le `relecteur` le dernier commit (Corbeau.arrivee/envol, Travailleur.ecouter, Consignes Faire.message, ColoniePnj.banc/finBanc, Monnaie.paieEnRetard). Puis livrer sur le serveur (pas de modpack : le client ne change pas).
-   - **Envoi du jar depuis le cloud** : `panel.py upload` échoue (connexion coupée vers le nœud). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods.
-2. **Vraie mesure sur test-andesite** : `python3 tools/panel.py cmd "pnj banc 50 tous X Y Z"` (près du spawn, sur une case d'air sans coffre voisin), attendre ~1 min, `pnj charge`, lire le journal, puis `pnj banc fin`. Personne ne doit être connecté.
-3. Analyser les pics (~100 ms à 100 PNJ, pire du cerveau et des chemins) et optimiser (points chauds : `Actions.chercherArbre` rayon 24, `Monde.chercherBloc`, `ColoniePnj.tous()`, chunks forcés par PNJ).
-4. Puis lot 1 suite : déblocage, morts dues à un bug.
+1. Si la 0.8.4 n'est pas sous 10 ms à 50 PNJ (voir journal) : lire les compteurs de recherches de `/pnj charge` et continuer : recherches d'étapes plus courtes (portée 36, multiplicateur 0,5, point 5 de l'analyse), délai aussi pour les cibles que le cerveau relance (ronde du guerrier, `Aller` vers un point inaccessible : ~70 recherches par cycle de 3-4 s), et regarder les pics isolés (~95-100 ms, hors chemins : ramasse-miettes ? mouvement ?).
+2. Restes de relecture (faibles, à faire en un lot) :
+   - `Itineraire.java:93-99` passe-droit : tous les PNJ affamés repartent au même tick (pic) → un seul passe-droit par tick, ou ordre qui tourne ; mesurer le pire tick global dans `TestsCharge`.
+   - `Itineraire.java:437` sortie de sous terre : exiger `canReach()` avant les pas tout droit ; `:434` idem au dernier point ; `:464-472`/`526` vérifier le sol de la marche quand il creuse.
+   - `Cerveau.java:87`, `Monde.java:157` : un guerrier attaque une bête qui le frappe (loup apprivoisé, chèvre, golem) → `Attaquer` seulement si `Monde.hostile` ou PNJ, sinon fuir.
+   - `Cerveau.java:69-77` : un gréviste frappé ne fuit pas (bloc grève avant bloc attaque).
+   - `Travailleur.recevoirLettre` (l.~577) : une lettre interrompt un combat ou une fuite et fige 3 s.
+   - `Consignes.java:1519-1524` : message sans limite de temps (messager qui suit sans fin, ouvrier figé tant qu'il le voit).
+   - `Corbeau.java:160-164` : trajet vérifié tous les 4 blocs, peut couper un coin inactif (lettre livrée par le secours au bout de 30 s).
+   - `Consignes.java:405-407` : « va là » vers de la lave : le cahier (8.5) veut qu'il refuse.
+   - Tests à compléter : logique de `Itineraire.jeton()` (affamé servi après 10 ticks), `neMarchePasDansLaLave` doit vérifier qu'il est arrivé au bord, guerrier frappé par un joueur en pleine action.
+   - Cahier 14.8 (le chef frappe son ouvrier : selon son caractère) : aujourd'hui ignoré, à faire au lot 5.
+3. Puis lot 1 suite : déblocage (creuser/poser pour sortir, téléportation au poste en dernier recours avec message), morts dues à un bug.
+
+## Envoi du jar depuis le cloud
+`panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.
 
 ## Fichiers à ouvrir
-- Mesure : `Charge.java`, `TestsCharge.java`, `ColoniePnj.java` (`banc`, `finBanc`, `charge`).
-- Points chauds : `Actions.java` (`chercherArbre`), `Monde.java`, `Cerveau.java`, `Itineraire.java`, `Travailleur.java` (`forcerChunk`).
+- Chemins : `Itineraire.java` (`avancer`, `choisirEtape`, `jeton`, `suivreSortie`), `Travailleur.java` (`createNavigation`, compteurs, `blocsInaccessibles`, `coupVu`), `Charge.java`, `TestsCharge.java`.
+- Combat : `Cerveau.java` (`decider`), `Monde.java` (`cibles`), `Guerrier.java`.
 - `docs/carte-du-code.md` pour le reste.
 
 ## Session en cours
