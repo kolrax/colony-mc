@@ -209,13 +209,12 @@ class IATest {
 
     @Test
     void refusDeSchemaRattrape() {
-        // Vrai refus de Groq (11/10) : le modèle a inventé l'action « chercher », Groq rejette tout (HTTP 400) mais rend
-        // le JSON généré dans failed_generation. On garde la réplique et les actions valides.
+        // Refus de Groq (HTTP 400) : le modèle est sorti d'une liste (ici l'humeur), Groq rejette tout mais rend le JSON
+        // généré dans failed_generation. On garde la réplique et les actions valides.
         Map<String, Set<String>> ids = new java.util.LinkedHashMap<>();
         ids.put("Bertrand", Set.of("fer", "charbon"));
         String genere = """
                 {"destinataires":["Bertrand"],"reponses":[{"qui":"Bertrand","reponse":"Je cherche ça, chef, et je te suis.","humeur":"pressé","actions":[
-                 {"type":"chercher","missions":[],"ajouter":false,"debut":0,"fin":0,"jours":0},
                  {"type":"suivre","missions":[],"ajouter":false,"debut":0,"fin":0,"jours":0}]}]}""";
         JsonObject err = new JsonObject(), e = new JsonObject();
         e.addProperty("message", "Generated JSON does not match the expected schema. Please adjust your prompt. See 'failed_generation' for more details. "
@@ -232,13 +231,49 @@ class IATest {
         ReponsesIA.Decision d = g.reponses().get("Bertrand");
         assertEquals("Je cherche ça, chef, et je te suis.", d.reponse());
         assertEquals("calme", d.humeur(), "humeur hors liste : calme");
-        assertEquals(List.of("suivre"), d.actions().stream().map(ReponsesIA.Action::type).toList(), "l'action inventée est écartée");
+        assertEquals(List.of("suivre"), d.actions().stream().map(ReponsesIA.Action::type).toList());
         assertEquals(Set.of(Ordres.Intention.SUIVRE), d.lecture().intentions);
         // Illisible (coupé) ou absent : pas de rattrapage, l'appel échoue comme avant.
         e.addProperty("failed_generation", "{\"reponses\":[{\"qui\":\"Bertrand\"");
         assertNull(ReponsesIA.generationRatee(err.toString()));
         assertNull(ReponsesIA.generationRatee("{\"error\":{\"message\":\"Failed to generate JSON\"}}"));
         assertNull(ReponsesIA.generationRatee("pas du json"));
+    }
+
+    static String refus(String genere) {
+        JsonObject err = new JsonObject(), e = new JsonObject();
+        e.addProperty("message", "Generated JSON does not match the expected schema.");
+        e.addProperty("code", "json_validate_failed");
+        e.addProperty("failed_generation", genere);
+        err.add("error", e);
+        return err.toString();
+    }
+
+    @Test
+    void champsMalTypes() {
+        // Un champ du mauvais type ne fait pas tomber tout le groupe.
+        String c = """
+                {"destinataires":["Raoul"],"reponses":[{"qui":"Raoul","reponse":"Oui chef.","humeur":{"ton":"fier"},"actions":[
+                 {"type":"suivre","missions":[],"ajouter":[],"debut":0,"fin":0,"jours":0}]}]}""";
+        ReponsesIA.Decision d = ReponsesIA.decisionGroupe(c, Map.of("Raoul", Set.of("garder"))).reponses().get("Raoul");
+        assertEquals("calme", d.humeur());
+        assertEquals(Set.of(Ordres.Intention.SUIVRE), d.lecture().intentions);
+        assertFalse(d.lecture().ajouter);
+    }
+
+    @Test
+    void idDuRepertoireDansType() {
+        // Le modèle met un id du répertoire dans type : c'est un « faire », par réponse normale comme rattrapée.
+        Map<String, Set<String>> ids = Map.of("Raoul", Set.of("garder"));
+        String genere = """
+                {"destinataires":["Raoul"],"reponses":[{"qui":"Raoul","reponse":"À vos ordres, chef.","humeur":"fier","actions":[
+                 {"type":"garde_a_vous","missions":[],"ajouter":false,"debut":0,"fin":0,"jours":0}]}]}""";
+        String corps = refus(genere);
+        assertNotNull(ReponsesIA.generationRatee(corps), "un id du répertoire n'empêche pas le rattrapage");
+        ReponsesIA.Decision d = ReponsesIA.decisionGroupe(ReponsesIA.contenu(corps), ids).reponses().get("Raoul");
+        assertEquals(List.of("garde_a_vous"), d.lecture().faire.stream().map(Ordres.Faire::id).toList());
+        // Un type vraiment inconnu dans un rattrapage : on ne garde pas la réponse (retour à l'interpréteur).
+        assertNull(ReponsesIA.generationRatee(refus(genere.replace("garde_a_vous", "chercher"))));
     }
 
     @Test

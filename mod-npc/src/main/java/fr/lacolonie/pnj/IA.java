@@ -119,7 +119,7 @@ final class IA {
             if (code / 100 == 2) return rep.body();
             if (code == 400 && ReponsesIA.generationRatee(rep.body()) != null) {
                 // Le modèle est sorti du schéma : on garde ce qu'il a écrit, la lecture en écarte ce qui n'est pas permis.
-                ColoniePnj.LOG.info("IA ({}) : réponse hors schéma rattrapée", s.nom);
+                ColoniePnj.LOG.info("IA ({}) : réponse hors schéma rattrapée ({})", s.nom, ReponsesIA.erreur(rep.body()));
                 return rep.body();
             }
             String msg = "HTTP " + code + " : " + ReponsesIA.erreur(rep.body());
@@ -330,13 +330,17 @@ final class IA {
         HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
                 .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(corps)).build();
-        // Groq rate parfois son JSON (« Failed to generate JSON ») : une seconde chance, puis l'interpréteur.
-        return envoyer(CONVERSATION, req).exceptionallyCompose(e -> String.valueOf(racine(e)).contains("generate JSON") && CONVERSATION.prendre(r().max_conversations_jour)
-                ? envoyer(CONVERSATION, req) : CompletableFuture.failedFuture(e)).thenApply(rep -> {
+        java.util.function.Function<String, ReponsesIA.Groupe> lire = rep -> {
             ReponsesIA.Groupe g = ReponsesIA.decisionGroupe(ReponsesIA.contenu(rep), ids);
+            // Un refus rattrapé sans rien d'utilisable compte comme un JSON raté : seconde chance.
+            if (ReponsesIA.generationRatee(rep) != null && g.reponses().values().stream().allMatch(d -> d.reponse().isEmpty() && d.actions().isEmpty()))
+                throw new CompletionException(new IllegalStateException("rattrapage vide (Failed to generate JSON)"));
             CONVERSATION.reussite(ReponsesIA.jetons(rep));
             return g;
-        });
+        };
+        // Groq rate parfois son JSON (« Failed to generate JSON ») : une seconde chance, puis l'interpréteur.
+        return envoyer(CONVERSATION, req).thenApply(lire).exceptionallyCompose(e -> String.valueOf(racine(e)).contains("generate JSON")
+                && CONVERSATION.prendre(r().max_conversations_jour) ? envoyer(CONVERSATION, req).thenApply(lire) : CompletableFuture.failedFuture(e));
     }
 
     /** Les derniers échanges avec son chef (gardés dans sa mémoire), pour qu'il suive la conversation. */

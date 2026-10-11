@@ -178,17 +178,29 @@ final class ReponsesIA {
 
     /**
      * Groq vérifie le JSON après coup : si le modèle sort du schéma (une action inventée…), il refuse (HTTP 400) mais
-     * rend ce qu'il avait écrit dans error.failed_generation. On le garde s'il se lit comme un objet JSON : la lecture,
-     * tolérante, en écarte ce qui n'est pas permis. Sinon null.
+     * rend ce qu'il avait écrit dans error.failed_generation. On le garde s'il se lit comme un objet JSON et que ses
+     * actions sont toutes connues (un id du répertoire compte comme un « faire ») : la lecture, tolérante, écarte le
+     * reste. Sinon null (une action inventée : on retombe sur l'interpréteur, qui comprend peut-être la phrase).
      */
     static String generationRatee(String corps) {
         try {
             JsonElement f = JsonParser.parseString(corps).getAsJsonObject().getAsJsonObject("error").get("failed_generation");
             if (f == null || f.isJsonNull()) return null;
             String s = f.isJsonPrimitive() ? f.getAsString() : f.toString();
-            objetJson(s);
-            return s;
+            return typesConnus(objetJson(s)) ? s : null;
         } catch (RuntimeException e) { return null; }
+    }
+
+    /** Vrai si chaque action (d'une réponse seule ou de groupe) a un type connu, ou un id du répertoire pour type. */
+    static boolean typesConnus(JsonObject o) {
+        if (o.has("actions") && o.get("actions").isJsonArray())
+            for (JsonElement a : o.getAsJsonArray("actions")) {
+                String t = a.isJsonObject() ? texte(a.getAsJsonObject(), "type") : "";
+                if (!ACTIONS_FACE.contains(t) && !Repertoire.PAR_ID.containsKey(t)) return false;
+            }
+        if (o.has("reponses") && o.get("reponses").isJsonArray())
+            for (JsonElement r : o.getAsJsonArray("reponses")) if (r.isJsonObject() && !typesConnus(r.getAsJsonObject())) return false;
+        return true;
     }
 
     /** Les jetons consommés (usage.total_tokens), 0 si le service ne le dit pas. */
@@ -237,7 +249,7 @@ final class ReponsesIA {
     static Decision decision(JsonObject o, Set<String> idsMissions, boolean enFace) {
         String reponse = o.has("reponse") && o.get("reponse").isJsonPrimitive() ? o.get("reponse").getAsString().strip() : "";
         if (reponse.length() > 400) reponse = reponse.substring(0, 400).replaceAll("\\s+\\S*$", "") + "…";
-        String humeur = o.has("humeur") ? o.get("humeur").getAsString() : "calme";
+        String humeur = texte(o, "humeur");
         if (!HUMEURS.contains(humeur)) humeur = "calme";
         List<String> permises = enFace ? ACTIONS_FACE : ACTIONS_LETTRE;
         List<Action> actions = new ArrayList<>();
@@ -246,6 +258,8 @@ final class ReponsesIA {
                 if (!e.isJsonObject()) continue;
                 JsonObject x = e.getAsJsonObject();
                 String type = texte(x, "type");
+                String faire = texte(x, "faire");
+                if (!permises.contains(type) && permises.contains("faire") && Repertoire.PAR_ID.containsKey(type)) { faire = type; type = "faire"; }
                 if (!permises.contains(type)) continue;
                 List<Mission> ms = new ArrayList<>();
                 if (x.has("missions") && x.get("missions").isJsonArray())
@@ -260,10 +274,9 @@ final class ReponsesIA {
                 int debut = entier(x, "debut", -1), fin = entier(x, "fin", -1), jours = entier(x, "jours", -1);
                 if (type.equals("horaires") && (debut < 0 || debut > 23 || fin < 0 || fin > 23)) continue;
                 if (type.equals("expedition") && (jours < 1 || jours > 30)) continue;
-                String faire = texte(x, "faire");
                 if (type.equals("faire") && !Repertoire.PAR_ID.containsKey(faire)) continue;
                 String cible = texte(x, "cible").strip();
-                actions.add(new Action(type, ms, x.has("ajouter") && x.get("ajouter").getAsBoolean(), debut, fin, jours, type.equals("faire") ? faire : "",
+                actions.add(new Action(type, ms, vrai(x, "ajouter"), debut, fin, jours, type.equals("faire") ? faire : "",
                         cible.length() > 64 ? cible.substring(0, 64) : cible, Math.clamp(entier(x, "nombre", 0), 0, 1000), Math.clamp(entier(x, "duree", 0), 0, 3600)));
             }
         return new Decision(reponse, humeur, actions);
@@ -272,6 +285,10 @@ final class ReponsesIA {
     static String texte(JsonObject o, String cle) {
         JsonElement e = o.get(cle);
         return e == null || e.isJsonNull() || !e.isJsonPrimitive() ? "" : e.getAsString();
+    }
+
+    static boolean vrai(JsonObject o, String cle) {
+        try { return o.has(cle) && o.get(cle).getAsBoolean(); } catch (RuntimeException e) { return false; }
     }
 
     static int entier(JsonObject o, String cle, int defaut) {
