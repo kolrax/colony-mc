@@ -1,6 +1,6 @@
 # Reprise : où on en est
 
-Mise à jour : 11/10/2026, ~23 h 45 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 11/10/2026, 23 h 45 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
 - Mod `colonie_pnj` : **0.8.4** dans le dépôt et sur le serveur (livrée le 11/10 vers 23 h 25 UTC, relue, 62 JUnit et 77 tests en jeu verts).
@@ -18,10 +18,16 @@ Mise à jour : 11/10/2026, ~23 h 45 UTC. Une page à lire en début de session, 
 
 ## Mesures réelles (test-andesite, 50 PNJ du banc + Raoul)
 - 0.8.2 : part du mod 30-32 ms/tick (pire 59), dont chemins 27 ms ; tick serveur 33-36 ms.
-- 0.8.4 : voir la fin de `docs/journal.md`.
+- 0.8.4 (23 h 33 UTC, mêmes conditions) : 1re fenêtre (97 s) mod 14 ms (pire 85), chemins 12 ms, 150 recherches dont 101 échecs ; **2e fenêtre (128 s) mod 80 ms (pire 192), chemins 77 ms, 882 recherches dont 784 échecs (793 d'« étapes », 764 échecs), 19 au pire sur un tick ; 10-12 TPS**. Jetons refusés : 4. Donc le budget (16/tick) ne freine rien : c'est le **coût d'une recherche d'étape ratée (~9 ms !)** qui tue.
 
 ## Prochaine étape (exacte)
-1. Si la 0.8.4 n'est pas sous 10 ms à 50 PNJ (voir journal) : lire les compteurs de recherches de `/pnj charge` et continuer : recherches d'étapes plus courtes (portée 36, multiplicateur 0,5, point 5 de l'analyse), délai aussi pour les cibles que le cerveau relance (ronde du guerrier, `Aller` vers un point inaccessible : ~70 recherches par cycle de 3-4 s), et regarder les pics isolés (~95-100 ms, hors chemins : ramasse-miettes ? mouvement ?).
+1. **URGENT lot 1 : la 0.8.4 n'est PAS sous 10 ms** (voir mesures ci-dessus). Pistes, dans l'ordre :
+   - comprendre pourquoi une recherche ratée coûte ~9 ms (région `PathNavigationRegion` de portée 64 + marge 8 reconstruite à chaque recherche ? 1024 nœuds ?) : mesurer le temps moyen par recherche par origine dans `Charge` ;
+   - recherches d'étape courtes (portée ~36, multiplicateur de nœuds 0,5) ; budget global ramené à 2-4 recherches d'étape par tick, ordre qui tourne ;
+   - pourquoi tant d'étapes ratées (96 %) chez des PNJ du banc posés au même endroit : candidats mal choisis (dans l'eau, le vide, les arbres ?), mémoire des cibles inaccessibles pour `Aller`/ronde ;
+   - un test en jeu sur un terrain accidenté (pas plat) qui reproduit le coût ;
+   - refaire la mesure sur test-andesite à 90 s ET 130 s, et à 3 minutes.
+   Autres pistes : recherches d'étapes plus courtes (portée 36, multiplicateur 0,5, point 5 de l'analyse), délai aussi pour les cibles que le cerveau relance (ronde du guerrier, `Aller` vers un point inaccessible : ~70 recherches par cycle de 3-4 s), et regarder les pics isolés (~95-100 ms, hors chemins : ramasse-miettes ? mouvement ?).
 2. Restes de relecture (faibles, à faire en un lot) :
    - `Itineraire.java:93-99` passe-droit : tous les PNJ affamés repartent au même tick (pic) → un seul passe-droit par tick, ou ordre qui tourne ; mesurer le pire tick global dans `TestsCharge`.
    - `Itineraire.java:437` sortie de sous terre : exiger `canReach()` avant les pas tout droit ; `:434` idem au dernier point ; `:464-472`/`526` vérifier le sol de la marche quand il creuse.

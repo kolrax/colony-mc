@@ -18,8 +18,8 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Carte du code `docs/carte-du-code.md` (une ligne par classe : rôle, fichiers liés, pièges) et fiche de reprise `docs/reprise.md` (une page : état exact, prochaine étape, fichiers à ouvrir), pour que les sessions et les agents n'aient plus à explorer le code
 
 ## 1. Fiabilité et performance (indispensable)
-- [x] Banc de charge : commande de test qui fait apparaître N ouvriers au travail, mesure du temps par tick (MSPT) et de la part du mod (`/pnj banc`, `/pnj charge`, tests à 10/50/100 ; code fini, livraison 0.8.2 à faire)
-- [ ] 50 PNJ et plus sans ralentissement perceptible (objectif : la part du mod < 10 ms par tick pour 50 PNJ)
+- [x] Banc de charge : commande de test qui fait apparaître N ouvriers au travail, mesure du temps par tick (MSPT) et de la part du mod (`/pnj banc`, `/pnj charge`, tests à 10/50/100, compteurs de recherches de chemin ; livré en 0.8.2-0.8.4)
+- [ ] 50 PNJ et plus sans ralentissement perceptible (objectif : la part du mod < 10 ms par tick pour 50 PNJ) — en cours : 0.8.4 livrée (chemins étalés et limités), mais mesure réelle 14 puis 80 ms ; à poursuivre (coût des recherches d'étape ratées)
 - [ ] Déblocage : il creuse ou pose des blocs pour sortir ; en dernier recours, téléportation au poste avec un message
 - [ ] Plus de morts dues à un bug (chutes, noyade, lave, faim)
 
