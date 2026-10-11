@@ -35,7 +35,21 @@ final class Charge {
         }
     }
 
+    /** D'où vient une recherche de chemin (pour savoir qui les multiplie). */
+    enum Origine {
+        DIRECT("chemin direct"),
+        ETAPE("étapes"),
+        SORTIE("sortie de sous terre"),
+        MONTEE("montée sur une marche"),
+        AUTRE("autres (buts de Minecraft…)");
+
+        final String nom;
+
+        Origine(String nom) { this.nom = nom; }
+    }
+
     static final Partie[] PARTIES = Partie.values();
+    static final Origine[] ORIGINES = Origine.values();
     static final int FENETRE = 100;
     /** Celui du serveur. */
     static final Charge ICI = new Charge(FENETRE);
@@ -45,11 +59,29 @@ final class Charge {
     private final long[][] fenetre;
     private final int[] pnjFenetre;
     private int pnjCourant, curseur, remplis;
+    /** Recherches de chemin du tick : [origine] puis [ORIGINES.length + origine] pour les échecs. */
+    private final int[] recherchesCourant = new int[ORIGINES.length * 2];
+    private final int[][] recherchesFenetre;
+    /** Le plus de recherches faites par un même PNJ sur un tick. */
+    private int pirePnjCourant;
+    private final int[] pirePnjFenetre;
 
     Charge(int taille) {
         this.taille = taille;
         fenetre = new long[taille][PARTIES.length];
         pnjFenetre = new int[taille];
+        recherchesFenetre = new int[taille][ORIGINES.length * 2];
+        pirePnjFenetre = new int[taille];
+    }
+
+    /**
+     * Une recherche de chemin vient d'être faite. {@code echec} : pas de chemin, ou un chemin qui n'atteint pas la cible.
+     * {@code duPnjCeTick} : combien ce PNJ en a déjà fait sur ce tick (celle-ci comprise).
+     */
+    void recherche(Origine o, boolean echec, int duPnjCeTick) {
+        recherchesCourant[o.ordinal()]++;
+        if (echec) recherchesCourant[ORIGINES.length + o.ordinal()]++;
+        pirePnjCourant = Math.max(pirePnjCourant, duPnjCeTick);
     }
 
     /** Ajoute le temps écoulé depuis {@code debut} à la partie, et rend l'heure (pour enchaîner les mesures). */
@@ -79,6 +111,10 @@ final class Charge {
         java.util.Arrays.fill(c, 0);
         pnjFenetre[curseur] = pnjCourant;
         pnjCourant = 0;
+        System.arraycopy(recherchesCourant, 0, recherchesFenetre[curseur], 0, recherchesCourant.length);
+        java.util.Arrays.fill(recherchesCourant, 0);
+        pirePnjFenetre[curseur] = pirePnjCourant;
+        pirePnjCourant = 0;
         curseur = (curseur + 1) % taille;
         if (remplis < taille) remplis++;
     }
@@ -108,6 +144,37 @@ final class Charge {
         return s / (double) remplis;
     }
 
+    /** Recherches de chemin sur la fenêtre (null = toutes origines). */
+    int recherches(Origine o) { return compter(o, 0); }
+
+    /** Celles qui ont échoué (pas de chemin, ou chemin qui n'atteint pas la cible). */
+    int echecs(Origine o) { return compter(o, ORIGINES.length); }
+
+    private int compter(Origine o, int decalage) {
+        int s = 0;
+        for (int i = 0; i < remplis; i++)
+            for (Origine x : ORIGINES) if (o == null || o == x) s += recherchesFenetre[i][decalage + x.ordinal()];
+        return s;
+    }
+
+    /** Le plus de recherches (tous les PNJ) sur un même tick de la fenêtre. */
+    int recherchesPireTick() {
+        int m = 0;
+        for (int i = 0; i < remplis; i++) {
+            int s = 0;
+            for (Origine x : ORIGINES) s += recherchesFenetre[i][x.ordinal()];
+            m = Math.max(m, s);
+        }
+        return m;
+    }
+
+    /** Le plus de recherches d'un même PNJ sur un même tick de la fenêtre. */
+    int recherchesPirePnj() {
+        int m = 0;
+        for (int i = 0; i < remplis; i++) m = Math.max(m, pirePnjFenetre[i]);
+        return m;
+    }
+
     /** Pour /pnj charge et le journal des tests : le serveur, la part du mod, puis chaque partie. */
     List<String> lignes(double msptMoyen, double msptPire) {
         List<String> l = new ArrayList<>();
@@ -118,6 +185,12 @@ final class Charge {
             String parPnj = !p.globale && pnj > 0 ? String.format(Locale.ROOT, " · %.3f ms par PNJ", moyenneMs(p) / pnj) : "";
             l.add(String.format(Locale.ROOT, " - %s : %.3f ms en moyenne, %.3f ms au pire%s", p.nom, moyenneMs(p), pireMs(p), parPnj));
         }
+        int n = recherches(null);
+        l.add(String.format(Locale.ROOT, " - recherches de chemin : %d (%.1f par tick, %d au pire sur un tick), dont %d échouées ; au plus %d pour un même PNJ sur un tick",
+                n, remplis == 0 ? 0 : n / (double) remplis, recherchesPireTick(), echecs(null), recherchesPirePnj()));
+        StringBuilder b = new StringBuilder(" - par origine :");
+        for (Origine o : ORIGINES) b.append(String.format(Locale.ROOT, " %s %d (%d échecs) ·", o.nom, recherches(o), echecs(o)));
+        l.add(b.substring(0, b.length() - 2));
         return l;
     }
 }

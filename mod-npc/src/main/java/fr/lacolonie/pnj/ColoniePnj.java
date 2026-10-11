@@ -136,6 +136,7 @@ public class ColoniePnj {
             Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
             mesure.mesurer(Charge.Partie.VOIX, h);
             mesure.clore();
+            Itineraire.nouveauTick(); // le budget des recherches d'étapes repart pour le tick suivant
         });
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).

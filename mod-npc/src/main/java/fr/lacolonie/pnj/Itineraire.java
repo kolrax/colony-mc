@@ -55,6 +55,34 @@ final class Itineraire {
     private int directRate, echecs, sortieAvance, ageCourant;
     private boolean sortieRatee;
     boolean bloque;
+    /** Le chemin direct accepté en dernier, et quand il a été calculé (âge de l'action). */
+    private Path direct;
+    private int directDate = -1000, sortieDate = -1000;
+    private Path cheminSortie;
+
+    // Le choix d'une étape, étalé sur plusieurs ticks (au plus PAR_TICK recherches par tick, BUDGET pour tout le serveur).
+    static final int PAR_TICK = 4, BUDGET = 16, DELAI_APRES_ECHEC = 20, RECALCUL = 10;
+    /** Recherches « étape » qui restent à tous les PNJ pour ce tick du serveur (remis à BUDGET à chaque tick). */
+    static int budget = BUDGET;
+    /** -1 : pas de choix en cours ; 0 : le but ; 1 : la trace ; 2 : la sortie de sous terre ; 3 : les étapes autour. */
+    private int phase = -1, curseur, essais, recherchesCeTick;
+    private List<BlockPos> candidats;
+    private final List<BlockPos> rates = new ArrayList<>();
+    /** Après un choix où rien n'était atteignable, il ne recommence pas avant ce moment (temps du monde). */
+    private long prochainChoix;
+
+    /** Un nouveau tick du serveur : le budget des étapes repart. */
+    static void nouveauTick() { budget = BUDGET; }
+
+    /** Une recherche « étape » de plus est permise maintenant (au plus PAR_TICK pour lui, BUDGET pour tous) ; elle est décomptée. */
+    private boolean jeton() {
+        if (recherchesCeTick >= PAR_TICK || budget <= 0) return false;
+        recherchesCeTick++;
+        budget--;
+        return true;
+    }
+
+    private void finChoix() { phase = -1; candidats = null; rates.clear(); }
 
     Itineraire(Travailleur t, Vec3 but) {
         this.but = but;
@@ -86,7 +114,7 @@ final class Itineraire {
             else {
                 t.diag = "monte en " + montee.toShortString();
                 if (t.onGround() && age % 10 == 0) {
-                    Path c = t.getNavigation().createPath(montee, 0);
+                    Path c = chercher(t, montee, 0, Charge.Origine.MONTEE);
                     if (c != null) t.getNavigation().moveTo(c, 1.0);
                     else t.getJumpControl().jump();
                 }
@@ -104,14 +132,19 @@ final class Itineraire {
         if (dh <= 40 && dv <= 20 && directRate < 2) {
             t.diag = "chemin direct";
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
-            if (age % 20 == 0 || nav.isDone()) {
+            // Au bout du chemin accepté (il s'arrête à côté du but) : il fait les derniers pas tout droit, sans le recalculer.
+            if (nav.isDone() && auBout(t, direct)) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
+            if (age % 20 == 0 || nav.isDone() && age - directDate >= RECALCUL) {
                 if (!t.onGround() && !t.isInWater()) return;
-                Path c = nav.createPath(BlockPos.containing(but), 0);
+                directDate = age;
+                Path c = chercher(t, BlockPos.containing(but), 0, Charge.Origine.DIRECT);
                 // Le chemin s'arrête à côté du but (bloc à casser, coffre…) : c'est bon aussi.
                 if (c != null && (c.canReach() || c.getEndNode() != null && c.getEndNode().asBlockPos().distSqr(BlockPos.containing(but)) <= 4)) {
                     nav.moveTo(c, v);
+                    direct = c;
                     directRate = 0;
                 } else {
+                    direct = null;
                     // Un chemin qui s'arrête en route, recalculé à chaque instant, le ferait hésiter et revenir sur ses pas
                     // (Enguerrand le 6 octobre) : il passe aux étapes, qui ne suivent que des chemins complets.
                     nav.stop();
@@ -123,46 +156,103 @@ final class Itineraire {
 
         // De loin, ou quand le chemin direct n'arrive pas au but : étape par étape.
         boolean arrive = etape != null && p.distanceToSqr(etape) < 6.25;
-        if (etape == null || arrive || nav.isDone() && age % 10 == 0) {
+        if (phase >= 0 || etape == null || arrive || nav.isDone() && age % 10 == 0) {
             if (!t.onGround() && !t.isInWater()) return; // Minecraft ne calcule un chemin qu'au sol ou dans l'eau
             choisirEtape(t, v);
         } else if (age % 60 == 0 && chemin != null) nav.moveTo(chemin, v);
     }
 
+    /**
+     * Choisit la prochaine étape : le but, la trace, la sortie de sous terre, puis des points autour, dans cet ordre.
+     * Le choix s'étale sur plusieurs ticks (au plus {@link #PAR_TICK} recherches par tick, {@link #BUDGET} pour tout le
+     * serveur) : en attendant, il ne part sur aucun chemin partiel. Si rien n'est atteignable, il attend
+     * {@link #DELAI_APRES_ECHEC} ticks avant de recommencer (un échec coûte cher : la recherche explore tout).
+     */
     void choisirEtape(Travailleur t, double v) {
         Level l = t.level();
+        long maintenant = l.getGameTime();
+        if (maintenant < prochainChoix) return;
+        recherchesCeTick = 0;
         BlockPos ici = t.blockPosition();
-        visites.merge(cellule(ici), 1, Integer::sum);
         Vec3 p = t.position();
         double dh = horizontale(p, but);
+        if (phase < 0) {
+            visites.merge(cellule(ici), 1, Integer::sum);
+            phase = 0;
+        }
 
         // a) Le but lui-même, s'il est à portée d'un chemin complet.
-        if (dh <= 48 && Math.abs(but.y - p.y) <= 24 && aller(t, BlockPos.containing(but), but, v)) return;
+        if (phase == 0) {
+            if (dh <= 48 && Math.abs(but.y - p.y) <= 24) {
+                if (!jeton()) return;
+                if (aller(t, BlockPos.containing(but), but, v)) { finChoix(); return; }
+            }
+            phase = 1;
+            curseur = Math.max(0, t.trace.size() - 4);
+        }
 
         // b) Pour rentrer : le chemin de l'aller, à l'envers (le point le plus avancé qu'il peut atteindre).
-        if (versLeBureau && !t.trace.isEmpty()) {
-            int fin = t.trace.size() - 1;
-            for (int k = Math.max(0, fin - 3); k <= fin; k++) {
-                BlockPos q = t.trace.get(k);
-                if (aller(t, q, Vec3.atBottomCenterOf(q), v)) {
-                    while (t.trace.size() > k) t.trace.remove(t.trace.size() - 1);
-                    return;
+        if (phase == 1) {
+            if (versLeBureau) {
+                for (; curseur < t.trace.size(); curseur++) {
+                    if (!jeton()) return;
+                    BlockPos q = t.trace.get(curseur);
+                    if (aller(t, q, Vec3.atBottomCenterOf(q), v)) {
+                        while (t.trace.size() > curseur) t.trace.remove(t.trace.size() - 1);
+                        finChoix();
+                        return;
+                    }
                 }
             }
+            phase = 2;
         }
 
         // c) Sous terre : d'abord sortir à l'air libre.
-        if (sousTerre(t) && (dh > 24 || but.y > p.y + 6)) {
-            sortie = sortieRatee ? null : versLeCiel(l, ici, 30000);
-            indexSortie = 0;
-            sortieAvance = 0;
-            if (sortie != null) return;
-            sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
-            commencerCreusage(t);
-            if (aCreuser != null) return;
+        if (phase == 2) {
+            phase = 3;
+            if (sousTerre(t) && (dh > 24 || but.y > p.y + 6)) {
+                sortie = sortieRatee ? null : versLeCiel(l, ici, 30000);
+                indexSortie = 0;
+                sortieAvance = 0;
+                if (sortie != null) { finChoix(); return; }
+                sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
+                commencerCreusage(t);
+                if (aCreuser != null) { finChoix(); return; }
+            }
+            candidats = candidats(t, l, ici, p, dh);
+            curseur = 0;
+            essais = 0;
+            rates.clear();
         }
 
         // d) Une étape sûre : des points à 28 et 14 blocs, vers le but d'abord, puis de plus en plus de côté.
+        for (; curseur < candidats.size() && essais < 18; curseur++) {
+            BlockPos c = candidats.get(curseur);
+            if (rates.stream().anyMatch(r -> r.distSqr(c) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
+            if (!jeton()) return;
+            essais++;
+            if (aller(t, c, Vec3.atBottomCenterOf(c), v)) {
+                finChoix();
+                // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
+                // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
+                if (dh <= 8 && !sousTerre(t)) { t.getNavigation().stop(); etape = null; bloque = true; t.diag = "inaccessible"; return; }
+                echecs = 0;
+                return;
+            }
+            rates.add(c);
+        }
+        finChoix();
+        prochainChoix = maintenant + DELAI_APRES_ECHEC;
+        // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
+        // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
+        commencerCreusage(t);
+        if (aCreuser != null) return;
+        if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
+        etape = null;
+    }
+
+    /** Les points d'étape possibles autour de lui, du meilleur au moins bon (vers le but, pas déjà parcouru, pas dans l'eau). */
+    private List<BlockPos> candidats(Travailleur t, Level l, BlockPos ici, Vec3 p, double dh) {
         double cap = Math.atan2(but.z - p.z, but.x - p.x);
         record Candidat(BlockPos pos, double score) {}
         List<Candidat> candidats = new ArrayList<>();
@@ -188,27 +278,12 @@ final class Itineraire {
             }
         }
         candidats.sort(Comparator.comparingDouble(Candidat::score));
-        int essais = 0;
-        List<BlockPos> rates = new ArrayList<>();
-        for (Candidat c : candidats) {
-            if (essais >= 18) break;
-            if (rates.stream().anyMatch(r -> r.distSqr(c.pos) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
-            essais++;
-            if (aller(t, c.pos, Vec3.atBottomCenterOf(c.pos), v)) {
-                // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
-                // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
-                if (dh <= 8 && !sousTerre(t)) { t.getNavigation().stop(); etape = null; bloque = true; t.diag = "inaccessible"; return; }
-                echecs = 0;
-                return;
-            }
-            rates.add(c.pos);
-        }
-        // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
-        // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
-        commencerCreusage(t);
-        if (aCreuser != null) return;
-        if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
-        etape = null;
+        return candidats.stream().map(Candidat::pos).toList();
+    }
+
+    /** Il se tient au bout de ce chemin (à un bloc près). */
+    static boolean auBout(Travailleur t, Path c) {
+        return c != null && c.getEndNode() != null && c.getEndNode().asBlockPos().distToCenterSqr(t.position()) < 2.5;
     }
 
     /** Un endroit où se tenir en (x, z), à quelques blocs de la hauteur y ; Integer.MIN_VALUE s'il n'y en a pas. */
@@ -217,9 +292,16 @@ final class Itineraire {
         return Integer.MIN_VALUE;
     }
 
+    /** Une recherche de chemin, comptée sous son origine pour le banc de charge ({@link Charge}). */
+    static Path chercher(Travailleur t, BlockPos q, int precision, Charge.Origine o) {
+        t.origineChemin = o;
+        try { return t.getNavigation().createPath(q, precision); }
+        finally { t.origineChemin = Charge.Origine.AUTRE; }
+    }
+
     /** Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. */
     private boolean aller(Travailleur t, BlockPos q, Vec3 cible, double v) {
-        Path c = t.getNavigation().createPath(q, 1);
+        Path c = chercher(t, q, 1, Charge.Origine.ETAPE);
         if (c == null || !c.canReach()) return false;
         chemin = c;
         etape = cible;
@@ -323,8 +405,12 @@ final class Itineraire {
         // Le dernier pas se fait jusqu'au bout : à un bloc près, il resterait sous le plafond et chercherait encore la sortie.
         if (t.position().distanceToSqr(c) < (dernier ? 0.3 : 2.25)) { indexSortie = cible + 1; sortieAvance = 0; return; }
         if (dernier && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
-        if (age % 20 == 0 || t.getNavigation().isDone()) {
-            Path ch = t.getNavigation().createPath(q, 0);
+        boolean fini = t.getNavigation().isDone();
+        // Au bout du dernier chemin vers ce point : les derniers pas tout droit, sans le recalculer à chaque tick.
+        if (fini && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
+        if (age % 20 == 0 || fini && age - sortieDate >= RECALCUL) {
+            sortieDate = age;
+            Path ch = cheminSortie = chercher(t, q, 0, Charge.Origine.SORTIE);
             if (ch != null) t.getNavigation().moveTo(ch, v);
             else t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v);
         }

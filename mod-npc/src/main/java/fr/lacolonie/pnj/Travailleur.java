@@ -237,6 +237,26 @@ public class Travailleur extends PathfinderMob {
 
     /** Les cibles qu'il n'a pas pu atteindre (identifiant → moment jusqu'auquel il les laisse), pour ne pas s'acharner. */
     final java.util.Map<Integer, Long> inaccessibles = new java.util.HashMap<>();
+    /**
+     * Les blocs qu'il n'a pas pu atteindre (arbre perché, minerai derrière un mur : position → moment du monde jusqu'auquel
+     * il les laisse, 30 s). Non sauvegardé. Sans ça, il les choisissait de nouveau aussitôt, et chaque essai coûte des
+     * recherches de chemin qui échouent (les plus chères).
+     */
+    final java.util.Map<Long, Long> blocsInaccessibles = new java.util.HashMap<>();
+
+    void blocInaccessible(BlockPos p) {
+        long maintenant = level().getGameTime();
+        if (blocsInaccessibles.size() >= 64) blocsInaccessibles.values().removeIf(fin -> fin <= maintenant);
+        blocsInaccessibles.put(p.asLong(), maintenant + 600);
+    }
+
+    boolean blocInaccessible(long p) {
+        Long fin = blocsInaccessibles.get(p);
+        if (fin == null) return false;
+        if (fin > level().getGameTime()) return true;
+        blocsInaccessibles.remove(p);
+        return false;
+    }
 
     public static AttributeSupplier.Builder attributs() {
         return Mob.createMobAttributes()
@@ -474,10 +494,39 @@ public class Travailleur extends PathfinderMob {
         Charge.ICI.pnj(System.nanoTime() - debut);
     }
 
-    /** Le calcul des chemins, mesuré pour le banc de charge (tous les appels passent par ici). */
+    /** D'où vient la prochaine recherche de chemin (posé par {@link Itineraire} le temps de l'appel), pour le banc de charge. */
+    Charge.Origine origineChemin = Charge.Origine.AUTRE;
+    /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
+    int recherches, recherchesPireTick;
+    private int recherchesCeTick;
+    private long tickRecherches = -1;
+
+    /** Une vraie recherche de chemin vient d'être faite (pas un chemin déjà en cours rendu tel quel). */
+    private void compterRecherche(Path c) {
+        long tick = level().getGameTime();
+        if (tick != tickRecherches) { tickRecherches = tick; recherchesCeTick = 0; }
+        recherches++;
+        recherchesPireTick = Math.max(recherchesPireTick, ++recherchesCeTick);
+        Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick);
+    }
+
+    /** Le calcul des chemins, mesuré et compté pour le banc de charge (tous les appels passent par ici). */
     @Override
     protected PathNavigation createNavigation(Level lvl) {
         return new GroundPathNavigation(this, lvl) {
+            @Override
+            protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int max) {
+                super.createPathFinder(max); // pose l'évaluateur de la marche (portes comprises)
+                return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
+                    @Override
+                    public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
+                        Path c = super.findPath(r, m, cibles, portee, precision, profondeur);
+                        if (!level().isClientSide) compterRecherche(c);
+                        return c;
+                    }
+                };
+            }
+
             @Override
             protected Path createPath(java.util.Set<BlockPos> cibles, int decalage, boolean auDessus, int precision, float portee) {
                 if (level.isClientSide) return super.createPath(cibles, decalage, auDessus, precision, portee);

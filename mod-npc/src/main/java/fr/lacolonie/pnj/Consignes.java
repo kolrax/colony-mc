@@ -1410,7 +1410,7 @@ final class Consignes {
                 }
                 case "abattre_autour" -> {
                     if (etape >= Math.max(1, c.nombre)) return ok(t);
-                    BlockPos a = Actions.chercherArbre((ServerLevel) l, t.blockPosition(), 20);
+                    BlockPos a = Actions.chercherArbre((ServerLevel) l, t.blockPosition(), 20, null, t);
                     if (a == null) { Voix.dire(t, etape == 0 ? "Je ne vois pas d'arbre par ici, chef." : "Plus d'arbre par ici, chef.", "calme"); return ok(t); }
                     etape++;
                     sous = new Actions.Abattre(a);

@@ -251,7 +251,7 @@ public final class Actions {
             if (st.getDestroySpeed(lvl, pos) < 0) return echec("incassable");
             if (lvl.getBlockEntity(pos) != null) return echec("contenant");
             if (!aPortee(t, pos)) {
-                if (coince() || age > 20 * 60) return echec("inaccessible");
+                if (coince() || age > 20 * 60) { t.blocInaccessible(pos); return echec("inaccessible"); }
                 marcher(t, Vec3.atCenterOf(pos), 1.0);
                 return Etat.EN_COURS;
             }
@@ -290,7 +290,7 @@ public final class Actions {
             }
             if (!lvl.getBlockState(pied).is(BlockTags.LOGS)) return Etat.OK;
             if (!aPortee(t, pied)) {
-                if (coince() || age > 20 * 60) return echec("inaccessible");
+                if (coince() || age > 20 * 60) { t.blocInaccessible(pied); return echec("inaccessible"); }
                 marcher(t, Vec3.atCenterOf(pied), 1.0);
                 return Etat.EN_COURS;
             }
@@ -335,10 +335,13 @@ public final class Actions {
     }
 
     /** Le pied de l'arbre naturel le plus proche du centre, dans un rayon donné. */
-    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon) { return chercherArbre(lvl, centre, rayon, null); }
+    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon) { return chercherArbre(lvl, centre, rayon, null, null); }
 
-    /** Pareil, pour un bois précis (filtre sur le pied de l'arbre, null = n'importe lequel). */
-    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon, Filtre bois) {
+    /**
+     * Pareil, pour un bois précis (filtre sur le pied de l'arbre, null = n'importe lequel), en sautant les arbres que
+     * {@code pour} n'a pas pu atteindre récemment (null = aucun).
+     */
+    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon, Filtre bois, Travailleur pour) {
         BlockPos meilleur = null;
         double dMin = Double.MAX_VALUE;
         for (int dx = -rayon; dx <= rayon; dx++)
@@ -353,6 +356,7 @@ public final class Actions {
                     if (!lvl.getBlockState(p).is(BlockTags.LOGS)) continue;
                     if (!lvl.getBlockState(p.below()).is(BlockTags.DIRT)) continue;
                     if (bois != null && !bois.bloc(lvl.getBlockState(p))) break;
+                    if (pour != null && pour.blocInaccessible(p.asLong())) break;
                     if (arbre(lvl, p) != null) { meilleur = p; dMin = d; }
                     break;
                 }

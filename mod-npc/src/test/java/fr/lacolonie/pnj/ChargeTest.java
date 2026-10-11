@@ -60,4 +60,25 @@ class ChargeTest {
         c.clore();
         assertEquals((apres - debut) / MS, c.moyenneMs(Charge.Partie.ACTION), 1e-9);
     }
+
+    @Test
+    void recherchesDeChemin() {
+        Charge c = new Charge(3);
+        c.recherche(Charge.Origine.ETAPE, true, 1);
+        c.recherche(Charge.Origine.ETAPE, true, 2);
+        c.recherche(Charge.Origine.DIRECT, false, 1);
+        c.clore();
+        c.recherche(Charge.Origine.SORTIE, false, 1);
+        c.clore();
+        assertEquals(4, c.recherches(null));
+        assertEquals(2, c.recherches(Charge.Origine.ETAPE));
+        assertEquals(2, c.echecs(null));
+        assertEquals(0, c.echecs(Charge.Origine.DIRECT));
+        assertEquals(3, c.recherchesPireTick());
+        assertEquals(2, c.recherchesPirePnj());
+        assertTrue(c.lignes(0, 0).stream().anyMatch(l -> l.contains("recherches de chemin : 4")), "/pnj charge doit les montrer");
+        for (int i = 0; i < 3; i++) c.clore();
+        assertEquals(0, c.recherches(null), "les vieux ticks sortent de la fenêtre");
+        assertEquals(0, c.recherchesPirePnj());
+    }
 }

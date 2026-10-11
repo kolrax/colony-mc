@@ -25,7 +25,7 @@ rm -rf run/world && ./gradlew runGameTestServer  # 65 tests en jeu (36 TestsJeu,
 ## Pour telle tâche, ouvrir tels fichiers
 - **Banc de charge, performance** :
   - fichiers : `Travailleur` (`customServerAiStep`, `tickCorps`, `forcerChunk`), `Cerveau` (`penser`, `decider`), `ColoniePnj` (`ServerTickEvent.Post`, `tous()`, commande `/pnj`), `Monde` (recherches de blocs), `Courrier.tick`, `Voix.tick`, `TestsJeu` (`employe`, `sol`) et `TestsIA` (`equipe`, `etapes`).
-  - **mesure** : `Charge` (fenêtre de 100 ticks, parties TOTAL/ENTITE/MOTEUR/CHUNKS/CORPS/ACTION/CERVEAU/CHEMINS/FILET/COURRIER/VOIX), `TestsCharge` (10/50/100 PNJ, lots séparés), commandes op `/pnj banc <N> [metier]`, `/pnj banc fin`, `/pnj charge`. `Travailleur.auTravail(...)` fait apparaître un ouvrier au travail (tests et banc).
+  - **mesure** : `Charge` (fenêtre de 100 ticks, parties TOTAL/ENTITE/MOTEUR/CHUNKS/CORPS/ACTION/CERVEAU/CHEMINS/FILET/COURRIER/VOIX ; depuis la 0.8.4, les **recherches de chemin** comptées par origine `Charge.Origine` DIRECT/ETAPE/SORTIE/MONTEE/AUTRE, leurs échecs, le pire tick et le pire PNJ sur un tick : `recherche()`, `recherches()`, `echecs()`, `recherchesPireTick()`, `recherchesPirePnj()`), `TestsCharge` (10/50/100 PNJ, lots séparés ; `cheminsSobres` : arbre perché, enclos, prisonnier), commandes op `/pnj banc <N> [metier]`, `/pnj banc fin`, `/pnj charge`. `Travailleur.auTravail(...)` fait apparaître un ouvrier au travail (tests et banc).
 - **Déblocage, chemins** :
   - fichiers : `Itineraire` (étapes, sortie de sous terre, creusage, bateau), `Actions.Aller` (`coince()`), `Cerveau` (réaction au résultat `bloque`, lettre « perdu »), `Monde`, `Travailleur` (saut d'à-pic, fin du fichier).
   - tests : `TestsJeu` (`sortParLesGaleries`, `creuseVersLaSurface`, `sortDuPuits`, `traverseALaNage`…).
@@ -55,7 +55,7 @@ Pour tout le serveur, dans `ColoniePnj` (`ServerTickEvent.Post`) :
 - toutes les 100 ticks : `tous()` puis `forcerChunk()` pour chaque PNJ (filet de sécurité) ;
 - arrivée des chercheurs d'emploi (`arriveeChercheurs`).
 En arrière-plan, hors du fil du serveur : tous les appels d'IA (`IA`).
-Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mondes ; `Monde.chercherBloc` et `solNaturel` balaient des volumes ; le calcul des chemins dans `Itineraire` ; 9 chunks forcés par PNJ.
+Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mondes ; `Monde.chercherBloc` et `solNaturel` balaient des volumes ; le calcul des chemins dans `Itineraire` (bridé depuis la 0.8.4 : 4 recherches d'étape par tick et par PNJ, 16 pour le serveur, 20 ticks de pause après un échec complet) ; 9 chunks forcés par PNJ.
 
 ## Pièges communs
 - Un PNJ seul se fige au bord d'un chunk : il faut 3 x 3 chunks forcés (`forcerChunk`).
@@ -65,11 +65,12 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - Un bloc `static {}` qui lit des champs doit venir après eux.
 
 ## Entité et cerveau
-- **Travailleur** (1265) : le PNJ, un `PathfinderMob` à corps de joueur. Champs : métier, niveau, chef, bureau, mode (`CHOMEUR`, `SUIVRE`, `ATTENDRE`, `TRAVAIL`, `GREVE`), missions, inventaire de 27 cases, faim, impayés, action en cours.
+- **Travailleur** (1265) : le PNJ, un `PathfinderMob` à corps de joueur. Champs : métier, niveau, chef, bureau, mode (`CHOMEUR`, `SUIVRE`, `ATTENDRE`, `TRAVAIL`, `GREVE`), missions, inventaire de 27 cases, faim, impayés, action en cours. Depuis la 0.8.4 : `createNavigation` compte chaque vraie recherche (`PathFinder.findPath`) dans `recherches` / `recherchesPireTick` (lus par les tests) et `Charge` ; `origineChemin` (posé par `Itineraire.chercher`) ; `blocsInaccessibles` (position → fin, 600 ticks, non sauvegardé) alimenté par `Casser`/`Abattre` quand ils échouent « inaccessible », lu par `Actions.chercherArbre(..., pour)` (bûcheron, consigne « abattre »). Le mineur garde sa propre mémoire (`ignores`).
   **Boucle de tick** : `customServerAiStep()` (ligne ~464) : chunks forcés toutes les 20 ticks, `tickCorps()` (ramassage, vitesse, armure…), `tickCourrier()` chaque seconde, l'action en cours (`Actions.Action.tick`) à chaque tick, puis `Cerveau.penser` toutes les 10 ticks (décalé par `getId()`). Aussi : à terre et relevé, mort et tombe, lettres reçues, `appliquer(Ordres.Lecture)`. Liés : `Cerveau`, `Actions`, `Courrier`, `Consignes`, `ColoniePnj.TICKETS`. Piège : `forcerChunk()` garde 3 x 3 chunks par PNJ (sinon il se fige au bord).
 - **Cerveau** (292) : ce que fait tout PNJ employé, appelé toutes les demi-secondes sans action en cours : grève, fuite (frappé par un joueur, même un combattant ne riposte pas : il recule ; un joueur ne se frappe que sur consigne du chef), faim, paie, consignes, retour à temps, repos, sac plein, courrier, missions ; puis `Metier.travailler`. `Portee` : journée, demain, expédition, trop loin. Journal d'erreurs `JOURNAL` (vu au panneau). Une erreur met le cerveau en pause 200 ticks.
 - **Actions** (659) : les gestes qui durent plusieurs ticks (`Aller`, `SuivreChef`, `Fuir`, `Attendre`, `Casser`, `Abattre`, `Poser`, `Attaquer`, `ToucherPaie`, `Deposer`, `Prendre`, `Demander`, `PorterLettres`, `LireLettres`, `Reposer`, `Ramasser`). Une seule à la fois. `Aller.coince()` : immobile 15 s ou sans progrès 2 min. Liés : `Itineraire`, `Monde`.
-- **Itineraire** (545) : aller loin sans cul-de-sac : chemin Minecraft de près (64 blocs), étapes d'une trentaine de blocs vérifiées avant de partir, retour par la trace, sortie de sous terre, escalier creusé vers le ciel, nage, bateau. `diagnostic()` pour `/pnj diag`. Pièges : ne jamais suivre un chemin direct partiel ; `getHeight` sur chunk non chargé renvoie le fond du monde.
+- **Itineraire** (631) : aller loin sans cul-de-sac : chemin Minecraft de près (64 blocs), étapes d'une trentaine de blocs vérifiées avant de partir, retour par la trace, sortie de sous terre, escalier creusé vers le ciel, nage, bateau. `diagnostic()` pour `/pnj diag`. Pièges : ne jamais suivre un chemin direct partiel ; `getHeight` sur chunk non chargé renvoie le fond du monde.
+  - Coût des chemins (0.8.4) : toute recherche passe par `chercher(t, pos, precision, origine)` (comptée dans `Charge`). `choisirEtape` est une petite machine à états (`phase` 0 but, 1 trace, 2 sortie, 3 candidats ; `curseur`, `candidats`, `rates`) : au plus `PAR_TICK` = 4 recherches par tick et par PNJ, `BUDGET` = 16 pour tout le serveur (`budget`, remis par `nouveauTick()` depuis `ColoniePnj`), le PNJ attend sans chemin partiel ; après un choix où rien n'est atteignable, `prochainChoix` = 20 ticks plus tard. Chemin direct et sortie : recalcul au plus toutes les `RECALCUL` = 10 ticks quand la navigation est finie ; au bout d'un chemin accepté (`auBout`), il fait les derniers pas tout droit.
 - **Monde** (169) : ce que le PNJ voit : surface, blocs libres, liquides, `chercherBloc`, `solNaturel`, `construit` (ne pas casser les constructions), cibles hostiles (`cibles` : jamais un joueur, même agresseur du PNJ ou du chef). Seulement les chunks chargés. Recherches de blocs : à surveiller pour la performance.
 - **Consignes** (1563) : les actions du répertoire jouées pour de vrai (gestes, postures, gardes, tâches, combats, sons, particules, instruments, formations). `ordonner` (le chef demande), `executer` (appelé par le cerveau), `interrompre`, `faits` (ce que le PNJ sait dire : heure, météo, inventaire…). Règles du serveur appliquées ici (`cassable`, cibles). Liés : `Repertoire`, `Cerveau`, `Dialogue`.
 
@@ -110,7 +111,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Reglages** (169) : `config/colonie_pnj/reglages.json` : monnaie, paie, grève, `pnj_max_par_joueur` (5), chercheurs, métiers inactifs, `port_panneau`, `jeton_panneau` (ne jamais l'afficher).
 - **PanneauWeb** (258) : serveur HTTP intégré (port 25776) : état, réglages, faire apparaître un PNJ, actions sur un PNJ. Protégé par `jeton_panneau`. Sert `web/index.html`.
 
-## Tests JUnit (`src/test`, pur Java, 60 tests ; `ChargeTest` : la fenêtre de mesure ; `MonnaieTest.paieEnRetardSansDebordement`)
+## Tests JUnit (`src/test`, pur Java, 61 tests ; `ChargeTest` : la fenêtre de mesure ; `MonnaieTest.paieEnRetardSansDebordement`)
 - **OrdresTest** (227, 17 tests) : lecture des ordres et missions.
 - **IATest** (223, 14) : son et lecture des réponses d'IA, sans réseau.
 - **RepertoireTest** (212, 11) : trouver les actions dans une phrase.
@@ -118,7 +119,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **MonnaieTest** (48, 5) : paiements en pièces.
 - **Entrainement** (577, 0 test) : outil, pas un test : entraîne l'adressage (`./gradlew entrainer`). Écrit `adressage.json`.
 
-## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 74 tests : 40 TestsJeu, 15 TestsRepertoire, 16 TestsIA, 3 TestsCharge)
+## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 75 tests : 40 TestsJeu, 15 TestsRepertoire, 16 TestsIA, 4 TestsCharge)
 - **TestsJeu** (~800, 40 tests) : cerveau et métiers pour de vrai (retour à temps, expédition, mineur, bûcheron, guerrier, dépôt, lit, à terre, grève, panneau, sorties de sous terre, nage…). Outils : `ouvrier(h, metier, x, y, z, outil)` et `employe(h, metier, bureau, pos, outil)` font apparaître un PNJ employé en service toute la journée, sans paie ; `sol(h, dx, dz)` : sol plat loin des autres tests.
 - **TestsIA** (639, 16 tests) : IA contre un faux Groq et un faux Gemini (serveur local `avant`/`apres`). Outils : `equipe(h, chef, coin)` (3 ouvriers autour d'un faux chef), `etapes(...)` (attendre qu'ils soient visibles puis enchaîner), `attendre(h, ticks)`.
 - **TestsRepertoire** (~300, 15 tests) : actions du répertoire jouées sans IA, chacune dans son coin de monde plat.

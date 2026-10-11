@@ -71,7 +71,7 @@ final class Bucheron extends Metier {
         }
 
         // 3. L'arbre du bon bois le plus proche de lui.
-        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois);
+        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t);
         if (arbre != null && t.peutAller(arbre)) {
             if (souches.size() < 16) { souches.add(arbre.asLong()); m.putLongArray("souches", souches); }
             if (!t.chezLui(arbre)) m.putLong("coin_" + c.id, arbre.asLong()); // un bon coin loin de chez lui : il y reviendra
