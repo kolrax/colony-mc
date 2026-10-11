@@ -110,7 +110,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Reglages** (169) : `config/colonie_pnj/reglages.json` : monnaie, paie, grève, `pnj_max_par_joueur` (5), chercheurs, métiers inactifs, `port_panneau`, `jeton_panneau` (ne jamais l'afficher).
 - **PanneauWeb** (258) : serveur HTTP intégré (port 25776) : état, réglages, faire apparaître un PNJ, actions sur un PNJ. Protégé par `jeton_panneau`. Sert `web/index.html`.
 
-## Tests JUnit (`src/test`, pur Java, 59 tests ; `ChargeTest` : la fenêtre de mesure)
+## Tests JUnit (`src/test`, pur Java, 60 tests ; `ChargeTest` : la fenêtre de mesure ; `MonnaieTest.paieEnRetardSansDebordement`)
 - **OrdresTest** (227, 17 tests) : lecture des ordres et missions.
 - **IATest** (223, 14) : son et lecture des réponses d'IA, sans réseau.
 - **RepertoireTest** (212, 11) : trouver les actions dans une phrase.
@@ -118,8 +118,14 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **MonnaieTest** (48, 5) : paiements en pièces.
 - **Entrainement** (577, 0 test) : outil, pas un test : entraîne l'adressage (`./gradlew entrainer`). Écrit `adressage.json`.
 
-## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 68 tests ; `TestsCharge` : banc à 10/50/100 PNJ)
+## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 71 tests : 38 TestsJeu, 14 TestsRepertoire, 16 TestsIA, 3 TestsCharge)
 - **TestsJeu** (727, 36 tests) : cerveau et métiers pour de vrai (retour à temps, expédition, mineur, bûcheron, guerrier, dépôt, lit, à terre, grève, panneau, sorties de sous terre, nage…). Outils : `ouvrier(h, metier, x, y, z, outil)` et `employe(h, metier, bureau, pos, outil)` font apparaître un PNJ employé en service toute la journée, sans paie ; `sol(h, dx, dz)` : sol plat loin des autres tests.
 - **TestsIA** (639, 16 tests) : IA contre un faux Groq et un faux Gemini (serveur local `avant`/`apres`). Outils : `equipe(h, chef, coin)` (3 ouvriers autour d'un faux chef), `etapes(...)` (attendre qu'ils soient visibles puis enchaîner), `attendre(h, ticks)`.
 - **TestsRepertoire** (270, 13 tests) : actions du répertoire jouées sans IA, chacune dans son coin de monde plat.
 - Pièges : structure fermée par un plafond de barrières (sauf `skyAccess = true`) ; pas de `runAfterDelay` dans un déclencheur ; un PNJ juste apparu n'est visible qu'au tick suivant (`TestsIA.etapes`) ; `rm -rf run/world` avant de lancer.
+
+## Ajouts du 11/10 soir (0.8.2)
+- `Monnaie.SANS_PAIE` / `Monnaie.paieEnRetard` : calcul de retard de paie sans débordement (utilisé par `Travailleur.paieEnRetard`).
+- `Travailleur.ecouter(qui, ticks)` : hélé par un messager, l'ouvrier s'arrête et le regarde sans perdre son action (`Consignes` `Faire.message` l'appelle à 16 blocs ou moins).
+- `Corbeau.arrivee` / `envol` : le corbeau part d'un point dont tout le trajet est actif (sinon lettre livrée tout de suite) ; pas d'envol depuis un tronçon inactif.
+- Piège : l'ordre des GameTests d'un lot dépend d'un HashSet ; ajouter un test déplace les autres sur la grille. Un test ne doit jamais dépendre de son voisin (faux joueur, tronçon chargé).

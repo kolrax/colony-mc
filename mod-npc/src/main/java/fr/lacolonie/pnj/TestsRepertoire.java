@@ -254,6 +254,36 @@ public class TestsRepertoire {
                 () -> fin(e));
     }
 
+    /**
+     * « Dis à Odon que… » alors qu'Odon est parti à 15 blocs d'ici : Bertrand le hèle, Odon l'attend en route, l'écoute,
+     * puis reprend sa marche. Avant, Bertrand le suivait sans le rattraper (ils vont aussi vite l'un que l'autre) : le
+     * message n'arrivait qu'une fois Odon arrêté au bout de sa route, ou jamais s'il allait loin.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void messageAUnOuvrierQuiPart(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 35);
+        Travailleur bertrand = e[0], odon = e[2];
+        Vec3 depart = odon.position(), but = depart.add(0, 0, 15); // dans les tronçons qu'il garde actifs autour de lui
+        double[] auMessage = {-1}; // à combien de blocs du bout il était quand il l'a appris
+        boolean[] auBout = {false, false}; // il est arrivé au bout ; il y était déjà arrivé quand il l'a appris
+        h.onEachTick(() -> {
+            if (odon.position().distanceTo(but) < 2) auBout[0] = true;
+            if (auMessage[0] < 0 && IA.echange(odon).contains("le repas est prêt")) { auMessage[0] = odon.position().distanceTo(but); auBout[1] = auBout[0]; }
+        });
+        etapes(h, chef, e,
+                () -> Cerveau.lancer(odon, new Actions.Aller(but, 1)),
+                () -> h.assertTrue(odon.position().distanceTo(depart) >= 3, "Odon doit être en route"),
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
+                () -> h.assertTrue(c(bertrand).equals("message"), "consigne : " + c(bertrand)),
+                () -> h.assertTrue(auMessage[0] >= 0, "Odon doit l'apprendre (Bertrand à " + (int) bertrand.distanceTo(odon) + " blocs de lui)"),
+                () -> h.assertTrue(!auBout[1] && auMessage[0] > 5, "Odon doit l'apprendre en route, avant le bout (il l'a appris à " + (int) auMessage[0]
+                        + " blocs du bout, " + (auBout[1] ? "après y être arrivé" : "sans y être encore arrivé") + ")"),
+                () -> h.assertTrue(odon.position().distanceTo(but) < 3, "puis il reprend sa route jusqu'au bout : "
+                        + (odon.action == null ? "-" : odon.action.nom) + ", à " + (int) odon.position().distanceTo(but) + " blocs du bout"),
+                () -> fin(e));
+    }
+
     /** « Danse ! » : il danse dix secondes, puis reprend son travail tout seul. */
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void danseUnMoment(GameTestHelper h) {

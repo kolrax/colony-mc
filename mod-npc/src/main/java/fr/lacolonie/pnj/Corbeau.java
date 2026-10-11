@@ -127,7 +127,7 @@ public class Corbeau extends Entity {
 
     /** Le corbeau s'envole de chez l'expéditeur (seulement si quelqu'un est là pour le voir). */
     static void envol(Level l, BlockPos depart, BlockPos arrivee, Courrier.Lettre lettre) {
-        if (!(l instanceof ServerLevel) || !temoin(l, depart)) return;
+        if (!(l instanceof ServerLevel sl) || !temoin(l, depart) || !sl.isPositionEntityTicking(depart)) return; // figé là, il resterait suspendu
         Corbeau c = ColoniePnj.CORBEAU.get().create(l);
         if (c == null) return;
         Vec3 cap = Vec3.atCenterOf(arrivee).subtract(Vec3.atCenterOf(depart)).multiply(1, 0, 1);
@@ -141,17 +141,27 @@ public class Corbeau extends Entity {
     /**
      * Le corbeau arrive chez le destinataire : il approche, se pose et laisse la lettre (qu'il livre lui-même en se
      * posant). Faux s'il n'y a personne pour le voir : la lettre est alors livrée tout de suite.
+     * <p>
+     * Il arrive de 36 blocs en arrière et 24 plus haut, mais jamais d'un tronçon où les entités ne bougent pas (hors
+     * de la distance de simulation, ou pas chargé) : il y resterait suspendu, et la lettre avec lui jusqu'au secours
+     * de {@link Courrier#tick} (30 s). Il part alors du point le plus lointain d'où tout son trajet est actif.
      */
     static boolean arrivee(Level l, BlockPos depart, BlockPos dest, boolean surLePoste, long lettre) {
-        if (!(l instanceof ServerLevel) || !l.isLoaded(dest) || !temoin(l, dest)) return false;
+        if (!(l instanceof ServerLevel sl) || !l.isLoaded(dest) || !temoin(l, dest)) return false;
         Corbeau c = ColoniePnj.CORBEAU.get().create(l);
         if (c == null) return false;
         Vec3 cap = Vec3.atCenterOf(dest).subtract(Vec3.atCenterOf(depart)).multiply(1, 0, 1);
         c.cap = cap.lengthSqr() < 1 ? new Vec3(1, 0, 0) : cap.normalize();
         c.but = surLePoste ? perchoir(l, dest) : Vec3.atBottomCenterOf(dest).add(-c.cap.x * 1.2, 0, -c.cap.z * 1.2);
+        if (!sl.isPositionEntityTicking(BlockPos.containing(c.but))) return false;
         c.phase = Phase.APPROCHE;
         c.lettre = lettre;
-        Vec3 debut = c.but.add(c.cap.scale(-36)).add(0, 24, 0);
+        Vec3 debut = c.but;
+        for (int k = 4; k <= 36; k += 4) { // un point tous les 4 blocs : un tronçon en fait 16
+            Vec3 p = c.but.add(c.cap.scale(-k)).add(0, k * 24.0 / 36, 0);
+            if (!sl.isPositionEntityTicking(BlockPos.containing(p))) break;
+            debut = p;
+        }
         c.moveTo(debut.x, debut.y, debut.z, (float) (Mth.atan2(c.cap.z, c.cap.x) * Mth.RAD_TO_DEG) - 90f, 0);
         return l.addFreshEntity(c);
     }

@@ -45,4 +45,13 @@ class MonnaieTest {
     void texteLisible() {
         assertEquals("1 laiton, 3 bronze", Monnaie.texte(67, new int[]{1, 64}, new String[]{"bronze", "laiton"}));
     }
+
+    @Test
+    void paieEnRetardSansDebordement() {
+        long jour = 1440 * 60_000L, maintenant = 1_791_834_138_252L;
+        assertFalse(Monnaie.paieEnRetard(maintenant, Monnaie.SANS_PAIE, jour), "sans paie : jamais en retard");
+        assertFalse(Monnaie.paieEnRetard(maintenant, Long.MAX_VALUE - 1, jour), "très loin dans l'avenir : pas de débordement");
+        assertFalse(Monnaie.paieEnRetard(maintenant, maintenant - jour / 4 + 1, jour));
+        assertTrue(Monnaie.paieEnRetard(maintenant, maintenant - jour / 4, jour), "un quart de jour de retard");
+    }
 }

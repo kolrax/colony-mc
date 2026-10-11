@@ -324,6 +324,17 @@ public class TestsJeu {
                 .thenSucceed();
     }
 
+    /** Sans paie (tests, banc de charge) : il ne compte jamais de paie en retard (avant, le calcul débordait dès le premier tick). */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void sansPaieJamaisEnRetard(GameTestHelper h) {
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 2, ItemStack.EMPTY);
+        h.runAtTickTime(h.getTick() + 60, () -> {
+            h.assertTrue(t.impayes == 0 && t.prochainePaie == Monnaie.SANS_PAIE, "pas de paie en retard (impayés " + t.impayes + ", prochaine paie " + t.prochainePaie + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
+
     /** Le panneau web répond : la page, l'API avec le mot de passe, et un refus sans. */
     @GameTest(template = "vide", timeoutTicks = 6000) // le serveur de test enchaîne les ticks bien plus vite que le temps réel
     public static void panneauRepond(GameTestHelper h) {
@@ -661,8 +672,9 @@ public class TestsJeu {
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void corbeauSePoseAuPoste(GameTestHelper h) {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
-        var chef = h.makeMockServerPlayerInLevel(); // un témoin
+        var chef = h.makeMockServerPlayerInLevel();
         BlockPos poste = h.absolutePos(new BlockPos(4, 2, 4));
+        chef.moveTo(poste.getX() + 2.5, poste.getY(), poste.getZ() + 0.5); // le témoin, au poste (sinon il reste au point d'apparition du monde)
         h.getLevel().setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
         Courrier c = Courrier.de(h.getLevel().getServer());
         c.definirPoste(chef.getUUID(), h.getLevel(), poste);
@@ -673,6 +685,33 @@ public class TestsJeu {
         h.succeedWhen(() -> {
             h.assertTrue(vu[0], "on doit voir le corbeau");
             h.assertTrue(c.boite(chef.getUUID()).stream().anyMatch(x -> x.objet.equals("Essai")), "la lettre doit être livrée");
+        });
+    }
+
+    /**
+     * Le corbeau arrive d'un coin où les entités ne bougent pas (seul le tronc du poste est actif) : il part de plus
+     * près, se pose et livre la lettre. Avant, il apparaissait là-bas, y restait suspendu, et la lettre n'arrivait
+     * qu'au bout de 30 s, par le secours du courrier.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void corbeauVenuDUnCoinFige(GameTestHelper h) {
+        var l = h.getLevel();
+        BlockPos poste = sol(h, 0, 36000);
+        var tronc = new net.minecraft.world.level.ChunkPos(poste);
+        l.setChunkForced(tronc.x, tronc.z, true);
+        l.setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
+        var chef = h.makeMockServerPlayerInLevel();
+        chef.moveTo(poste.getX() + 2.5, poste.getY(), poste.getZ() + 0.5); // le témoin
+        Courrier c = Courrier.de(l.getServer());
+        c.definirPoste(chef.getUUID(), l, poste);
+        Courrier.Lettre lettre = c.nouvelle("Aliénor", null, chef.getUUID(), "Essai au loin", "Bonjour chef.", l);
+        c.envoyerCorbeau(l, poste.east(40), chef.getUUID(), lettre, true);
+        boolean[] vu = {false};
+        h.onEachTick(() -> { if (!l.getEntitiesOfClass(Corbeau.class, new net.minecraft.world.phys.AABB(poste).inflate(16)).isEmpty()) vu[0] = true; });
+        h.succeedWhen(() -> {
+            h.assertTrue(vu[0], "on doit le voir arriver au poste");
+            h.assertTrue(c.boite(chef.getUUID()).stream().anyMatch(x -> x.objet.equals("Essai au loin")), "la lettre doit être livrée par le corbeau posé");
+            l.setChunkForced(tronc.x, tronc.z, false);
         });
     }
 

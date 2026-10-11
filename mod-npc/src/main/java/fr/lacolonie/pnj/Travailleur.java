@@ -205,6 +205,9 @@ public class Travailleur extends PathfinderMob {
      */
     Consignes.Consigne consigne, consigneFond;
     int lectureTicks;
+    /** Hélé par un messager : il s'arrête et l'attend, sans lâcher ce qu'il faisait ({@link #ecouter}). */
+    int ecouteTicks;
+    net.minecraft.world.entity.Entity ecoutePar;
     /** Où ses affaires ont été mises à sa mort (pour l'avis de décès). */
     String lieuAffaires = "";
     int pauseCerveau;
@@ -501,6 +504,13 @@ public class Travailleur extends PathfinderMob {
             if (--lectureTicks <= 0) { Courrier.Lettre l = lettreEnMain; lettreEnMain = null; lireLettre(l); }
             return;
         }
+        if (ecouteTicks > 0) { // un messager le hèle : il l'attend sur place, puis reprend son action là où il l'a laissée
+            ecouteTicks--;
+            getNavigation().stop();
+            if (ecoutePar != null && ecoutePar.isAlive()) getLookControl().setLookAt(ecoutePar);
+            if (ecouteTicks == 0) ecoutePar = null;
+            return;
+        }
         if (mode == Mode.CHOMEUR) {
             long duree = Reglages.actuel.chercheurs.duree_minutes * 60_000L;
             if (System.currentTimeMillis() > arrivee + duree && level().getNearestPlayer(this, 16) == null) discard();
@@ -543,6 +553,16 @@ public class Travailleur extends PathfinderMob {
         boolean tient = getOffhandItem().is(Items.PAPER);
         if (lettre && !tient && getOffhandItem().isEmpty()) setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.PAPER));
         else if (!lettre && tient) setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+    }
+
+    /**
+     * Un messager le hèle (« Odon, attends ! ») : il s'arrête {@code ticks} ticks pour l'écouter. Sans ça, quand il
+     * marchait, le messager qui va aussi vite que lui ne le rattrapait jamais. Pas au combat, ni en fuite, ni à terre.
+     */
+    void ecouter(net.minecraft.world.entity.Entity qui, int ticks) {
+        if (aTerre || action instanceof Actions.Attaquer || action instanceof Actions.Fuir) return;
+        ecouteTicks = Math.max(ecouteTicks, ticks);
+        ecoutePar = qui;
     }
 
     /** Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. */
@@ -643,7 +663,7 @@ public class Travailleur extends PathfinderMob {
     public boolean paieDue() { return chef != null && mode != Mode.CHOMEUR && System.currentTimeMillis() >= prochainePaie; }
 
     /** Une journée entière est passée sans qu'il ait pu toucher sa paie. */
-    boolean paieEnRetard() { return System.currentTimeMillis() >= prochainePaie + periodePaie() / 4 && action == null; }
+    boolean paieEnRetard() { return Monnaie.paieEnRetard(System.currentTimeMillis(), prochainePaie, periodePaie()) && action == null; }
 
     /** Montant dû : les paies impayées, plus la paie du jour si elle est due. */
     public long du() { return salaireVerse() * (impayes + (paieDue() ? 1 : 0)); }
@@ -1156,13 +1176,13 @@ public class Travailleur extends PathfinderMob {
      * posé en {@code bureau} (tests de jeu et banc de charge).
      */
     static Travailleur auTravail(ServerLevel l, String metier, BlockPos bureau, net.minecraft.world.phys.Vec3 p, UUID chef, ItemStack outil) {
-        l.setBlockAndUpdate(bureau, ColoniePnj.BUREAU.get().defaultBlockState());
+        if (!l.getBlockState(bureau).is(ColoniePnj.BUREAU.get())) l.setBlockAndUpdate(bureau, ColoniePnj.BUREAU.get().defaultBlockState());
         Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
         t.moveTo(p.x, p.y, p.z, -90, 0);
         t.tirerAuSort(metier, 5);
         t.mode = Mode.TRAVAIL;
         t.chef = chef;
-        t.prochainePaie = Long.MAX_VALUE;
+        t.prochainePaie = Monnaie.SANS_PAIE;
         t.debut = 0;
         t.fin = 0; // de 0 h à 0 h : en service toute la journée
         if (l.getBlockEntity(bureau) instanceof Bureau.Entite b) b.proprietaire = chef;

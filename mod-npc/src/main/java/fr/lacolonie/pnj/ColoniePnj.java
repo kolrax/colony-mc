@@ -300,10 +300,13 @@ public class ColoniePnj {
                             return n;
                         }))
                         .then(Commands.argument("nombre", IntegerArgumentType.integer(1, 300))
-                                .executes(c -> banc(c, ""))
+                                .executes(c -> banc(c, "", null))
                                 .then(Commands.argument("metier", StringArgumentType.word())
-                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Metier.TOUS.keySet(), b))
-                                        .executes(c -> banc(c, StringArgumentType.getString(c, "metier"))))))
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(java.util.stream.Stream.of("tous"), Metier.TOUS.keySet().stream()), b))
+                                        .executes(c -> banc(c, StringArgumentType.getString(c, "metier"), null))
+                                        .then(Commands.argument("pos", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos())
+                                                .executes(c -> banc(c, StringArgumentType.getString(c, "metier"),
+                                                        net.minecraft.commands.arguments.coordinates.BlockPosArgument.getBlockPos(c, "pos")))))))
                 .then(Commands.literal("charge").executes(c -> {
                     for (String l : charge(c.getSource().getServer())) c.getSource().sendSuccess(() -> Component.literal(l), false);
                     return 1;
@@ -323,32 +326,56 @@ public class ColoniePnj {
     static final UUID CHEF_BANC = UUID.nameUUIDFromBytes("colonie_pnj:banc".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     static final String MARQUE_BANC = "colonie_pnj_banc";
 
-    static int banc(CommandContext<CommandSourceStack> c, String metier) {
+    static int banc(CommandContext<CommandSourceStack> c, String metier, BlockPos pos) {
+        if (metier.equals("tous")) metier = "";
         if (!metier.isEmpty() && !Metier.existe(metier)) {
-            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : " + String.join(", ", Metier.TOUS.keySet())));
+            c.getSource().sendFailure(Component.literal("Métier inconnu : " + metier + ". Métiers : tous, " + String.join(", ", Metier.TOUS.keySet())));
+            return 0;
+        }
+        if (pos == null && c.getSource().getEntity() == null) {
+            c.getSource().sendFailure(Component.literal("Depuis la console, donne la position : /pnj banc <nombre> tous <x> <y> <z>"));
             return 0;
         }
         int n = IntegerArgumentType.getInteger(c, "nombre");
-        var l = banc(c.getSource().getLevel(), BlockPos.containing(c.getSource().getPosition()), n, metier);
-        c.getSource().sendSuccess(() -> Component.literal(l.size() + " ouvriers du banc de charge au travail autour du poste. "
-                + "« /pnj charge » pour la mesure (attendre 5 s), « /pnj banc fin » pour les retirer."), true);
-        return l.size();
+        try {
+            var l = banc(c.getSource().getLevel(), pos != null ? pos : BlockPos.containing(c.getSource().getPosition()), n, metier);
+            c.getSource().sendSuccess(() -> Component.literal(l.size() + " ouvriers du banc de charge au travail autour du poste. "
+                    + "« /pnj charge » pour la mesure (attendre 5 s), « /pnj banc fin » pour les retirer."), true);
+            return l.size();
+        } catch (IllegalStateException e) {
+            c.getSource().sendFailure(Component.literal(e.getMessage()));
+            return 0;
+        }
+    }
+
+    /** Un banc tourne déjà : son poste existe, ou un de ses ouvriers. */
+    static boolean bancEnCours(MinecraftServer s) {
+        return Courrier.de(s).poste(CHEF_BANC) != null || tous(s).stream().anyMatch(t -> t.getTags().contains(MARQUE_BANC));
     }
 
     /**
      * Fait apparaître {@code n} ouvriers au travail (mineurs, bûcherons et guerriers à tour de rôle, sauf métier donné),
-     * en grille tous les 3 blocs au sud de {@code centre}, rattachés à un poste posé 3 blocs au nord. Ils sont marqués.
+     * en grille tous les 3 blocs au sud de {@code centre}, rattachés à un poste posé 3 blocs au nord, sur le sol réel.
+     * Ils sont marqués, et ne ramassent rien (pas les affaires d'un joueur mort). Refus (IllegalStateException) si un
+     * banc tourne déjà, ou si la place du poste n'est pas une case d'air sur un sol, loin de tout coffre.
      */
     static List<Travailleur> banc(ServerLevel l, BlockPos centre, int n, String metier) {
-        Courrier courrier = Courrier.de(l.getServer());
+        if (bancEnCours(l.getServer())) throw new IllegalStateException("Un banc de charge tourne déjà : « /pnj banc fin » d'abord.");
+        BlockPos bureau = sol(l, centre.getX(), centre.getY(), centre.getZ() - 3);
+        if (bureau == null || !l.getBlockState(bureau).isAir())
+            throw new IllegalStateException("Pas de place pour le poste 3 blocs au nord : il faut une case d'air posée sur un sol.");
+        for (var d : net.minecraft.core.Direction.values())
+            if (l.getCapability(Capabilities.ItemHandler.BLOCK, bureau.relative(d), null) != null)
+                throw new IllegalStateException("Un coffre ou une machine touche la place du poste (" + bureau.toShortString() + ") : choisis un autre endroit.");
+        l.setBlockAndUpdate(bureau, BUREAU.get().defaultBlockState());
+        Courrier.de(l.getServer()).definirPoste(CHEF_BANC, l, bureau);
         int cote = (int) Math.ceil(Math.sqrt(n));
-        BlockPos bureau = surface(l, centre.getX(), centre.getZ() - 3);
-        courrier.definirPoste(CHEF_BANC, l, bureau);
         List<String> metiers = metier.isEmpty() ? List.of("mineur", "bucheron", "guerrier") : List.of(metier);
         List<Travailleur> r = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String m = metiers.get(i % metiers.size());
-            BlockPos p = surface(l, centre.getX() + (i % cote - cote / 2) * 3, centre.getZ() + 2 + (i / cote) * 3);
+            BlockPos p = sol(l, centre.getX() + (i % cote - cote / 2) * 3, centre.getY(), centre.getZ() + 2 + (i / cote) * 3);
+            if (p == null) continue; // dans un mur ou au-dessus du vide : pas d'ouvrier à cette place
             var outil = new net.minecraft.world.item.ItemStack(switch (m) {
                 case "mineur" -> net.minecraft.world.item.Items.IRON_PICKAXE;
                 case "bucheron" -> net.minecraft.world.item.Items.IRON_AXE;
@@ -357,6 +384,7 @@ public class ColoniePnj {
             });
             Travailleur t = Travailleur.auTravail(l, m, bureau, net.minecraft.world.phys.Vec3.atBottomCenterOf(p), CHEF_BANC, outil);
             t.addTag(MARQUE_BANC);
+            t.memoire.putLong("sans_ramasser", Long.MAX_VALUE);
             // Du vrai travail : le fer pour le mineur (un escalier à creuser), la ronde pour le guerrier, n'importe quel bois sinon.
             if (m.equals("mineur")) t.missions.add(new Travailleur.Mission("fer", "quantite", 100_000));
             if (m.equals("guerrier")) t.missions.add(new Travailleur.Mission("ronde", "quantite", 100_000));
@@ -366,26 +394,41 @@ public class ColoniePnj {
         return r;
     }
 
-    /** Le sol en (x, z), chunk chargé d'abord (sinon la hauteur vaut le fond du monde). */
-    static BlockPos surface(ServerLevel l, int x, int z) {
+    /**
+     * Le sol réel sous (x, y, z) : la première case où tient un ouvrier (deux cases libres sur un bloc solide), en
+     * descendant de y + 2 à y - 8. Pas le dessus de la colonne (un toit, le plafond du Nether). Chunk chargé d'abord.
+     */
+    static BlockPos sol(ServerLevel l, int x, int y, int z) {
         l.getChunk(x >> 4, z >> 4);
-        return new BlockPos(x, l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+        for (int dy = 2; dy >= -8; dy--) {
+            BlockPos p = new BlockPos(x, y + dy, z);
+            if (Monde.libre(l, p) && Monde.libre(l, p.above()) && !l.getBlockState(p.below()).getCollisionShape(l, p.below()).isEmpty()) return p;
+        }
+        return null;
     }
 
-    /** Retire les ouvriers du banc (eux seuls), leurs postes, leurs lettres et leur effectif. */
+    /**
+     * Retire les ouvriers du banc (eux seuls), puis leurs postes vidés, leurs lettres et leur effectif. Les ouvriers
+     * partent d'abord : sinon chacun écrirait que son poste est détruit (une volée de corbeaux).
+     */
     static int finBanc(MinecraftServer s) {
+        Courrier c = Courrier.de(s);
+        List<Courrier.Poste> postes = new ArrayList<>();
+        if (c.poste(CHEF_BANC) != null) postes.add(c.poste(CHEF_BANC));
         int n = 0;
         for (Travailleur t : tous(s)) {
             if (!t.getTags().contains(MARQUE_BANC)) continue;
-            if (t.bureau != null && t.level().getBlockEntity(t.bureau) instanceof Bureau.Entite b && CHEF_BANC.equals(b.proprietaire)) {
-                b.caisse.clearContent(); // ce qu'ils y ont déposé disparaît avec eux
-                b.depot.clearContent();
-                t.level().removeBlock(t.bureau, false);
-            }
+            if (t.bureau != null) postes.add(new Courrier.Poste(t.level().dimension(), t.bureau));
             t.discard();
             n++;
         }
-        Courrier c = Courrier.de(s);
+        for (Courrier.Poste p : postes) {
+            ServerLevel l = s.getLevel(p.monde());
+            if (l == null || !(l.getBlockEntity(p.pos()) instanceof Bureau.Entite b) || !CHEF_BANC.equals(b.proprietaire)) continue;
+            b.caisse.clearContent(); // ce qu'ils y ont déposé disparaît avec eux
+            b.depot.clearContent();
+            l.removeBlock(p.pos(), false);
+        }
         c.postes.remove(CHEF_BANC);
         c.boites.remove(CHEF_BANC);
         c.effectifs.remove(CHEF_BANC);

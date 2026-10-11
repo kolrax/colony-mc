@@ -11,7 +11,7 @@ import java.util.Locale;
  * Tout se passe sur le fil du serveur (les PNJ côté client ne sont pas mesurés).
  */
 final class Charge {
-    /** Les parties mesurées. Les « dont » sont comprises dans la partie au-dessus d'elles. */
+    /** Les parties mesurées. Les « dont » sont comprises dans le tick entier ; les chemins aussi, à cheval sur trois « dont ». */
     enum Partie {
         TOTAL("part du mod", false),
         ENTITE("PNJ, tick entier", false),
@@ -20,7 +20,7 @@ final class Charge {
         CORPS("  dont corps (faim, ramassage, armure, courrier)", false),
         ACTION("  dont action en cours", false),
         CERVEAU("  dont cerveau (décisions)", false),
-        CHEMINS("  dont calcul des chemins (pris sur les trois au-dessus)", false),
+        CHEMINS("calcul des chemins (déjà compté dans le mouvement, l'action ou le cerveau)", false),
         FILET("filet des chunks (tous les PNJ, toutes les 5 s)", true),
         COURRIER("corbeaux arrivés", true),
         VOIX("voix et micro", true);

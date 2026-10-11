@@ -17,6 +17,10 @@ public class TestsCharge {
 
     static void mesurer(GameTestHelper h, int n, int coin) {
         List<Travailleur> l = ColoniePnj.banc(h.getLevel(), TestsJeu.sol(h, coin * 1000, 80000), n, "");
+        boolean refuse = false;
+        try { ColoniePnj.banc(h.getLevel(), TestsJeu.sol(h, coin * 1000 + 100, 80000), 1, ""); }
+        catch (IllegalStateException e) { refuse = true; }
+        h.assertTrue(refuse, "un second banc doit être refusé tant que le premier tourne");
         h.runAtTickTime(h.getTick() + 200, () -> {
             Charge c = Charge.ICI;
             List<String> lignes = new java.util.ArrayList<>(ColoniePnj.charge(h.getLevel().getServer()));

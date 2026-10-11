@@ -4,6 +4,17 @@ package fr.lacolonie.pnj;
 public final class Monnaie {
     private Monnaie() {}
 
+    /** « Jamais de paie » (tests, banc de charge) : la prochaine paie n'arrive jamais. */
+    public static final long SANS_PAIE = Long.MAX_VALUE;
+
+    /**
+     * La paie attendue à {@code prochaine} a un quart de période de retard. Écrit en soustraction : avec
+     * {@link #SANS_PAIE}, l'addition débordait et la paie était en retard dès le premier instant.
+     */
+    public static boolean paieEnRetard(long maintenant, long prochaine, long periode) {
+        return prochaine != SANS_PAIE && maintenant - prochaine >= periode / 4;
+    }
+
     public static long total(int[] valeurs, int[] quantites) {
         long t = 0;
         for (int i = 0; i < valeurs.length; i++) t += (long) valeurs[i] * quantites[i];
