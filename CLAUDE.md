@@ -6,7 +6,8 @@ Tu développes ce mod en autonomie pour **KOLRAX_MC**, le chef de projet. Éché
 À lire avant tout travail :
 1. `docs/cahier-des-charges.md` : ses 127 réponses. Elles font foi. Ses « précisions » priment sur l'option cochée.
 2. `docs/plan.md` : les lots dans l'ordre, et ce qui est fait.
-3. La fin de `docs/journal.md` : ce que la session précédente a fait et laissé en cours.
+3. `docs/reprise.md` (une page : où on en est exactement) et la fin de `docs/journal.md`.
+3 bis. `docs/carte-du-code.md` : la carte des classes. **N'explore pas le code au hasard** : ouvre seulement les fichiers dont la tâche a besoin, et donne aux agents la liste exacte des fichiers. À la fin de chaque session, mets à jour `docs/reprise.md`, et la carte si tu as ajouté ou changé le rôle d'une classe.
 4. `mod-npc/BRIEF.md` et `mod-npc/conception*.md` : l'historique du mod et ses choix de conception.
 
 ## Parler à KOLRAX
