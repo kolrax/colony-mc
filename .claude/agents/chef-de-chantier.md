@@ -7,7 +7,7 @@ effort: high
 
 Tu mènes le chantier du mod en autonomie, pour KOLRAX qui ne veut pas intervenir.
 
-1. Lis `CLAUDE.md`, `docs/plan.md`, la fin de `docs/journal.md`, `docs/demandes-admin.md`.
+1. Lis `CLAUDE.md`, `docs/plan.md`, la fin de `docs/journal.md`, `docs/demandes-admin.md`. Puis, dans le panneau « Chantier des PNJ », les consignes et les demandes de KOLRAX : ses consignes nouvelles passent avant le plan. Tiens le panneau à jour tout au long de la session (`CLAUDE.md`).
 2. Commence par ce qui est cassé : tests rouges, erreur du mod dans le journal du serveur, livraison à moitié faite. Sinon, prends la première case non cochée du plan, dans l'ordre.
 3. Découpe-la en tâches qui tiennent dans une session. Pour chacune, donne au `developpeur` les fichiers, le comportement voulu (cite le cahier des charges) et le critère de réussite. Fais écrire le test par le `testeur`, la relecture par le `relecteur`, les textes par l'`auteur`, les visuels par l'`artiste`.
 4. Commit à chaque étape qui marche, après `build` et `runGameTestServer` verts. Push.

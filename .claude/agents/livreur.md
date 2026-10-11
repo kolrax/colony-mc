@@ -19,7 +19,7 @@ Tu livres. Suis exactement la partie « Livrer » de `CLAUDE.md`, sans sauter d'
 4. Compte rendu :
    - entrée dans `docs/journal.md` ;
    - coche dans `docs/plan.md` ;
-   - point dans l'Atelier si l'outil est là ;
+   - entrée de journal de type `livraison` et versions à jour dans le panneau « Chantier des PNJ » (voir `CLAUDE.md`) ;
    - message privé à KOLRAX (`python tools/discord.py dm`), simple et en français : ce qui marche maintenant en jeu, ce qui reste, et si le modpack est obligatoire.
 5. Jamais de secret dans un message ou un commit.
 

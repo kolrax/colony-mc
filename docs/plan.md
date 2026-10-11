@@ -14,6 +14,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Tests lancés par la session cloud avant chaque push (pas de CI GitHub : compte bloqué, KOLRAX ne veut pas mettre de carte)
 - [x] Session cloud capable de compiler et de lancer les tests en jeu (essai du 11/10 : 52 JUnit et 65 GameTests verts)
 - [ ] Déploiement du panneau Supabase par la ligne de commande (sans Chrome)
+- [x] Panneau de suivi en direct pour KOLRAX (artefact « Chantier des PNJ »), rempli par les sessions
 
 ## 1. Fiabilité et performance (indispensable)
 - [ ] Banc de charge : commande de test qui fait apparaître N ouvriers au travail, mesure du temps par tick (MSPT) et de la part du mod
