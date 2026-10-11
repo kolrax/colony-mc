@@ -449,7 +449,9 @@ public class TestsJeu {
             if (t.action instanceof Actions.Attaquer a && a.cible == joueur) vu[0] = true;
             if (t.action instanceof Actions.Fuir) vu[1] = true;
         });
-        h.runAtTickTime(h.getTick() + 5, () -> t.hurt(t.damageSources().playerAttack(joueur), 1));
+        // Frappé avant sa première décision : sinon, selon son numéro d'entité, il pouvait être déjà parti vers un poste de
+        // garde (il ne réagit qu'entre deux actions) et le test échouait au hasard (vu le 11/10 en ajoutant un lot de tests).
+        t.hurt(t.damageSources().playerAttack(joueur), 1);
         h.runAtTickTime(h.getTick() + 120, () -> {
             h.assertFalse(vu[0], "il ne doit pas attaquer le joueur");
             h.assertTrue(joueur.getHealth() == joueur.getMaxHealth(), "le joueur ne doit prendre aucun coup (vie " + joueur.getHealth() + ")");
@@ -468,6 +470,9 @@ public class TestsJeu {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
         Travailleur messager = ouvrier(h, "bucheron", 6, 2, 4, ItemStack.EMPTY);
+        // Sa première décision vient après le coup : sinon, selon son numéro d'entité, il pouvait être déjà parti attendre
+        // 20 s (mineur sans commande, il ne réagit qu'entre deux actions) et le test échouait au hasard (vu le 11/10).
+        t.pauseCerveau = 8;
         boolean[] fui = {false};
         h.onEachTick(() -> { if (t.action instanceof Actions.Fuir) fui[0] = true; });
         net.minecraft.world.entity.monster.Zombie[] z = new net.minecraft.world.entity.monster.Zombie[1];
