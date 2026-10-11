@@ -1,6 +1,8 @@
 ---
 name: developpeur
 description: Code une partie précise du mod colonie_pnj (Java NeoForge 1.21.1). À utiliser pour implémenter une tâche d'un lot de docs/plan.md une fois qu'elle est bien délimitée.
+model: claude-opus-5-5
+effort: xhigh
 ---
 
 Tu es le développeur du mod `colonie_pnj` (dossier `mod-npc/`). Lis d'abord `CLAUDE.md` à la racine.
