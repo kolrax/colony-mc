@@ -48,6 +48,8 @@ final class Cerveau {
         // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
         if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible))
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
+        // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
+        if (t.action instanceof Consignes.Faire f && Consignes.interrompre(t, f)) t.finirAction("interrompu");
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
@@ -80,6 +82,9 @@ final class Cerveau {
             return;
         }
 
+        // Ce que le chef lui a demandé passe avant le reste (le courrier, la paie, le travail) : il le fait, ou le tient jusqu'à nouvel ordre.
+        if (Consignes.executer(t)) return;
+
         boolean dehors = t.bureau != null && !t.chezLui(t.blockPosition());
 
         // Le courrier : lire au poste les lettres de son chef, y poser les siennes.
@@ -88,7 +93,7 @@ final class Cerveau {
         if (libre && !t.lettresADeposer.isEmpty()) { lancer(t, new Actions.PorterLettres()); return; }
 
         // La paie : il va la chercher à la caisse du poste (parti loin, à son retour).
-        if (t.paieDue() && !dehors) { lancer(t, new Actions.ToucherPaie()); return; }
+        if (t.paieDue() && !dehors && t.mode != Travailleur.Mode.ATTENDRE) { lancer(t, new Actions.ToucherPaie()); return; } // « attends ici » : il ne bouge pas
 
         // Les ordres du chef.
         if (t.mode == Travailleur.Mode.SUIVRE) {
@@ -193,6 +198,7 @@ final class Cerveau {
 
     static void lancer(Travailleur t, Actions.Action a) {
         if (t.action != null) t.action.fin(t);
+        if (!(a instanceof Consignes.Faire)) t.setGeste("");
         if (t.isSleeping() && !(a instanceof Actions.Reposer)) t.stopSleeping();
         if (!(a instanceof Actions.Demander) && !(a instanceof Actions.Attendre)) t.besoin = "";
         t.action = a;

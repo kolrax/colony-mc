@@ -1,0 +1,403 @@
+# Répertoire des actions des ouvriers (mod colonie_pnj).
+#
+# Une action par ligne :   id | qui | ce qu'elle fait | programme | ce qu'on dit pour la demander | réponses sans IA (facultatif)
+#   qui        : « tous », ou des métiers séparés par des virgules (mineur, bucheron, guerrier)
+#   ce qu'elle fait : quelques mots, montrés à l'IA et dans le panneau
+#   programme  : le comportement qui la joue, son argument, puis des réglages clé=valeur (voir Consignes.java) :
+#                geste <geste> [duree=4s|2m|tenu] [regard=chef|devant|ciel|sol|la|cible|autour|dos|aucun] [son=…] [rythme=ticks]
+#                      [part=…] [objet=…] [saut] [tourne] [spontane]
+#                aller <lieu> [puis=<id>] [tenu] [vite]      suivre <qui>        regarder <quoi> [duree=…]
+#                son <son> [fois=n] [geste=…] [part=…]          musique <instrument> [duree=…]
+#                donner <objet> [a=cible]   jeter <objet>   prendre <objet> [n=…]   tenir <objet>   ranger   deposer   manger   dormir
+#                utiliser <bloc>   combat <mode>   travail <mode> [n=…]   info <sujet>   parler <genre> [geste=…] [part=…]
+#                silence [duree=…]   parole   vitesse <rapide|lent|normal>   formation <rang|file|cercle|derriere>   arret   annuler
+#                [remplace=…] : ordres de base ou missions que la phrase ne veut pas dire quand cette action est demandée
+#   ce qu'on dit : des formules séparées par « ; » (accents et ponctuation ignorés, les verbes se reconnaissent conjugués)
+# Les lignes « ## Titre » ouvrent une catégorie.
+
+## Discipline et postures
+garde_a_vous | tous | se mettre au garde-à-vous, droit et immobile, jusqu'à nouvel ordre | geste garde_a_vous duree=tenu regard=devant son=talons rythme=0 | garde à vous ; garde-à-vous ; au garde à vous ; fixe ; à vos rangs fixe ; tiens toi droit ; tenez vous droit ; droit comme un i ; en position réglementaire | À vos ordres, chef ! ; Garde-à-vous, chef !
+salut_militaire | tous | faire le salut militaire | geste salut_militaire duree=3s regard=chef spontane | salut militaire ; fais le salut militaire ; salue moi ; salue ; saluez ; fais un salut ; au salut ; salue le chef | Mes respects, chef !
+repos_mains_dos | tous | se tenir au repos, mains dans le dos, jusqu'à nouvel ordre | geste repos duree=tenu regard=devant | mains dans le dos ; les mains derrière le dos ; position de repos ; au repos mains dans le dos
+annuler | tous | reprendre ce qu'il faisait (fin d'une posture, d'un geste, d'un silence ou d'une tâche demandée) | annuler | repos ; rompez ; rompez les rangs ; dispersion ; c'est bon ; ça ira ; tu peux disposer ; vous pouvez disposer ; reprends ce que tu faisais ; continue ce que tu faisais ; détends toi ; détendez vous ; relâche toi ; à l'aise ; c'est fini ; tu peux bouger ; vous pouvez bouger ; fin de l'exercice | Repos. ; Bien, chef. ; Je reprends.
+arret | tous | s'arrêter net, ne plus rien faire ni bouger jusqu'à nouvel ordre | arret remplace=attendre | arrête tout ; arrêtez tout ; fige toi ; figez vous ; plus un geste ; pas un geste ; ne fais plus rien ; immobile ; statue ; plus personne ne bouge ; freeze | Je ne bouge plus. ; Plus un geste, chef.
+bras_croises | tous | croiser les bras | geste bras_croises duree=tenu | croise les bras ; croisez les bras ; bras croisés | Voilà.
+mains_hanches | tous | se tenir les mains sur les hanches | geste mains_hanches duree=tenu | mains sur les hanches ; poings sur les hanches ; les mains aux hanches
+assis | tous | s'asseoir par terre jusqu'à nouvel ordre | geste assis duree=tenu regard=chef | assieds toi ; asseyez vous ; assis ; assis toi ; pose toi ; posez vous ; repose tes jambes ; prends un siège ; installe toi par terre | Ah, ça fait du bien.
+a_genoux | tous | se mettre à genoux jusqu'à nouvel ordre | geste a_genoux duree=tenu regard=chef | à genoux ; mets toi à genoux ; agenouille toi ; agenouillez vous ; un genou à terre ; genou à terre
+accroupi | tous | s'accroupir jusqu'à nouvel ordre | geste accroupi duree=tenu | accroupis toi ; accroupissez vous ; baisse toi ; baissez vous ; fais toi petit ; à couvert baisse toi ; penche toi
+allonge | tous | s'allonger par terre jusqu'à nouvel ordre | geste allonge duree=tenu regard=ciel | allonge toi ; allongez vous ; couche toi par terre ; couchez vous ; étends toi ; à plat ventre ; au sol ; mets toi par terre
+fais_le_mort | tous | faire le mort | geste allonge duree=10s regard=aucun | fais le mort ; faites les morts ; joue au mort ; fais semblant d'être mort | …
+debout | tous | se relever et se tenir debout | annuler | debout ; lève toi ; levez vous ; relève toi ; relevez vous ; sur tes pieds ; on se lève | Debout !
+tete_haute | tous | se tenir fier, le menton haut | geste fier duree=8s regard=devant | tiens toi fier ; relève la tête ; menton haut ; bombe le torse ; prends la pose ; fais le fier | Comme ça, chef ?
+tete_basse | tous | baisser la tête, l'air penaud | geste tete_basse duree=6s regard=sol | baisse la tête ; fais profil bas ; tu as honte ; aie honte ; fais le penaud
+statue_heros | tous | prendre une pose héroïque, le bras levé | geste statue duree=10s regard=ciel | pose héroïque ; fais le héros ; prends une pose de statue ; pose comme une statue ; fais la statue
+timide | tous | faire le timide | geste timide duree=6s regard=sol | fais le timide ; sois timide ; fais ton timide
+impatient | tous | taper du pied, impatient | geste impatient duree=6s regard=chef | fais l'impatient ; tape du pied ; montre ton impatience
+mains_en_l_air | tous | lever les mains en l'air | geste mains_en_l_air duree=6s | mains en l'air ; haut les mains ; lève les mains ; levez les mains ; les bras en l'air ; rends toi | Je me rends !
+cache_yeux | tous | se cacher les yeux | geste cache_yeux duree=6s | cache tes yeux ; ferme les yeux ; ne regarde pas ; bouche toi les yeux ; cachez vos yeux | Je ne vois rien !
+cache_cache | tous | compter les yeux cachés, comme à cache-cache | geste cache_yeux duree=12s son=compter rythme=20 | joue à cache cache ; compte jusqu'à dix ; on joue à cache cache ; compte les yeux fermés | Un, deux, trois…
+
+## Gestes et politesse
+saluer_main | tous | faire coucou de la main | geste saluer_main duree=3s spontane | fais coucou ; fais signe de la main ; agite la main ; fais un signe ; dis bonjour de la main ; salue de la main ; fais au revoir de la main ; coucou de la main
+s_incliner | tous | s'incliner poliment | geste s_incliner duree=2s regard=sol | incline toi ; inclinez vous ; courbette ; fais une courbette ; salue bien bas ; penche toi pour saluer
+reverence | tous | faire une grande révérence | geste reverence duree=3s regard=sol | révérence ; fais une révérence ; faites la révérence ; une belle révérence
+hocher_tete | tous | hocher la tête pour dire oui | geste hocher_tete duree=2s spontane | fais oui de la tête ; hoche la tête ; acquiesce ; dis oui de la tête
+secouer_tete | tous | secouer la tête pour dire non | geste secouer_tete duree=2s spontane | fais non de la tête ; secoue la tête ; dis non de la tête
+hausser_epaules | tous | hausser les épaules | geste hausser_epaules duree=2s spontane | hausse les épaules ; haussez les épaules ; je sais pas ; fais celui qui ne sait pas
+gratter_tete | tous | se gratter la tête, perplexe | geste gratter_tete duree=3s spontane | gratte toi la tête ; réfléchis bien ; fais le perplexe
+reflechir | tous | prendre un air pensif, la main au menton | geste reflechir duree=6s regard=ciel | prends un air pensif ; réfléchis ; fais le penseur ; le penseur ; médite là dessus | Hmm…
+applaudir | tous | applaudir | geste applaudir duree=4s regard=chef son=applaudir rythme=6 spontane | applaudis ; applaudissez ; bravo applaudissez ; tape dans tes mains ; tapez dans vos mains ; une ovation ; on applaudit | Bravo !
+serrer_main | tous | serrer la main du chef | aller chef puis=serrer_main_geste | serre moi la main ; serrons nous la main ; tope là ; topez là ; une poignée de main ; donne moi la main ; marché conclu | Tope là, chef !
+serrer_main_geste | tous | tendre la main pour la serrer | geste serrer_main duree=3s regard=chef | tends la main ; tends moi la main
+calin | tous | faire une accolade au chef | aller chef puis=calin_geste | fais moi un câlin ; un câlin ; accolade ; prends moi dans tes bras ; embrasse moi ; fais une accolade ; serre moi dans tes bras | Allez, viens là, chef !
+calin_geste | tous | ouvrir les bras pour une accolade | geste calin duree=3s regard=chef part=coeur | ouvre les bras ; bras ouverts
+faire_signe_venir | tous | faire signe de venir | geste faire_signe duree=3s regard=chef | fais signe de venir ; fais moi signe ; appelle avec la main
+chut | tous | faire chut, le doigt sur la bouche | geste chut duree=3s | fais chut ; chut ; le doigt sur la bouche ; fais silence avec le doigt
+pointer_la | tous | montrer du doigt l'endroit que regarde le chef | geste pointer duree=4s regard=la | montre du doigt ; pointe du doigt ; pointe là bas ; désigne ça ; montre là bas ; c'est quoi là bas
+pointer_ciel | tous | montrer le ciel du doigt | geste pointer duree=4s regard=ciel | montre le ciel ; pointe le ciel ; regarde là haut ; montre les étoiles
+dire_bonjour_cible | tous | aller saluer quelqu'un (un autre ouvrier ou un joueur) | aller cible puis=saluer_main | va dire bonjour à @ ; va saluer @ ; salue @ ; salue @ de ma part ; va dire salut à @ ; présente toi à @ ; dis bonjour à @ | J'y vais.
+remercier | tous | remercier le chef d'une révérence | geste s_incliner duree=2s regard=chef | remercie moi ; dis merci ; remercie | Merci, chef !
+excuse | tous | présenter ses excuses | parler excuse geste=tete_basse | excuse toi ; excusez vous ; demande pardon ; présente tes excuses ; dis pardon | Pardon, chef…
+victoire | tous | lever le poing en signe de victoire | geste victoire duree=3s son=hourra rythme=30 | victoire ; on a gagné ; fais le signe de la victoire ; lève le poing ; hourra ; youpi ; hip hip hip | Hourra !
+hourra | tous | pousser un hourra, les bras levés | geste mains_en_l_air duree=3s son=hourra rythme=20 saut | crie hourra ; pousse un hourra ; hourra pour le chef ; trois hourras ; vive le chef | Hourra !
+encourager | tous | encourager le chef avec entrain | parler encouragement geste=victoire | encourage moi ; donne moi du courage ; motive moi ; remonte moi le moral ; dis moi quelque chose de gentil | Courage, chef !
+
+## Émotions
+rire | tous | éclater de rire | geste rire duree=3s son=rire rythme=25 spontane | ris ; rigole ; riez ; rigolez ; éclate de rire ; fous toi de moi ; marre toi ; fais moi rire ; mort de rire | Ha ha ha !
+pleurer | tous | pleurer à chaudes larmes | geste pleurer duree=5s part=larmes | pleure ; pleurez ; fais semblant de pleurer ; chiale ; verse une larme ; sanglote | Snif…
+trembler | tous | trembler de peur | geste trembler duree=4s part=sueur | tremble ; fais semblant d'avoir peur ; aie peur ; fais le peureux ; claque des dents | B-b-brr…
+se_facher | tous | se mettre en colère, poings serrés | geste impatient duree=4s part=colere son=grogner rythme=30 | fâche toi ; mets toi en colère ; énerve toi ; fais le méchant ; montre ta colère ; grogne | Grrr !
+bouder | tous | bouder, le dos tourné | geste bras_croises duree=8s regard=dos | boude ; fais la tête ; fais la moue ; tourne moi le dos ; boudez | Hmpf.
+amoureux | tous | faire les yeux doux | geste timide duree=5s part=coeur regard=chef | fais les yeux doux ; fais l'amoureux ; tu m'aimes ; fais moi un coeur ; montre ton amour | …
+content | tous | sautiller de joie | geste victoire duree=4s part=content saut | sois content ; saute de joie ; montre ta joie ; réjouis toi ; fais la fête | Youpi !
+surpris | tous | avoir l'air surpris | geste mains_en_l_air duree=2s | fais le surpris ; sois surpris ; quelle surprise | Oh !
+fatigue_geste | tous | montrer qu'il est épuisé, les mains sur les genoux | geste epuise duree=5s part=sueur | fais le fatigué ; montre que tu es épuisé ; souffle un peu ; reprends ton souffle | Pfiou…
+bailler | tous | bâiller longuement | geste bailler duree=3s | baille ; bâille ; fais semblant de bâiller ; tu t'ennuies | Aaaah…
+s_etirer | tous | s'étirer | geste s_etirer duree=4s | étire toi ; étirez vous ; fais des étirements ; étire tes bras
+soupirer | tous | soupirer, les épaules basses | geste tete_basse duree=3s son=soupir rythme=0 | soupire ; pousse un soupir ; soupirez
+rougir | tous | rougir et faire le timide | geste timide duree=4s part=coeur | rougis ; tu rougis ; fais le gêné
+honte | tous | se cacher le visage de honte | geste cache_yeux duree=4s | cache ton visage ; cache toi de honte ; tu devrais avoir honte
+
+## Danse, musique et spectacle
+danser | tous | danser une gigue | geste danser duree=10s part=note saut rythme=20 | danse ; dansez ; une danse ; fais une danse ; danse pour moi ; danse un peu ; on danse ; entre dans la danse ; bouge ton corps ; remue toi | En avant la musique !
+danse_bras | tous | danser en agitant les bras en l'air | geste danse_bras duree=10s part=note | danse avec les bras ; lève les bras en dansant ; fais la danse des bras ; danse comme à la fête
+gigue | tous | danser la gigue en tapant des pieds | geste gigue duree=10s part=note son=pas rythme=5 | la gigue ; danse la gigue ; tape des pieds ; une danse paysanne ; danse folklorique ; danse de taverne
+tourner_sur_soi | tous | tourner sur lui-même | geste danser duree=4s tourne | tourne sur toi même ; fais la toupie ; pirouette ; fais une pirouette ; tourne en rond sur place ; virevolte | Wouhou !
+valse | tous | valser en tournant | geste calin duree=10s tourne part=note | valse ; une valse ; danse une valse ; danse à deux
+ronde | tous | danser la ronde autour du chef | aller chef puis=danser | dansez la ronde ; faites une ronde autour de moi ; danse autour de moi
+chanter | tous | chanter une chanson | parler chanson geste=chanter part=note | chante ; chantez ; chante moi une chanson ; une chanson ; pousse la chansonnette ; chante quelque chose ; entonne un chant ; chante pour moi | La la la…
+chanson_a_boire | tous | chanter une chanson de taverne | parler chanson_a_boire geste=chanter part=note | chanson à boire ; chanson de taverne ; une chanson paillarde ; chante comme à la taverne
+berceuse | tous | chanter une berceuse | parler berceuse geste=chanter part=note | chante une berceuse ; une berceuse ; chante moi de quoi dormir
+hymne | tous | chanter l'hymne de la colonie, au garde-à-vous | parler hymne geste=garde_a_vous part=note | l'hymne ; chante l'hymne ; hymne de la colonie ; chant patriotique ; chante l'hymne de la colonie
+siffler | tous | siffloter un air | musique flute duree=6s | siffle ; siffle un air ; sifflote ; sifflez ; siffle une chanson
+fredonner | tous | fredonner un air | musique harpe duree=6s | fredonne ; fredonne un air ; chantonne ; chantonnez
+flute | tous | jouer un air de flûte | musique flute duree=10s | joue de la flûte ; un air de flûte ; flûte ; joue un air de flûte ; flûtiau | Écoute ça, chef.
+luth | tous | jouer un air de luth | musique guitare duree=10s | joue du luth ; joue de la guitare ; gratte la guitare ; un air de luth ; luth ; guitare
+harpe | tous | jouer un air de harpe | musique harpe duree=10s | joue de la harpe ; un air de harpe ; harpe
+tambour | tous | battre le tambour | musique tambour duree=8s | joue du tambour ; bats le tambour ; tambour ; roulement de tambour ; tambourine ; percussions
+cloches | tous | jouer un air de carillon | musique cloche duree=8s | joue des cloches ; carillon ; un air de carillon ; joue du carillon
+xylophone | tous | jouer du xylophone | musique xylophone duree=8s | joue du xylophone ; xylophone ; joue des os
+banjo | tous | jouer un air de banjo | musique banjo duree=8s | joue du banjo ; banjo ; un air de banjo
+cornemuse | tous | jouer de la cornemuse | musique didgeridoo duree=8s | joue de la cornemuse ; cornemuse ; biniou ; joue du biniou
+basse | tous | jouer une ligne de basse | musique basse duree=8s | joue de la basse ; un air de basse ; contrebasse
+cloche_vache | tous | jouer de la cloche à vache | musique cloche_vache duree=6s | cloche à vache ; joue de la cloche à vache ; sonnaille
+musique | tous | jouer un air de musique | musique hasard duree=10s | joue de la musique ; fais de la musique ; mets de l'ambiance ; joue un air ; un peu de musique ; musique maestro ; joue nous quelque chose | Musique !
+concert | tous | donner un petit concert | musique hasard duree=20s | un concert ; donne un concert ; fais un spectacle de musique ; joue longtemps
+jongler | tous | jongler | geste lancer duree=6s regard=ciel | jongle ; jonglez ; fais du jonglage ; jongle avec des cailloux
+spectacle | tous | faire le pitre pour amuser la galerie | geste singe duree=6s saut son=rire rythme=30 | fais le pitre ; fais le clown ; fais le guignol ; amuse moi ; fais nous rire ; fais un spectacle ; fais des grimaces ; le bouffon | Approchez, approchez !
+robot | tous | danser comme un automate | geste robot duree=8s | fais le robot ; danse comme un robot ; fais l'automate ; danse comme une machine
+marcher_au_pas | tous | marcher au pas sur place | geste marcher_au_pas duree=8s son=pas rythme=10 regard=devant | marche au pas ; au pas ; une deux une deux ; marquez le pas ; marque le pas ; au pas cadencé
+mime_mineur | tous | mimer un coup de pioche | geste piocher duree=5s | mime un mineur ; fais semblant de miner ; mime un coup de pioche ; fais le mineur
+mime_bucheron | tous | mimer un bûcheron qui scie | geste scier duree=5s | mime un bûcheron ; fais semblant de couper du bois ; mime la scie ; fais le bûcheron
+mime_balai | tous | faire semblant de balayer | geste balayer duree=6s | balaie ; fais semblant de balayer ; fais le ménage ; passe le balai
+mime_nager | tous | faire semblant de nager | geste nager duree=6s | fais semblant de nager ; mime la nage ; nage sur place ; fais la brasse
+mime_oiseau | tous | battre des bras comme un oiseau | geste oiseau duree=6s saut | fais l'oiseau ; vole ; bats des ailes ; fais l'avion ; envole toi
+mime_zombie | tous | marcher comme un zombie, les bras tendus | geste zombie duree=6s son=zombie rythme=30 | fais le zombie ; marche comme un zombie ; imite un zombie ; fais le mort vivant
+mime_singe | tous | faire le singe | geste singe duree=6s saut | fais le singe ; imite un singe ; fais le macaque
+coucou_cache | tous | jouer à coucou-caché | geste coucou duree=5s | coucou caché ; joue à coucou ; fais coucou caché
+boxe | tous | boxer dans le vide | geste boxe duree=6s son=frappe rythme=8 | boxe ; fais de la boxe ; montre tes poings ; shadow boxing ; tape dans le vide ; montre comment tu te bats
+muscles | tous | montrer ses muscles | geste muscles duree=4s | montre tes muscles ; fais le costaud ; montre tes biceps ; fais le fort ; gonfle tes muscles | Admire, chef !
+grimace | tous | faire une grimace | geste coucou duree=3s son=rire rythme=0 | fais une grimace ; grimace ; tire la langue
+compter_doigts | tous | compter sur ses doigts | geste compter duree=5s | compte sur tes doigts ; compte ; compte jusqu'à cinq ; sais tu compter
+saut | tous | sauter sur place | geste victoire duree=3s saut | saute ; sautez ; fais un saut ; saute sur place ; saute en l'air ; un bond | Hop !
+sautiller | tous | sautiller longtemps | geste danser duree=8s saut | sautille ; sautillez ; saute partout ; fais des bonds
+roulade | tous | se rouler par terre | geste allonge duree=4s tourne | roule par terre ; fais une roulade ; roule toi par terre ; roulé boulé
+pompes | tous | faire des pompes | geste pompes duree=10s part=sueur | fais des pompes ; des pompes ; dix pompes ; vingt pompes ; pompes ; muscle toi | Une… deux… trois…
+echauffement | tous | s'échauffer en faisant des moulinets de bras | geste echauffement duree=8s | échauffe toi ; échauffez vous ; fais des exercices ; fais du sport ; entraîne toi ; gymnastique ; fais de l'exercice
+meditation | tous | méditer, assis en tailleur | geste mediter duree=tenu regard=aucun | médite ; méditez ; fais du yoga ; en tailleur ; assieds toi en tailleur ; fais le vide ; zen
+priere | tous | prier, à genoux et les mains jointes | geste priere duree=10s regard=ciel | prie ; priez ; fais une prière ; joins les mains ; prie pour nous ; prie le ciel | Ainsi soit-il.
+
+## Imitations et bruits
+imiter_cochon | tous | imiter le cochon | son cochon fois=3 geste=rire | fais le cochon ; imite le cochon ; groin groin ; fais groin groin ; fais le bruit du cochon | Groin groin !
+imiter_vache | tous | imiter la vache | son vache fois=3 | fais la vache ; imite la vache ; meuh ; fais meuh ; fais le bruit de la vache | Meuh !
+imiter_mouton | tous | imiter le mouton | son mouton fois=3 | fais le mouton ; imite le mouton ; bêê ; fais bêê ; fais le bruit du mouton | Bêêê !
+imiter_poule | tous | imiter la poule en battant des bras | son poule fois=4 geste=oiseau | fais la poule ; imite la poule ; cot cot ; fais cot cot ; fais le bruit de la poule ; fais le coq ; cocorico | Cot cot codet !
+imiter_chien | tous | aboyer comme un chien | son chien fois=3 | fais le chien ; imite le chien ; aboie ; ouaf ; wouf ; fais le bruit du chien | Ouaf !
+imiter_loup | tous | hurler comme un loup | son loup fois=1 geste=fier regard=ciel | fais le loup ; imite le loup ; hurle comme un loup ; hurle à la lune ; aouuuh | Aouuuh !
+imiter_chat | tous | miauler comme un chat | son chat fois=3 | fais le chat ; imite le chat ; miaule ; miaou ; fais le bruit du chat | Miaou !
+imiter_cheval | tous | hennir comme un cheval | son cheval fois=2 | fais le cheval ; imite le cheval ; hennis ; hennir ; fais le bruit du cheval | Hiiii !
+imiter_ane | tous | braire comme un âne | son ane fois=2 | fais l'âne ; imite l'âne ; brais ; hi han ; fais hi han | Hi-han !
+imiter_chevre | tous | crier comme une chèvre | son chevre fois=2 | fais la chèvre ; imite la chèvre ; crie comme une chèvre | Mêêê !
+imiter_perroquet | tous | jacasser comme un perroquet | son perroquet fois=3 | fais le perroquet ; imite le perroquet ; jacasse
+imiter_renard | tous | glapir comme un renard | son renard fois=3 | fais le renard ; imite le renard ; glapis
+imiter_grenouille | tous | coasser comme une grenouille | son grenouille fois=3 saut | fais la grenouille ; imite la grenouille ; coasse ; croa croa | Croâ !
+imiter_abeille | tous | bourdonner comme une abeille | son abeille fois=3 geste=oiseau | fais l'abeille ; imite l'abeille ; bourdonne ; bzzz | Bzzz !
+imiter_villageois | tous | marmonner comme un villageois | son villageois fois=3 geste=bras_croises | fais le villageois ; imite un villageois ; hmm comme un villageois ; parle comme un villageois | Hmm !
+imiter_zombie | tous | grogner comme un zombie | son zombie fois=3 geste=zombie | grogne comme un zombie ; fais le bruit du zombie ; imite le grognement du zombie | Grrraaah…
+imiter_squelette | tous | cliqueter comme un squelette | son squelette fois=3 geste=robot | fais le squelette ; imite un squelette ; fais claquer tes os
+imiter_creeper | tous | siffler comme un creeper (pour rire) | son creeper fois=1 geste=accroupi | fais le creeper ; imite le creeper ; fais peur comme un creeper ; ssss ; fais le bruit du creeper | Ssssss… boum ! Je rigole, chef.
+imiter_enderman | tous | imiter l'enderman | son enderman fois=2 geste=zombie | fais l'enderman ; imite l'enderman
+imiter_araignee | tous | imiter l'araignée | son araignee fois=3 geste=accroupi | fais l'araignée ; imite l'araignée
+imiter_fantome | tous | gémir comme un fantôme | son ghast fois=2 geste=zombie | fais le fantôme ; imite un fantôme ; fais hou hou ; fais le ghast | Houuu…
+imiter_ours | tous | grogner comme un ours | son ours fois=2 geste=muscles | fais l'ours ; imite l'ours ; grogne comme un ours | Grrrr !
+imiter_chauve_souris | tous | couiner comme une chauve-souris | son chauve_souris fois=3 geste=oiseau | fais la chauve souris ; imite la chauve souris
+imiter_dauphin | tous | siffler comme un dauphin | son dauphin fois=3 | fais le dauphin ; imite le dauphin
+imiter_panda | tous | éternuer comme un panda | son panda fois=2 | fais le panda ; imite le panda ; éternue
+imiter_tortue | tous | imiter la tortue | son tortue fois=2 geste=accroupi | fais la tortue ; imite la tortue
+imiter_slime | tous | rebondir comme un slime | son slime fois=4 saut geste=accroupi | fais le slime ; imite un slime ; rebondis
+roter | tous | lâcher un rot sonore | son rot fois=1 geste=rire | rote ; fais un rot ; un rot ; lâche un rot | Pardon, chef !
+cri_de_guerre | tous | pousser un cri de guerre | son cri fois=2 geste=victoire | cri de guerre ; pousse un cri de guerre ; crie ; hurle ; montjoie ; pousse un cri | Montjoie !
+cor | tous | sonner du cor | son cor fois=1 geste=jouer_flute regard=ciel | sonne du cor ; souffle dans le cor ; sonne la charge ; sonne l'alarme ; sonne le rassemblement | Taratata !
+claquer_talons | tous | claquer des talons | son talons fois=2 geste=garde_a_vous | claque des talons ; claquez des talons ; joins les talons
+siffler_fort | tous | siffler fort pour appeler | son sifflet fois=2 geste=jouer_flute | siffle fort ; siffle pour appeler ; un coup de sifflet ; siffle dans tes doigts
+
+## Regarder
+regarder_chef | tous | regarder le chef dans les yeux | regarder chef duree=6s | regarde moi ; regardez moi ; regarde moi dans les yeux ; les yeux dans les yeux ; tourne toi vers moi ; fais face ; face à moi | Oui, chef ?
+regarder_la | tous | regarder là où regarde le chef | regarder la duree=6s | regarde là ; regarde ça ; regarde là bas ; regardez là bas ; tu vois ça ; regarde par là ; jette un oeil là bas | Je vois, chef.
+regarder_ciel | tous | lever les yeux au ciel | regarder ciel duree=5s | regarde le ciel ; regarde en l'air ; lève les yeux ; regarde les nuages ; regarde le soleil ; regarde la lune
+regarder_sol | tous | regarder ses pieds | regarder sol duree=5s | regarde par terre ; regarde tes pieds ; baisse les yeux ; regarde le sol
+regarder_autour | tous | regarder tout autour de lui | regarder autour duree=6s | regarde autour de toi ; regardez autour ; observe les environs ; jette un oeil autour ; scrute les alentours ; ouvre l'oeil
+regarder_cible | tous | regarder quelqu'un (un autre ouvrier ou un joueur) | regarder cible duree=6s | regarde @ ; regardez @ ; tourne toi vers @ 
+tourner_dos | tous | tourner le dos au chef | regarder dos duree=6s | tourne toi ; retourne toi ; tourne le dos ; dos à moi ; regarde derrière toi ; regarde de l'autre côté | Comme ça ?
+guetter | tous | guetter l'horizon, la main en visière | geste guetter duree=8s regard=autour | guette ; guettez ; scrute l'horizon ; fais le guet ; surveille l'horizon ; observe au loin ; vois tu quelque chose au loin | Rien à l'horizon, chef.
+ne_regarde_pas | tous | détourner le regard | regarder dos duree=5s | ne me regarde pas ; arrête de me regarder ; détourne les yeux ; regarde ailleurs
+
+## Déplacements
+aller_la | tous | aller là où regarde le chef, puis y rester | aller la tenu | va là bas ; va là ; allez là bas ; va ici ; place toi là ; mets toi là ; va par là ; vas y ; file là bas ; poste toi là bas ; installe toi là | J'y vais.
+aller_voir_la | tous | aller voir ce qu'il y a là où regarde le chef, puis revenir à ce qu'il faisait | aller la | va voir là bas ; va voir ce que c'est ; va jeter un oeil ; va inspecter ; va vérifier là bas ; va voir ce qui se passe | Je vais voir.
+venir_pres | tous | venir tout près du chef | aller chef | approche ; approchez ; viens plus près ; rapproche toi ; avance vers moi ; colle moi ; viens à côté de moi ; à mes côtés | Me voilà.
+derriere | tous | se placer derrière le chef et y rester | aller derriere tenu | derrière moi ; mets toi derrière moi ; place toi derrière moi ; reste derrière moi ; passe derrière moi ; à l'arrière | Derrière toi, chef.
+devant | tous | se placer devant le chef et y rester | aller devant tenu | devant moi ; mets toi devant moi ; passe devant ; place toi devant moi ; ouvre la marche ; passe devant moi | Devant, chef.
+a_gauche | tous | se placer à la gauche du chef | aller gauche tenu | à ma gauche ; mets toi à ma gauche ; place toi à gauche ; à gauche ; sur ma gauche | À ta gauche.
+a_droite | tous | se placer à la droite du chef | aller droite tenu | à ma droite ; mets toi à ma droite ; place toi à droite ; à droite ; sur ma droite ; mon bras droit | À ta droite.
+reculer | tous | reculer de quelques pas | aller recule | recule ; reculez ; recule un peu ; fais un pas en arrière ; en arrière ; écarte toi ; pousse toi ; tu me gênes ; laisse moi passer ; dégage le passage ; fais de la place | Pardon, chef.
+avancer | tous | avancer de quelques pas | aller avance | avance ; avancez ; avance un peu ; fais un pas en avant ; en avant ; va de l'avant
+s_eloigner | tous | s'éloigner du chef | aller loin tenu | éloigne toi ; éloignez vous ; va plus loin ; prends tes distances ; laisse moi seul ; laisse moi tranquille un moment ; va un peu plus loin | Je m'éloigne.
+au_poste | tous | courir jusqu'au poste de travail et y rester | aller poste tenu vite remplace=rentrer | cours au poste ; file au poste ; va au poste et restes y ; attends moi au poste ; va m'attendre au bureau ; rendez vous au poste | Je file au poste.
+au_lit | tous | aller à son lit | aller lit | va à ton lit ; va voir ton lit ; montre moi ton lit ; où est ton lit ; va près de ton lit
+monter | tous | monter sur un point élevé | aller haut tenu | monte en haut ; monte en hauteur ; grimpe ; va en hauteur ; monte sur la colline ; prends de la hauteur ; monte là haut ; va sur le toit | J'y monte.
+s_abriter | tous | se mettre à l'abri sous un toit | aller abri tenu | mets toi à l'abri ; abrite toi ; à l'abri ; va te mettre à couvert ; sors de la pluie ; abritez vous ; rentre à l'intérieur | À l'abri !
+cacher | tous | aller se cacher | aller abri tenu geste=accroupi | cache toi ; cachez vous ; planque toi ; va te cacher ; disparais ; trouve une cachette | Je me cache.
+aller_eau | tous | aller au bord de l'eau | aller eau | va à l'eau ; va près de l'eau ; va à la rivière ; va au lac ; va te baigner ; va boire un coup d'eau ; va te rafraîchir | J'y vais.
+aller_feu | tous | aller se réchauffer près d'un feu | aller feu tenu geste=assis | va te réchauffer ; va près du feu ; réchauffe toi ; va au feu de camp ; viens au coin du feu | Ah, il fait bon.
+aller_porte | tous | aller à la porte la plus proche | aller porte | va à la porte ; va devant la porte ; va vers la porte ; poste toi à la porte
+aller_coffre | tous | aller au coffre le plus proche | aller coffre | va au coffre ; va vers le coffre ; va devant le coffre
+aller_four | tous | aller au four le plus proche | aller four | va au four ; va vers le four ; va devant le four ; va à la forge
+aller_etabli | tous | aller à l'établi le plus proche | aller etabli | va à l'établi ; va vers l'établi ; va à la table de craft ; va à l'atelier
+aller_cloche | tous | aller à la cloche | aller cloche | va à la cloche ; va vers la cloche
+aller_arbre | tous | aller au pied de l'arbre le plus proche | aller arbre | va à l'arbre ; va sous l'arbre ; va vers un arbre ; va te mettre à l'ombre d'un arbre
+aller_lumiere | tous | aller dans la lumière | aller lumiere | va dans la lumière ; mets toi dans la lumière ; sors de l'ombre ; va près d'une torche
+aller_ombre | tous | aller à l'ombre | aller ombre | va à l'ombre ; mets toi à l'ombre ; sors du soleil
+sortir | tous | sortir dehors, à l'air libre | aller dehors | sors ; sortez ; va dehors ; sors d'ici ; va prendre l'air ; à l'air libre ; sors de la grotte ; sors de la maison | Je sors.
+caresser_chien | tous | aller caresser le chien le plus proche | aller chien puis=caresser_geste | caresse le chien ; va caresser le chien ; flatte le chien ; va voir le chien ; joue avec le chien | Bon chien !
+caresser_chat | tous | aller caresser le chat le plus proche | aller chat puis=caresser_geste | caresse le chat ; va caresser le chat ; va voir le chat ; joue avec le chat | Minou, minou…
+caresser_cheval | tous | aller flatter le cheval le plus proche | aller cheval puis=caresser_geste | caresse le cheval ; flatte le cheval ; va voir le cheval ; brosse le cheval
+caresser_geste | tous | caresser l'animal devant lui | geste caresser duree=4s regard=sol part=coeur | caresse le ; caresse la ; caresse ; câline le
+voir_vache | tous | aller voir les vaches | aller vache puis=caresser_geste | va voir les vaches ; va voir la vache ; caresse la vache
+voir_cochon | tous | aller voir les cochons | aller cochon puis=caresser_geste | va voir les cochons ; va voir le cochon ; caresse le cochon
+voir_mouton | tous | aller voir les moutons | aller mouton puis=caresser_geste | va voir les moutons ; va voir le mouton ; caresse le mouton
+voir_poules | tous | aller voir les poules | aller poule puis=caresser_geste | va voir les poules ; va voir la poule ; caresse la poule
+voir_lapin | tous | aller voir le lapin | aller lapin puis=caresser_geste | va voir le lapin ; caresse le lapin ; attrape le lapin
+voir_renard | tous | aller voir le renard | aller renard puis=caresser_geste | va voir le renard ; caresse le renard
+voir_perroquet | tous | aller voir le perroquet | aller perroquet puis=caresser_geste | va voir le perroquet
+voir_chevre | tous | aller voir la chèvre | aller chevre puis=caresser_geste | va voir la chèvre ; caresse la chèvre
+voir_abeilles | tous | aller voir les abeilles | aller abeille | va voir les abeilles ; va voir la ruche
+voir_villageois | tous | aller voir le villageois le plus proche | aller villageois puis=saluer_main | va voir le villageois ; va parler au villageois ; va saluer le villageois ; va au village
+voir_golem | tous | aller voir le golem | aller golem puis=saluer_main | va voir le golem ; va saluer le golem
+aller_voir_cible | tous | aller voir quelqu'un (un autre ouvrier ou un joueur) | aller cible | va voir @ ; rejoins @ ; va rejoindre @ ; va trouver @ ; va aider @ ; cours rejoindre @ ; va retrouver @ ; va à côté de @ ; va près de @ | J'y vais.
+suivre_cible | tous | suivre quelqu'un d'autre (un autre ouvrier ou un joueur) jusqu'à nouvel ordre | suivre cible remplace=suivre | suis @ ; va suivre @ ; accompagne @ ; marche avec @ ; colle @ ; file @ ; suivez @ ; prends @ en filature ; reste avec @ | Je le suis.
+courir | tous | courir (marcher vite) pendant quelques minutes | vitesse rapide | cours ; courez ; plus vite ; dépêche toi ; dépêchez vous ; presse le pas ; accélère ; en vitesse ; au pas de course ; magne toi | Je me dépêche !
+ralentir | tous | marcher lentement pendant quelques minutes | vitesse lent | doucement ; ralentis ; ralentissez ; moins vite ; marche lentement ; prends ton temps ; pas si vite ; tout doux | Doucement, chef.
+vitesse_normale | tous | reprendre son pas normal | vitesse normal | vitesse normale ; marche normalement ; reprends ton pas ; à ton rythme
+
+## Formations (à plusieurs)
+en_rang | tous | se mettre en rang face au chef, au garde-à-vous | formation rang geste=garde_a_vous | en rang ; en rangs ; mettez vous en rang ; alignez vous ; en ligne ; rassemblement ; rassemblez vous ; formez les rangs ; à vos rangs ; au rapport tout le monde | En rang !
+en_file | tous | se mettre en file indienne derrière le chef | formation file | en file ; en file indienne ; à la queue leu leu ; en colonne ; les uns derrière les autres ; mettez vous en file | En file !
+en_cercle | tous | former un cercle autour du chef | formation cercle | en cercle ; faites un cercle ; entourez moi ; autour de moi ; formez un cercle ; cercle autour de moi ; encerclez moi | Autour de toi, chef.
+derriere_moi_tous | tous | se placer en ligne derrière le chef | formation derriere | tous derrière moi ; rangez vous derrière moi ; en ligne derrière moi ; protégez mes arrières | Derrière toi !
+haie_honneur | tous | former une haie d'honneur | formation rang geste=salut_militaire | haie d'honneur ; faites une haie d'honneur ; présentez vous ; une haie | Honneur au chef !
+
+## Objets et sac
+donner_chef | tous | donner au chef ce qu'il demande, pris dans son sac | donner objet | donne moi ; donne ; passe moi ; file moi ; tends moi ; apporte moi ce que tu as ; refile moi ; lance moi ; envoie moi ; je veux ton ; tu peux me donner | Tiens, chef.
+donner_nourriture | tous | donner à manger au chef | donner nourriture | donne moi à manger ; j'ai faim ; tu as à manger ; partage ta nourriture ; nourris moi ; donne moi ton pain ; passe moi de la viande | Tiens, mange, chef.
+donner_tout | tous | donner tout ce qu'il porte au chef | donner tout | donne moi tout ; donne moi tout ce que tu as ; vide tes poches ; donne tout ; vide ton sac devant moi ; aboule tout | Voilà tout ce que j'ai.
+donner_cible | tous | donner un objet à quelqu'un d'autre | donner objet a=cible | donne à @ ; passe à @ ; apporte à @ ; partage avec @ ; offre à @ ; donne lui ; file lui ; donne ça à @ 
+jeter | tous | jeter par terre ce qu'il porte | jeter objet | jette ; lâche ; pose par terre ; débarrasse toi de ; jette ça ; laisse tomber ton ; lâche ça | C'est par terre.
+jeter_tout | tous | vider tout son sac par terre | jeter tout | jette tout ; vide ton sac par terre ; lâche tout ; débarrasse toi de tout ; vide tout | Voilà, tout est par terre.
+deposer | tous | aller ranger son sac au dépôt du poste | deposer | range tes affaires ; va déposer tes affaires ; vide ton sac au dépôt ; dépose tout au dépôt ; va au dépôt ; décharge ton sac ; range ça au poste ; mets tout au coffre du poste | Je vais tout ranger.
+prendre_manger | tous | aller prendre à manger au dépôt | prendre nourriture n=16 | prends à manger ; va chercher à manger ; prends des provisions ; fais des provisions ; ravitaille toi ; prends de la nourriture au dépôt | Je vais me servir.
+prendre_torches | tous | aller prendre des torches au dépôt | prendre torche n=32 | prends des torches ; va chercher des torches ; prends des torches au dépôt
+prendre_objet | tous | aller prendre un objet au dépôt | prendre objet n=16 | prends au dépôt ; va prendre au dépôt ; va chercher au poste ; récupère au dépôt ; prends dans le coffre
+manger | tous | manger quelque chose maintenant | manger | mange ; mangez ; mange quelque chose ; va manger ; prends ton repas ; casse la croûte ; mange un morceau ; restaure toi ; à table | Bon appétit à moi !
+boire | tous | boire un coup | geste boire duree=3s | buvez ; bois un coup ; bois de l'eau ; à ta santé ; trinque ; santé ; porte un toast ; tchin tchin | À la tienne, chef !
+montrer_arme | tous | brandir son arme | tenir arme | brandis ton arme ; montre ton arme ; sors ton arme ; sors ton épée ; dégaine ; dégainez ; montre ton épée ; brandis ton épée | En garde !
+montrer_outil | tous | montrer son outil de travail | tenir outil | montre ton outil ; sors ton outil ; montre ta pioche ; montre ta hache ; sors ta pioche ; sors ta hache ; montre ce que tu as en main
+tenir_torche | tous | prendre une torche en main | tenir torche | prends une torche ; sors une torche ; allume une torche ; éclaire moi ; tiens une torche ; porte une torche
+tenir_objet | tous | prendre en main un objet de son sac | tenir objet | prends en main ; mets dans ta main ; tiens dans ta main ; prends dans ta main ; garde en main
+ranger_main | tous | ranger ce qu'il tient en main | ranger | range ton arme ; rengaine ; rengainez ; range ton épée ; range ça ; mains vides ; range ton outil ; pose ton arme | C'est rangé.
+montrer_objet | tous | montrer au chef l'objet qu'il tient | geste montrer duree=4s regard=chef | montre moi ce que tu tiens ; fais voir ; fais moi voir ; montre ce que tu tiens
+
+## Blocs et objets du monde
+ouvrir_porte | tous | ouvrir ou fermer la porte la plus proche | utiliser porte | ouvre la porte ; ferme la porte ; ouvre ; ferme ; ouvre moi ; ferme derrière toi ; ouvrez la porte ; fermez la porte | Voilà.
+sonner_cloche | tous | sonner la cloche la plus proche | utiliser cloche | sonne la cloche ; sonnez la cloche ; fais sonner la cloche ; sonne le tocsin ; donne l'alerte avec la cloche | Ding ! Dong !
+levier | tous | actionner le levier le plus proche | utiliser levier | tire le levier ; actionne le levier ; baisse le levier ; lève le levier ; abaisse le levier 
+bouton | tous | appuyer sur le bouton le plus proche | utiliser bouton | appuie sur le bouton ; presse le bouton ; appuyez sur le bouton ; enfonce le bouton 
+trappe | tous | ouvrir ou fermer la trappe la plus proche | utiliser trappe | ouvre la trappe ; ferme la trappe 
+portillon | tous | ouvrir ou fermer le portillon le plus proche | utiliser portillon | ouvre le portillon ; ferme le portillon ; ouvre la barrière ; ferme la barrière 
+bloc_musical | tous | jouer du bloc musical le plus proche | utiliser note | joue du bloc musical ; tape sur le bloc musical ; bloc de notes
+
+## Travail du mineur
+miner_la | mineur | miner le bloc que regarde le chef | travail miner_la | mine ça ; mine ce bloc ; casse ce bloc ; creuse ici ; creuse là ; casse ça ; enlève ce bloc ; détruis ce bloc ; pioche ici ; tape là | Je m'en occupe.
+tunnel | mineur | creuser un tunnel droit devant, là où regarde le chef | travail tunnel n=8 | creuse un tunnel ; fais un tunnel ; perce un tunnel ; creuse un passage ; ouvre un passage ; creuse tout droit ; une galerie | Je perce, chef.
+trou | mineur | creuser un trou là où regarde le chef | travail trou n=3 | creuse un trou ; fais un trou ; creuse un puits ; creuse vers le bas ; creuse en dessous | Un trou, ça marche.
+torches | mineur | poser des torches autour pour éclairer | travail torches n=4 | pose des torches ; éclaire le coin ; mets des torches ; installe des torches ; il fait noir ici ; on n'y voit rien ; plante des torches ; éclaire la mine | J'éclaire tout ça.
+torche_la | mineur | poser une torche là où regarde le chef | travail torche_la | pose une torche ici ; pose une torche là ; mets une torche là ; une torche ici | Une torche, voilà.
+ramasser_pierres | mineur | ramasser ce qui traîne par terre | travail ramasser n=12 | ramasse les pierres ; ramasse ce qui traîne ; ramasse les cailloux ; nettoie le sol
+chercher_minerai | mineur | dire où il voit du minerai et le montrer du doigt | info minerai | tu vois du minerai ; il y a du minerai ? ; où y a t il du fer ; où est le minerai ; cherche du minerai ; repère du minerai ; trouve moi du fer ; trouve moi du diamant ; il y a du charbon par ici ? ; où trouver du fer | Je regarde…
+sonder | mineur | tapoter la paroi pour la sonder | geste piocher duree=4s son=frappe rythme=10 | sonde la paroi ; tâte la roche ; tapote le mur ; écoute la roche
+
+## Travail du bûcheron
+abattre_la | bucheron | abattre l'arbre que regarde le chef | travail abattre_la | abats cet arbre ; coupe cet arbre ; abats celui là ; coupe celui ci ; abats l'arbre ; coupe l'arbre ; à terre cet arbre ; fais tomber cet arbre | Attention, ça tombe !
+abattre_autour | bucheron | abattre les arbres les plus proches | travail abattre_autour n=3 | abats les arbres autour ; coupe les arbres autour ; défriche ; dégage les arbres ; rase la forêt ; coupe tout ici ; abats quelques arbres | Je m'y mets.
+planter | bucheron | planter des pousses d'arbre autour | travail planter n=4 | plante des arbres ; replante ; plante des pousses ; reboise ; plante des graines d'arbre ; fais pousser des arbres | Je replante.
+planter_la | bucheron | planter une pousse là où regarde le chef | travail planter_la | plante ici ; plante là ; plante un arbre ici ; plante un arbre là
+debroussailler | bucheron,mineur | couper les herbes hautes et les fleurs autour | travail defricher n=5 | débroussaille ; coupe les herbes ; fauche ; nettoie les herbes ; tonds la pelouse ; coupe les fleurs ; arrache les mauvaises herbes | Ça va être propre.
+ramasser_bois | bucheron | ramasser ce qui traîne par terre | travail ramasser n=12 | ramasse le bois ; ramasse les pousses ; ramasse ce qui traîne ; ramasse les pommes
+chercher_arbre | bucheron | dire où est l'arbre le plus proche et le montrer | info arbre | où est l'arbre le plus proche ; tu vois un arbre ; trouve un arbre ; y a t il des arbres ; cherche des arbres | Je regarde…
+scier_mime | bucheron | faire semblant de scier une bûche | geste scier duree=5s son=scie rythme=10 | scie ; scie une bûche ; montre comment tu scies
+
+## Combat et garde (guerrier)
+attaquer_la | guerrier | attaquer le monstre que regarde le chef | combat cible | attaque ; attaque le ; tue le ; tue ça ; frappe le ; défonce le ; élimine le ; attaque ce monstre ; tue ce zombie ; tue ce squelette ; tue cette araignée ; abats le ; sus à l'ennemi ; à l'attaque ; charge le | À l'attaque !
+nettoyer | guerrier | tuer tous les monstres alentour, puis dire que c'est sûr | combat nettoyer n=20 | tue les monstres ; nettoie la zone ; débarrasse nous des monstres ; élimine les monstres ; extermine les ; fais le ménage ; sécurise la zone ; chasse les monstres ; tue tout ce qui bouge | Je nettoie, chef.
+garder_ici | guerrier | garder cet endroit et frapper tout monstre qui approche, jusqu'à nouvel ordre | combat garder_ici remplace=missions | garde cette position ; tiens la position ; garde ici ; défends ici ; reste en faction ici ; monte la garde ici ; garde ce passage ; tiens ce passage ; garde l'endroit ; ne laisse passer personne | Personne ne passera !
+proteger_cible | guerrier | protéger quelqu'un (un ouvrier ou un joueur) en restant près de lui | combat proteger remplace=missions,suivre | protège @ ; défends @ ; veille sur @ ; garde un oeil sur @ ; escorte @ ; sois le garde du corps de @ ; surveille @ ; protégez @ | Je veille sur lui.
+patrouiller_chef | guerrier | patrouiller en cercle autour du chef | combat patrouiller remplace=missions | patrouille autour de moi ; tourne autour de moi ; fais des rondes autour de moi ; surveille autour de moi | Je tourne autour, chef.
+charger | guerrier | charger au pas de course là où regarde le chef | combat charge | charge ; chargez ; à la charge ; fonce ; foncez ; en avant toute ; à l'assaut ; donne l'assaut | Chaaarge !
+repli | guerrier | se replier en courant auprès du chef | combat repli | repli ; replie toi ; repliez vous ; battez en retraite ; retraite ; reviens vers moi vite ; recule vite ; décroche ; fuyons | Je me replie !
+en_garde | guerrier | se mettre en garde, l'arme prête, jusqu'à nouvel ordre | geste en_garde duree=tenu objet=arme regard=devant | en garde ; mets toi en garde ; garde haute ; prêt au combat ; sois prêt ; tiens toi prêt ; arme prête ; prépare toi au combat | En garde !
+bouclier | guerrier | lever son bouclier, jusqu'à nouvel ordre | geste bouclier duree=tenu objet=bouclier regard=devant son=bouclier rythme=0 | lève ton bouclier ; bouclier ; lève le bouclier ; protège toi ; couvre toi ; à l'abri derrière ton bouclier ; formation tortue | Bouclier levé !
+salut_epee | guerrier | saluer de l'épée | geste salut_epee duree=3s objet=arme regard=chef | salue avec ton épée ; salut à l'épée ; salut des armes ; salue de l'épée | Mes respects !
+moulinet | guerrier | faire des moulinets avec son arme | geste moulinet duree=5s objet=arme son=epee rythme=10 | fais des moulinets ; fais tournoyer ton épée ; fais tourner ton arme ; montre ta technique | Admire !
+entrainement | guerrier | s'entraîner au combat en frappant dans le vide | geste frapper duree=10s objet=arme son=epee rythme=12 | entraîne toi au combat ; entraînement ; fais tes exercices ; frappe dans le vide ; travaille tes coups ; exerce toi | À l'entraînement !
+tirer_arc | guerrier | viser à l'arc là où regarde le chef | geste tirer_arc duree=5s regard=la | vise ; vise là bas ; mets en joue ; bande ton arc ; vise avec l'arc ; tir à l'arc
+inspecter | guerrier | faire son rapport de garde : les monstres qu'il voit alentour | info monstres geste=guetter | rapport de garde ; fais ton rapport de garde ; état des menaces ; des ennemis en vue ; la voie est libre ? ; tu entends quelque chose ? | Je regarde…
+cri_rassemblement | guerrier | pousser un cri pour rassembler | son cri fois=1 geste=mains_en_l_air | rassemble les troupes ; appelle les autres ; donne de la voix ; crie pour rassembler | À moi, la colonie !
+intimider | guerrier | prendre un air menaçant | geste en_garde duree=5s objet=arme part=colere regard=la | intimide ; fais peur ; impressionne les ; montre les dents ; fais le dur | Grrr…
+
+## Sommeil et repos
+dormir | tous | aller dormir (dans son lit s'il en a un) jusqu'à nouvel ordre | dormir | va dormir ; va te coucher ; au lit ; dodo ; fais dodo ; au dodo ; va faire une sieste ; repose toi ; va te reposer ; couche toi ; bonne nuit va dormir | Bonne nuit, chef.
+sieste | tous | faire une petite sieste sur place | geste dormir duree=30s regard=aucun | fais une sieste ; une petite sieste ; somnole ; pique un somme ; fais un somme ; ferme l'oeil | Zzz…
+reveil | tous | se réveiller | annuler | réveille toi ; réveillez vous ; debout là dedans ; on se réveille ; ouvre les yeux | Hein ? Je suis réveillé !
+
+## Silence et parole
+silence | tous | se taire (plus de bulles ni de voix) pendant un moment | silence duree=5m | tais toi ; taisez vous ; silence ; motus ; bouche cousue ; ferme la ; ne dis plus rien ; arrête de parler ; arrêtez de parler ; plus un mot ; la ferme ; chut maintenant | …
+parole | tous | reprendre la parole après un silence | parole | tu peux parler ; parle ; tu peux reparler ; vous pouvez parler ; reprends la parole ; dis quelque chose | Enfin ! Merci, chef.
+crier | tous | crier très fort, les mains en porte-voix | geste crier duree=3s son=cri rythme=30 | crie fort ; parle plus fort ; hurle plus fort ; je ne t'entends pas ; plus fort | OHÉ !
+chuchoter | tous | chuchoter | parler secret geste=chut | chuchote ; parle tout bas ; murmure ; dis moi un secret ; parle à voix basse ; un secret | Psst…
+
+## Paroles et récits
+blague | tous | raconter une blague | parler blague geste=rire | raconte une blague ; une blague ; fais moi une blague ; raconte moi une histoire drôle ; fais moi rire avec une blague ; connais tu une blague ; dis une blague |
+histoire | tous | raconter une histoire | parler histoire geste=parler | raconte une histoire ; raconte moi une histoire ; une histoire ; raconte nous quelque chose ; il était une fois ; raconte un conte ; un conte |
+legende | tous | raconter une légende de la colonie | parler legende geste=parler | raconte une légende ; une légende ; connais tu une légende ; légende de la colonie |
+poeme | tous | réciter un poème | parler poeme geste=reverence | récite un poème ; un poème ; fais moi un poème ; dis un poème ; déclame ; écris moi un poème ; des vers |
+dicton | tous | dire un dicton | parler dicton geste=reflechir | dis un dicton ; un dicton ; un proverbe ; dis un proverbe ; une maxime ; une sagesse |
+devinette | tous | poser une devinette | parler devinette geste=reflechir | pose moi une devinette ; une devinette ; une énigme ; fais moi deviner ; pose une énigme |
+compliment | tous | faire un compliment au chef | parler compliment geste=s_incliner | fais moi un compliment ; un compliment ; dis moi un truc gentil ; flatte moi ; tu me trouves comment ; je suis beau |
+taquinerie | tous | taquiner gentiment le chef | parler taquinerie geste=rire | taquine moi ; moque toi de moi ; chambre moi ; vanne moi ; insulte moi ; dis du mal de moi ; clashe moi |
+conseil | tous | donner un conseil | parler conseil geste=reflechir | donne moi un conseil ; un conseil ; tu me conseilles quoi ; que me conseilles tu ; une astuce ; un tuyau |
+astuce_metier | tous | donner une astuce de son métier | parler astuce geste=parler | une astuce de ton métier ; apprends moi ton métier ; comment tu travailles ; explique ton travail ; tes secrets de métier |
+recette | tous | donner une recette de cuisine | parler recette geste=parler | une recette ; donne moi une recette ; qu'est ce qu'on mange ; tu sais cuisiner ; que faut il pour un bon ragoût |
+souvenir | tous | raconter un souvenir | parler souvenir geste=reflechir regard=ciel | raconte un souvenir ; un souvenir ; raconte ta vie ; d'où viens tu ; ton passé ; ton enfance ; qu'as tu fait avant |
+presentation | tous | se présenter | parler presentation geste=s_incliner | présente toi ; qui es tu ; comment t'appelles tu ; ton nom ; dis moi ton nom ; parle moi de toi ; tu es qui |
+famille | tous | parler de sa famille | parler famille geste=reflechir | parle moi de ta famille ; ta famille ; tu as des enfants ; tu es marié ; tes parents |
+reve | tous | raconter son rêve | parler reve geste=reflechir regard=ciel | raconte ton rêve ; de quoi tu rêves ; ton rêve ; quel est ton rêve ; tu as rêvé de quoi |
+prediction | tous | prédire l'avenir | parler prediction geste=reflechir regard=ciel | prédis l'avenir ; lis l'avenir ; dis moi la bonne aventure ; qu'est ce qui va se passer ; fais une prophétie |
+discours | tous | faire un discours pour motiver les troupes | parler discours geste=victoire | fais un discours ; un discours ; motive les troupes ; harangue ; galvanise nous ; parle aux troupes |
+serment | tous | prêter serment de fidélité | parler serment geste=a_genoux | prête serment ; jure moi fidélité ; fais un serment ; jure ; promets moi ; tu me seras fidèle |
+priere_parole | tous | dire une prière | parler priere geste=priere | dis une prière ; récite une prière ; bénis nous ; un bénédicité |
+philosophie | tous | dire une pensée profonde | parler philosophie geste=reflechir regard=ciel | une pensée ; dis quelque chose de profond ; philosophe ; le sens de la vie ; à quoi tu penses ; tu penses à quoi |
+ragot | tous | raconter un ragot sur la colonie | parler ragot geste=chut | un ragot ; raconte un potin ; des potins ; quoi de neuf à la colonie ; les rumeurs ; une rumeur ; tu as entendu ; les nouvelles |
+plainte | tous | dire ce qui ne lui plaît pas | parler plainte geste=bras_croises | de quoi tu te plains ; plains toi ; qu'est ce qui ne va pas ; tu es content de ton travail ; quelque chose à redire ; tes doléances |
+remerciement | tous | remercier chaleureusement le chef | parler remerciement geste=s_incliner | remercie moi comme il faut ; dis merci au chef ; montre ta gratitude |
+bonne_nuit | tous | souhaiter bonne nuit | parler bonne_nuit geste=bailler | souhaite moi bonne nuit ; dis bonne nuit ; souhaite bonne nuit |
+toast | tous | porter un toast | parler toast geste=boire | porte un toast ; un toast ; lève ton verre ; trinquons ; à la santé du chef |
+felicitations | tous | féliciter le chef | parler felicitations geste=applaudir | félicite moi ; félicitations ; dis moi bravo ; je suis le meilleur |
+nouvelle_colonie | tous | donner des nouvelles de son travail en une phrase | parler rapport geste=parler remplace=avancement | fais moi ton rapport ; ton rapport ; au rapport ; rapport de situation ; quoi de neuf ; fais le point |
+langue_etrangere | tous | dire quelques mots dans une autre langue | parler langue geste=parler | parle anglais ; dis quelque chose en anglais ; parle une autre langue ; parle latin ; dis quelque chose en latin ; parle espagnol |
+alphabet | tous | réciter l'alphabet | parler alphabet geste=compter | récite l'alphabet ; l'alphabet ; dis l'alphabet ; abc |
+compter_haut | tous | compter à voix haute | parler compter geste=compter | compte à voix haute ; compte jusqu'à dix ; compte jusqu'à cent ; compte pour moi |
+meteo_avis | tous | donner son avis sur le temps qu'il fera | parler meteo geste=guetter regard=ciel | quel temps fera t il ; il va pleuvoir ; prévisions ; la météo ; il fera beau demain |
+
+## Ce qu'il sait et ce qu'il voit
+heure | tous | dire l'heure qu'il est | info heure | quelle heure est il ; il est quelle heure ; l'heure ; tu as l'heure ; donne moi l'heure ; c'est l'heure de quoi | Il est…
+meteo | tous | dire le temps qu'il fait | info meteo geste=guetter | quel temps fait il ; il fait beau ? ; il pleut ? ; il fait quel temps ; il y a de l'orage ? ; il neige ? ; comment est le ciel | Voyons…
+jour | tous | dire depuis combien de jours dure le monde et s'il fait jour | info jour | quel jour sommes nous ; on est quel jour ; quel jour on est ; combien de jours ; c'est le jour ou la nuit |
+lune | tous | dire la phase de la lune | info lune geste=pointer regard=ciel | la lune ; quelle lune ; c'est la pleine lune ; phase de la lune ; nouvelle lune |
+ou_poste | tous | dire où est le poste et le montrer du doigt | info poste geste=pointer | où est le poste ; où est le bureau ; c'est par où le poste ; dans quelle direction est le poste ; la base est où ; on est loin du poste ; où est la base ; où est la maison | Le poste…
+ou_lit | tous | dire où est son lit | info lit geste=pointer | où est ton lit ; tu as un lit ; où dors tu ; tu dors où |
+ou_cible | tous | dire où est un autre ouvrier ou un joueur, et le montrer du doigt | info cible geste=pointer | où est @ ; tu as vu @ ; sais tu où est @ ; où est passé @ ; où est passée @ ; il est où @ ; elle est où @ ; où sont les autres ; où sont mes ouvriers |
+ou_chef | tous | dire au chef où il se trouve | info position geste=pointer | où sommes nous ; où on est ; où suis je ; on est où ; nos coordonnées ; ta position ; donne ta position |
+nord | tous | montrer le nord | info nord geste=pointer | où est le nord ; montre le nord ; le nord est où ; quelle direction ; où est l'est ; où est le sud ; où est l'ouest ; boussole |
+altitude | tous | dire l'altitude où l'on est | info altitude | à quelle hauteur sommes nous ; quelle altitude ; on est à quelle profondeur ; sommes nous sous terre ; quelle profondeur |
+biome | tous | dire dans quelle contrée on se trouve | info biome geste=guetter | quel est cet endroit ; on est dans quelle région ; quel paysage ; c'est quoi ce coin ; quelle contrée ; quel biome |
+monstres_proches | tous | dire s'il voit des monstres alentour | info monstres geste=guetter | il y a des monstres ; tu vois un monstre ; c'est dangereux ; on est en sécurité ; des zombies ; des squelettes ; des araignées ; des creepers |
+animaux | tous | dire quels animaux il voit alentour | info animaux geste=guetter | tu vois des animaux ; il y a des animaux ; des vaches par ici ; du gibier ; des moutons par ici |
+joueurs_proches | tous | dire quels autres joueurs sont dans les parages | info joueurs geste=guetter | il y a quelqu'un ; tu vois quelqu'un ; qui est là ; il y a des joueurs ; on est seuls |
+lumiere | tous | dire s'il fait assez clair pour être à l'abri des monstres | info lumiere geste=guetter | il fait sombre ; il fait noir ; on y voit assez ; c'est assez éclairé ; il fait clair |
+eau_proche | tous | dire où est l'eau la plus proche | info eau geste=pointer | il y a de l'eau ; où est l'eau ; où boire ; une rivière par ici ; un lac par ici |
+sac | tous | dire ce qu'il a dans son sac | info sac geste=montrer remplace=sac | qu'est ce que tu portes ; que transportes tu ; qu'as tu sur toi ; tu as quoi sur toi ; inventaire à voix haute ; dis moi ce que tu as ; liste tes affaires |
+sante | tous | dire comment il va (vie, faim, fatigue) | info sante | tu es blessé ; tu as mal ; tu es en forme ; ta santé ; tu saignes ; tes blessures ; tu as besoin de soins |
+outil_etat | tous | dire dans quel état est son outil | info outil geste=montrer | ton outil est usé ; dans quel état est ton outil ; ta pioche est usée ; ta hache est usée ; ton épée est usée ; il te faut un nouvel outil |
+armure | tous | dire quelle armure il porte | info armure geste=fier | tu as une armure ; quelle armure ; ton armure ; tu es protégé |
+salaire | tous | dire son salaire et sa prochaine paie | info salaire | combien tu gagnes ; ton salaire ; quand est ta paie ; je te dois combien ; ta paie ; tu es bien payé |
+anciennete | tous | dire depuis quand il travaille pour le chef | info anciennete | depuis quand travailles tu pour moi ; depuis combien de temps ; ton ancienneté ; tu es là depuis quand |
+temperament | tous | dire quel est son caractère | info caractere | quel est ton caractère ; tu es comment ; ton tempérament ; décris toi ; quel genre d'homme es tu |
+niveau | tous | dire son niveau de compétence | info niveau | quel est ton niveau ; tu es bon ; combien d'étoiles ; tu es doué ; ton expérience |
+distance_chef | tous | dire à quelle distance il est du chef | info distance | tu es loin ; à quelle distance es tu ; tu es à combien de blocs ; tu es proche |
+ouvriers | tous | dire où sont les autres ouvriers du chef | info ouvriers geste=guetter | où sont les autres ; tu as vu les autres ; où sont tes collègues ; combien sommes nous ; qui travaille pour moi ; l'équipe est où |
+
+## Avec les autres (un ouvrier ou un joueur)
+message | tous | aller dire à quelqu'un ce que le chef veut lui faire savoir | message cible | dis à @ ; va dire à @ ; préviens @ ; va prévenir @ ; annonce à @ ; transmets à @ ; préviens le ; préviens la ; préviens les autres | Je lui transmets.
+applaudir_cible | tous | aller applaudir quelqu'un | aller cible puis=applaudir | applaudis @ ; applaudissez @ ; va applaudir @
+danser_avec | tous | aller danser avec quelqu'un | aller cible puis=danser | danse avec @ ; va danser avec @ ; invite @ à danser ; fais danser @
+calin_cible | tous | aller faire une accolade à quelqu'un | aller cible puis=calin_geste | fais un câlin à @ ; va faire un câlin à @ ; embrasse @ ; console @ ; va consoler @
+serrer_main_cible | tous | aller serrer la main de quelqu'un | aller cible puis=serrer_main_geste | serre la main à @ ; serre la main de @ ; va serrer la main de @ ; fais la paix avec @ ; réconcilie toi avec @
+reveiller_cible | tous | aller réveiller quelqu'un | aller cible puis=crier | réveille @ ; va réveiller @ ; secoue @
+feliciter_cible | tous | aller féliciter quelqu'un | aller cible puis=applaudir | félicite @ ; va féliciter @ ; dis bravo à @
+defier_cible | tous | aller défier quelqu'un à un combat pour rire (sans coup porté) | aller cible puis=boxe | défie @ ; bats toi avec @ ; affronte @ ; provoque @ en duel ; un duel avec @
+chanter_pour | tous | aller chanter pour quelqu'un | aller cible puis=chanter | chante pour @ ; va chanter pour @ ; donne une sérénade à @ ; une sérénade
+reverence_cible | tous | aller faire la révérence à quelqu'un | aller cible puis=reverence | fais la révérence à @ ; incline toi devant @ ; salue bien bas @
+montrer_cible | tous | montrer quelqu'un du doigt | regarder cible duree=4s geste=pointer | montre moi @ ; montre @ du doigt ; désigne @ ; pointe @
+taquiner_cible | tous | aller taquiner quelqu'un en imitant le cochon | aller cible puis=imiter_cochon | taquine @ ; embête @ ; va embêter @ ; fais une blague à @
+
+## Exercice militaire
+demi_tour | tous | faire demi-tour sur place | regarder dos duree=4s remplace=rentrer | demi tour droite ; demi tour sur place ; volte face ; fais volte face
+en_avant_marche | tous | avancer au pas, devant lui | aller avance geste=marcher_au_pas | en avant marche ; en avant, marche ; avance au pas ; marche au pas devant
+presenter_armes | guerrier | présenter les armes, jusqu'à nouvel ordre | geste salut_epee duree=tenu objet=arme regard=devant | présentez armes ; présentez les armes ; présente les armes ; portez armes
+reposez_armes | guerrier | reposer les armes | ranger | reposez armes ; reposez les armes ; armes au pied ; rangez vos armes
+sentinelle | guerrier | monter la garde à la porte la plus proche, jusqu'à nouvel ordre | aller porte tenu geste=en_garde remplace=missions | garde la porte d'ici ; monte la garde devant cette porte ; sentinelle ; mets toi en sentinelle ; poste de sentinelle ; en faction à la porte
+fouiller | guerrier | fouiller les environs à la recherche de monstres | combat nettoyer n=32 | fouille les environs ; ratisse le coin ; inspecte les alentours ; va voir s'il y a des monstres ; bats la campagne
+garde_du_corps | guerrier | coller au chef et frapper tout monstre qui l'approche, jusqu'à nouvel ordre | combat proteger_chef remplace=missions,suivre | colle moi et protège moi ; reste près de moi et protège moi ; garde rapprochée ; ne me lâche pas d'une semelle ; couvre moi | Je ne te quitte pas, chef.
+
+## Vie de tous les jours
+se_laver | tous | aller se laver à l'eau | aller eau puis=se_secouer | lave toi ; va te laver ; prends un bain ; fais ta toilette ; tu sens mauvais ; va te débarbouiller | J'y vais…
+se_secouer | tous | s'ébrouer pour se sécher | geste trembler duree=2s part=eclaboussure | secoue toi ; sèche toi ; ébroue toi
+pecher | tous | aller au bord de l'eau et lancer une ligne | aller eau puis=lancer_ligne | va pêcher ; pêche ; va à la pêche ; attrape du poisson | Ça mord, chef ?
+lancer_ligne | tous | lancer sa ligne et attendre que ça morde | geste lancer duree=15s regard=sol | lance ta ligne ; jette la ligne
+cueillir | tous | ramasser ce qui traîne par terre autour | travail ramasser n=10 | ramasse ça ; ramasse ; ramasse ce qu'il y a par terre ; ramasse les objets ; récupère ce qui traîne ; nettoie par terre | Je ramasse.
+admirer_vue | tous | monter en hauteur et admirer la vue | aller haut puis=regarder_autour | admire la vue ; va admirer le paysage ; regarde le paysage ; profite de la vue | Quelle vue, chef !
+coucher_soleil | tous | contempler le ciel | regarder ciel duree=10s | regarde le coucher du soleil ; regarde le lever du soleil ; contemple le ciel ; regarde les étoiles ; admire le ciel
+voeu | tous | faire un vœu, les yeux au ciel | geste priere duree=5s regard=ciel part=magie | fais un voeu ; fais un souhait ; souhaite quelque chose | Voilà, j'ai fait un vœu.
+se_soigner | tous | manger pour reprendre des forces | manger | soigne toi ; requinque toi ; reprends des forces ; refais toi une santé ; panse tes blessures | Ça va mieux.
+attendre_assis | tous | s'asseoir et attendre là jusqu'à nouvel ordre | geste assis duree=tenu remplace=attendre | attends assis ; attends moi assis ; assieds toi et attends ; reste assis ; attendez assis | J'attends là.

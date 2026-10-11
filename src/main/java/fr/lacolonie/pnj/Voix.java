@@ -49,7 +49,8 @@ final class Voix {
      * l'entendre, Gemini disponible). Les voix sont demandées ensemble, puis jouées l'une après l'autre ; la bulle
      * s'affiche quand la voix commence.
      */
-    static void direEnSuite(List<Replique> l) {
+    static void direEnSuite(List<Replique> toutes) {
+        List<Replique> l = toutes.stream().filter(x -> !x.t().muet() && !x.texte().isBlank()).toList(); // « tais-toi » : plus un mot
         if (l.isEmpty() || l.get(0).t().level().getServer() == null) return;
         MinecraftServer s = l.get(0).t().level().getServer();
         List<CompletableFuture<short[]>> sons = new ArrayList<>();

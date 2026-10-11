@@ -60,6 +60,8 @@ import java.util.UUID;
 /** Un PNJ travailleur : un corps de joueur piloté par le cerveau commun et son métier (codés dans le mod). */
 public class Travailleur extends PathfinderMob {
     public static final EntityDataAccessor<String> SKIN = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
+    /** Le geste qu'il fait (garde-à-vous, salut, danse…), dessiné chez les joueurs ({@link Poses}) ; vide : aucun. */
+    public static final EntityDataAccessor<String> GESTE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
 
     public enum Mode {
         CHOMEUR("chomeur"), SUIVRE("suivre"), ATTENDRE("attendre"), TRAVAIL("travail"), GREVE("greve");
@@ -195,6 +197,11 @@ public class Travailleur extends PathfinderMob {
     Courrier.Lettre lettreEnMain;
     /** Il attend la réponse de l'IA (il « réfléchit ») : on ne lui en redemande pas une autre en même temps. */
     boolean reflechit;
+    /**
+     * Ce que le chef lui a demandé en plus de son travail (une action du répertoire : un geste, une posture, une tâche),
+     * et la posture qu'il tenait avant un petit geste (il y revient ensuite). Voir {@link Consignes}.
+     */
+    Consignes.Consigne consigne, consigneFond;
     int lectureTicks;
     /** Où ses affaires ont été mises à sa mort (pour l'avis de décès). */
     String lieuAffaires = "";
@@ -238,6 +245,7 @@ public class Travailleur extends PathfinderMob {
     protected void defineSynchedData(SynchedEntityData.Builder b) {
         super.defineSynchedData(b);
         b.define(SKIN, "");
+        b.define(GESTE, "");
     }
 
     @Override
@@ -433,6 +441,13 @@ public class Travailleur extends PathfinderMob {
     public String skin() { return entityData.get(SKIN); }
     public void setSkin(String pseudo) { entityData.set(SKIN, pseudo == null ? "" : pseudo.trim()); }
 
+    public String geste() { return entityData.get(GESTE); }
+
+    public void setGeste(String g) { if (!geste().equals(g)) entityData.set(GESTE, g == null ? "" : g); }
+
+    /** On lui a demandé de se taire (plus de bulles ni de voix, jusqu'à l'heure dite). */
+    public boolean muet() { return memoire.getLong("muet") > level().getGameTime(); }
+
     public void majNom() {
         String suffixe = switch (mode) {
             case CHOMEUR -> " · cherche du travail";
@@ -559,6 +574,7 @@ public class Travailleur extends PathfinderMob {
             fatigue = Math.clamp(fatigue, 0, 100);
         }
         if (tickCount % 10 == 0) ramasserAutour();
+        if (tickCount % 20 == 0) Consignes.verifierVitesse(this);
         // Il nage comme un joueur : allongé, quand il court dans l'eau profonde.
         boolean nage = isInWater() && isSprinting() && !isPassenger() && !isSleeping() && level().getFluidState(blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER);
         if (nage && getPose() == Pose.STANDING) setPose(Pose.SWIMMING);
@@ -799,6 +815,7 @@ public class Travailleur extends PathfinderMob {
     }
 
     void ramasserAutour() {
+        if (memoire.getLong("sans_ramasser") > level().getGameTime()) return;
         for (ItemEntity ie : level().getEntitiesOfClass(ItemEntity.class, getBoundingBox().inflate(1.2, 0.5, 1.2))) {
             if (ie.hasPickUpDelay() || !ie.isAlive() || !inventaire.canAddItem(ie.getItem())) continue;
             ItemStack s = ie.getItem().copy();
@@ -826,7 +843,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Il parle : une bulle au-dessus de sa tête pour ceux qui sont près de lui (et la fenêtre de conversation). Jamais dans le chat. */
     public void dire(String texte) {
-        if (!(level() instanceof ServerLevel)) return;
+        if (!(level() instanceof ServerLevel) || muet() || texte == null || texte.isBlank()) return;
         for (Player p : level().players())
             if (p.distanceToSqr(this) < 24 * 24 && p instanceof ServerPlayer sp && sp.connection != null && sp.connection.hasChannel(Reseau.Parole.TYPE))
                 PacketDistributor.sendToPlayer(sp, new Reseau.Parole(getId(), texte));
@@ -957,6 +974,8 @@ public class Travailleur extends PathfinderMob {
         }
         if (mode == Mode.CHOMEUR || chef == null) return "";
         boolean auTravail = false;
+        // Un ordre de base ou une mission met fin à ce qu'on lui avait demandé (« au travail » après « garde à vous »).
+        if (!l.missions.isEmpty() || l.intentions.stream().anyMatch(i -> java.util.EnumSet.of(Ordres.Intention.SUIVRE, Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE, Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER).contains(i))) Consignes.annuler(this);
 
         // Les missions.
         if (!l.missions.isEmpty()) {
@@ -1008,6 +1027,12 @@ public class Travailleur extends PathfinderMob {
             finirAction("ordre");
         }
 
+        // Les actions du répertoire (gestes, postures, déplacements, tâches, paroles…).
+        for (Ordres.Faire f : l.faire) {
+            String dit = Consignes.ordonner(this, f, enFace, l.texte, l.rang, l.total);
+            if (!dit.isEmpty()) r.add(dit);
+        }
+
         // Son sac.
         if (l.intentions.contains(Ordres.Intention.SAC)) {
             if (enFace == null) r.add("Je te montrerai mon sac à mon retour.");
@@ -1022,7 +1047,7 @@ public class Travailleur extends PathfinderMob {
         if (r.isEmpty() && l.intentions.contains(Ordres.Intention.SALUT)) r.add(Messages.corps(this, "dit_salut"));
         if (l.intentions.contains(Ordres.Intention.MERCI)) r.add(Messages.corps(this, "dit_merci"));
         majNom();
-        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC)) return enFace == null ? "" : Messages.corps(this, "dit_pas_compris");
+        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty()) return enFace == null ? "" : Messages.corps(this, "dit_pas_compris");
         return String.join(" ", r);
     }
 
@@ -1032,6 +1057,7 @@ public class Travailleur extends PathfinderMob {
         if (mode == Mode.GREVE) return "Je suis en grève.";
         if (mode == Mode.SUIVRE) return "Je te suis.";
         if (mode == Mode.ATTENDRE) return "J'attends là où tu m'as dit d'attendre.";
+        if (consigne != null && consigne.entree() != null) return "Je fais ce que tu m'as demandé : " + consigne.entree().nom() + ".";
         Mission m = missionActive();
         String mission = m == null ? "" : " Je travaille à : " + Metier.avancementTexte(this, m) + ".";
         String geste = action == null ? "Je réfléchis à la suite." : switch (action.nom) {
@@ -1160,6 +1186,8 @@ public class Travailleur extends PathfinderMob {
         t.putInt("ATerreTicks", aTerreTicks);
         t.put("Inventaire", inventaire.createTag(registryAccess()));
         t.put("Etat", memoire);
+        if (consigne != null) t.put("Consigne", consigne.sauver());
+        if (consigneFond != null) t.put("ConsigneFond", consigneFond.sauver());
         ListTag ad = new ListTag(), al = new ListTag();
         for (Courrier.Lettre l : lettresADeposer) ad.add(l.sauver());
         for (Courrier.Lettre l : lettresALire) al.add(l.sauver());
@@ -1208,6 +1236,8 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) setPose(Pose.SLEEPING);
         inventaire.fromTag(t.getList("Inventaire", Tag.TAG_COMPOUND), registryAccess());
         memoire = t.getCompound("Etat"); // l'ancienne mémoire des scripts (« Memoire ») n'est pas reprise
+        consigne = t.contains("Consigne") ? Consignes.Consigne.lire(t.getCompound("Consigne")) : null;
+        consigneFond = t.contains("ConsigneFond") ? Consignes.Consigne.lire(t.getCompound("ConsigneFond")) : null;
         lettresADeposer.clear();
         lettresALire.clear();
         for (Tag x : t.getList("LettresADeposer", Tag.TAG_COMPOUND)) lettresADeposer.add(Courrier.Lettre.lire((CompoundTag) x));

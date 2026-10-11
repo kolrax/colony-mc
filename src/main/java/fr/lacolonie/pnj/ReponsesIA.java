@@ -26,13 +26,16 @@ final class ReponsesIA {
     private ReponsesIA() {}
 
     static final List<String> ACTIONS_FACE = List.of("suivre", "arreter_suivre", "travailler", "attendre", "rentrer", "montrer_sac", "renvoyer",
-            "missions", "horaires", "expedition");
+            "missions", "horaires", "expedition", "faire");
     static final List<String> ACTIONS_LETTRE = List.of("travailler", "rentrer", "missions", "horaires", "expedition");
     static final List<String> HUMEURS = List.of("calme", "joyeux", "inquiet", "agace", "triste", "fatigue", "fier");
 
     record Mission(String id, String mode, int nombre) {}
 
-    record Action(String type, List<Mission> missions, boolean ajouter, int debut, int fin, int jours) {}
+    /** Une action. {@code faire} : l'identifiant d'une action du répertoire (type « faire »), avec ce qu'elle vise, un nombre, une durée. */
+    record Action(String type, List<Mission> missions, boolean ajouter, int debut, int fin, int jours, String faire, String cible, int nombre, int duree) {
+        Action(String type, List<Mission> missions, boolean ajouter, int debut, int fin, int jours) { this(type, missions, ajouter, debut, fin, jours, "", "", 0, 0); }
+    }
 
     /** Ce que l'IA a décidé : ce que le PNJ répond, sur quel ton, et ce qu'il fait. */
     record Decision(String reponse, String humeur, List<Action> actions) {
@@ -55,6 +58,7 @@ final class ReponsesIA {
                     }
                     case "horaires" -> { l.debut = a.debut(); l.fin = a.fin(); }
                     case "expedition" -> l.jours = a.jours();
+                    case "faire" -> l.faire.add(new Ordres.Faire(a.faire(), a.cible(), a.nombre(), a.duree(), false));
                     default -> {}
                 }
             }
@@ -66,31 +70,43 @@ final class ReponsesIA {
 
     /** Le schéma imposé à la réponse (mode strict : tous les champs obligatoires, rien d'autre). */
     static JsonObject schema(List<String> idsMissions, boolean enFace) {
-        return objet(Map.of("reponse", type("string"), "humeur", enumeration(HUMEURS), "actions", tableau(action(idsMissions, enFace))));
+        return objet(Map.of("reponse", type("string"), "humeur", enumeration(HUMEURS), "actions", tableau(action(idsMissions, enFace, List.of()))));
     }
 
     /**
      * Le schéma d'une réponse de groupe : à qui le chef parle ({@code destinataires}, parmi les présents), puis la
      * réponse et les actions de chacun ({@code qui} : l'étiquette de l'ouvrier).
      */
-    static JsonObject schemaGroupe(List<String> etiquettes, List<String> idsMissions) {
+    static JsonObject schemaGroupe(List<String> etiquettes, List<String> idsMissions) { return schemaGroupe(etiquettes, idsMissions, List.of()); }
+
+    /** Pareil, avec les actions du répertoire proposées pour cette phrase ({@code repertoire} : leurs identifiants). */
+    static JsonObject schemaGroupe(List<String> etiquettes, List<String> idsMissions, List<String> repertoire) {
         JsonObject reponse = objet(Map.of("qui", enumeration(etiquettes), "reponse", type("string"), "humeur", enumeration(HUMEURS),
-                "actions", tableau(action(idsMissions, true))));
+                "actions", tableau(action(idsMissions, true, repertoire))));
         return objet(Map.of("destinataires", tableau(enumeration(etiquettes)), "reponses", tableau(reponse)));
     }
 
-    static JsonObject action(List<String> idsMissions, boolean enFace) {
+    static JsonObject action(List<String> idsMissions, boolean enFace, List<String> repertoire) {
         JsonObject mission = objet(Map.of(
                 "id", enumeration(idsMissions.isEmpty() ? List.of("aucune") : idsMissions),
                 "mode", enumeration(List.of("quantite", "stock")),
                 "nombre", type("integer")));
-        return objet(Map.of(
-                "type", enumeration(enFace ? ACTIONS_FACE : ACTIONS_LETTRE),
+        Map<String, JsonObject> champs = new java.util.LinkedHashMap<>(Map.of(
+                "type", enumeration(enFace && !repertoire.isEmpty() ? ACTIONS_FACE : enFace ? ACTIONS_FACE.subList(0, ACTIONS_FACE.size() - 1) : ACTIONS_LETTRE),
                 "missions", tableau(mission),
                 "ajouter", type("boolean"),
                 "debut", type("integer"),
                 "fin", type("integer"),
                 "jours", type("integer")));
+        if (enFace && !repertoire.isEmpty()) {
+            List<String> ids = new ArrayList<>(repertoire);
+            ids.add("");
+            champs.put("faire", enumeration(ids));
+            champs.put("cible", type("string"));
+            champs.put("nombre", type("integer"));
+            champs.put("duree", type("integer"));
+        }
+        return objet(champs);
     }
 
     static JsonObject type(String t) { JsonObject o = new JsonObject(); o.addProperty("type", t); return o; }
@@ -228,7 +244,11 @@ final class ReponsesIA {
                 int debut = entier(x, "debut", -1), fin = entier(x, "fin", -1), jours = entier(x, "jours", -1);
                 if (type.equals("horaires") && (debut < 0 || debut > 23 || fin < 0 || fin > 23)) continue;
                 if (type.equals("expedition") && (jours < 1 || jours > 30)) continue;
-                actions.add(new Action(type, ms, x.has("ajouter") && x.get("ajouter").getAsBoolean(), debut, fin, jours));
+                String faire = texte(x, "faire");
+                if (type.equals("faire") && !Repertoire.PAR_ID.containsKey(faire)) continue;
+                String cible = texte(x, "cible").strip();
+                actions.add(new Action(type, ms, x.has("ajouter") && x.get("ajouter").getAsBoolean(), debut, fin, jours, type.equals("faire") ? faire : "",
+                        cible.length() > 64 ? cible.substring(0, 64) : cible, Math.clamp(entier(x, "nombre", 0), 0, 1000), Math.clamp(entier(x, "duree", 0), 0, 3600)));
             }
         return new Decision(reponse, humeur, actions);
     }

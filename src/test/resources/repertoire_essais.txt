@@ -1,0 +1,182 @@
+# Essais du répertoire : phrase | métier | action attendue (sans IA)  — « - » : rien du répertoire (ordre de base, mission, bavardage)
+# Écrites à part des formules du répertoire, comme un joueur les dirait.
+
+# --- Ce qui doit déclencher une action ---
+Garde à vous soldat ! | guerrier | garde_a_vous
+Allez, au garde-à-vous tout le monde | guerrier | garde_a_vous
+Repos les gars | guerrier | annuler
+Rompez ! | guerrier | annuler
+Fige-toi immédiatement | mineur | arret
+Plus un geste ! | bucheron | arret
+Assieds-toi là | mineur | assis
+Asseyez-vous | bucheron | assis
+Couche-toi par terre | mineur | allonge
+Mets-toi à genoux devant moi | guerrier | a_genoux
+Accroupis-toi vite | mineur | accroupi
+Fais le salut militaire | guerrier | salut_militaire
+Salue-moi soldat | guerrier | salut_militaire
+Fais coucou de la main | mineur | saluer_main
+Fais une révérence | bucheron | reverence
+Hoche la tête | mineur | hocher_tete
+Applaudis ! | mineur | applaudir
+Tope là ! | bucheron | serrer_main
+Fais-moi un câlin | mineur | calin
+Danse ! | mineur | danser
+Dansez les gars ! | bucheron | danser
+Tu peux danser un peu ? | guerrier | danser
+Fais la gigue | mineur | gigue
+Fais une pirouette | mineur | tourner_sur_soi
+Chante-nous quelque chose | mineur | chanter
+Chante une chanson à boire | bucheron | chanson_a_boire
+Joue-nous un air de flûte | mineur | flute
+Bats le tambour | guerrier | tambour
+Joue de la musique | bucheron | musique
+Siffle un air | mineur | siffler
+Fais le pitre | mineur | spectacle
+Fais le robot | bucheron | robot
+Marche au pas | guerrier | marcher_au_pas
+Fais des pompes | guerrier | pompes
+Échauffe-toi | guerrier | echauffement
+Médite un peu | mineur | meditation
+Fais le cochon ! | mineur | imiter_cochon
+Imite une vache | bucheron | imiter_vache
+Fais la poule | mineur | imiter_poule
+Aboie comme un chien | mineur | imiter_chien
+Hurle à la lune | guerrier | imiter_loup
+Fais le creeper | mineur | imiter_creeper
+Rote ! | mineur | roter
+Pousse un cri de guerre | guerrier | cri_de_guerre
+Sonne du cor | guerrier | cor
+Ris ! | mineur | rire
+Pleure un peu | bucheron | pleurer
+Boude | mineur | bouder
+Fais semblant d'avoir peur | mineur | trembler
+Regarde-moi dans les yeux | mineur | regarder_chef
+Regarde là-bas | mineur | regarder_la
+Regarde le ciel | bucheron | regarder_ciel
+Tourne-toi | mineur | tourner_dos
+Guette l'horizon | guerrier | guetter
+Va là-bas | mineur | aller_la
+Va voir ce que c'est | guerrier | aller_voir_la
+Approche | mineur | venir_pres
+Mets-toi derrière moi | guerrier | derriere
+Passe devant | guerrier | devant
+Recule ! | mineur | reculer
+Pousse-toi, tu me gênes | mineur | reculer
+Éloigne-toi un peu | bucheron | s_eloigner
+Mets-toi à l'abri | mineur | s_abriter
+Cache-toi | mineur | cacher
+Va te laver | bucheron | se_laver
+Va pêcher | mineur | pecher
+Monte en hauteur | guerrier | monter
+Sors de la grotte | mineur | sortir
+Va caresser le chien | bucheron | caresser_chien
+Dépêche-toi ! | mineur | courir
+Doucement ! | mineur | ralentir
+En rang ! | guerrier | en_rang
+Mettez-vous en file indienne | mineur | en_file
+Faites un cercle autour de moi | bucheron | en_cercle
+Donne-moi ton pain | mineur | donner_nourriture
+Donne-moi tout ce que tu as | mineur | donner_tout
+Passe-moi ta pioche | mineur | donner_chef
+Jette ça par terre | mineur | jeter
+Vide ton sac au dépôt | mineur | deposer
+Va ranger tes affaires | bucheron | deposer
+Prends à manger au dépôt | mineur | prendre_manger
+Mange quelque chose | mineur | manger
+Dégaine ! | guerrier | montrer_arme
+Rengaine ton épée | guerrier | ranger_main
+Prends une torche | mineur | tenir_torche
+Ouvre la porte | mineur | ouvrir_porte
+Sonne la cloche | guerrier | sonner_cloche
+Tire le levier | mineur | levier
+Mine ce bloc | mineur | miner_la
+Creuse un tunnel par là | mineur | tunnel
+Creuse un trou ici | mineur | trou
+Pose des torches, on n'y voit rien | mineur | torches
+Abats cet arbre | bucheron | abattre_la
+Coupe les arbres autour | bucheron | abattre_autour
+Replante des arbres | bucheron | planter
+Débroussaille un peu | bucheron | debroussailler
+Attaque ce zombie ! | guerrier | attaquer_la
+Tue ce squelette | guerrier | attaquer_la
+Nettoie la zone | guerrier | nettoyer
+Tiens la position | guerrier | garder_ici
+Protège Raoul | guerrier | proteger_cible
+Charge ! | guerrier | charger
+Replie-toi ! | guerrier | repli
+En garde ! | guerrier | en_garde
+Lève ton bouclier | guerrier | bouclier
+Présentez armes ! | guerrier | presenter_armes
+Entraîne-toi au combat | guerrier | entrainement
+Va dormir | mineur | dormir
+Fais une sieste | bucheron | sieste
+Réveille-toi ! | mineur | reveil
+Tais-toi | mineur | silence
+Silence ! | guerrier | silence
+Tu peux parler | mineur | parole
+Raconte-moi une blague | mineur | blague
+Raconte une histoire | bucheron | histoire
+Récite un poème | mineur | poeme
+Dis-moi un proverbe | bucheron | dicton
+Pose-moi une devinette | mineur | devinette
+Fais-moi un compliment | mineur | compliment
+Taquine-moi | bucheron | taquinerie
+Donne-moi un conseil | mineur | conseil
+Présente-toi | mineur | presentation
+Parle-moi de ta famille | bucheron | famille
+Fais un discours aux troupes | guerrier | discours
+Jure-moi fidélité | guerrier | serment
+Quelle heure est-il ? | mineur | heure
+Quel temps fait-il ? | bucheron | meteo
+Où est le poste ? | mineur | ou_poste
+Où est Raoul ? | mineur | ou_cible
+Où est le nord ? | bucheron | nord
+On est à quelle profondeur ? | mineur | altitude
+Tu vois des monstres ? | guerrier | monstres_proches
+Qu'est-ce que tu portes sur toi ? | mineur | sac
+Tu es blessé ? | guerrier | sante
+Combien tu gagnes ? | mineur | salaire
+Tu vois du minerai ? | mineur | chercher_minerai
+Suis Bertrand | mineur | suivre_cible
+Va voir Odon | bucheron | aller_voir_cible
+Dis à Raoul que le repas est prêt | mineur | message
+Danse avec Bertrand | mineur | danser_avec
+Va réveiller Raoul | mineur | reveiller_cible
+Arrête de danser | mineur | danser (fin)
+Arrête de chanter | mineur | chanter (fin)
+Ne danse plus | mineur | danser (fin)
+
+# --- Ce qui ne doit rien déclencher du répertoire ---
+Suis-moi | mineur | -
+Attends ici | mineur | -
+Au travail ! | mineur | -
+Rentre au poste | mineur | -
+Montre-moi ton sac | mineur | -
+Ramène-moi dix fers | mineur | -
+Ramène du bois de bouleau | bucheron | -
+Coupe du chêne | bucheron | -
+Garde 32 bûches de bouleau en stock | bucheron | -
+Du chêne noir, 40, en permanence | bucheron | -
+Maintiens un stock de 64 charbons au dépôt | mineur | -
+Garde le poste | guerrier | -
+Protège la base | guerrier | -
+Fais la ronde | guerrier | -
+Escorte-moi | guerrier | -
+Travaille de 6 h à 18 h | mineur | -
+Tu peux partir 5 jours en expédition | mineur | -
+Merci beaucoup | mineur | -
+Bonjour Raoul | mineur | -
+Ça va ? | mineur | -
+Il danse bien, Raoul | mineur | -
+Je chante faux, hein | mineur | -
+Il est lent ce mec | mineur | -
+Bon, je mine encore un peu et je rentre | mineur | -
+On verra demain | mineur | -
+C'est vraiment un chômeur | mineur | -
+Ne danse pas | mineur | -
+Tu danses ? | mineur | -
+Je vais chercher la poule | mineur | -
+Le zombie là-bas me fait peur | guerrier | -
+Il fait beau aujourd'hui | mineur | -
+J'ai trouvé du fer | mineur | -

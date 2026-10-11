@@ -173,10 +173,14 @@ final class Dialogue {
             ReponsesIA.Decision d = decisions == null ? null : decisions.get(i);
             String r, humeur = "calme";
             boolean ia = false;
-            if (d == null) r = t.appliquer(Ordres.lire(dit, t.metier), enFace);
+            Ordres.Lecture lecture = d == null ? Ordres.lire(dit, t.metier) : d.lecture();
+            lecture.texte = dit; // on y cherche qui ou quoi est visé
+            lecture.rang = i;
+            lecture.total = dest.size();
+            if (d == null) r = t.appliquer(lecture, enFace);
             else {
                 long renvoiAvant = t.memoire.getLong("renvoi");
-                String regles = t.appliquer(d.lecture(), enFace);
+                String regles = t.appliquer(lecture, enFace);
                 // Un renvoi demande toujours confirmation : on pose la question clairement.
                 ia = t.memoire.getLong("renvoi") == renvoiAvant && !d.reponse().isEmpty();
                 r = ia ? d.reponse() : regles;

@@ -1,0 +1,163 @@
+# Ce que disent les ouvriers sans IA, par genre :  genre | texte
+# {prenom}, {metier}, {chef} sont remplacés. Avec l'IA, c'est elle qui invente (ces textes ne servent qu'en secours).
+
+defaut | Euh… je ne sais pas trop quoi dire, chef.
+defaut | Laisse-moi y réfléchir, je te dirai ça plus tard.
+
+blague | Pourquoi les mineurs ne se perdent jamais ? Parce qu'ils creusent toujours la question !
+blague | Que dit un zombie qui rate son coup ? « J'ai pas la tête à ça. »
+blague | Un creeper entre dans une taverne. Le tavernier lui dit : « On ne sert pas les explosifs ici ! » Il répond : « Sssss… »
+blague | Pourquoi le bûcheron est toujours calme ? Parce qu'il a les nerfs bien abattus !
+blague | Quel est le comble pour un forgeron ? Battre le fer pendant qu'il est chaud… et se faire battre aux cartes après.
+blague | Pourquoi les squelettes ne se battent jamais entre eux ? Ils n'ont pas le cran… ni les tripes !
+blague | Tu sais ce qu'un mouton dit à un autre mouton ? « Après toi, je te suis. »
+blague | Comment appelle-t-on un villageois qui chante ? Un hmm-mm-hmmiste !
+
+histoire | Il était une fois un mineur si têtu qu'il creusa jusqu'au fond du monde. Là, il trouva… une autre galerie, creusée par un mineur encore plus têtu.
+histoire | Mon grand-père racontait qu'une nuit, un loup blanc veillait sur son campement. Au matin, le loup avait disparu, mais personne n'avait été attaqué.
+histoire | Un jour, un marchand voulut acheter la lune. Le seigneur lui répondit : « Elle n'est pas à vendre, mais je te loue ses nuits. »
+histoire | On dit qu'un forgeron forgea une épée si légère qu'elle flottait sur l'eau. Il la perdit dans la rivière… et la cherche encore.
+
+legende | On raconte qu'au premier jour de la colonie, le chef planta un arbre près du poste. Tant qu'il pousse, la colonie prospère.
+legende | Dans les mines profondes vit le Grand Ver de Pierre. Il ne mange que les pioches mal entretenues, alors j'entretiens la mienne.
+legende | Les anciens disent qu'une cloche sonne toute seule quand un ouvrier fidèle quitte ce monde.
+legende | Il paraît qu'un trésor dort sous le premier four de la colonie. Personne n'a jamais osé le casser pour vérifier.
+
+poeme | Sous la lune d'argent, la pioche se repose, / et le mineur rêve d'or et de roses.
+poeme | Le bois chante sous la hache, / la forêt garde ses secrets, / et le soir, quand le ciel se cache, / on rentre au poste, l'âme en paix.
+poeme | Chef, ton nom est gravé sur nos outils, / ta colonie grandit, nos cœurs aussi.
+poeme | La pierre est dure, la nuit est longue, / mais la colonie tient bon, et la chanson s'allonge.
+
+dicton | Pierre qui roule… finit au fond de la mine.
+dicton | Qui veut voyager loin ménage sa pioche.
+dicton | À chaque jour suffit sa peine, et à chaque nuit ses zombies.
+dicton | Il ne faut pas vendre la peau du creeper avant de l'avoir vu sauter.
+dicton | Mieux vaut une torche aujourd'hui que deux squelettes demain.
+dicton | Petit à petit, l'ouvrier fait son stock.
+dicton | Quand le coq chante, le mineur dort encore.
+
+devinette | Je suis noir, je brûle, et sans moi pas de torche. Qui suis-je ? … Le charbon !
+devinette | Plus j'ai de gardiens, moins on me vole. Qui suis-je ? … Le poste de la colonie !
+devinette | J'ai des feuilles mais je ne suis pas un livre. Qui suis-je ? … Un arbre !
+devinette | Je siffle avant de faire boum. Qui suis-je ? … Un creeper, chef. Méfie-toi.
+
+compliment | Chef, avec toi à la tête de la colonie, même les zombies se tiennent à carreau.
+compliment | Tu as l'œil d'un aigle et le cœur d'un lion, chef.
+compliment | On n'a jamais eu un chef aussi juste. Et aussi bien coiffé.
+compliment | Sans toi, chef, la colonie ne serait qu'un tas de cailloux.
+
+taquinerie | Chef, tu creuses comme un poulet qui cherche des vers !
+taquinerie | Avec ton sens de l'orientation, chef, même une boussole se perdrait.
+taquinerie | Tu as encore oublié tes torches, chef ? Les squelettes te remercient.
+taquinerie | Chef, je t'ai vu courir devant une poule l'autre jour. Courageux !
+
+encouragement | Courage, chef ! Chaque bloc posé fait grandir la colonie.
+encouragement | On est avec toi, chef. Rien ne nous arrête !
+encouragement | Tu vas y arriver, chef. Tu y arrives toujours.
+encouragement | Haut les cœurs ! Demain sera meilleur, et après-demain encore plus.
+
+conseil | Ne creuse jamais tout droit sous tes pieds, chef. Jamais.
+conseil | Garde toujours à manger sur toi : la faim arrive plus vite que les ennuis.
+conseil | Pose des torches partout : les monstres détestent la lumière.
+conseil | Un bon lit près du poste, et la nuit passe toute seule.
+conseil | Range ton coffre de temps en temps, chef. On s'y retrouve mieux.
+
+astuce | Dans mon métier, le secret, c'est la patience. Et un outil bien affûté.
+astuce | Toujours regarder où on met les pieds, chef : la lave ne pardonne pas.
+astuce | Le meilleur bois, c'est celui qu'on replante. Une pousse pour chaque arbre abattu.
+astuce | Un bon guerrier ne frappe pas le premier : il frappe le dernier.
+
+recette | Un ragoût de champignons : un bol, un champignon rouge, un champignon brun. Simple et ça tient au corps.
+recette | Du pain : trois blés côte à côte. Rien de plus, rien de moins.
+recette | Une tarte à la citrouille : une citrouille, du sucre, un œuf. On se lèche les doigts.
+recette | Une soupe de betterave : six betteraves et un bol. Ma mère en faisait tous les dimanches.
+
+souvenir | Avant de travailler pour toi, chef, je traînais de village en village. Ici, j'ai enfin trouvé ma place.
+souvenir | Je me souviens de ma première nuit dehors : j'ai entendu un zombie gratter à ma porte. Je n'ai pas fermé l'œil.
+souvenir | Mon père était {metier}, son père aussi. Ça doit être dans le sang.
+souvenir | Le jour où tu m'as embauché, chef, j'ai su que la vie allait changer.
+
+famille | Ma famille vit loin d'ici, dans un petit village au bord d'une rivière. Je leur envoie des nouvelles quand je peux.
+famille | J'ai une sœur qui élève des moutons. Les plus laineux de la région, à ce qu'elle dit.
+famille | Pas encore de femme ni d'enfants, chef. Le travail d'abord !
+famille | Ma mère disait toujours : « Un bon ouvrier est un ouvrier qui mange bien. »
+
+reve | Je rêve d'une colonie où chaque maison a sa cheminée et chaque cheminée sa fumée.
+reve | Cette nuit, j'ai rêvé d'une mine pleine de diamants. Au réveil, il n'y avait que de la pierre.
+reve | Mon rêve ? Avoir un jour mon petit atelier, avec mon nom au-dessus de la porte.
+reve | Je rêve de voir la mer, chef. La vraie, celle qui ne finit pas.
+
+prediction | Je vois… je vois… beaucoup de travail dans ton avenir, chef. Et une soupe.
+prediction | Les étoiles disent qu'un grand trésor t'attend. Ou un grand creeper. Les étoiles ne sont pas claires.
+prediction | Demain, quelqu'un frappera à ta porte. Espérons que ce soit un ami.
+prediction | Ta colonie deviendra une ville, chef. Je le sens dans mes os.
+
+discours | Compagnons ! Ce que nous bâtissons ici, aucun monstre ne le défera. Haut les cœurs, et au travail !
+discours | Mes amis, nos pioches creusent l'avenir et nos haches taillent la grandeur de la colonie. Pour le chef !
+discours | Ils sont nombreux, nous sommes unis. Ils ont la nuit, nous avons les torches. En avant !
+
+serment | Moi, {prenom}, je jure fidélité à mon chef {chef}, à son poste et à sa colonie, tant que mes bras pourront servir.
+serment | Je le jure sur ma pioche et sur mon pain : je ne te trahirai jamais, chef.
+serment | Par la pierre et par le bois, je te sers, chef, aujourd'hui comme demain.
+
+priere | Que le ciel garde nos mines, nos forêts et notre chef, et qu'il éloigne les monstres de nos portes.
+priere | Bénis ce pain, ces outils et ces bras qui travaillent. Ainsi soit-il.
+priere | Que la lumière de nos torches ne s'éteigne jamais. Amen.
+
+philosophie | On croit creuser la terre, chef, mais c'est peut-être elle qui nous creuse.
+philosophie | Le sens de la vie ? Se lever, travailler, bien manger, et rentrer avant la nuit.
+philosophie | Un arbre met des années à pousser et une minute à tomber. Pense à ça avant d'agir.
+philosophie | Le bonheur, c'est un coffre bien rangé.
+
+ragot | Il paraît qu'un des ouvriers parle à ses poules. Je ne dirai pas qui.
+ragot | On raconte qu'un marchand ambulant rôde dans les parages avec des lamas.
+ragot | J'ai entendu dire que la nuit, quelqu'un mange en cachette dans le coffre du poste.
+ragot | Un villageois m'a juré avoir vu un golem danser. Je n'y crois pas, mais bon.
+
+plainte | Pour être honnête, chef, une paie un peu plus grosse ne me ferait pas de mal.
+plainte | Les nuits sont froides, et le lit est un peu dur. Mais je ne me plains pas. Enfin, si, un peu.
+plainte | Le travail est dur, mais l'équipe est bonne. C'est déjà ça.
+plainte | Rien à redire, chef. Juste un peu plus de pain, peut-être.
+
+excuse | Pardon, chef. Je ferai mieux la prochaine fois, c'est promis.
+excuse | Je m'excuse, chef. Je n'avais pas réfléchi.
+excuse | Mille excuses, chef. Ça ne se reproduira plus.
+
+remerciement | Merci, chef, du fond du cœur. Pour le travail, le pain et le toit.
+remerciement | Je te dois beaucoup, chef. Merci de m'avoir fait confiance.
+
+bonne_nuit | Bonne nuit, chef. Que les monstres restent loin de ta porte.
+bonne_nuit | Dors bien, chef. Demain, on repart de plus belle.
+
+toast | À la santé du chef, et à la colonie !
+toast | Levons nos verres : à la pierre, au bois, et à ceux qui les travaillent !
+toast | À nos outils qui ne cassent pas, et à nos amis qui ne partent pas !
+
+felicitations | Bravo, chef ! Ça, c'est du travail bien fait.
+felicitations | Chapeau bas, chef. Je n'aurais pas fait mieux.
+felicitations | Félicitations ! Toute la colonie est fière de toi.
+
+chanson | ♪ Pioche, pioche, mon ami, la pierre est dure mais la nuit est jolie… ♪
+chanson | ♪ Au clair de la lune, mon ami Pierrot, prête-moi ta plume pour écrire un mot… ♪
+chanson | ♪ Dans la forêt, le bûcheron chante, sa hache tape, la colonie avance… ♪
+chanson | ♪ Ohé, ohé, les gars de la colonie, on rentre au poste avant la nuit ! ♪
+
+chanson_a_boire | ♪ Remplis mon verre, tavernier, la mine est loin, le pain est payé ! ♪
+chanson_a_boire | ♪ Buvons un coup, buvons-en deux, à la santé des amoureux ! ♪
+
+berceuse | ♪ Dodo, l'enfant do, l'enfant dormira bien vite… ♪
+berceuse | ♪ Ferme les yeux, petit ouvrier, la lune veille sur le poste… ♪
+
+hymne | ♪ Colonie, ô colonie, ta pierre est notre abri, ton bois notre fierté, ton chef notre clarté ! ♪
+hymne | ♪ Debout, enfants du poste, la torche à la main, nous bâtirons demain ! ♪
+
+secret | Psst… entre nous, chef, je cache un gâteau dans mon sac. Ne le dis à personne.
+secret | Psst… je crois que le coffre du poste a un double fond.
+
+langue | Hello, chief! … C'est de l'anglais, je l'ai appris d'un marchand.
+langue | Ave, dux ! … C'est du latin, ça veut dire « salut, chef ».
+langue | ¡ Hola, jefe ! … Un voyageur m'a appris ça.
+
+meteo | D'après mes genoux, chef, il pleuvra bientôt.
+meteo | Ciel rouge le soir, beau temps pour le lendemain. Ciel rouge le matin… on verra.
+meteo | Le vent tourne. Ça sent l'orage.

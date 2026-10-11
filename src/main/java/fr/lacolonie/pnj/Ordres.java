@@ -24,6 +24,13 @@ final class Ordres {
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
 
+    /**
+     * Une action du répertoire ({@link Repertoire}) demandée : son identifiant, ce qu'elle vise (un prénom, un objet ;
+     * vide : on le cherchera dans la phrase), un nombre et une durée (0 : ceux du répertoire). {@code fin} : on lui
+     * demande de l'arrêter (« arrête de danser »).
+     */
+    record Faire(String id, String cible, int nombre, int duree, boolean fin) {}
+
     /** Ce qu'on a compris d'un message. */
     static final class Lecture {
         final Set<Intention> intentions = EnumSet.noneOf(Intention.class);
@@ -36,8 +43,13 @@ final class Ordres {
         int jours = -1;
         /** Ce qu'on lui demande et qui n'est pas de son métier (« du bois » à un mineur), par métier. */
         final Map<String, String> horsMetier = new LinkedHashMap<>();
+        /** Les actions du répertoire demandées (gestes, déplacements, tâches, paroles…). */
+        final List<Faire> faire = new ArrayList<>();
+        /** La phrase elle-même (on y cherche qui ou quoi est visé), et la place de l'ouvrier dans le groupe à qui elle est dite. */
+        String texte = "";
+        int rang, total = 1;
 
-        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty(); }
+        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty(); }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -135,6 +147,7 @@ final class Ordres {
     /** Lit un message adressé à un ouvrier de ce métier. */
     static Lecture lire(String texte, String metier) {
         Lecture l = new Lecture();
+        l.texte = texte;
         String n = normaliser(texte);
 
         // Horaires et expéditions (avant tout, leurs nombres ne sont pas des quantités).
@@ -170,7 +183,7 @@ final class Ordres {
                 "ne bouge pas", "ne bouge plus", "bouge pas", "stop", "halte", "arrete toi", "arretez vous", "patiente", "pause", "reste"))
             l.intentions.add(Intention.ATTENDRE);
         if (dit(n, "ton sac", "tes affaires", "ton inventaire", "inventaire", "sac", "ce que tu as", "qu as tu", "qu est ce que tu as",
-                "ton equipement", "montre moi"))
+                "ton equipement", "montre moi ton sac", "montre moi tes affaires"))
             l.intentions.add(Intention.SAC);
         if (dit(n, "renvoye", "renvoyee", "renvoie", "je te renvoie", "vire", "viree", "je te vire", "licencie", "licenciee", "je te licencie",
                 "degage", "va t en", "tu es libre", "je te libere", "plus besoin de toi", "je n ai plus besoin de toi"))
@@ -202,7 +215,39 @@ final class Ordres {
         lireMissions(sansChiffresDeTemps, metier, l);
         // Une mission comprise le remet au travail : « escorte-moi » ou « viens avec 10 fers » ne veulent pas dire « suis-moi ».
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
+        repertoire(texte, metier, l);
         return l;
+    }
+
+    /**
+     * Les actions du répertoire que la phrase demande (« garde à vous », « fais le cochon », « protège Raoul »). Elles
+     * l'emportent sur ce que leurs mots auraient voulu dire d'autre : « donne-moi ton fer » n'est pas une mission de fer,
+     * « suis Raoul » n'est pas « suis-moi ».
+     */
+    static void repertoire(String texte, String metier, Lecture l) {
+        String n = normaliser(texte);
+        for (Repertoire.Trouve t : Repertoire.lire(texte, metier)) {
+            l.faire.add(new Faire(t.e().id(), "", 0, 0, t.fin()));
+            if (t.fin()) continue;
+            // « Danse avec moi » : « avec moi » n'y veut pas dire « suis-moi » (mais « viens avec moi et chante », si).
+            if (dit(n, "avec moi") && !dit(n, "suis moi", "suivez moi", "suis nous", "viens avec moi", "venez avec moi", "accompagne moi", "viens", "en route"))
+                l.intentions.remove(Intention.SUIVRE);
+            for (String x : t.e().remplace()) {
+                switch (x) {
+                    case "missions" -> { l.missions.clear(); l.horsMetier.clear(); }
+                    case "missions_sans_nombre" -> {
+                        String[] mots = normaliser(texte).strip().split(" ");
+                        boolean nombre = false;
+                        for (int i = 0; i < mots.length && !nombre; i++) nombre = !mots[i].equals("un") && !mots[i].equals("une") && nombre(mots, i) != null;
+                        if (!nombre) { l.missions.clear(); l.horsMetier.clear(); }
+                    }
+                    default -> {
+                        try { l.intentions.remove(Intention.valueOf(x.toUpperCase(java.util.Locale.ROOT))); }
+                        catch (IllegalArgumentException ignore) {}
+                    }
+                }
+            }
+        }
     }
 
     static final Set<String> STOCK = Set.of("stock", "stocks", "garde", "gardes", "garder", "maintiens", "maintenir", "maintient", "toujours",
@@ -525,7 +570,8 @@ final class Ordres {
         boolean question = j.contains("?") || !j.isEmpty() && INTERROGATIFS.contains(j.get(0)) || dit(n, "est ce que", "est ce qu");
         // Un prénom ou « les gars » dans une phrase qui ne s'adresse à personne (« il est lent, Raoul ») : on parle d'eux, pas à eux.
         long noms = mentions.stream().mapToInt(m -> m.fin() - m.debut()).sum() + j.stream().filter(w -> ponctuation(w) || w.equals("et")).count();
-        boolean adressee = deuxieme || demande || question || j.stream().anyMatch(APPELS::contains) || !lire(texte, "").intentions.isEmpty() || noms >= j.size();
+        boolean adressee = deuxieme || demande || question || j.stream().anyMatch(APPELS::contains) || !lire(texte, "").intentions.isEmpty() || noms >= j.size()
+                || Repertoire.commande(texte);
         // « Les gars », « tout le monde » placés comme un appel (« On bouge, tout le monde ! ») restent un appel ; sujets d'un verbe
         // (« les gars sont partis »), ils parlent d'eux.
         if (!adressee) { cites.addAll(appeles); appeles.clear(); metiersTous.clear(); metiersUn.clear(); tous = tous && groupeEnAppel(j); }

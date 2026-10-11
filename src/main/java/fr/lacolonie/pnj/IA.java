@@ -183,15 +183,35 @@ final class IA {
 
     static final String CORRECT = "Ne dis jamais que tu es une IA ou un programme, ne parle pas du monde réel, reste correct (rien de choquant), même en colère.";
 
-    static String actions(boolean enFace) {
+    static String actions(boolean enFace) { return actions(enFace, List.of(), List.of()); }
+
+    /**
+     * Les actions possibles. {@code repertoire} : les actions du répertoire proposées pour cette phrase (les plus proches
+     * de ce qu'il a dit, puis les petits gestes) ; {@code hors} : celles qu'il demande mais qu'aucun d'eux ne sait faire.
+     */
+    static String actions(boolean enFace, List<Repertoire.Entree> repertoire, List<Repertoire.Entree> hors) {
         StringBuilder b = new StringBuilder("Actions (champ actions, seulement si le chef le demande clairement ; sinon liste vide) : ");
         if (enFace) b.append("suivre (suivre le chef) ; arreter_suivre (cesser de le suivre et retourner au travail) ; attendre (rester sur place) ; montrer_sac ; ")
                 .append("renvoyer (seulement si le chef le renvoie clairement) ; ");
-        return b.append("travailler (retourner au travail) ; rentrer (revenir au poste de travail) ; missions (missions : id parmi les possibles de son métier, mode quantite = en rapporter nombre puis arrêter, ")
+        b.append("travailler (retourner au travail) ; rentrer (revenir au poste de travail) ; missions (missions : id parmi les possibles de son métier, mode quantite = en rapporter nombre puis arrêter, ")
                 .append("ou stock = en garder nombre au dépôt en permanence ; ajouter = vrai si le chef dit « aussi » ou « en plus », sinon elles remplacent les anciennes) ; ")
                 .append("horaires (debut et fin, de 0 à 23 ; même heure = toute la journée) ; expedition (jours : 1 à 30). ")
-                .append("Dans une action, mets 0, faux ou [] aux champs inutiles. Ce que son métier ne fait pas, il le dit, sans action ; ")
-                .append("s'il ne comprend pas, il demande de préciser. humeur : le ton de la réponse.").toString();
+                .append("Dans une action, mets 0, faux, \"\" ou [] aux champs inutiles. Ce que son métier ne fait pas, il le dit, sans action ; ")
+                .append("s'il ne comprend pas, il demande de préciser. humeur : le ton de la réponse.");
+        if (enFace && !repertoire.isEmpty()) {
+            b.append("\nfaire : une action de son répertoire (champ faire = son id ; cible = le prénom, le joueur ou l'objet visé s'il y en a un, sinon \"\" ; ")
+                    .append("nombre = combien si le chef le dit, sinon 0 ; duree = en secondes si le chef la dit, sinon 0). Ce qu'il fait, il le fait vraiment : ")
+                    .append("ne la choisis que si elle correspond à ce que le chef demande (« garde à vous » : garde_a_vous ; « arrête de danser » : annuler). ")
+                    .append("Une question sur ce qu'il sait ou voit : l'action info qui va avec, et la réponse dit le fait donné plus haut (« Ce qu'il sait »). ")
+                    .append("Un petit geste (marqué *) peut accompagner une réponse sans qu'on le demande. Répertoire (id : ce qu'elle fait) :\n");
+            for (Repertoire.Entree e : repertoire)
+                b.append("- ").append(e.id()).append(e.spontane() ? "*" : "").append(" : ").append(e.nom())
+                        .append(e.metiers().isEmpty() ? "" : " [" + String.join(", ", e.metiers().stream().map(m -> Metier.nom(m).toLowerCase()).toList()) + " seulement]").append('\n');
+            for (Repertoire.Entree e : hors)
+                b.append("(Personne ici ne sait « ").append(e.nom()).append(" » : c'est le travail d'un ")
+                        .append(String.join(" ou d'un ", e.metiers().stream().map(m -> Metier.nom(m).toLowerCase()).toList())).append(".)\n");
+        }
+        return b.toString().strip();
     }
 
     /** Le PNJ seul, qui répond à une lettre de son chef. */
@@ -218,6 +238,11 @@ final class IA {
      * agit pour chacun.
      */
     static String systemeGroupe(List<Travailleur> ouvriers, List<String> etiquettes, Travailleur vise, boolean ecrit) {
+        return systemeGroupe(ouvriers, etiquettes, vise, ecrit, "", List.of(), List.of());
+    }
+
+    static String systemeGroupe(List<Travailleur> ouvriers, List<String> etiquettes, Travailleur vise, boolean ecrit, String parole,
+                                List<Repertoire.Entree> repertoire, List<Repertoire.Entree> hors) {
         Travailleur t0 = ouvriers.get(0);
         net.minecraft.world.entity.player.Player chef = t0.chefJoueur();
         StringBuilder b = new StringBuilder();
@@ -235,6 +260,9 @@ final class IA {
             b.append(". ").append(etat(t)).append(" Missions possibles de son métier (id = nom) : ").append(catalogue(t)).append('.');
             String e = echange(t, 4);
             if (!e.isEmpty()) b.append(" Derniers échanges avec le chef : ").append(e.replace("\n", " / ")).append('.');
+            if (t.consigne != null && t.consigne.entree() != null) b.append(" En ce moment, à la demande du chef : ").append(t.consigne.entree().nom()).append('.');
+            String faits = repertoire.isEmpty() ? "" : Consignes.faits(t, chef instanceof net.minecraft.server.level.ServerPlayer sp ? sp : null, parole, repertoire);
+            if (!faits.isEmpty()) b.append(" Ce qu'il sait : ").append(faits);
             b.append('\n');
         }
         b.append("Il s'adresse à eux tous (destinataires : tous ceux de la liste).\n");
@@ -243,7 +271,7 @@ final class IA {
                 .append("prennent la parole, très brièvement ; les autres laissent reponse vide mais font quand même leur action. ")
                 .append("Ne promets jamais ce que tes actions ne permettent pas : si on te demande autre chose, dis franchement que tu ne sais pas le faire. ")
                 .append(CORRECT).append("\n")
-                .append(actions(true));
+                .append(actions(true, repertoire, hors));
         return b.toString();
     }
 
@@ -289,8 +317,11 @@ final class IA {
             ids.put(etiquettes.get(i), Set.copyOf(x));
             x.forEach(id -> { if (!tous.contains(id)) tous.add(id); });
         }
-        String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, ecrit),
-                "Le chef dit : « " + parole + " »", ReponsesIA.schemaGroupe(etiquettes, tous));
+        // Les actions du répertoire les plus proches de ce qu'il dit (que l'un d'eux sait faire), et les petits gestes.
+        List<String> metiers = ouvriers.stream().map(t -> t.metier).distinct().toList();
+        List<Repertoire.Entree> repertoire = Repertoire.candidats(parole, metiers, 14), hors = Repertoire.horsMetiers(parole, metiers);
+        String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, ecrit, parole, repertoire, hors),
+                "Le chef dit : « " + parole + " »", ReponsesIA.schemaGroupe(etiquettes, tous, repertoire.stream().map(Repertoire.Entree::id).toList()));
         HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
                 .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(corps)).build();

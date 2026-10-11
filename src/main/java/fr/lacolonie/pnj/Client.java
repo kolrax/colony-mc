@@ -128,13 +128,58 @@ public final class Client {
         return DefaultPlayerSkin.get(e.getUUID());
     }
 
+    /**
+     * Le modèle de joueur, plus les gestes du répertoire (garde-à-vous, salut, danse…) : le jeu pose d'abord le
+     * modèle (marche, regard), puis {@link Poses} y met le geste. Tous les ouvriers partagent ce modèle : on le remet
+     * au repos à chaque image.
+     */
+    static class ModeleOuvrier extends PlayerModel<Travailleur> {
+        final boolean fin;
+        final Poses.Corps corps = new Poses.Corps();
+
+        ModeleOuvrier(ModelPart p, boolean fin) { super(p, fin); this.fin = fin; }
+
+        @Override
+        public void setupAnim(Travailleur e, float marche, float ampleur, float age, float tete, float pitch) {
+            for (ModelPart m : new ModelPart[]{head, hat, body, rightArm, leftArm, rightLeg, leftLeg}) m.resetPose();
+            super.setupAnim(e, marche, ampleur, age, tete, pitch);
+            String g = Client.geste(e);
+            if (g.isEmpty()) return;
+            Poses.Corps c = corps;
+            c.dy = c.rx = c.ry = 0;
+            c.epaule = rightArm.y;
+            lire(head, c.tete); lire(body, c.corps); lire(rightArm, c.brasD); lire(leftArm, c.brasG); lire(rightLeg, c.jambeD); lire(leftLeg, c.jambeG);
+            Poses.appliquer(c, g, age);
+            ecrire(c.tete, head); ecrire(c.corps, body); ecrire(c.brasD, rightArm); ecrire(c.brasG, leftArm); ecrire(c.jambeD, rightLeg); ecrire(c.jambeG, leftLeg);
+            hat.copyFrom(head);
+            jacket.copyFrom(body);
+            rightSleeve.copyFrom(rightArm);
+            leftSleeve.copyFrom(leftArm);
+            rightPants.copyFrom(rightLeg);
+            leftPants.copyFrom(leftLeg);
+        }
+
+        static void lire(ModelPart m, Poses.Partie p) { p.x = m.x; p.y = m.y; p.z = m.z; p.xRot = m.xRot; p.yRot = m.yRot; p.zRot = m.zRot; }
+
+        static void ecrire(Poses.Partie p, ModelPart m) { m.x = p.x; m.y = p.y; m.z = p.z; m.xRot = p.xRot; m.yRot = p.yRot; m.zRot = p.zRot; }
+    }
+
+    /** Son geste, sans les options (« danser+tourne » → « danser ») ; vide s'il n'en fait pas ou si ce client ne le connaît pas. */
+    static String geste(Travailleur e) {
+        String g = e.geste();
+        int i = g.indexOf('+');
+        String base = i < 0 ? g : g.substring(0, i);
+        return Poses.connu(base) ? base : "";
+    }
+
     static class Rendu extends HumanoidMobRenderer<Travailleur, PlayerModel<Travailleur>> {
         final PlayerModel<Travailleur> large, fin;
+        final Poses.Corps racine = new Poses.Corps();
 
         Rendu(EntityRendererProvider.Context c) {
-            super(c, new PlayerModel<>(c.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
+            super(c, new ModeleOuvrier(c.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
             large = model;
-            fin = new PlayerModel<>(c.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+            fin = new ModeleOuvrier(c.bakeLayer(ModelLayers.PLAYER_SLIM), true);
             addLayer(new HumanoidArmorLayer<>(this, new HumanoidArmorModel<>(c.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                     new HumanoidArmorModel<>(c.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), c.getModelManager()));
         }
@@ -150,6 +195,17 @@ public final class Client {
         @Override
         protected void setupRotations(Travailleur e, PoseStack ps, float bob, float yBodyRot, float pt, float scale) {
             super.setupRotations(e, ps, bob, yBodyRot, pt, scale);
+            // Le corps entier : assis, à genoux, allongé, en pompes, qui tourne sur lui-même.
+            String g = geste(e);
+            if (!g.isEmpty()) {
+                Poses.Corps c = racine;
+                c.dy = c.rx = c.ry = 0;
+                Poses.appliquer(c, g, e.tickCount + pt);
+                if (e.geste().contains("+tourne")) c.ry += Poses.tourne(e.tickCount + pt);
+                if (c.dy != 0) ps.translate(0, c.dy, 0);
+                if (c.ry != 0) ps.mulPose(Axis.YP.rotationDegrees(c.ry));
+                if (c.rx != 0) ps.mulPose(Axis.XP.rotationDegrees(c.rx));
+            }
             float f = e.getSwimAmount(pt);
             if (f > 0) {
                 float cible = e.isInWater() ? -90.0f - e.getXRot() : -90.0f;
