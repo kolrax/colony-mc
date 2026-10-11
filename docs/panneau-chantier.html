@@ -1,0 +1,453 @@
+<title>Chantier des PNJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Mise en page : tableau de bord d'un chantier — en-tête d'état, onglets (en bas sur téléphone), feuilles de suivi */
+:root{
+  --bg:#ECEEE9; --sheet:#FAFAF7; --ink:#1D2220; --muted:#5A625E; --line:#D2D6CE;
+  --brass:#8E6118; --brass-wash:#F1E4C6; --copper:#27725F; --copper-wash:#D9ECE5;
+  --warn:#9C5A10; --warn-wash:#F6E3CC; --bad:#9A3626; --bad-wash:#F5DCD6;
+  --display:"Alegreya SC", Georgia, "Times New Roman", serif;
+  --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141817; --sheet:#1C211F; --ink:#E4E7E2; --muted:#9AA29D; --line:#343B38;
+  --brass:#D8A752; --brass-wash:#3A2F19; --copper:#62BBA5; --copper-wash:#1A302A;
+  --warn:#E6A35A; --warn-wash:#3A2A17; --bad:#E5907B; --bad-wash:#3B201B; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#141817; --sheet:#1C211F; --ink:#E4E7E2; --muted:#9AA29D; --line:#343B38;
+  --brass:#D8A752; --brass-wash:#3A2F19; --copper:#62BBA5; --copper-wash:#1A302A;
+  --warn:#E6A35A; --warn-wash:#3A2A17; --bad:#E5907B; --bad-wash:#3B201B; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body)}
+button,textarea,input{font:inherit;color:inherit}
+a{color:var(--brass)}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin:0 0 6px}
+h1{font:700 clamp(28px,4.4vw,42px)/1.05 var(--display);margin:0;text-wrap:balance}
+.topmeta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted);align-items:center}
+.live{display:inline-flex;gap:6px;align-items:center}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live.on::before{background:var(--copper)}
+.live.off::before{background:var(--bad)}
+.countdown{font:500 13px var(--mono);color:var(--ink);background:var(--brass-wash);padding:3px 8px;border-radius:3px}
+
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);display:flex;gap:2px;overflow-x:auto;padding-block:8px;margin-bottom:16px;border-bottom:1px solid var(--line);scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;display:inline-flex;align-items:center;gap:8px;background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;cursor:pointer;color:var(--muted);font-weight:500;font-size:15px}
+.tab svg{width:18px;height:18px;flex:none}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--brass)}
+.tab .n{font:500 11px var(--mono);background:var(--bad);color:var(--sheet);border-radius:9px;padding:1px 6px;min-width:18px;text-align:center}
+.tab .n.calm{background:var(--muted)}
+.tab:focus-visible,.btn:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+.panel{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:18px;min-width:0}
+.card h2{font:700 20px/1.2 var(--display);margin:0 0 12px;text-wrap:balance}
+.card h2 small{font:500 12px var(--mono);color:var(--muted);margin-left:8px;letter-spacing:0}
+.muted{color:var(--muted)}
+.empty{color:var(--muted);font-style:italic;margin:0}
+
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;border-left:4px solid var(--muted)}
+.hero.work{border-left-color:var(--copper)}
+.hero.cut{border-left-color:var(--warn)}
+.hero.rest{border-left-color:var(--brass)}
+.pulse{width:14px;height:14px;border-radius:50%;background:var(--muted);margin-top:8px}
+.hero.work .pulse{background:var(--copper);animation:pulse 2s infinite}
+.hero.cut .pulse{background:var(--warn)}
+.hero.rest .pulse{background:var(--brass)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--copper) 55%,transparent)}70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.hero h2{font-size:24px;margin:0 0 4px}
+.hero .sub{margin:0 0 8px;color:var(--muted)}
+.hero .obj{margin:0;max-width:70ch}
+.hero .next{margin:10px 0 0;font-size:14px}
+
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:14px;min-width:0}
+.tile .k{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.tile .v{font:700 24px/1.15 var(--display);margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile .s{font-size:13px;color:var(--muted);margin:4px 0 0}
+.bar{height:8px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:8px}
+.bar span{display:block;height:100%;background:var(--copper)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+
+.pill{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap;background:var(--line);color:var(--ink)}
+.pill.ok{background:var(--copper-wash);color:var(--copper)}
+.pill.run{background:var(--copper);color:var(--sheet)}
+.pill.warn{background:var(--warn-wash);color:var(--warn)}
+.pill.bad{background:var(--bad-wash);color:var(--bad)}
+.pill.brass{background:var(--brass-wash);color:var(--brass)}
+
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding-block:10px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0;padding-top:0}
+.row .t{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.row .d{grid-column:1/-1;font-size:14px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.when{font:500 12px var(--mono);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.lot{border-top:1px solid var(--line);padding-block:12px}
+.lot:first-of-type{border-top:0;padding-top:0}
+.lot summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;cursor:pointer;list-style:none}
+.lot summary::-webkit-details-marker{display:none}
+.lot .num{font:500 12px var(--mono);color:var(--brass);min-width:28px}
+.lot .ti{font-weight:500;min-width:0}
+.lot .cnt{font:500 12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.lot.cur .ti::after{content:" · en cours";color:var(--copper);font-weight:400}
+.lot.done .cnt{color:var(--copper)}
+.lot .bar{margin-left:38px}
+.items{list-style:none;margin:10px 0 0 38px;padding:0;display:flex;flex-direction:column;gap:6px}
+.items li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:6px;font-size:15px}
+.items li::before{content:"○";color:var(--muted)}
+.items li.f::before{content:"✓";color:var(--copper);font-weight:700}
+.items li.f{color:var(--muted)}
+
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 10px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--brass-wash);border-color:var(--brass)}
+.entry{border-top:1px solid var(--line);padding-block:12px}
+.entry:first-child{border-top:0;padding-top:0}
+.entry summary{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;list-style:none}
+.entry summary::-webkit-details-marker{display:none}
+.entry .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.entry .ti{font-weight:500;overflow-wrap:anywhere}
+.body{margin-top:8px;max-width:72ch;overflow-wrap:anywhere}
+.body p{margin:0 0 6px}
+.body ul{margin:0 0 6px;padding-left:20px}
+.body code{font:500 13px var(--mono);background:var(--bg);padding:1px 4px;border-radius:3px}
+
+.dem{border:1px solid var(--line);border-radius:4px;padding:14px;background:var(--sheet)}
+.dem.open{border-color:var(--brass);border-left-width:4px}
+.dem .head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:6px}
+.dem h3{font-size:17px;margin:0 0 6px;overflow-wrap:anywhere}
+.dem .ans{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-height:84px;resize:vertical;font-size:16px}
+textarea:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:var(--brass)}
+.btn{align-self:flex-start;background:var(--ink);color:var(--sheet);border:1px solid var(--ink);border-radius:4px;padding:9px 16px;font-weight:500;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn[disabled]{opacity:.5;cursor:default}
+.msg{font-size:14px;margin:0}
+.msg.err{color:var(--bad)}
+.reply{margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:4px;font-size:15px;overflow-wrap:anywhere}
+
+.foot{margin-top:24px;font-size:14px;color:var(--muted);max-width:75ch}
+.foot p{margin:0 0 6px}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cols{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  .wrap{padding-block:16px calc(88px + env(safe-area-inset-bottom,0px))}
+  .tabs{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;justify-content:space-around;gap:0;border-bottom:0;border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));background:var(--sheet)}
+  .tab{flex:1 1 0;flex-direction:column;gap:2px;padding:6px 2px;font-size:11px;border-bottom:0;border-top:3px solid transparent;position:relative;min-width:0}
+  .tab[aria-selected="true"]{border-top-color:var(--brass);border-bottom-color:transparent}
+  .tab .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tab .n{position:absolute;top:2px;right:calc(50% - 22px);font-size:10px;padding:0 5px;min-width:16px}
+  .hero{grid-template-columns:minmax(0,1fr)}
+  .pulse{display:none}
+  .lot .bar,.items{margin-left:0}
+}
+@media (prefers-reduced-motion: reduce){ .hero.work .pulse{animation:none} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">La Colonie · mod colonie_pnj</p>
+      <h1>Chantier des PNJ</h1>
+    </div>
+    <div class="topmeta">
+      <span class="countdown" id="countdown"></span>
+      <span class="live" id="live">Connexion…</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections du suivi" id="tabs"></nav>
+
+  <main>
+    <section class="panel" id="t-accueil" role="tabpanel"></section>
+    <section class="panel" id="t-plan" role="tabpanel" hidden></section>
+    <section class="panel" id="t-journal" role="tabpanel" hidden></section>
+    <section class="panel" id="t-demandes" role="tabpanel" hidden></section>
+    <section class="panel" id="t-consignes" role="tabpanel" hidden>
+      <div class="card">
+        <h2>Donner une consigne à l'équipe</h2>
+        <p class="muted" style="margin:0 0 10px">Une priorité à changer, une idée, un défaut que tu as vu en jeu… La prochaine session la lit en premier et te dit ce qu'elle en a fait.</p>
+        <form id="f-consigne" class="ans">
+          <textarea id="consigne-texte" placeholder="Ex. : les bûcherons coupent trop près du village, éloigne-les de 30 blocs." aria-label="Nouvelle consigne"></textarea>
+          <button class="btn" type="submit" id="consigne-envoyer">Envoyer la consigne</button>
+          <p class="msg" id="consigne-msg" role="status"></p>
+        </form>
+      </div>
+      <div class="card"><h2>Tes consignes</h2><div id="consignes-liste"></div></div>
+    </section>
+    <section class="panel" id="t-sessions" role="tabpanel" hidden></section>
+  </main>
+
+  <div class="foot" id="foot">
+    <p>Une session de travail démarre toutes les 3 heures dans le cloud, à 2 h 59, 5 h 59, 8 h 59, 11 h 59, 14 h 59, 17 h 59, 20 h 59 et 23 h 59. Chacune dure 2 heures au plus. Les sessions remplissent ce panneau elles-mêmes, au fil de leur travail.</p>
+    <p>Le code et le journal complet sont sur <a href="https://github.com/kolrax/colony-mc" target="_blank" rel="noopener">github.com/kolrax/colony-mc</a>.</p>
+  </div>
+</div>
+
+<script>
+const ICON = {
+  accueil:'<path d="M3 11 12 4l9 7v9H14v-6h-4v6H3z"/>',
+  plan:'<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
+  journal:'<path d="M5 4h11l3 3v13H5zM9 9h6M9 13h6M9 17h4"/>',
+  demandes:'<path d="M12 21a9 9 0 1 0-9-9c0 1.8.5 3.4 1.4 4.8L3 21l4.3-1.4A9 9 0 0 0 12 21zM12 8v5M12 16v.5"/>',
+  consignes:'<path d="M4 10v4h3l6 5V5L7 10zM17 9a4 4 0 0 1 0 6"/>',
+  sessions:'<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/>'
+};
+const TABS = [["accueil","Accueil"],["plan","Avancement"],["journal","Journal"],["demandes","Demandes"],["consignes","Consignes"],["sessions","Sessions"]];
+const AGENTS = {"chef-de-chantier":"Chef de chantier",developpeur:"Développeur",testeur:"Testeur",relecteur:"Relecteur",auteur:"Auteur",artiste:"Artiste",livreur:"Livreur"};
+const TYPES = {session:"Session",livraison:"Livraison",incident:"Incident",decision:"Décision",rapport:"Point du jour",info:"Info"};
+const OUVERTURE = new Date("2026-10-16T18:00:00+02:00");
+
+let E = null, P = null, J = [], D = [], C = [], S = [];
+let tab = "accueil", filtre = "tout", db = null, demandeDiffere = false;
+const brouillons = {}, choix = {};
+try { const t = localStorage.getItem("chantier-onglet"); if (TABS.some(x => x[0] === t)) tab = t; } catch (e) {}
+if (location.hash && TABS.some(x => x[0] === location.hash.slice(1))) tab = location.hash.slice(1);
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lien = (u) => /^https:\/\/(claude\.ai|github\.com)\//.test(String(u || "")) ? String(u) : null;
+const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+function md(t) {
+  let out = "", ul = false;
+  for (const l of esc(t).split("\n")) {
+    const m = l.match(/^\s*[-•]\s+(.*)/);
+    if (m) { if (!ul) { out += "<ul>"; ul = true; } out += "<li>" + inline(m[1]) + "</li>"; continue; }
+    if (ul) { out += "</ul>"; ul = false; }
+    if (l.trim()) out += "<p>" + inline(l) + "</p>";
+  }
+  return out + (ul ? "</ul>" : "");
+}
+const d8 = (iso) => { const d = new Date(iso); return isNaN(d) ? null : d; };
+const heure = (d) => d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(":", " h ");
+const jour = (d) => d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Paris" });
+function quand(iso) {
+  const d = d8(iso); if (!d) return "";
+  const s = (Date.now() - d) / 1000;
+  if (s < 60) return "à l'instant";
+  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+  if (s < 6 * 3600) return `il y a ${Math.floor(s / 3600)} h ${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`;
+  return `${jour(d)} à ${heure(d)}`;
+}
+function duree(a, b) {
+  const x = d8(a), y = b ? d8(b) : new Date(); if (!x || !y) return "";
+  const m = Math.max(0, Math.round((y - x) / 60000));
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
+}
+function prochaine() { // routine : minute 59 des heures UTC multiples de 3
+  const d = new Date(); d.setUTCSeconds(0, 0);
+  for (let i = 0; i < 4 * 60; i++) { d.setUTCMinutes(d.getUTCMinutes() + 1); if (d.getUTCMinutes() === 59 && d.getUTCHours() % 3 === 0) return d; }
+  return null;
+}
+const pill = (cls, txt) => `<span class="pill ${cls}">${esc(txt)}</span>`;
+const STAT_AGENT = { en_cours: ["run", "en cours"], fini: ["ok", "fini"], echec: ["bad", "échec"] };
+const STAT_SESSION = { en_cours: ["run", "en cours"], terminee: ["ok", "terminée"], coupee: ["warn", "coupée (quota)"], sautee: ["", "sautée"], echec: ["bad", "en échec"] };
+
+function avancement() {
+  if (!P || !P.lots) return null;
+  let f = 0, t = 0, cur = null;
+  for (const l of P.lots) { const n = l.items.filter((i) => i.fait).length; f += n; t += l.items.length; if (!cur && n < l.items.length) cur = l; }
+  return { f, t, cur };
+}
+const ouvertes = () => D.filter((d) => d.pour !== "admin" && d.statut === "ouverte");
+
+/* ---------- Onglets ---------- */
+function renderTabs() {
+  const nd = ouvertes().length, nc = C.filter((c) => c.statut === "nouvelle").length;
+  $("#tabs").innerHTML = TABS.map(([id, nom]) => {
+    const n = id === "demandes" && nd ? `<span class="n">${nd}</span>` : id === "consignes" && nc ? `<span class="n calm">${nc}</span>` : "";
+    return `<button class="tab" role="tab" id="tab-${id}" aria-controls="t-${id}" aria-selected="${id === tab}" data-tab="${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[id]}</svg><span class="lbl">${nom}</span>${n}</button>`;
+  }).join("");
+  for (const [id] of TABS) $("#t-" + id).hidden = id !== tab;
+}
+function go(id) {
+  tab = id; try { localStorage.setItem("chantier-onglet", id); } catch (e) {}
+  renderTabs(); window.scrollTo(0, 0);
+}
+
+/* ---------- Accueil ---------- */
+function renderAccueil() {
+  const s = E && E.session || {}, maj = d8(E && E.maj);
+  const enCours = s.statut === "en_cours", perime = enCours && maj && Date.now() - maj > 3.5 * 3600e3;
+  const nx = prochaine();
+  let cls = "rest", titre = "Au repos", sous = nx ? `Prochaine session à ${heure(nx)}` : "";
+  if (!E) { titre = "En attente de la première session"; sous = nx ? `Elle démarre à ${heure(nx)}, puis toutes les 3 heures.` : ""; }
+  else if (perime) { cls = "cut"; titre = "Session interrompue"; sous = `Plus de nouvelles depuis ${quand(E.maj)}. Le quota est sans doute épuisé : la session suivante reprendra.`; }
+  else if (enCours) { cls = "work"; titre = "Au travail"; sous = `Depuis ${duree(s.debut)}${s.lot ? " · " + s.lot : ""}`; }
+  else if (s.fin) sous = `Dernière session terminée ${quand(s.fin)}${nx ? ` · prochaine à ${heure(nx)}` : ""}`;
+  const a = avancement(), v = (E && E.versions) || {}, te = (E && E.tests) || {};
+  const ag = (E && E.agents) || [], lienS = lien(s.lien);
+  const rap = J.find((j) => j.type === "rapport");
+  const nd = ouvertes();
+  $("#t-accueil").innerHTML = `
+    <div class="card hero ${cls}"><span class="pulse" aria-hidden="true"></span><div>
+      <h2>${esc(titre)}</h2><p class="sub">${esc(sous)}</p>
+      ${s.objectif && enCours ? `<p class="obj"><strong>Objectif :</strong> ${esc(s.objectif)}</p>` : ""}
+      ${!enCours && s.resume ? `<div class="obj body">${md(s.resume)}</div>` : ""}
+      ${s.prochaine_etape ? `<p class="next"><strong>Prochaine étape :</strong> ${esc(s.prochaine_etape)}</p>` : ""}
+      ${lienS ? `<p class="next"><a href="${esc(lienS)}" target="_blank" rel="noopener">Ouvrir la session dans claude.ai</a></p>` : ""}
+    </div></div>
+    <div class="tiles">
+      <div class="tile"><p class="k">Avancement</p><p class="v">${a ? Math.round(100 * a.f / Math.max(1, a.t)) + " %" : "—"}</p><p class="s">${a ? `${a.f} cases sur ${a.t}` : "Plan pas encore chargé"}</p>${a ? `<div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div>` : ""}</div>
+      <div class="tile"><p class="k">Lot en cours</p><p class="v">${a && a.cur ? (a.cur.num != null ? "Lot " + a.cur.num : "—") : "—"}</p><p class="s">${a && a.cur ? esc(a.cur.titre) : ""}</p></div>
+      <div class="tile"><p class="k">Version</p><p class="v">${esc(v.mod || "0.8.0")}</p><p class="s">Modpack ${esc(v.modpack || "0.4.8")}${v.modpack_obligatoire ? " · <strong>obligatoire</strong>" : ""}</p></div>
+      <div class="tile"><p class="k">Tests</p><p class="v">${esc(te.jeu || "—")}</p><p class="s">${te.junit ? `en jeu · ${esc(te.junit)} sans le jeu` : "en jeu"}${te.date ? " · " + esc(quand(te.date)) : ""}</p></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Agents${ag.length ? `<small>${ag.filter((x) => x.statut === "en_cours").length} au travail</small>` : ""}</h2>
+        ${ag.length ? `<ul class="rows">${ag.map((x) => { const st = STAT_AGENT[x.statut] || ["", x.statut || ""]; return `<li class="row"><span class="t">${esc(AGENTS[x.nom] || x.nom)}</span>${pill(st[0], st[1])}<span class="d">${esc(x.tache || "")}${x.debut ? ` · ${esc(duree(x.debut, x.fin))}` : ""}</span></li>`; }).join("")}</ul>`
+          : `<p class="empty">${enCours ? "Le chef de chantier prépare le travail." : "Aucun agent ne travaille en ce moment."}</p>`}
+      </div>
+      <div class="card"><h2>À toi de trancher${nd.length ? `<small>${nd.length}</small>` : ""}</h2>
+        ${nd.length ? `<ul class="rows">${nd.slice(0, 4).map((d) => `<li class="row"><span class="t">${esc(d.titre)}</span>${d.importance === "haute" ? pill("bad", "important") : pill("brass", "à lire")}<span class="d">${esc(quand(d.date))}</span></li>`).join("")}</ul><p style="margin:12px 0 0"><button class="btn" data-go="demandes">Répondre</button></p>`
+          : `<p class="empty">Rien ne t'attend. Les sessions avancent seules.</p>`}
+      </div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Dernier point du jour${rap ? `<small>${esc(quand(rap.date))}</small>` : ""}</h2>${rap ? `<div class="body">${md(rap.texte)}</div>` : `<p class="empty">Le premier point du jour arrivera après 18 h, ici et en message privé sur Discord.</p>`}</div>
+      <div class="card"><h2>Derniers événements</h2>${J.length ? `<ul class="rows">${J.slice(0, 5).map((j) => `<li class="row"><span class="t">${esc(j.titre)}</span><span class="when">${esc(quand(j.date))}</span><span class="d">${esc(TYPES[j.type] || j.type || "")}</span></li>`).join("")}</ul><p style="margin:12px 0 0"><button class="btn ghost" data-go="journal">Tout le journal</button></p>` : `<p class="empty">Le journal se remplira dès la première session.</p>`}</div>
+    </div>`;
+}
+
+/* ---------- Avancement ---------- */
+function renderPlan() {
+  const a = avancement();
+  if (!a) { $("#t-plan").innerHTML = `<div class="card"><h2>Avancement</h2><p class="empty">Le plan apparaîtra ici dès que la première session l'aura chargé.</p></div>`; return; }
+  $("#t-plan").innerHTML = `<div class="card"><h2>Avancement global<small>${a.f} / ${a.t} · mis à jour ${esc(quand(P.maj))}</small></h2><div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div><p class="muted" style="margin:10px 0 0">Livraison visée : vendredi 16 octobre, pour l'ouverture du serveur.</p></div>
+    <div class="card">${P.lots.map((l) => {
+      const n = l.items.filter((i) => i.fait).length, fini = n === l.items.length, cur = a.cur === l;
+      return `<details class="lot${cur ? " cur" : ""}${fini ? " done" : ""}"${cur ? " open" : ""}><summary><span class="num">${l.num != null ? esc(l.num) : "·"}</span><span class="ti">${esc(l.titre)}</span><span class="cnt">${n}/${l.items.length}</span></summary><div class="bar"><span style="width:${(100 * n / Math.max(1, l.items.length)).toFixed(1)}%"></span></div><ul class="items">${l.items.map((i) => `<li class="${i.fait ? "f" : ""}">${inline(esc(i.texte))}</li>`).join("")}</ul></details>`;
+    }).join("")}</div>`;
+}
+
+/* ---------- Journal ---------- */
+function renderJournal() {
+  const types = ["tout", ...Object.keys(TYPES).filter((t) => J.some((j) => j.type === t))];
+  const liste = filtre === "tout" ? J : J.filter((j) => j.type === filtre);
+  $("#t-journal").innerHTML = `<div class="card"><h2>Journal<small>${J.length} entrées</small></h2>
+    <div class="filters" role="group" aria-label="Filtrer le journal">${types.map((t) => `<button class="chip" data-filtre="${t}" aria-pressed="${t === filtre}">${t === "tout" ? "Tout" : esc(TYPES[t])}</button>`).join("")}</div>
+    ${liste.length ? liste.map((j, i) => { const l = lien(j.lien); return `<details class="entry"${i < 2 ? " open" : ""}><summary><span class="head">${pill(j.type === "incident" ? "bad" : j.type === "livraison" ? "ok" : j.type === "rapport" ? "brass" : "", TYPES[j.type] || j.type || "info")}<span class="ti">${esc(j.titre)}</span></span><span class="when">${esc(quand(j.date))}</span></summary><div class="body">${md(j.texte)}${l ? `<p><a href="${esc(l)}" target="_blank" rel="noopener">Voir la session</a></p>` : ""}</div></details>`; }).join("")
+      : `<p class="empty">Aucune entrée pour l'instant.</p>`}</div>`;
+}
+
+/* ---------- Demandes ---------- */
+function renderDemandes() {
+  const act = document.activeElement;
+  if (act && act.closest && act.closest("[data-demande]")) { demandeDiffere = true; return; }
+  demandeDiffere = false;
+  const moi = D.filter((d) => d.pour !== "admin"), admin = D.filter((d) => d.pour === "admin");
+  const carte = (d) => {
+    const open = d.statut === "ouverte" && d.pour !== "admin";
+    const st = d.statut === "ouverte" ? (d.pour === "admin" ? ["brass", "chez l'Admin"] : ["bad", "à trancher"]) : d.statut === "repondue" ? ["warn", "réponse envoyée"] : ["ok", "appliquée"];
+    const opts = Array.isArray(d.options) ? d.options : [];
+    return `<article class="dem${open ? " open" : ""}"><div class="head">${pill(st[0], st[1])}${d.importance === "haute" ? pill("bad", "important") : ""}<span class="when">${esc(quand(d.date))}</span></div>
+      <h3>${esc(d.titre)}</h3><div class="body">${md(d.texte)}</div>
+      ${d.reponse ? `<div class="reply"><strong>${d.pour === "admin" ? "Réponse de l'Admin" : "Ta réponse"} :</strong> ${esc(d.reponse)}</div>` : ""}
+      ${d.note ? `<div class="reply"><strong>Ce que l'équipe en a fait :</strong> ${esc(d.note)}</div>` : ""}
+      ${open ? `<form class="ans" data-demande="${esc(d.id)}">
+        ${opts.length ? `<div class="opts" role="group" aria-label="Choix">${opts.map((o, k) => `<button type="button" class="chip" data-opt="${k}" aria-pressed="${choix[d.id] === k}">${esc(o)}</button>`).join("")}</div>` : ""}
+        <textarea id="rep-${esc(d.id)}" data-brouillon="${esc(d.id)}" placeholder="${opts.length ? "Une précision (facultatif)" : "Ta réponse"}" aria-label="Ta réponse">${esc(brouillons[d.id] || "")}</textarea>
+        <button class="btn" type="submit">Envoyer ma réponse</button><p class="msg" role="status"></p></form>` : ""}
+    </article>`;
+  };
+  $("#t-demandes").innerHTML = `<div class="card"><h2>Pour toi</h2><p class="muted" style="margin:0 0 12px">Les décisions que l'équipe ne peut pas prendre seule. Elle avance sur autre chose en attendant ta réponse.</p>
+      <div class="panel">${moi.length ? moi.map(carte).join("") : `<p class="empty">Aucune demande pour l'instant.</p>`}</div></div>
+    <div class="card"><h2>Pour la session Admin</h2><p class="muted" style="margin:0 0 12px">Les changements d'autres mods ou de configuration du serveur. C'est l'Admin qui tranche.</p>
+      <div class="panel">${admin.length ? admin.map(carte).join("") : `<p class="empty">Aucune demande à l'Admin.</p>`}</div></div>`;
+}
+
+/* ---------- Consignes ---------- */
+function renderConsignes() {
+  const ST = { nouvelle: ["brass", "en attente"], prise: ["run", "prise en compte"], faite: ["ok", "faite"], annulee: ["", "annulée"] };
+  $("#consignes-liste").innerHTML = C.length ? `<ul class="rows">${C.map((c) => { const st = ST[c.statut] || ["", c.statut]; return `<li class="row"><span class="t">${esc(c.texte)}</span>${pill(st[0], st[1])}<span class="d">${esc(quand(c.date))}${c.note ? " · " + esc(c.note) : ""}${c.statut === "nouvelle" ? ` · <button class="chip" data-annuler="${esc(c.id)}">Annuler</button>` : ""}</span></li>`; }).join("")}</ul>`
+    : `<p class="empty">Tu n'as encore donné aucune consigne.</p>`;
+}
+
+/* ---------- Sessions ---------- */
+function renderSessions() {
+  $("#t-sessions").innerHTML = `<div class="card"><h2>Sessions<small>${S.length}</small></h2>
+    ${S.length ? `<ul class="rows">${S.map((s) => { const st = STAT_SESSION[s.statut] || ["", s.statut || ""], l = lien(s.lien); return `<li class="row"><span class="t">${esc(d8(s.debut) ? jour(d8(s.debut)) + " à " + heure(d8(s.debut)) : "")}${s.lot ? " · " + esc(s.lot) : ""}</span>${pill(st[0], st[1])}<span class="d">${s.debut ? esc(duree(s.debut, s.fin)) + " · " : ""}${esc(s.resume || "")}${l ? ` · <a href="${esc(l)}" target="_blank" rel="noopener">ouvrir</a>` : ""}</span></li>`; }).join("")}</ul>`
+      : `<p class="empty">Aucune session pour l'instant. La première démarre à ${(() => { const n = prochaine(); return n ? heure(n) : "l'heure prévue"; })()}.</p>`}</div>`;
+}
+
+function renderAll() { renderTabs(); renderAccueil(); renderPlan(); renderJournal(); renderDemandes(); renderConsignes(); renderSessions(); }
+function renderCompte() {
+  const j = Math.ceil((OUVERTURE - Date.now()) / 864e5);
+  $("#countdown").textContent = j > 1 ? `Ouverture dans ${j} jours` : j === 1 ? "Ouverture demain" : j === 0 ? "Ouverture aujourd'hui" : "Serveur ouvert";
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-tab]"); if (t) { go(t.dataset.tab); return; }
+  const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
+  const f = e.target.closest("[data-filtre]"); if (f) { filtre = f.dataset.filtre; renderJournal(); return; }
+  const o = e.target.closest("[data-opt]");
+  if (o) { const id = o.closest("[data-demande]").dataset.demande, k = +o.dataset.opt; choix[id] = choix[id] === k ? undefined : k; o.parentElement.querySelectorAll("[data-opt]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.opt === choix[id]))); return; }
+  const an = e.target.closest("[data-annuler]");
+  if (an && db) db.doc("consignes/" + an.dataset.annuler).update({ statut: "annulee" }).catch(() => {});
+});
+document.addEventListener("input", (e) => { const id = e.target.dataset && e.target.dataset.brouillon; if (id) brouillons[id] = e.target.value; });
+document.addEventListener("focusout", () => { setTimeout(() => { const a = document.activeElement; if (demandeDiffere && !(a && a.closest && a.closest("[data-demande]"))) renderDemandes(); }, 0); });
+document.addEventListener("submit", async (e) => {
+  const f = e.target.closest("[data-demande]"); if (!f) return;
+  e.preventDefault();
+  const id = f.dataset.demande, d = D.find((x) => x.id === id), msg = f.querySelector(".msg"), btn = f.querySelector("button[type=submit]");
+  const opts = (d && Array.isArray(d.options)) ? d.options : [];
+  const txt = (brouillons[id] || "").trim(), opt = choix[id] != null ? opts[choix[id]] : "";
+  const rep = [opt, txt].filter(Boolean).join(" — ");
+  if (!rep) { msg.className = "msg err"; msg.textContent = opts.length ? "Choisis une option ou écris une réponse." : "Écris ta réponse avant d'envoyer."; return; }
+  if (!db) { msg.className = "msg err"; msg.textContent = "Pas de connexion à la base : ouvre ce panneau depuis claude.ai."; return; }
+  btn.disabled = true; msg.className = "msg"; msg.textContent = "Envoi…";
+  try {
+    await db.doc("demandes/" + id).update({ reponse: rep, statut: "repondue", reponse_date: new Date().toISOString() });
+    delete brouillons[id]; delete choix[id];
+    if (document.activeElement) document.activeElement.blur();
+  } catch (err) { btn.disabled = false; msg.className = "msg err"; msg.textContent = "Réponse non enregistrée (" + ((err && err.code) || "erreur") + "). Réessaie dans un instant."; }
+});
+$("#f-consigne").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const ta = $("#consigne-texte"), msg = $("#consigne-msg"), btn = $("#consigne-envoyer"), texte = ta.value.trim();
+  if (!texte) { msg.className = "msg err"; msg.textContent = "Écris ta consigne avant d'envoyer."; return; }
+  if (!db) { msg.className = "msg err"; msg.textContent = "Pas de connexion à la base : ouvre ce panneau depuis claude.ai."; return; }
+  btn.disabled = true; msg.className = "msg"; msg.textContent = "Envoi…";
+  try {
+    await db.collection("consignes").add({ date: new Date().toISOString(), texte, statut: "nouvelle", auteur: "kolrax" });
+    ta.value = ""; try { localStorage.removeItem("chantier-consigne"); } catch (er) {}
+    msg.textContent = "Consigne envoyée. La prochaine session la lira en premier.";
+  } catch (err) { msg.className = "msg err"; msg.textContent = "Consigne non enregistrée (" + ((err && err.code) || "erreur") + "). Réessaie dans un instant."; }
+  btn.disabled = false;
+});
+$("#consigne-texte").addEventListener("input", (e) => { try { localStorage.setItem("chantier-consigne", e.target.value); } catch (er) {} });
+try { $("#consigne-texte").value = localStorage.getItem("chantier-consigne") || ""; } catch (e) {}
+
+/* ---------- Base partagée ---------- */
+function live(kind, txt) { const el = $("#live"); el.className = "live " + kind; el.textContent = txt; }
+const enListe = (q) => q.docs.map((d) => ({ id: d.id, ...d.data() }));
+const erreur = (e) => live("off", "Mise à jour interrompue (" + ((e && e.code) || "erreur") + "). Recharge la page.");
+renderCompte(); renderAll();
+setInterval(() => { renderCompte(); renderAccueil(); if (tab === "sessions") renderSessions(); }, 60000);
+(window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null)).then((d) => {
+  if (!d) { live("off", "Hors ligne : ouvre ce panneau depuis claude.ai"); return; }
+  db = d; live("on", "En direct");
+  db.doc("etat/courant").onSnapshot((s) => { E = s.exists ? s.data() : null; renderTabs(); renderAccueil(); }, erreur);
+  db.doc("plan/lots").onSnapshot((s) => { P = s.exists ? s.data() : null; renderAccueil(); renderPlan(); }, erreur);
+  db.collection("journal").orderBy("date", "desc").limit(200).onSnapshot((q) => { J = enListe(q); renderAccueil(); renderJournal(); }, erreur);
+  db.collection("demandes").orderBy("date", "desc").limit(100).onSnapshot((q) => { D = enListe(q); renderTabs(); renderAccueil(); renderDemandes(); }, erreur);
+  db.collection("consignes").orderBy("date", "desc").limit(100).onSnapshot((q) => { C = enListe(q); renderTabs(); renderConsignes(); }, erreur);
+  db.collection("sessions").orderBy("debut", "desc").limit(60).onSnapshot((q) => { S = enListe(q); renderSessions(); }, erreur);
+}, () => live("off", "Hors ligne : ouvre ce panneau depuis claude.ai"));
+</script>
