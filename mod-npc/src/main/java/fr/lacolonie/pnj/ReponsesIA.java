@@ -169,10 +169,26 @@ final class ReponsesIA {
         return m;
     }
 
-    /** Le texte de la réponse (choices[0].message.content). */
+    /** Le texte de la réponse (choices[0].message.content), ou celui d'un refus de schéma rattrapable ({@link #generationRatee}). */
     static String contenu(String corps) {
         JsonObject o = JsonParser.parseString(corps).getAsJsonObject();
+        if (!o.has("choices")) { String r = generationRatee(corps); if (r != null) return r; }
         return o.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
+    }
+
+    /**
+     * Groq vérifie le JSON après coup : si le modèle sort du schéma (une action inventée…), il refuse (HTTP 400) mais
+     * rend ce qu'il avait écrit dans error.failed_generation. On le garde s'il se lit comme un objet JSON : la lecture,
+     * tolérante, en écarte ce qui n'est pas permis. Sinon null.
+     */
+    static String generationRatee(String corps) {
+        try {
+            JsonElement f = JsonParser.parseString(corps).getAsJsonObject().getAsJsonObject("error").get("failed_generation");
+            if (f == null || f.isJsonNull()) return null;
+            String s = f.isJsonPrimitive() ? f.getAsString() : f.toString();
+            objetJson(s);
+            return s;
+        } catch (RuntimeException e) { return null; }
     }
 
     /** Les jetons consommés (usage.total_tokens), 0 si le service ne le dit pas. */

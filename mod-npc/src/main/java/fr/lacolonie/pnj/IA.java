@@ -117,6 +117,11 @@ final class IA {
         return HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).thenApply(rep -> {
             int code = rep.statusCode();
             if (code / 100 == 2) return rep.body();
+            if (code == 400 && ReponsesIA.generationRatee(rep.body()) != null) {
+                // Le modèle est sorti du schéma : on garde ce qu'il a écrit, la lecture en écarte ce qui n'est pas permis.
+                ColoniePnj.LOG.info("IA ({}) : réponse hors schéma rattrapée", s.nom);
+                return rep.body();
+            }
             String msg = "HTTP " + code + " : " + ReponsesIA.erreur(rep.body());
             long attente = rep.headers().firstValue("retry-after").map(v -> { try { return (long) (Double.parseDouble(v) * 1000); } catch (NumberFormatException e) { return 60_000L; } }).orElse(-1L);
             if (code == 429) s.echec("trop de demandes (quota du fournisseur) — " + msg, attente > 0 ? Math.min(attente, 3_600_000) : 120_000);
@@ -190,7 +195,7 @@ final class IA {
      * de ce qu'il a dit, puis les petits gestes) ; {@code hors} : celles qu'il demande mais qu'aucun d'eux ne sait faire.
      */
     static String actions(boolean enFace, List<Repertoire.Entree> repertoire, List<Repertoire.Entree> hors) {
-        StringBuilder b = new StringBuilder("Actions (champ actions, seulement si le chef le demande clairement ; sinon liste vide) : ");
+        StringBuilder b = new StringBuilder("Actions (champ actions, seulement si le chef le demande clairement ; sinon liste vide ; type pris seulement dans cette liste) : ");
         if (enFace) b.append("suivre (suivre le chef) ; arreter_suivre (cesser de le suivre et retourner au travail) ; attendre (rester sur place) ; montrer_sac ; ")
                 .append("renvoyer (seulement si le chef le renvoie clairement) ; ");
         b.append("travailler (retourner au travail) ; rentrer (revenir au poste de travail) ; missions (missions : id parmi les possibles de son métier, mode quantite = en rapporter nombre puis arrêter, ")
@@ -199,10 +204,10 @@ final class IA {
                 .append("Dans une action, mets 0, faux, \"\" ou [] aux champs inutiles. Ce que son métier ne fait pas, il le dit, sans action ; ")
                 .append("s'il ne comprend pas, il demande de préciser. humeur : le ton de la réponse.");
         if (enFace && !repertoire.isEmpty()) {
-            b.append("\nfaire : une action de son répertoire (champ faire = son id ; cible = le prénom, le joueur ou l'objet visé s'il y en a un, sinon \"\" ; ")
+            b.append("\nfaire : une action de son répertoire (type = \"faire\" et champ faire = son id ; un id du répertoire ne va jamais dans type ; cible = le prénom, le joueur ou l'objet visé s'il y en a un, sinon \"\" ; ")
                     .append("nombre = combien si le chef le dit, sinon 0 ; duree = en secondes si le chef la dit, sinon 0). Ce qu'il fait, il le fait vraiment : ")
-                    .append("ne la choisis que si elle correspond à ce que le chef demande (« garde à vous » : garde_a_vous ; « arrête de danser » : annuler). ")
-                    .append("Une question sur ce qu'il sait ou voit : l'action info qui va avec, et la réponse dit le fait donné plus haut (« Ce qu'il sait »). ")
+                    .append("ne la choisis que si elle correspond à ce que le chef demande (« garde à vous » : faire = garde_a_vous ; « arrête de danser » : faire = annuler). ")
+                    .append("Une question sur ce qu'il sait ou voit : l'action faire du répertoire qui donne ce renseignement, et la réponse dit le fait donné plus haut (« Ce qu'il sait »). ")
                     .append("Un petit geste (marqué *) peut accompagner une réponse sans qu'on le demande. Répertoire (id : ce qu'elle fait) :\n");
             for (Repertoire.Entree e : repertoire)
                 b.append("- ").append(e.id()).append(e.spontane() ? "*" : "").append(" : ").append(e.nom())

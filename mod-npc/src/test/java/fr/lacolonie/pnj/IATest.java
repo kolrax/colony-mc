@@ -208,6 +208,40 @@ class IATest {
     }
 
     @Test
+    void refusDeSchemaRattrape() {
+        // Vrai refus de Groq (11/10) : le modèle a inventé l'action « chercher », Groq rejette tout (HTTP 400) mais rend
+        // le JSON généré dans failed_generation. On garde la réplique et les actions valides.
+        Map<String, Set<String>> ids = new java.util.LinkedHashMap<>();
+        ids.put("Bertrand", Set.of("fer", "charbon"));
+        String genere = """
+                {"destinataires":["Bertrand"],"reponses":[{"qui":"Bertrand","reponse":"Je cherche ça, chef, et je te suis.","humeur":"pressé","actions":[
+                 {"type":"chercher","missions":[],"ajouter":false,"debut":0,"fin":0,"jours":0},
+                 {"type":"suivre","missions":[],"ajouter":false,"debut":0,"fin":0,"jours":0}]}]}""";
+        JsonObject err = new JsonObject(), e = new JsonObject();
+        e.addProperty("message", "Generated JSON does not match the expected schema. Please adjust your prompt. See 'failed_generation' for more details. "
+                + "Error: jsonschema: '/reponses/0/actions/0/type' does not validate with /properties/reponses/items/properties/actions/items/properties/type/enum: "
+                + "value must be one of 'suivre', 'arreter_suivre', 'travailler', 'attendre', 'rentrer', 'montrer_sac', 'renvoyer', 'missions', 'horaires', 'expedition', 'faire'");
+        e.addProperty("type", "invalid_request_error");
+        e.addProperty("code", "json_validate_failed");
+        e.addProperty("failed_generation", genere);
+        err.add("error", e);
+        String corps = err.toString();
+        assertNotNull(ReponsesIA.generationRatee(corps));
+        ReponsesIA.Groupe g = ReponsesIA.decisionGroupe(ReponsesIA.contenu(corps), ids);
+        assertEquals(List.of("Bertrand"), g.destinataires());
+        ReponsesIA.Decision d = g.reponses().get("Bertrand");
+        assertEquals("Je cherche ça, chef, et je te suis.", d.reponse());
+        assertEquals("calme", d.humeur(), "humeur hors liste : calme");
+        assertEquals(List.of("suivre"), d.actions().stream().map(ReponsesIA.Action::type).toList(), "l'action inventée est écartée");
+        assertEquals(Set.of(Ordres.Intention.SUIVRE), d.lecture().intentions);
+        // Illisible (coupé) ou absent : pas de rattrapage, l'appel échoue comme avant.
+        e.addProperty("failed_generation", "{\"reponses\":[{\"qui\":\"Bertrand\"");
+        assertNull(ReponsesIA.generationRatee(err.toString()));
+        assertNull(ReponsesIA.generationRatee("{\"error\":{\"message\":\"Failed to generate JSON\"}}"));
+        assertNull(ReponsesIA.generationRatee("pas du json"));
+    }
+
+    @Test
     void whisperSansSesInventions() {
         String v = "{\"text\":\" Merci d'avoir regardé. Ramène dix fers.\",\"segments\":["
                 + "{\"text\":\" Merci d'avoir regardé.\",\"avg_logprob\":-0.9,\"compression_ratio\":1.2,\"no_speech_prob\":0.82},"
