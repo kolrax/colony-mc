@@ -34,8 +34,8 @@ Sans ces cas, un PNJ ne frappe que des monstres et ne casse que des blocs nature
 
 ## Secrets (le dépôt est public)
 - Jamais de clé, de jeton ni de mot de passe dans le dépôt, un commit, un log ou un message.
-- Les secrets viennent des variables d'environnement : `PANEL_URL`, `SERVER_ID`, `PANEL_API_KEY`, `DISCORD_APP_ID`, `DISCORD_GUILD_ID`, `DISCORD_BOT_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `GROQ_API_KEY`. Sur le PC, ils sont dans `.env`, ignoré par git. Les outils lisent les deux.
-- Les clés d'IA du serveur (`config/colonie_pnj/ia.json`) sont posées par KOLRAX lui-même. Ne jamais les lui demander, ni les lire à voix haute. Le panneau web n'en montre que les 4 derniers caractères.
+- Les secrets viennent des variables d'environnement : `PANEL_URL`, `SERVER_ID`, `PANEL_API_KEY`, `DISCORD_APP_ID`, `DISCORD_GUILD_ID`, `DISCORD_BOT_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` (clé payante de KOLRAX, limitée par lui à 5 € par mois : à n'utiliser que pour le mod et quelques essais réels, jamais en boucle). Sur le PC, ils sont dans `.env`, ignoré par git. Les outils lisent les deux.
+- Les clés d'IA du serveur (`config/colonie_pnj/ia.json`) sont posées par KOLRAX lui-même. Seule exception : la clé OpenRouter, que tu recopies de `OPENROUTER_API_KEY` vers `ia.json` du serveur quand le mod sait s'en servir. Fais-le par un script Python (`panel.req` pour lire et réécrire le fichier), sans jamais afficher le contenu : le fichier contient aussi les autres clés. Ne jamais les lui demander, ni les lire à voix haute. Le panneau web n'en montre que les 4 derniers caractères.
 - Le mot de passe du panneau du mod (`jeton_panneau`, dans `config/colonie_pnj/reglages.json` sur le serveur) se lit par programme, sans jamais être affiché.
 - Pas de données de joueurs dans le dépôt : questionnaires, sauvegardes et rapports restent sur le PC.
 
@@ -57,7 +57,8 @@ cd mod-npc
 - Sur le PC Windows, il faut `JAVA_HOME` = JDK 21 et `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:/Users/utilisateur/.gradle/tmp`. Supprimer d'abord `build/classes build/resources build/libs build/generated/jarJar build/generated/sources/modMetadata` si Gradle refuse de les nettoyer.
 - `rm -rf run/world` avant les tests en jeu : le serveur de test garde le monde et ses PNJ.
 - **Un nouveau test doit d'abord échouer sur l'ancien code**. Sinon il ne prouve rien. Vérifie-le à chaque fois.
-- CI GitHub (`.github/workflows/ci.yml`) : compilation, tests JUnit et tests en jeu à chaque push sur `mod-npc/`. Ne livre jamais si elle est rouge.
+- Pas de CI automatique : c'est toi qui lances `build` puis `runGameTestServer` avant chaque push sur `mod-npc/`. Tout doit être vert, sinon pas de push ni de livraison. (`.github/workflows/ci.yml` ne se lance qu'à la main, et seulement si le compte GitHub de KOLRAX est débloqué.)
+- Réveil du panneau : au début de chaque session, `curl -s -o /dev/null -w '%{http_code}' https://wegefcdewecwjvmhaaxb.supabase.co/functions/v1/modpack`. Un projet Supabase gratuit se met en pause après 7 jours sans visite.
 - Banc photo des gestes et skins : `./gradlew runPhotos` (client, il faut un écran). Captures dans `run-photos/screenshots`, à regarder une par une.
 
 ## Livrer

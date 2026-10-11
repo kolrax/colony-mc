@@ -3,7 +3,7 @@
 Ordre décidé à partir du cahier des charges. Les trois priorités de KOLRAX : **« naturel, pas de lag, on s'amuse »**.
 Un lot est fini quand :
 - ses tests passent, dont au moins un test en jeu qui échouait avant ;
-- la CI est verte ;
+- `build` et `runGameTestServer` sont verts ;
 - le serveur de test est à jour ;
 - il a une entrée dans le journal.
 
@@ -11,7 +11,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 0. Infrastructure
 - [x] Dépôt public, manuel `CLAUDE.md`, cahier des charges, agents
-- [ ] CI verte sur GitHub (compilation, JUnit, tests en jeu) : bloquée tant que le compte GitHub de KOLRAX est bloqué pour facturation ; en attendant, tests lancés par la session cloud avant chaque push
+- [x] Tests lancés par la session cloud avant chaque push (pas de CI GitHub : compte bloqué, KOLRAX ne veut pas mettre de carte)
 - [x] Session cloud capable de compiler et de lancer les tests en jeu (essai du 11/10 : 52 JUnit et 65 GameTests verts)
 - [ ] Déploiement du panneau Supabase par la ligne de commande (sans Chrome)
 

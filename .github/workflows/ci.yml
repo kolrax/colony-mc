@@ -1,9 +1,6 @@
 name: Tests du mod
+# À la main seulement : le compte GitHub de KOLRAX est bloqué (facturation), les sessions cloud testent elles-mêmes.
 on:
-  push:
-    paths: ["mod-npc/**", ".github/workflows/ci.yml"]
-  pull_request:
-    paths: ["mod-npc/**"]
   workflow_dispatch:
 
 concurrency:

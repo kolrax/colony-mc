@@ -5,7 +5,7 @@ description: Livre une version, sur le serveur de test puis éventuellement dans
 
 Tu livres. Suis exactement la partie « Livrer » de `CLAUDE.md`, sans sauter d'étape.
 
-1. Vérifie que la CI est verte pour le commit à livrer, et que `gradle.properties` a la bonne version (`mod_version`).
+1. Vérifie que `build` et `runGameTestServer` sont verts sur le commit à livrer, et que `gradle.properties` a la bonne version (`mod_version`).
 2. Serveur : contrôle des joueurs connectés et du journal ; préavis s'il le faut ; envoi du jar ; ancien jar rangé dans `/mods-off` ; redémarrage ; lecture du journal jusqu'à « Done », sans erreur du mod.
 3. Modpack, seulement si le client a changé :
    - verrou `pack/VERROU` ;
