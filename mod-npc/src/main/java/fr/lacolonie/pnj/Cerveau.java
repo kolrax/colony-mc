@@ -51,6 +51,16 @@ final class Cerveau {
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
         if (t.action instanceof Consignes.Faire f && Consignes.interrompre(t, f)) t.finirAction("interrompu");
+        // Frappé en pleine action (il attend, il marche, il travaille) : il la lâche tout de suite, pour fuir ou riposter
+        // plus bas. Une seule fois par coup, sinon il casserait chaque action pendant 10 s. Pas s'il se bat ou fuit déjà,
+        // ni si c'est son chef qui l'a frappé. Avant, il ne réagissait qu'entre deux actions et finissait à terre.
+        LivingEntity coupDe = t.getLastHurtByMob();
+        if (t.action != null && coupDe != null && coupDe.isAlive() && !t.estDe(coupDe) && Monde.recent(t, t.getLastHurtByMobTimestamp())
+                && t.getLastHurtByMobTimestamp() != t.coupVu && !(t.action instanceof Actions.Fuir) && !(t.action instanceof Actions.Attaquer)
+                && !(t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat"))) {
+            t.coupVu = t.getLastHurtByMobTimestamp();
+            t.finirAction("interrompu");
+        }
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;

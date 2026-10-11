@@ -497,6 +497,66 @@ public class TestsJeu {
         });
     }
 
+    /**
+     * Frappé par un monstre en pleine action longue (il attend 20 s), il la lâche et s'enfuit tout de suite ; frappé par
+     * son chef, il ne lâche rien. Avant la 0.8.4, il ne réagissait qu'entre deux actions (un mineur qui attendait ou
+     * marchait finissait à terre).
+     */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void frappeEnPleineAction(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 2, ItemStack.EMPTY);
+        Travailleur u = ouvrier(h, "mineur", 2, 2, 7, ItemStack.EMPTY);
+        var chef = h.makeMockServerPlayerInLevel();
+        u.chef = chef.getUUID();
+        Cerveau.lancer(t, new Actions.Attendre(400));
+        Actions.Action tache = new Actions.Attendre(400);
+        Cerveau.lancer(u, tache);
+        var z = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 6, 2, 2);
+        z.setNoAi(true);
+        int[] fuite = {-1};
+        h.onEachTick(() -> { if (fuite[0] < 0 && t.action instanceof Actions.Fuir) fuite[0] = (int) h.getTick(); });
+        int coup = (int) h.getTick() + 5;
+        h.runAtTickTime(coup, () -> {
+            t.hurt(t.damageSources().mobAttack(z), 1);
+            u.hurt(u.damageSources().playerAttack(chef), 1);
+        });
+        h.runAtTickTime(coup + 40, () -> {
+            h.assertTrue(fuite[0] >= 0 && fuite[0] - coup <= 40, "frappé par un monstre, il doit s'enfuir dans les 2 s (" + (t.action == null ? "-" : t.action.nom) + ")");
+            h.assertTrue(u.action == tache, "frappé par son chef, il ne doit pas lâcher son action (" + (u.action == null ? "-" : u.action.nom) + ")");
+            t.discard();
+            u.discard();
+            z.discard();
+            h.succeed();
+        });
+    }
+
+    /**
+     * Envoyé sur un îlot entouré d'une douve de lave d'un bloc : le chemin s'arrête au bord, à deux blocs du but. Il
+     * reste au bord et finit par renoncer, sans jamais entrer dans la lave. Dans la première 0.8.4, au bout de ce chemin
+     * inachevé, il marchait tout droit vers le but… et dans la lave.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400, skyAccess = true)
+    public static void neMarchePasDansLaLave(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos ilot = sol(h, 0, 93000);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+            if (dx != 0 || dz != 0) l.setBlockAndUpdate(ilot.offset(dx, -1, dz), Blocks.LAVA.defaultBlockState());
+        Travailleur t = employe(h, "mineur", sol(h, -10, 93000), Vec3.atBottomCenterOf(sol(h, -8, 93000)), ItemStack.EMPTY);
+        t.mode = Travailleur.Mode.ATTENDRE; // le cerveau ne lui donne rien d'autre à faire
+        t.forcerChunk();
+        Actions.Action aller = new Actions.Aller(Vec3.atBottomCenterOf(ilot), 1);
+        Cerveau.lancer(t, aller);
+        boolean[] lave = {false};
+        h.onEachTick(() -> { if (t.isInLava() || t.getY() < ilot.getY() - 0.4) lave[0] = true; });
+        h.runAtTickTime(h.getTick() + 220, () -> {
+            String e = etat(t, t.bureau) + ", " + t.diag + ", feu " + t.isOnFire();
+            t.discard();
+            h.assertFalse(lave[0], "il ne doit jamais entrer dans la lave (" + e + ")");
+            h.succeed();
+        });
+    }
+
     /** Un zombie enfermé sous ses pieds, hors de vue (Raoul le 6 octobre) : le guerrier ne tourne pas en rond au-dessus. */
     @GameTest(template = "grand", timeoutTicks = 300)
     public static void guerrierNeTournePasEnRond(GameTestHelper h) {

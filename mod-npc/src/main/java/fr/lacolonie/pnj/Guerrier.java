@@ -9,12 +9,13 @@ import java.util.List;
 
 /**
  * Le guerrier. Commandes : garder le bureau, faire la ronde dans son espace de vie, ou escorter son chef.
- * Il tue les créatures hostiles et ceux qui s'en prennent à lui ou à son chef. Il ne frappe jamais un villageois,
- * un golem, un animal ou un joueur qui ne s'en est pris à personne (règle du serveur : pas de violence hors RP).
+ * Il tue les créatures hostiles, et celles qui s'en prennent à lui ou à son chef. Il ne frappe un joueur que sur ordre
+ * de son chef (en guerre, une consigne de combat) ; frappé par un joueur, il recule sans riposter. Il ne frappe jamais
+ * un villageois, un golem ou un animal (règle du serveur : pas de violence hors RP).
  */
 final class Guerrier extends Metier {
     Guerrier() {
-        super("guerrier", "Guerrier", "Garde le bureau, fait la ronde autour ou escorte son chef, et tue les monstres. Il ne s'en prend jamais aux villageois ni à un joueur qui n'a attaqué personne.",
+        super("guerrier", "Guerrier", "Garde le bureau, fait la ronde autour ou escorte son chef, et tue les monstres. Il ne lève son arme sur un homme que sur l'ordre de son chef ; si quelqu'un le frappe, il recule sans rendre le coup. Il ne touche jamais aux villageois ni aux bêtes.",
                 true, "nourriture", "#minecraft:swords", "#minecraft:axes");
         commandes.add(new Commande("garder", "Garder le bureau", null));
         commandes.add(new Commande("ronde", "Faire la ronde (50 blocs)", null));

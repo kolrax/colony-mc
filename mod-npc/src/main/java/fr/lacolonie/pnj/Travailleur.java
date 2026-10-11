@@ -620,6 +620,9 @@ public class Travailleur extends PathfinderMob {
     static boolean enCombat(Actions.Action a) { return a instanceof Actions.Attaquer || a instanceof Actions.Fuir; }
 
     /** Une créature (monstre, joueur, son chef…) l'a frappé il y a moins de 10 secondes. */
+    /** Le coup (moment de getLastHurtByMobTimestamp) qui a déjà interrompu son action : une seule interruption par coup. */
+    int coupVu = Integer.MIN_VALUE;
+
     boolean vientDEtreFrappe() { return getLastHurtByMob() != null && Monde.recent(this, getLastHurtByMobTimestamp()); }
 
     /** Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. */

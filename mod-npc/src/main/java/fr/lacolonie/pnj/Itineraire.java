@@ -71,12 +71,33 @@ final class Itineraire {
     /** Après un choix où rien n'était atteignable, il ne recommence pas avant ce moment (temps du monde). */
     private long prochainChoix;
 
+    /** Un PNJ qui attend un jeton depuis tant de ticks en reçoit un, même si le budget du tick est épuisé. */
+    static final int ATTENTE_MAX = 10;
+    /** Depuis quand (temps du monde) il attend un jeton refusé faute de budget ; -1 s'il n'attend pas. */
+    private long attendDepuis = -1;
+    /** Le tick où il est passé hors budget : ce tick-là, il a droit à toutes ses recherches (PAR_TICK). */
+    private long passeDroit = -1;
+
     /** Un nouveau tick du serveur : le budget des étapes repart. */
     static void nouveauTick() { budget = BUDGET; }
 
-    /** Une recherche « étape » de plus est permise maintenant (au plus PAR_TICK pour lui, BUDGET pour tous) ; elle est décomptée. */
-    private boolean jeton() {
-        if (recherchesCeTick >= PAR_TICK || budget <= 0) return false;
+    /**
+     * Une recherche « étape » de plus est permise maintenant (au plus PAR_TICK pour lui, BUDGET pour tous) ; elle est
+     * décomptée. Les PNJ passent toujours dans le même ordre : sans recours, ceux de la fin de la liste n'auraient jamais
+     * de jeton et finiraient faussement « coincés ». Après {@link #ATTENTE_MAX} ticks d'attente, il passe hors budget
+     * (pour ce tick, jusqu'à PAR_TICK recherches).
+     * Les refus et les passe-droits sont comptés dans {@link Charge}.
+     */
+    private boolean jeton(long maintenant) {
+        if (recherchesCeTick >= PAR_TICK) return false;
+        if (budget <= 0) {
+            if (attendDepuis < 0) attendDepuis = maintenant;
+            boolean force = maintenant - attendDepuis >= ATTENTE_MAX || passeDroit == maintenant;
+            Charge.ICI.jeton(force);
+            if (!force) return false;
+            passeDroit = maintenant;
+        }
+        attendDepuis = -1;
         recherchesCeTick++;
         budget--;
         return true;
@@ -110,7 +131,7 @@ final class Itineraire {
 
         if (aCreuser != null) { t.diag = "creuse " + aCreuser.toShortString(); creuser(t); return; }
         if (montee != null) {
-            if (t.blockPosition().equals(montee) || age > monteeFin) { montee = null; etape = null; }
+            if (t.blockPosition().equals(montee) || age > monteeFin) { montee = null; etape = null; finChoix(); }
             else {
                 t.diag = "monte en " + montee.toShortString();
                 if (t.onGround() && age % 10 == 0) {
@@ -131,9 +152,15 @@ final class Itineraire {
         // De près : le chemin direct, s'il mène bien au but.
         if (dh <= 40 && dv <= 20 && directRate < 2) {
             t.diag = "chemin direct";
+            if (phase >= 0) finChoix(); // un choix d'étape laissé en route : ses positions ne valent plus rien
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
-            // Au bout du chemin accepté (il s'arrête à côté du but) : il fait les derniers pas tout droit, sans le recalculer.
-            if (nav.isDone() && auBout(t, direct)) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
+            // Au bout du chemin accepté, sans le recalculer à chaque tick (seulement toutes les 20 ticks) : s'il mène au but,
+            // il fait les derniers pas tout droit ; s'il s'arrête à côté (bloc à casser, coffre, ou but de l'autre côté
+            // d'une lave, d'un trou), il reste au bord : marcher tout droit le jetterait dedans.
+            if (nav.isDone() && auBout(t, direct) && age % 20 != 0) {
+                if (direct.canReach()) t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v);
+                return;
+            }
             if (age % 20 == 0 || nav.isDone() && age - directDate >= RECALCUL) {
                 if (!t.onGround() && !t.isInWater()) return;
                 directDate = age;
@@ -184,7 +211,7 @@ final class Itineraire {
         // a) Le but lui-même, s'il est à portée d'un chemin complet.
         if (phase == 0) {
             if (dh <= 48 && Math.abs(but.y - p.y) <= 24) {
-                if (!jeton()) return;
+                if (!jeton(maintenant)) return;
                 if (aller(t, BlockPos.containing(but), but, v)) { finChoix(); return; }
             }
             phase = 1;
@@ -195,7 +222,7 @@ final class Itineraire {
         if (phase == 1) {
             if (versLeBureau) {
                 for (; curseur < t.trace.size(); curseur++) {
-                    if (!jeton()) return;
+                    if (!jeton(maintenant)) return;
                     BlockPos q = t.trace.get(curseur);
                     if (aller(t, q, Vec3.atBottomCenterOf(q), v)) {
                         while (t.trace.size() > curseur) t.trace.remove(t.trace.size() - 1);
@@ -229,7 +256,7 @@ final class Itineraire {
         for (; curseur < candidats.size() && essais < 18; curseur++) {
             BlockPos c = candidats.get(curseur);
             if (rates.stream().anyMatch(r -> r.distSqr(c) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
-            if (!jeton()) return;
+            if (!jeton(maintenant)) return;
             essais++;
             if (aller(t, c, Vec3.atBottomCenterOf(c), v)) {
                 finChoix();
@@ -407,7 +434,7 @@ final class Itineraire {
         if (dernier && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         boolean fini = t.getNavigation().isDone();
         // Au bout du dernier chemin vers ce point : les derniers pas tout droit, sans le recalculer à chaque tick.
-        if (fini && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
+        if (fini && cheminSortie != null && cheminSortie.getTarget().equals(q) && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         if (age % 20 == 0 || fini && age - sortieDate >= RECALCUL) {
             sortieDate = age;
             Path ch = cheminSortie = chercher(t, q, 0, Charge.Origine.SORTIE);
@@ -547,6 +574,7 @@ final class Itineraire {
         t.inventaire.setChanged();
         t.getNavigation().stop();
         t.setSprinting(false);
+        finChoix();
         bateauBloque = 0;
         barreFin = 0;
         Cerveau.dire(t, "bateau", 600, "Je prends le bateau pour traverser.");
@@ -613,6 +641,7 @@ final class Itineraire {
         etape = null;
         chemin = null;
         directRate = 0;
+        finChoix();
     }
 
     /** Prend en main l'outil de son sac qui casse ce bloc le plus vite (pioche, pelle…). */

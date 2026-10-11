@@ -81,4 +81,19 @@ class ChargeTest {
         assertEquals(0, c.recherches(null), "les vieux ticks sortent de la fenêtre");
         assertEquals(0, c.recherchesPirePnj());
     }
+
+    @Test
+    void jetonsRefusesEtForces() {
+        Charge c = new Charge(2);
+        c.jeton(false);
+        c.jeton(false);
+        c.jeton(true);
+        c.clore();
+        assertEquals(2, c.jetonsRefuses());
+        assertEquals(1, c.jetonsForces());
+        assertTrue(c.lignes(0, 0).stream().anyMatch(l -> l.contains("refusés faute de budget : 2") && l.contains("d'attente : 1")), "/pnj charge doit les montrer");
+        c.clore();
+        c.clore();
+        assertEquals(0, c.jetonsRefuses(), "les vieux ticks sortent de la fenêtre");
+    }
 }

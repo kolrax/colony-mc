@@ -65,6 +65,9 @@ final class Charge {
     /** Le plus de recherches faites par un même PNJ sur un tick. */
     private int pirePnjCourant;
     private final int[] pirePnjFenetre;
+    /** Jetons d'étape du tick : [0] refusés faute de budget (le PNJ attend), [1] accordés hors budget après une longue attente. */
+    private final int[] jetonsCourant = new int[2];
+    private final int[][] jetonsFenetre;
 
     Charge(int taille) {
         this.taille = taille;
@@ -72,6 +75,7 @@ final class Charge {
         pnjFenetre = new int[taille];
         recherchesFenetre = new int[taille][ORIGINES.length * 2];
         pirePnjFenetre = new int[taille];
+        jetonsFenetre = new int[taille][2];
     }
 
     /**
@@ -83,6 +87,9 @@ final class Charge {
         if (echec) recherchesCourant[ORIGINES.length + o.ordinal()]++;
         pirePnjCourant = Math.max(pirePnjCourant, duPnjCeTick);
     }
+
+    /** Le budget des étapes du tick était épuisé : le jeton est refusé, ou {@code force} accordé quand même (le PNJ attendait trop). */
+    void jeton(boolean force) { jetonsCourant[force ? 1 : 0]++; }
 
     /** Ajoute le temps écoulé depuis {@code debut} à la partie, et rend l'heure (pour enchaîner les mesures). */
     long mesurer(Partie p, long debut) {
@@ -115,6 +122,8 @@ final class Charge {
         java.util.Arrays.fill(recherchesCourant, 0);
         pirePnjFenetre[curseur] = pirePnjCourant;
         pirePnjCourant = 0;
+        System.arraycopy(jetonsCourant, 0, jetonsFenetre[curseur], 0, 2);
+        java.util.Arrays.fill(jetonsCourant, 0);
         curseur = (curseur + 1) % taille;
         if (remplis < taille) remplis++;
     }
@@ -157,6 +166,18 @@ final class Charge {
         return s;
     }
 
+    /** Jetons d'étape refusés faute de budget sur la fenêtre. */
+    int jetonsRefuses() { return jetons(0); }
+
+    /** Jetons d'étape accordés hors budget (après une longue attente) sur la fenêtre. */
+    int jetonsForces() { return jetons(1); }
+
+    private int jetons(int i) {
+        int s = 0;
+        for (int k = 0; k < remplis; k++) s += jetonsFenetre[k][i];
+        return s;
+    }
+
     /** Le plus de recherches (tous les PNJ) sur un même tick de la fenêtre. */
     int recherchesPireTick() {
         int m = 0;
@@ -191,6 +212,8 @@ final class Charge {
         StringBuilder b = new StringBuilder(" - par origine :");
         for (Origine o : ORIGINES) b.append(String.format(Locale.ROOT, " %s %d (%d échecs) ·", o.nom, recherches(o), echecs(o)));
         l.add(b.substring(0, b.length() - 2));
+        l.add(String.format(Locale.ROOT, " - jetons d'étape refusés faute de budget : %d (un par PNJ et par tick d'attente), accordés hors budget après 10 ticks d'attente : %d",
+                jetonsRefuses(), jetonsForces()));
         return l;
     }
 }
