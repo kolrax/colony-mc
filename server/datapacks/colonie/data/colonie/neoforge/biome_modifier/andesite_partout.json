@@ -1,0 +1,9 @@
+{
+ "type": "neoforge:add_features",
+ "biomes": "#minecraft:is_overworld",
+ "features": [
+  "colonie:andesite_proche_surface",
+  "colonie:andesite_profonde"
+ ],
+ "step": "underground_ores"
+}

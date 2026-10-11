@@ -1,0 +1,40 @@
+# Modpack « La Colonie » — Minecraft 1.21.1 / NeoForge
+# Une ligne = un slug Modrinth. Suffixe optionnel : "client" (joueurs seulement) ou "server" (serveur seulement).
+# Les dépendances obligatoires sont ajoutées automatiquement par build.py.
+
+# --- Socle Create (voulu par KOLRAX_MC et Nielscutt) ---
+create
+create-steam-n-rails-1.21.1
+numismatics
+create-enchantment-industry
+slice-and-dice
+create-stuff-additions
+
+# --- Génération du monde (choix de KOLRAX le 2026-10-04 : combo B du rapport) ---
+terralith server
+tectonic server
+towns-and-towers server
+create-let-the-adventure-begin server
+
+# --- Confort & social ---
+# Règles du chef de projet (KOLRAX_MC), non négociables : pas de keepInventory (tombe à la place),
+# aucune téléportation / home (transport réel en jeu), aucune protection de terrain (RP).
+gravestone-mod
+jei
+simple-voice-chat
+# Cartes en jeu (décision du 2026-10-05 : remplacent la carte web, ne montrent que ce que chacun a exploré).
+# Aussi sur le serveur, qui impose les réglages (pas de mode grotte, pas de radar des joueurs).
+xaeros-minimap
+xaeros-world-map
+
+# --- Admin & performance ---
+spark
+modernfix
+ferrite-core
+simple-backups server
+sdlink server
+chunky server
+
+# --- Performance / shaders côté joueurs ---
+sodium==mc1.21.1-0.6.13-neoforge client   # épinglé : Iris 1.8.12 exige Sodium 0.6.13 (la 0.8 fait planter le jeu, 0.4.0)
+iris client

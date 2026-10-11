@@ -1,8 +1,17 @@
-build/
-run/
-run-data/
-.gradle/
-*.iml
-.idea/
-repo/
-run-photos/
+# Dépôt PUBLIC : aucun secret, aucune donnée de joueur.
+.env
+*.env
+ia.json
+reglages.json
+
+# Données privées ou lourdes, gardées seulement sur le PC
+sauvegardes/
+questionnaires/
+rapports/
+etat_dump.json
+tools/etat.json
+*.mrpack
+
+__pycache__/
+*.pyc
+.claude/settings.local.json

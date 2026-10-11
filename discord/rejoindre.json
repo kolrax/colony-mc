@@ -1,0 +1,13 @@
+{
+  "content": "",
+  "embeds": [{
+    "title": "🧭 Rejoindre la Colonie",
+    "color": 6989903,
+    "description": "Tu ne vois que l'accueil ? Demande le rôle **⚒️ Colon** à {{@fondateur}} pour ouvrir le reste du Discord.\n\n**1.** Télécharge le modpack dans {{modpacks}} : choisis ton launcher, le fichier se télécharge tout seul.\n**2.** Importe-le. Avec **Modrinth App** (recommandé) : double-clique sur le fichier `.mrpack`.\n**3.** Lance l'instance et ajoute le serveur `lacolonie.mintservers.fr`.\n**4.** Le serveur est sur liste blanche : demande à {{@fondateur}} de t'ajouter.\n**5.** Chat vocal de proximité : touche **V** pour régler ton micro.",
+    "fields": [
+      {"name": "🌐 Adresse du serveur", "value": "`lacolonie.mintservers.fr`", "inline": true},
+      {"name": "🔄 Mises à jour", "value": "Annoncées dans {{annonces}}, fichiers dans {{modpacks}}.", "inline": true}
+    ],
+    "footer": {"text": "Un souci d'installation ? Ouvre un fil dans 💡 idées-et-bugs."}
+  }]
+}

@@ -1,0 +1,5 @@
+whitelist add KOLRAX_MC
+whitelist add Nielscutt
+op KOLRAX_MC
+gamerule keepInventory false
+gamerule playersSleepingPercentage 50

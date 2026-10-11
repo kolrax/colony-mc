@@ -1,0 +1,16 @@
+{
+  "content": "",
+  "embeds": [{
+    "title": "📜 Le règlement de la Colonie",
+    "color": 15251258,
+    "description": "La Colonie est un serveur **Create** entre amis, dans un univers **médiéval qui s'industrialise**. On y bâtit une civilisation ensemble : on construit, on commerce, on s'organise.\n\nCes règles sont fixées par le fondateur. Elles ne changent pas.",
+    "fields": [
+      {"name": "⚰️ La mort coûte cher", "value": "Pas de keepInventory. Une tombe garde tes affaires là où tu es tombé : à toi d'aller les rechercher."},
+      {"name": "🐎 On voyage pour de vrai", "value": "Aucune téléportation, aucun /home. À pied, à cheval, en bateau ou en train."},
+      {"name": "🗡️ Pas de protection, mais du roleplay", "value": "Aucun terrain n'est protégé. Voler ou détruire est permis **dans un cadre roleplay** : une guerre déclarée, une trahison, une ruse… Jamais gratuitement ni hors jeu. Chaque acte aura ses conséquences dans la colonie."},
+      {"name": "⚙️ Médiéval-industriel", "value": "Pas de distributeurs ni de banque moderne : la monnaie, ce sont les pièces."},
+      {"name": "❤️ Respect", "value": "Entre colons, en jeu comme sur ce Discord."}
+    ],
+    "footer": {"text": "L'Intendant de la Colonie"}
+  }]
+}

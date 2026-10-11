@@ -1,0 +1,10 @@
+{
+  "content": "",
+  "embeds": [{
+    "title": "🗺️ La carte de la Colonie",
+    "color": 12618302,
+    "description": "La carte se consulte en jeu, avec le modpack 0.3.0 ou plus récent (voir {{modpacks}}).\n\n**M** : la carte du monde · la mini-carte s'affiche en haut de l'écran\n\nChacun ne voit que ce qu'il a exploré lui-même. Le serveur impose les mêmes règles à tous : pas de vue des grottes ni des intérieurs (sauf dans le Nether), pas de radar, et personne n'apparaît sur la carte des autres.",
+    "footer": {"text": "Ta tombe est marquée sur la carte quand tu meurs : suis le point de mort pour récupérer tes affaires."}
+  }],
+  "components": []
+}
