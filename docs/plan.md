@@ -21,7 +21,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Banc de charge : commande de test qui fait apparaître N ouvriers au travail, mesure du temps par tick (MSPT) et de la part du mod (`/pnj banc`, `/pnj charge`, tests à 10/50/100, compteurs de recherches de chemin ; livré en 0.8.2-0.8.4)
 - [x] 50 PNJ et plus sans ralentissement perceptible (objectif : la part du mod < 10 ms par tick pour 50 PNJ) — atteint en 0.8.5 (12/10) : mesure réelle 2,6 à 5,1 ms en moyenne, 20 TPS ; pires ticks du mod encore 17-25 ms (échecs de chemin direct ~10 ms), à polir plus tard
 - [x] Déblocage : il creuse ou pose des blocs pour sortir ; en dernier recours, téléportation au poste avec un message — livré en 0.8.7 (12/10) : pilier et pont de blocs, blocs repris ensuite, retour au poste après 5 min coincé avec un avis au chef, pas plus de 2 retours de suite
-- [ ] Plus de morts dues à un bug (chutes, noyade, lave, faim)
+- [x] Plus de morts dues à un bug (chutes, noyade, lave, faim) — livré en 0.8.8 (12/10) : 14 essais de morts en jeu, 5 trouvées (mineur près de la lave ou sous du gravier/sable), corrigées ; il bouche la lave ; réflexe de survie (feu, lave, enseveli, noyade)
 
 ## 2. Interface du poste (indispensable, noté 2/5)
 - [ ] Beaucoup moins de messages, regroupés et triés ; gestion simple (lu, archivé, tout effacer)
