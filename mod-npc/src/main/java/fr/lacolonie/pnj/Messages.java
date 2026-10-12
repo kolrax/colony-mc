@@ -128,6 +128,10 @@ final class Messages {
         m("mission_finie_suite", "Mission terminée",
                 "Mission terminée : {0}. Je passe à la suivante : {1}.",
                 "C'est fait pour {0}. Je m'attaque maintenant à : {1}.");
+        m("mission_jour_finie", "Livraison du jour",
+                "C'est fait pour aujourd'hui : {0}, au dépôt. Je recommence demain.",
+                "{0} livrés pour aujourd'hui. Je m'y remets demain matin.");
+        m("vu", null, "J'ai vu {0}, {1}.", "J'ai aperçu {0}, {1}. Prends garde, chef.", "Attention, chef : {0}, {1}.");
         m("stock_plein", "Le stock est plein",
                 "Le stock de {0} est plein ({1}/{2}). Je reprends dès qu'il baisse.",
                 "Il y a assez de {0} au dépôt ({1}/{2}) : j'attends qu'on en prenne pour m'y remettre.");
@@ -177,6 +181,8 @@ final class Messages {
         m("dit_salut", null, "Bonjour, chef.", "Salut, chef !", "Chef !");
         m("dit_hors_metier", null, "Je suis {0}, chef : {1}, ce n'est pas mon travail.", "{1} ? Je suis {0}, je ne saurais pas faire ça.");
         m("dit_missions", null, "Compris, chef : {0}.", "Entendu : {0}.", "Bien noté : {0}.");
+        m("dit_regle", null, "Entendu : {0}, {1}.", "Bien noté : {0}, {1}.", "C'est compris : {0}, {1}.");
+        m("dit_oublie_regles", null, "Entendu, j'oublie tes consignes.", "Bien, je ne tiens plus compte de ce que tu m'avais demandé.");
         m("dit_horaires", null, "Entendu : je travaillerai de {0} h à {1} h.", "D'accord, de {0} h à {1} h.");
         m("dit_toute_journee", null, "Entendu : je travaillerai toute la journée.", "D'accord, sans arrêt.");
         m("dit_jours", null, "Entendu : mes expéditions dureront {0} jours au plus.", "D'accord : {0} jours d'expédition au plus.");

@@ -121,6 +121,9 @@ public class Travailleur extends PathfinderMob {
         public final String id, mode;
         public final int nombre;
         public int livre;
+        /** « Tous les jours » : une fois livrée, elle attend le jour suivant (jourFait : le jour du jeu où elle l'a été, -1 sinon). */
+        public boolean quotidienne;
+        public long jourFait = -1;
 
         public Mission(String id, String mode, int nombre) {
             this.id = id;
@@ -136,12 +139,15 @@ public class Travailleur extends PathfinderMob {
             t.putString("mode", mode);
             t.putInt("nombre", nombre);
             t.putInt("livre", livre);
+            if (quotidienne) { t.putBoolean("quotidienne", true); t.putLong("jourFait", jourFait); }
             return t;
         }
 
         static Mission lire(CompoundTag t) {
             Mission m = new Mission(t.getString("id"), t.getString("mode"), t.getInt("nombre"));
             m.livre = t.getInt("livre");
+            m.quotidienne = t.getBoolean("quotidienne");
+            m.jourFait = t.contains("jourFait") ? t.getLong("jourFait") : -1;
             return m;
         }
     }
@@ -164,7 +170,7 @@ public class Travailleur extends PathfinderMob {
             Mission m = it.next();
             Metier.Commande c = Metier.catalogue(metier, m.id);
             if (c == null) { it.remove(); continue; }
-            if (m.quantite() && m.livre >= m.nombre) {
+            if (m.quantite() && !m.quotidienne && m.livre >= m.nombre) {
                 it.remove();
                 Mission suivante = missionActive();
                 Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom.toLowerCase(),
@@ -172,6 +178,118 @@ public class Travailleur extends PathfinderMob {
             }
         }
     }
+    // --- Ordres longs (cahier 8.3) -------------------------------------------------------------------
+
+    /** Ses règles (« s'il pleut, rentre », « quand tu as fini, va aider Raoul »…), 8 au plus, sauvegardées. */
+    public final List<OrdresLongs.Regle> regles = new ArrayList<>();
+    /** Vrai le temps d'appliquer une règle (ce n'est pas un ordre du chef). */
+    boolean parRegle;
+    /** Le dernier ordre du chef (temps du jeu, non sauvegardé) : une règle qui s'arrête ne défait pas un ordre donné depuis. */
+    long ordreChef;
+
+    /** Toutes les secondes : les missions quotidiennes (livrées : elles attendent demain), puis ses règles. */
+    void tickRegles() {
+        long jour = level().getDayTime() / 24000;
+        for (Mission m : missions) {
+            if (!m.quotidienne) continue;
+            if (m.livre >= m.nombre && m.jourFait < 0) {
+                m.jourFait = jour;
+                Metier.Commande c = Metier.catalogue(metier, m.id);
+                if (c != null) Courrier.ecrire(this, "mission_jour_finie", m.nombre + " " + c.nom.toLowerCase());
+            } else if (m.jourFait >= 0 && jour != m.jourFait) { m.livre = 0; m.jourFait = -1; }
+        }
+        if (regles.isEmpty() || chef == null || mode == Mode.CHOMEUR) return;
+        long maintenant = level().getGameTime();
+        int heure = (int) ((level().getDayTime() + 6000) % 24000 / 1000);
+        java.util.List<LivingEntity> autour = null;
+        for (OrdresLongs.Regle r : List.copyOf(regles)) {
+            LivingEntity vu = null;
+            boolean vrai;
+            if (r.quand.equals("FINI")) vrai = missionActive() == null;
+            else if (r.voit()) {
+                if (autour == null) autour = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16), x -> x != this && x.isAlive());
+                for (LivingEntity x : autour) if (vu(r.vu(), x) && hasLineOfSight(x)) { vu = x; break; }
+                vrai = vu != null;
+            } else vrai = OrdresLongs.vrai(r.quand, heure, level().isRaining(), level().isThundering());
+            if (vrai && !r.actif) {
+                if (!r.voit() || maintenant - r.dernierAvis >= 2400) declencher(r, vu, maintenant); // un avis toutes les 2 minutes au plus
+            } else if (!vrai && r.actif && r.mene) reprendre(r);
+            r.actif = vrai;
+        }
+    }
+
+    /** Ce qu'il guette : un zombie, un monstre, un étranger (un joueur qui n'est pas son chef)… */
+    boolean vu(String type, LivingEntity e) {
+        return switch (type) {
+            case "zombie" -> e instanceof net.minecraft.world.entity.monster.Zombie;
+            case "squelette" -> e instanceof net.minecraft.world.entity.monster.AbstractSkeleton;
+            case "creeper" -> e instanceof net.minecraft.world.entity.monster.Creeper;
+            case "araignee" -> e instanceof net.minecraft.world.entity.monster.Spider;
+            case "sorciere" -> e instanceof net.minecraft.world.entity.monster.Witch;
+            case "enderman" -> e instanceof net.minecraft.world.entity.monster.EnderMan;
+            case "pillard" -> e instanceof net.minecraft.world.entity.monster.AbstractIllager;
+            case "monstre" -> e instanceof net.minecraft.world.entity.monster.Enemy;
+            case "etranger" -> e instanceof Player p && !p.getUUID().equals(chef) && !p.isSpectator();
+            default -> false;
+        };
+    }
+
+    /** La règle se déclenche : il prévient son chef, ou fait ce qu'elle dit (comme un ordre reçu par lettre). */
+    void declencher(OrdresLongs.Regle r, LivingEntity vu, long maintenant) {
+        r.depuis = maintenant;
+        Ordres.Lecture x = Ordres.lire(r.suite, metier);
+        x.regles.clear();
+        x.annulerRegles = false;
+        if (r.voit()) {
+            r.dernierAvis = maintenant;
+            if (r.previens()) {
+                String nom = OrdresLongs.NOMS_VUS.getOrDefault(r.vu(), "un monstre");
+                String dit = Messages.corps(this, "vu", nom, Messages.ou(this));
+                dire(dit);
+                if (level() instanceof ServerLevel sl) Courrier.avis(sl.getServer(), chef, "vu", false, prenom + " a vu " + nom, prenom + " : « " + dit + " »");
+                x.faire.removeIf(f -> f.id().equals("message"));
+                if (x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty()) return;
+            }
+        }
+        if (x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty() && metier.equals(OrdresLongs.metierDuVerbe(r.suite)))
+            x.intentions.add(Ordres.Intention.TRAVAIL); // « le matin tu mines »
+        // « S'il pleut, rentre » : il reste à l'abri au poste tant que ça dure.
+        if ((r.quand.equals("PLUIE") || r.quand.equals("ORAGE")) && x.intentions.contains(Ordres.Intention.RENTRER) && !x.intentions.contains(Ordres.Intention.TRAVAIL))
+            x.intentions.add(Ordres.Intention.ATTENDRE);
+        String dit;
+        parRegle = true;
+        try { dit = appliquer(x, null); } finally { parRegle = false; }
+        r.mene = r.finit() && (x.intentions.contains(Ordres.Intention.RENTRER) || x.intentions.contains(Ordres.Intention.ATTENDRE));
+        if (dit != null && !dit.isBlank()) dire(dit);
+    }
+
+    /** La condition a cessé (la pluie, la nuit) : s'il attend à cause d'elle et que son chef n'a rien dit depuis, il reprend le travail. */
+    void reprendre(OrdresLongs.Regle r) {
+        r.mene = false;
+        if (ordreChef > r.depuis || mode == Mode.GREVE) return;
+        if (mode == Mode.ATTENDRE || memoire.getBoolean("rappel") || memoire.getBoolean("attendre_apres")) {
+            memoire.remove("rappel");
+            memoire.remove("attendre_apres");
+            mode = Mode.TRAVAIL;
+            finirAction("ordre");
+            majNom();
+            dire(OrdresLongs.fin(r) + " : je retourne au travail.");
+        }
+    }
+
+    /** Ce qu'il fera quand la règle se déclenchera, à la première personne (« je rentre au poste »). */
+    String quoi(OrdresLongs.Regle r) {
+        if (r.voit() && r.previens()) return "je te préviens";
+        Ordres.Lecture x = Ordres.lire(r.suite, metier);
+        List<String> q = new ArrayList<>();
+        if (x.intentions.contains(Ordres.Intention.RENTRER)) q.add((r.quand.equals("PLUIE") || r.quand.equals("ORAGE")) ? "je rentre au poste à l'abri" : "je rentre au poste");
+        else if (x.intentions.contains(Ordres.Intention.ATTENDRE)) q.add("j'attends");
+        if (!x.missions.isEmpty()) q.add("je m'occupe de " + String.join(" et ", x.missions.stream().map(m -> Metier.nomMission(metier, new Mission(m.id(), m.mode(), m.nombre()))).toList()));
+        else if (x.intentions.contains(Ordres.Intention.TRAVAIL) || x.intentions.isEmpty() && x.faire.isEmpty()) q.add("je travaille");
+        if (!x.faire.isEmpty()) q.add("je fais ce que tu m'as dit (« " + r.suite + " »)");
+        return String.join(", et ", q);
+    }
+
     /** Profondeur imposée (tests) ; Integer.MIN_VALUE = celle du catalogue. */
     public int profondeurForcee = Integer.MIN_VALUE;
     public int fatigue;
@@ -560,6 +678,7 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
+        if ((tickCount + getId()) % 20 == 7 && mode != Mode.CHOMEUR) tickRegles();
         if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
@@ -1252,6 +1371,9 @@ public class Travailleur extends PathfinderMob {
         }
         if (mode == Mode.CHOMEUR || chef == null) return "";
         boolean auTravail = false;
+        if (!parRegle && (!l.missions.isEmpty() || !l.faire.isEmpty() || l.intentions.stream().anyMatch(i -> java.util.EnumSet.of(Ordres.Intention.SUIVRE,
+                Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE, Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER).contains(i))))
+            ordreChef = maintenant;
         // Un ordre de base ou une mission met fin à ce qu'on lui avait demandé (« au travail » après « garde à vous »).
         if (!l.missions.isEmpty() || l.intentions.stream().anyMatch(i -> java.util.EnumSet.of(Ordres.Intention.SUIVRE, Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE, Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER).contains(i))) Consignes.annuler(this);
 
@@ -1260,12 +1382,25 @@ public class Travailleur extends PathfinderMob {
             if (!l.ajouter) missions.clear();
             for (Ordres.Mission m : l.missions) {
                 missions.removeIf(x -> x.id.equals(m.id()));
-                missions.add(new Mission(m.id(), m.mode(), m.nombre()));
+                Mission nm = new Mission(m.id(), m.mode(), m.nombre());
+                nm.quotidienne = l.quotidien && nm.quantite();
+                missions.add(nm);
             }
             auTravail = true;
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
         }
         l.horsMetier.forEach((met, id) -> r.add(Messages.corps(this, "dit_hors_metier", Metier.nom(metier).toLowerCase(), "« " + Metier.nomCommande(met, id) + " »")));
+
+        // Les ordres longs : « oublie tes ordres », puis les nouvelles règles (pas celles d'une règle qui se déclenche).
+        if (l.annulerRegles && !parRegle) {
+            regles.clear();
+            r.add(Messages.corps(this, "dit_oublie_regles"));
+        }
+        if (!parRegle) for (OrdresLongs.Regle x : l.regles) {
+            x.actif = x.quand.equals("FINI") && missionActive() == null; // « quand tu as fini » : seulement après une mission en cours
+            OrdresLongs.ajouter(regles, x);
+            r.add(Messages.corps(this, "dit_regle", OrdresLongs.quand(x), quoi(x)));
+        }
 
         // Horaires et expéditions.
         if (l.debut >= 0 || l.fin >= 0) {
@@ -1293,7 +1428,7 @@ public class Travailleur extends PathfinderMob {
                 r.add(Messages.corps(this, "dit_rentrer"));
             }
         } else if (l.intentions.contains(Ordres.Intention.ATTENDRE)) {
-            if (enFace == null) r.add("Pour que je t'attende quelque part, viens me le dire, chef.");
+            if (enFace == null && !parRegle) r.add("Pour que je t'attende quelque part, viens me le dire, chef.");
             else { mode = Mode.ATTENDRE; auTravail = false; finirAction("ordre"); r.add(Messages.corps(this, "dit_attendre")); }
         }
         if (l.intentions.contains(Ordres.Intention.SUIVRE)) {
@@ -1307,7 +1442,8 @@ public class Travailleur extends PathfinderMob {
 
         // Les actions du répertoire (gestes, postures, déplacements, tâches, paroles…).
         for (Ordres.Faire f : l.faire) {
-            String dit = Consignes.ordonner(this, f, enFace, l.texte, l.rang, l.total);
+            // Une règle qui se déclenche (« quand tu as fini, va aider Raoul ») : comme un ordre de son chef, s'il est dans le monde.
+            String dit = Consignes.ordonner(this, f, enFace != null || !parRegle ? enFace : chefJoueur(), l.texte, l.rang, l.total);
             if (!dit.isEmpty()) r.add(dit);
         }
 
@@ -1358,7 +1494,8 @@ public class Travailleur extends PathfinderMob {
     /** « Où en es-tu ? » */
     String rapport() {
         String ms = missions.isEmpty() ? "Je n'ai pas de mission." : "Mes missions : " + String.join(" ; ", missions.stream().map(m -> Metier.avancementTexte(this, m)).toList()) + ".";
-        return "Je suis " + Messages.ou(this) + ". " + activite() + " " + ms;
+        String rg = regles.isEmpty() ? "" : " Tes consignes : " + String.join(" ; ", regles.stream().map(x -> OrdresLongs.quand(x) + ", " + quoi(x)).toList()) + ".";
+        return "Je suis " + Messages.ou(this) + ". " + activite() + " " + ms + rg;
     }
 
     /** « Pourquoi tu ne travailles pas ? » */
@@ -1392,6 +1529,7 @@ public class Travailleur extends PathfinderMob {
         lit = null;
         bureau = null;
         missions.clear();
+        regles.clear();
         lettresADeposer.clear();
         lettresALire.clear();
         lettresAuCalme.clear();
@@ -1478,6 +1616,16 @@ public class Travailleur extends PathfinderMob {
         ListTag ms = new ListTag();
         for (Mission m : missions) ms.add(m.sauver());
         t.put("Missions", ms);
+        ListTag rg = new ListTag();
+        for (OrdresLongs.Regle r : regles) {
+            CompoundTag x = new CompoundTag();
+            x.putString("quand", r.quand);
+            x.putString("suite", r.suite);
+            x.putBoolean("actif", r.actif);
+            x.putBoolean("mene", r.mene);
+            rg.add(x);
+        }
+        t.put("Regles", rg);
         t.putInt("Fatigue", fatigue);
         t.putLong("ProchainePaie", prochainePaie);
         t.putLong("Arrivee", arrivee);
@@ -1527,6 +1675,14 @@ public class Travailleur extends PathfinderMob {
                     t.contains("CommandeNombre") ? t.getInt("CommandeNombre") : 64);
             m.livre = t.getInt("CommandeLivre");
             missions.add(m);
+        }
+        regles.clear();
+        for (Tag x : t.getList("Regles", Tag.TAG_COMPOUND)) {
+            CompoundTag c = (CompoundTag) x;
+            OrdresLongs.Regle r = new OrdresLongs.Regle(c.getString("quand"), c.getString("suite"));
+            r.actif = c.getBoolean("actif");
+            r.mene = c.getBoolean("mene");
+            OrdresLongs.ajouter(regles, r);
         }
         fatigue = t.getInt("Fatigue");
         prochainePaie = t.getLong("ProchainePaie");

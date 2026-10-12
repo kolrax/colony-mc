@@ -48,8 +48,12 @@ final class Ordres {
         /** La phrase elle-même (on y cherche qui ou quoi est visé), et la place de l'ouvrier dans le groupe à qui elle est dite. */
         String texte = "";
         int rang, total = 1;
+        /** Les ordres longs ({@link OrdresLongs}) : des règles à garder, « oublie tes ordres », des missions à refaire chaque jour. */
+        final List<OrdresLongs.Regle> regles = new ArrayList<>();
+        boolean annulerRegles, quotidien;
 
-        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty(); }
+        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
+                && regles.isEmpty() && !annulerRegles; }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -144,9 +148,30 @@ final class Ordres {
     static final Pattern JOURS = Pattern.compile(" (\\d{1,2}|" + String.join("|", List.of("un", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix",
             "onze", "douze", "quinze", "vingt", "trente")) + ") jours?");
 
+    static final Pattern A_LA_MINE = Pattern.compile("(?:^|[,.;:!?]|\\b(?:tous|toutes|allez|va|vas|file|filez|direction|retourne|retournez|descends|descendez|vite|hop|et|monde))\\s*(?:a la mine|au bois|a la foret|a la tache|au chantier)\\b"
+            .replace(" la ", " +la +").replace("au ", "au +"));
+
     /** Lit un message adressé à un ouvrier de ce métier. */
     static Lecture lire(String texte, String metier) {
         Lecture l = new Lecture();
+        // Les ordres longs d'abord : la conséquence d'une règle (« s'il pleut, rentre ») ne se fait pas tout de suite.
+        OrdresLongs.Lu lu = OrdresLongs.lire(texte);
+        for (OrdresLongs.Regle r : lu.regles) {
+            if (r.voit() && r.previens()) { l.regles.add(r); continue; }
+            Lecture x = lire(r.suite, metier);
+            String verbe = OrdresLongs.metierDuVerbe(r.suite);
+            boolean rien = x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty();
+            // L'emploi du temps : « l'après-midi tu coupes », dit à un mineur, n'est pas de son métier (il le dira).
+            if (r.periode() && verbe != null && !metier.isEmpty() && !verbe.equals(metier) && rien) {
+                l.horsMetier.putIfAbsent(verbe, switch (verbe) { case "mineur" -> "pierre"; case "bucheron" -> "tout"; default -> "garder"; });
+                continue;
+            }
+            if (rien && !x.horsMetier.isEmpty()) { x.horsMetier.forEach(l.horsMetier::putIfAbsent); continue; }
+            if (!rien || verbe != null) l.regles.add(r); // une suite qu'il ne comprend pas : ce n'était pas une règle
+        }
+        l.annulerRegles = lu.annuler;
+        l.quotidien = lu.quotidien;
+        if (!l.regles.isEmpty() || !l.horsMetier.isEmpty() || lu.annuler) texte = lu.reste;
         l.texte = texte;
         String n = normaliser(texte);
 
@@ -179,6 +204,9 @@ final class Ordres {
         if (dit(n, "au travail", "travaille", "travailler", "retourne travailler", "reprends le travail", "reprend le travail", "reprends ton travail",
                 "au boulot", "bosse", "va bosser", "retourne bosser", "remets toi au travail", "a l ouvrage", "va travailler", "reprends"))
             l.intentions.add(Intention.TRAVAIL);
+        // « Les mineurs, tous à la mine ! », « au bois ! » : en tête, après une pause ou un mot d'élan ; mais « je suis à la
+        // mine » ou « ils sont partis à la mine » ne sont pas des ordres.
+        if (A_LA_MINE.matcher(OrdresLongs.plat(texte)).find()) l.intentions.add(Intention.TRAVAIL);
         if (!l.intentions.contains(Intention.ARRETER_SUIVRE) && dit(n, "attends", "attend", "attendez", "reste ici", "reste la", "restez ici",
                 "ne bouge pas", "ne bouge plus", "bouge pas", "stop", "halte", "arrete toi", "arretez vous", "patiente", "pause", "reste"))
             l.intentions.add(Intention.ATTENDRE);
@@ -211,8 +239,8 @@ final class Ordres {
             l.intentions.add(Intention.MERCI);
         l.ajouter = dit(n, "aussi", "en plus", "ajoute", "egalement", "de plus", "apres ca", "apres cela", "ensuite aussi");
 
-        // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode.
-        lireMissions(sansChiffresDeTemps, metier, l);
+        // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode (« au bois » est un lieu, pas une mission).
+        lireMissions(sansChiffresDeTemps.replace(" au bois ", " "), metier, l);
         // Une mission comprise le remet au travail : « escorte-moi » ou « viens avec 10 fers » ne veulent pas dire « suis-moi ».
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);

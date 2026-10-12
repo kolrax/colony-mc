@@ -119,6 +119,7 @@ public abstract class Metier {
         Commande c = catalogue(metier, m.id);
         if (c == null) return m.id;
         if (c.objet == null) return c.nom;
+        if (m.quotidienne) return m.nombre + " " + c.nom.toLowerCase() + " chaque jour";
         return m.quantite() ? m.nombre + " " + c.nom.toLowerCase() : "un stock de " + m.nombre + " " + c.nom.toLowerCase();
     }
 
@@ -129,7 +130,7 @@ public abstract class Metier {
         if (c.objet == null) return c.nom;
         int a = avancement(t, m);
         String n = (a < 0 ? "?" : String.valueOf(a)) + "/" + m.nombre;
-        return c.nom + " : " + (m.quantite() ? n + " livrés" : n + " au dépôt") + (remplie(t, m) ? (m.quantite() ? " (fait)" : " (plein)") : "");
+        return c.nom + " : " + (m.quantite() ? n + " livrés" : n + " au dépôt") + (remplie(t, m) ? (m.quotidienne ? " (fait pour aujourd'hui)" : m.quantite() ? " (fait)" : " (plein)") : m.quotidienne ? " (aujourd'hui)" : "");
     }
 
     /** Toutes ses missions, en une ligne (pour le panneau web). */
