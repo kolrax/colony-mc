@@ -276,7 +276,7 @@ final class Mineur extends Metier {
                 Cerveau.attendre(t, 1);
                 return;
             }
-            Courrier.ecrire(t, "puits_fini");
+            t.dire(Messages.corps(t, "puits_fini")); // plus de lettre : elle revenait à chaque puits, sans rien demander au chef
             m.remove("puits");
             Cerveau.attendre(t, 2);
             return;

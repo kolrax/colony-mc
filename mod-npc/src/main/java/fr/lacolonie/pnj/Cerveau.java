@@ -176,7 +176,7 @@ final class Cerveau {
         // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {
             if ("depot_plein".equals(t.resultat)) {
-                ecrire(t, "depot", 900, "depot_plein");
+                ecrire(t, "depot", UN_JOUR, "depot_plein");
                 attendre(t, 30);
                 return;
             }
@@ -227,6 +227,9 @@ final class Cerveau {
     static void attendre(Travailleur t, double secondes) { lancer(t, new Actions.Attendre((int) (secondes * 20))); }
 
     static void rentrer(Travailleur t) { lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3)); }
+
+    /** Un jour du jeu, en secondes de {@link #temps} : le plus court intervalle entre deux lettres bavardes. */
+    static final int UN_JOUR = 1200;
 
     /** Une horloge en secondes qui ne fait qu'avancer. */
     static long temps(Travailleur t) { return t.level().getGameTime() / 20; }

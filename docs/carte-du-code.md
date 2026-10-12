@@ -36,7 +36,9 @@ rm -rf run/world && ./gradlew runGameTestServer  # 65 tests en jeu (36 TestsJeu,
   - fichiers : `IA` (appels), `ReponsesIA` (requêtes, schéma JSON, lecture des réponses), `ReglagesIA` (`ia.json`), `Adressage`, `Dialogue`, `Voix`.
   - tests : `IATest`, `AdressageTest`, `TestsIA` (faux Groq/Gemini).
 - **Messages du poste (lot 2)** :
-  - fichiers : `Courrier` (lettres, avis, corbeaux), `Messages` (textes), `Bureau` (le poste, données envoyées à l'écran), `Client.EcranPoste` (l'écran), `Reseau` (paquets `Poste`, `ActionBureau`).
+  - fichiers : `Courrier` (lettres, avis, corbeaux), `Boite` (regroupement, tri, purge, tout lu / archiver / tout effacer ; pur Java), `Messages` (textes, `IMPORTANTES`, `SEULES`), `Bureau` (le poste, données envoyées à l'écran, `Entite.action`), `Client.EcranPoste` (l'écran), `Reseau` (paquets `Poste`, `ActionBureau`).
+  - tests : `BoiteTest` (JUnit), `TestsMessages` (lot `messages`).
+  - règles : une lettre de routine (`type` non vide, pas `importante`) se fond dans la lettre non lue du même auteur et du même type (`nombre`, « ×N » dans l'objet envoyé à l'écran) ; les avis « ramene » se regroupent en gardant chaque texte ; notification seulement pour une nouvelle lettre. Écran : clés `lettres` (triées) et `archives` du paquet `Poste` ; actions `tout_lu`, `archiver`, `desarchiver`, `tout_effacer` (sur la boîte de celui qui agit, propriétaire du bureau). Canal réseau inchangé.
 - **Métiers** :
   - fichiers : `Metier` (base, catalogue, missions), `Mineur`, `Bucheron`, `Guerrier`, `Biomes`, `Actions`, `Cerveau`.
   - tests : `TestsJeu`.
@@ -91,7 +93,8 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 
 ## Poste, courrier, économie
 - **Bureau** (394) : le poste de travail, un par joueur (`Bloc`, `Entite` avec caisse et dépôt agrandi par les coffres voisins, `Menu`). Données de l'écran du chef. Liés : `Courrier`, `Client.EcranPoste`, `Reseau`.
-- **Courrier** (406) : `SavedData` du monde : lettres, postes de chaque joueur, effectif, vols de corbeau (15 blocs/s, comptés, pas simulés). `tick()` chaque seconde livre les corbeaux arrivés. `ecrire`, `avis`, `ecrireAuPnj`. Liés : `Messages`, `Corbeau`, `Bureau`.
+- **Courrier** (406) : `SavedData` du monde : lettres (`importante`, `archivee`, `nombre`, `type` depuis le lot 2), postes de chaque joueur, effectif, vols de corbeau (15 blocs/s, comptés, pas simulés). `tick()` chaque seconde livre les corbeaux arrivés. `ecrire`, `avis(s, chef, type, importante, objet, texte)`, `ecrireAuPnj`. `recevoir` range par `Boite.ranger`. Liés : `Messages`, `Corbeau`, `Bureau`, `Boite`.
+- **Boite** (~110) : règles pures de la boîte aux lettres du poste : regroupement de la routine, purge (lues, puis archivées, non lues en dernier), ordre de l'écran, tout lu, archiver, effacer les lues. Testé par `BoiteTest` et `TestsMessages`.
 - **Corbeau** (171) : l'entité visible au départ et à l'arrivée d'une lettre. Non sauvegardée.
 - **Messages** (243) : textes des lettres et bulles, plusieurs variantes par situation, ton selon le tempérament ; trous `{0}`, `{1}`.
 - **Monnaie** (74) : calcul pur des paiements en pièces Numismatics. Testé par `MonnaieTest`.
@@ -133,6 +136,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **TestsIA** (639, 16 tests) : IA contre un faux Groq et un faux Gemini (serveur local `avant`/`apres`). Outils : `equipe(h, chef, coin)` (3 ouvriers autour d'un faux chef), `etapes(...)` (attendre qu'ils soient visibles puis enchaîner), `attendre(h, ticks)`.
 - **TestsRepertoire** (~370, 18 tests) : actions du répertoire jouées sans IA, chacune dans son coin de monde plat.
 - **TestsMorts** (~590, 22 tests, lot `morts`) : « aucune mort due à un bug ». Chutes (falaise, deux à-pics, pilier), noyade (longue nage, galerie inondée, poche d'eau percée, mare), lave (filon sous la lave, devant un lac de lave, bûcheron près de la lave), faim, étouffement (filon sous du gravier ou du sable, escalier sous le gravier) réflexe de survie (`sortDuFeu`, `sortDuGravier`, `sortDeLaLave`, `feuSansEscaladerUnRebord`, `sortDuGravierDuBonCote` : il attend dans le danger, il doit en sortir) `fuitSiFrappeEnFeu` (en feu, eau derrière une clôture, frappé : il fuit), `escalierDansLeSable` (le mineur descend dans 7 blocs de sable) et `canalAuSoleilPasBouche` (il ne bouche pas un canal au ras du sol). `suivre(h, t)` relève à chaque tick la vie et l'air les plus bas, les dégâts subis et les actions jouées ; `finir` l'écrit dans le journal (« [morts] ») et vérifie.
+- **TestsMessages** (~230, 8 tests, lot `messages`) : courrier du poste : routine regroupée (×5), important jamais regroupé, avis « ramené » regroupés, ordre de l'écran, archiver / tout lu, tout effacer, un autre joueur sans pouvoir, purge, sauvegarde NBT (et lettre d'avant le lot 2). `poste(h, chef)` : un bureau dont le faux chef est propriétaire, le chef à côté.
 - Pièges : structure fermée par un plafond de barrières (sauf `skyAccess = true`) ; pas de `runAfterDelay` dans un déclencheur ; un PNJ juste apparu n'est visible qu'au tick suivant (`TestsIA.etapes`) ; `rm -rf run/world` avant de lancer.
 
 ## Ajouts du 11/10 soir (0.8.2)

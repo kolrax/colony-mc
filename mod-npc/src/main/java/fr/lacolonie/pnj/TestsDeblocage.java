@@ -278,7 +278,7 @@ public class TestsDeblocage {
         var boite = Courrier.de(h.getLevel().getServer()).boite(t.chef);
         int[] etape = {1};
         h.onEachTick(() -> {
-            long retours = boite.stream().filter(l -> l.texte.contains("ramené au poste")).count();
+            long retours = boite.stream().filter(l -> l.texte.contains("ramené au poste")).mapToLong(l -> l.nombre).sum(); // les avis se regroupent
             if (retours < etape[0]) return;
             if (etape[0] == 2) { // ramené deux fois : il attend ; son chef le remet au travail
                 if (t.mode != Travailleur.Mode.ATTENDRE) return;

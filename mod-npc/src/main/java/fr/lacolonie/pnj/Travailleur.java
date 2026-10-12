@@ -811,7 +811,7 @@ public class Travailleur extends PathfinderMob {
         t.resetFallDistance();
         t.forcerChunk();
         t.dire("Me voilà de retour au poste : j'étais coincé là-bas.");
-        Courrier.avis(ici.getServer(), chef, "Ouvrier ramené au poste", prenom + " était coincé en " + avant.toShortString() + " depuis "
+        Courrier.avis(ici.getServer(), chef, "ramene", false, "Ouvrier ramené au poste", prenom + " était coincé en " + avant.toShortString() + " depuis "
                 + minutes + (minutes > 1 ? " minutes" : " minute") + " : je l'ai ramené au poste.");
         Cerveau.journal("[" + prenom + "] coincé en " + avant.toShortString() + " depuis " + minutes + " min : ramené au poste en " + q.toShortString());
         if (t == this && coince.retours >= Coince.RETOURS_MAX) {
@@ -851,7 +851,7 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 100 == 0) equiperArmure();
         if (tickCount % 20 == 0) {
             if (bureau == null || chezLui(blockPosition())) {
-                if (expedition && sortieDepuis >= 0) { Courrier.ecrire(this, "retour_expedition"); expedition = false; }
+                if (expedition && sortieDepuis >= 0) { Cerveau.ecrire(this, "retour", Cerveau.UN_JOUR, "retour_expedition"); expedition = false; }
                 if (expedition && !(action instanceof Actions.Aller)) expedition = false; // décidée, mais il n'est pas parti
                 sortieDepuis = -1;
                 trace.clear();
@@ -970,7 +970,7 @@ public class Travailleur extends PathfinderMob {
         super.die(src);
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
-            Courrier.avis(sl.getServer(), chef, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
+            Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
                     + ") est mort en " + blockPosition().toShortString() + ", " + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
         }
     }

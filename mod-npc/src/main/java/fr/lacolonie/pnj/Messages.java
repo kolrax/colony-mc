@@ -19,6 +19,14 @@ final class Messages {
     static final Map<String, String> OBJETS = new HashMap<>();
     /** Les lettres qui ne peuvent pas attendre qu'il passe au poste : un corbeau part tout de suite. */
     static final java.util.Set<String> URGENTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place");
+    /**
+     * Les lettres importantes : en tête du courrier, signalées, jamais regroupées. Les autres sont de la routine : une
+     * lettre du même ouvrier et de la même situation, encore non lue, compte simplement une fois de plus (voir {@link Boite}).
+     */
+    static final java.util.Set<String> IMPORTANTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place", "ramene_attend",
+            "poste_detruit", "mission_finie");
+    /** Ni importantes ni regroupées : chacune répond à une lettre du chef. */
+    static final java.util.Set<String> SEULES = java.util.Set.of("nouvelles");
 
     static void m(String type, String objet, String... variantes) {
         CORPS.put(type, variantes);

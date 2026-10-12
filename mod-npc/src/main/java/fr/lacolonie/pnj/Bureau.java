@@ -270,12 +270,23 @@ public final class Bureau {
             });
             f.put("ouvriers", ouvriers);
 
-            ListTag lettres = new ListTag();
+            // Triées (importantes non lues, non lues, lues), avec le compteur dans l'objet : un ancien écran les montre
+            // aussi dans cet ordre. Les archives à part, sous une clé qu'un ancien écran ignore.
             List<Courrier.Lettre> boite = c.boite(p.getUUID());
-            for (int i = 0; i < Math.min(60, boite.size()); i++) lettres.add(boite.get(i).sauver());
-            f.put("lettres", lettres);
+            f.put("lettres", lettres(Boite.affichees(boite, false)));
+            f.put("archives", lettres(Boite.affichees(boite, true)));
             f.putLong("nonLues", c.nonLues(p.getUUID()));
             return f;
+        }
+
+        static ListTag lettres(List<Courrier.Lettre> ls) {
+            ListTag t = new ListTag();
+            for (int i = 0; i < Math.min(60, ls.size()); i++) {
+                CompoundTag x = ls.get(i).sauver();
+                x.putString("objet", Boite.objet(ls.get(i)));
+                t.add(x);
+            }
+            return t;
         }
 
         static CompoundTag ficheOuvrier(Travailleur t) {
@@ -328,14 +339,19 @@ public final class Bureau {
                     Travailleur.signaler(p, t.chezLui(t.blockPosition()) ? "Lettre posée au poste : " + t.prenom + " passera la prendre."
                             : "Un corbeau s'envole vers " + t.prenom + ".");
                 }
+                // Le courrier : seulement la boîte de celui qui agit (le propriétaire, vérifié plus haut).
                 case "lue" -> c.boite(p.getUUID()).stream().filter(l -> l.id == d.getLong("id")).forEach(l -> { l.lue = true; c.setDirty(); });
                 case "supprimer" -> { if (c.boite(p.getUUID()).removeIf(l -> l.id == d.getLong("id"))) c.setDirty(); }
+                case "tout_lu" -> { if (Boite.toutLu(c.boite(p.getUUID()))) c.setDirty(); }
+                case "archiver" -> { if (Boite.archiver(c.boite(p.getUUID()), d.getLong("id"), true)) c.setDirty(); }
+                case "desarchiver" -> { if (Boite.archiver(c.boite(p.getUUID()), d.getLong("id"), false)) c.setDirty(); }
+                case "tout_effacer" -> { if (Boite.effacerLues(c.boite(p.getUUID()))) c.setDirty(); }
                 case "retirer" -> {
                     try { c.retirer(p.getUUID(), UUID.fromString(d.getString("uuid"))); } catch (IllegalArgumentException ignore) { return; }
                 }
                 default -> { return; }
             }
-            PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
+            if (p.connection != null && p.connection.hasChannel(Reseau.Poste.TYPE)) PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
         }
 
         static Travailleur ouvrier(ServerPlayer p, String uuid) {

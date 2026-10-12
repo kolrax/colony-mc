@@ -482,12 +482,16 @@ public final class Client {
         static String ongletMemo = "ouvriers", choisiMemo = "";
         static long lettreMemo = -1;
         static int defilement;
+        /** On regarde les archives plutôt que le courrier. */
+        static boolean archivesMemo;
 
         final BlockPos pos;
         final CompoundTag f;
-        final List<CompoundTag> ouvriers = new ArrayList<>(), lettres = new ArrayList<>();
+        final List<CompoundTag> ouvriers = new ArrayList<>(), lettres = new ArrayList<>(), archives = new ArrayList<>();
         CompoundTag choisi;
         CompoundTag lue;
+        /** « Tout effacer » demande un second clic. */
+        boolean confirmer;
         // Réglages de l'ouvrier choisi
         int debut, fin, jours;
         EditBox mission, salaire;
@@ -503,8 +507,9 @@ public final class Client {
             this.f = infos;
             for (Tag x : infos.getList("ouvriers", Tag.TAG_COMPOUND)) ouvriers.add((CompoundTag) x);
             for (Tag x : infos.getList("lettres", Tag.TAG_COMPOUND)) lettres.add((CompoundTag) x);
+            for (Tag x : infos.getList("archives", Tag.TAG_COMPOUND)) archives.add((CompoundTag) x);
             choisi = ouvriers.stream().filter(o -> o.getString("uuid").equals(choisiMemo)).findFirst().orElse(ouvriers.isEmpty() ? null : ouvriers.get(0));
-            lue = lettres.stream().filter(l -> l.getLong("id") == lettreMemo).findFirst().orElse(null);
+            lue = liste().stream().filter(l -> l.getLong("id") == lettreMemo).findFirst().orElse(null);
             if (choisi != null) {
                 debut = choisi.getInt("debut");
                 fin = choisi.getInt("fin");
@@ -513,6 +518,16 @@ public final class Client {
         }
 
         void envoyer(String action, CompoundTag d) { PacketDistributor.sendToServer(new Reseau.ActionBureau(pos, action, d)); }
+
+        /** Les lettres de la liste : le courrier, ou les archives. */
+        List<CompoundTag> liste() { return archivesMemo ? archives : lettres; }
+
+        void surLettre(String action) {
+            CompoundTag d = new CompoundTag();
+            d.putLong("id", lue.getLong("id"));
+            lettreMemo = -1;
+            envoyer(action, d);
+        }
 
         void onglet(String o) { ongletMemo = o; ecrire = false; rebuildWidgets(); }
 
@@ -634,13 +649,16 @@ public final class Client {
                     bouton("Annuler", x0 + 248, y0 + 222, 80, b -> { ecrire = false; rebuildWidgets(); });
                 }
             }
-            int visibles = 9;
+            List<CompoundTag> lettres = liste();
+            int visibles = 8;
             defilement = Mth.clamp(defilement, 0, Math.max(0, lettres.size() - visibles));
             for (int k = 0; k < Math.min(visibles, lettres.size() - defilement); k++) {
                 CompoundTag l = lettres.get(defilement + k);
-                String t = (l.getBoolean("lue") ? "" : "● ") + l.getString("de") + " : " + l.getString("objet");
+                boolean importante = l.getBoolean("importante"), dejaLue = l.getBoolean("lue");
+                String t = (importante ? "! " : dejaLue ? "" : "● ") + l.getString("de") + " : " + l.getString("objet");
                 if (font.width(t) > 140) t = font.plainSubstrByWidth(t, 134) + "…";
-                Button b = addRenderableWidget(Button.builder(Component.literal(t).withStyle(s -> s.withColor(l.getBoolean("lue") ? GRIS : BLANC)), x -> {
+                int couleur = dejaLue ? GRIS : importante ? ORANGE : BLANC;
+                Button b = addRenderableWidget(Button.builder(Component.literal(t).withStyle(s -> s.withColor(couleur)), x -> {
                     lettreMemo = l.getLong("id");
                     lue = l;
                     ecrire = false;
@@ -653,23 +671,39 @@ public final class Client {
                 }).bounds(x0 + 8, y0 + 30 + k * 21, 150, 20).build());
                 b.active = lue == null || lue.getLong("id") != l.getLong("id") || ecrire;
             }
+            // Ranger le courrier : tout marquer lu, voir les archives, effacer les lettres lues (deux clics).
+            bouton("Tout lu", x0 + 8, y0 + 200, 72, b -> envoyer("tout_lu", new CompoundTag()))
+                    .active = !archivesMemo && lettres.stream().anyMatch(l -> !l.getBoolean("lue"));
+            bouton(archivesMemo ? "◂ Courrier" : "Archives", x0 + 82, y0 + 200, 76, b -> {
+                archivesMemo = !archivesMemo;
+                lettreMemo = -1;
+                lue = null;
+                defilement = 0;
+                ecrire = false;
+                rebuildWidgets();
+            }).setTooltip(Tooltip.create(Component.literal(archivesMemo ? "Revenir au courrier." : "Les lettres que tu as gardées de côté (" + archives.size() + ").")));
             bouton("▲", x0 + 8, y0 + 222, 20, b -> { defilement--; rebuildWidgets(); }).active = defilement > 0;
             bouton("▼", x0 + 30, y0 + 222, 20, b -> { defilement++; rebuildWidgets(); }).active = defilement + visibles < lettres.size();
+            Button effacer = bouton(confirmer ? "Sûr ?" : "Tout effacer", x0 + 52, y0 + 222, 106, b -> {
+                if (!confirmer) { confirmer = true; rebuildWidgets(); return; }
+                confirmer = false;
+                lettreMemo = -1;
+                envoyer("tout_effacer", new CompoundTag());
+            });
+            effacer.active = !archivesMemo && lettres.stream().anyMatch(l -> l.getBoolean("lue"));
+            effacer.setTooltip(Tooltip.create(Component.literal(confirmer ? "Clique encore pour effacer les lettres lues." : "Efface les lettres déjà lues. Les non lues et les archives restent.")));
             if (!ecrire) {
-                bouton("Écrire à…", x0 + 56, y0 + 222, 102, b -> { ecrire = true; rebuildWidgets(); }).active = !vivants().isEmpty();
+                bouton("Écrire", x0 + 164, y0 + 222, 60, b -> { ecrire = true; rebuildWidgets(); }).active = !vivants().isEmpty();
                 if (lue != null) {
-                    if (lue.hasUUID("deUuid")) bouton("Répondre", x0 + 164, y0 + 222, 80, b -> {
+                    if (lue.hasUUID("deUuid")) bouton("Répondre", x0 + 226, y0 + 222, 64, b -> {
                         List<CompoundTag> v = vivants();
                         for (int k = 0; k < v.size(); k++) if (v.get(k).getString("uuid").equals(lue.getUUID("deUuid").toString())) destinataire = k;
                         ecrire = true;
                         rebuildWidgets();
                     }).active = vivants().stream().anyMatch(o -> o.getString("uuid").equals(lue.getUUID("deUuid").toString()));
-                    bouton("Jeter", x0 + 248, y0 + 222, 70, b -> {
-                        CompoundTag d = new CompoundTag();
-                        d.putLong("id", lue.getLong("id"));
-                        lettreMemo = -1;
-                        envoyer("supprimer", d);
-                    });
+                    bouton(archivesMemo ? "Ressortir" : "Archiver", x0 + 292, y0 + 222, 64, b -> surLettre(archivesMemo ? "desarchiver" : "archiver"))
+                            .setTooltip(Tooltip.create(Component.literal(archivesMemo ? "La remettre dans le courrier." : "La garder de côté : « Tout effacer » n'y touche pas.")));
+                    bouton("Jeter", x0 + 358, y0 + 222, 52, b -> surLettre("supprimer"));
                 }
             }
         }
@@ -732,15 +766,17 @@ public final class Client {
         }
 
         void renderLettres(GuiGraphics g) {
-            if (lettres.isEmpty() && !ecrire) texte(g, "Aucune lettre pour l'instant.", x0 + 10, y0 + 34, GRIS);
+            if (liste().isEmpty() && !ecrire) texte(g, archivesMemo ? "Aucune lettre aux archives." : "Aucune lettre pour l'instant.", x0 + 10, y0 + 34, GRIS);
             if (ecrire) return;
             int x = x0 + 164, w = 248;
             if (lue == null) {
-                paragraphe(g, "Tes ouvriers t'écrivent ici : leurs besoins, leurs missions, leurs expéditions. Ceux qui sont près du poste apportent leur lettre à pied ; les autres envoient un corbeau.", x, y0 + 34, w, GRIS, 8);
+                if (archivesMemo) paragraphe(g, "Les archives : les lettres que tu as gardées de côté. « Tout effacer » n'y touche pas.", x, y0 + 34, w, GRIS, 8);
+                else paragraphe(g, "Tes ouvriers t'écrivent ici : leurs besoins, leurs missions, leurs expéditions. Les lettres marquées « ! » sont importantes. "
+                        + "Une même nouvelle qui revient ne fait pas une lettre de plus : elle compte une fois de plus (×2, ×3…).", x, y0 + 34, w, GRIS, 10);
                 return;
             }
-            texte(g, lue.getString("objet"), x, y0 + 30, OR);
-            texte(g, "De " + lue.getString("de") + " · " + lue.getString("date"), x, y0 + 42, GRIS);
+            texte(g, lue.getString("objet"), x, y0 + 30, lue.getBoolean("importante") ? ORANGE : OR);
+            texte(g, "De " + lue.getString("de") + " · " + lue.getString("date") + (lue.getInt("nombre") > 1 ? " (la dernière)" : ""), x, y0 + 42, GRIS);
             paragraphe(g, lue.getString("texte"), x, y0 + 58, w, BLANC, 16);
         }
     }

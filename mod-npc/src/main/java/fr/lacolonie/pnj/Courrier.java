@@ -42,12 +42,17 @@ final class Courrier extends SavedData {
     static final double VITESSE_CORBEAU = 15; // blocs par seconde
     static final int MAX_LETTRES = 200;
 
-    /** Une lettre. {@code pour} : le chef (courrier reçu au poste) ou un ouvrier. */
+    /**
+     * Une lettre. {@code pour} : le chef (courrier reçu au poste) ou un ouvrier. {@code type} : sa situation
+     * (« torches », « faim »…), pour regrouper les lettres de routine ; vide, elle ne se regroupe jamais (voir
+     * {@link Boite}). {@code nombre} : combien de lettres semblables elle rassemble.
+     */
     static final class Lettre {
         long id;
-        String de = "", objet = "", texte = "", date = "";
+        String de = "", objet = "", texte = "", date = "", type = "";
         UUID deUuid, pour;
-        boolean lue, duChef;
+        boolean lue, duChef, importante, archivee;
+        int nombre = 1;
 
         CompoundTag sauver() {
             CompoundTag t = new CompoundTag();
@@ -60,6 +65,10 @@ final class Courrier extends SavedData {
             if (pour != null) t.putUUID("pour", pour);
             t.putBoolean("lue", lue);
             t.putBoolean("duChef", duChef);
+            t.putString("type", type);
+            t.putBoolean("importante", importante);
+            t.putBoolean("archivee", archivee);
+            t.putInt("nombre", nombre);
             return t;
         }
 
@@ -74,6 +83,10 @@ final class Courrier extends SavedData {
             l.pour = t.hasUUID("pour") ? t.getUUID("pour") : null;
             l.lue = t.getBoolean("lue");
             l.duChef = t.getBoolean("duChef");
+            l.type = t.getString("type"); // absents des anciennes sauvegardes : valeurs par défaut
+            l.importante = t.getBoolean("importante");
+            l.archivee = t.getBoolean("archivee");
+            l.nombre = t.contains("nombre") ? Math.max(1, t.getInt("nombre")) : 1;
             return l;
         }
     }
@@ -257,25 +270,32 @@ final class Courrier extends SavedData {
 
     List<Lettre> boite(UUID chef) { return boites.computeIfAbsent(chef, k -> new ArrayList<>()); }
 
-    long nonLues(UUID chef) { return boite(chef).stream().filter(l -> !l.lue).count(); }
+    long nonLues(UUID chef) { return boite(chef).stream().filter(l -> !l.lue && !l.archivee).count(); }
 
-    /** Une lettre arrive au poste du chef : on la range, et le chef (s'il est là) l'apprend d'un mot discret, sans le chat. */
+    /**
+     * Une lettre arrive au poste du chef : on la range (une lettre de routine se fond dans sa semblable encore non lue,
+     * voir {@link Boite#ranger}), et le chef (s'il est là) l'apprend d'un mot discret, sans le chat : seulement pour
+     * une nouvelle lettre, pas quand une lettre déjà là compte une fois de plus.
+     */
     void recevoir(MinecraftServer s, UUID chef, Lettre l) {
-        List<Lettre> b = boite(chef);
-        b.add(0, l);
-        while (b.size() > MAX_LETTRES) b.remove(b.size() - 1);
+        boolean nouvelle = Boite.ranger(boite(chef), l, MAX_LETTRES);
         setDirty();
         ServerPlayer p = s.getPlayerList().getPlayer(chef);
-        if (p != null) {
+        if (p != null && nouvelle) {
             p.displayClientMessage(Component.literal("✉ Une lettre de " + l.de + " t'attend au poste : « " + l.objet + " »").withStyle(ChatFormatting.GOLD), true);
             p.playNotifySound(SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8f, 1.1f);
         }
     }
 
-    /** Un avis du poste lui-même (un décès, par exemple). */
-    static void avis(MinecraftServer s, UUID chef, String objet, String texte) {
+    /**
+     * Un avis du poste lui-même. Les avis non lus du même {@code type} se regroupent (« ramene ») ; un avis important
+     * (un décès) ne se regroupe jamais.
+     */
+    static void avis(MinecraftServer s, UUID chef, String type, boolean importante, String objet, String texte) {
         Courrier c = de(s);
         Lettre l = c.nouvelle("Le poste", null, chef, objet, texte, s.overworld());
+        l.type = type;
+        l.importante = importante;
         c.recevoir(s, chef, l);
     }
 
@@ -286,16 +306,21 @@ final class Courrier extends SavedData {
      * de vie, il apporte la lettre au poste à pied ; plus loin, ou si c'est urgent, un corbeau la porte.
      */
     static void ecrire(Travailleur t, String type, Object... vals) {
-        ecrireTexte(t, Messages.objet(type), Messages.corps(t, type, vals), Messages.URGENTES.contains(type));
+        envoyer(t, Messages.SEULES.contains(type) ? "" : type, Messages.IMPORTANTES.contains(type), Messages.objet(type),
+                Messages.corps(t, type, vals), Messages.URGENTES.contains(type));
     }
 
-    /** Pareil, avec son propre texte (une réponse écrite par l'IA, par exemple). */
-    static void ecrireTexte(Travailleur t, String objet, String corps, boolean urgent) {
+    /** Pareil, avec son propre texte (une réponse écrite par l'IA, par exemple) : une lettre seule, jamais regroupée. */
+    static void ecrireTexte(Travailleur t, String objet, String corps, boolean urgent) { envoyer(t, "", false, objet, corps, urgent); }
+
+    private static void envoyer(Travailleur t, String type, boolean importante, String objet, String corps, boolean urgent) {
         if (t.chef == null || !(t.level() instanceof ServerLevel sl)) return;
         ServerPlayer chef = t.chefJoueur();
         if (chef != null && chef.level() == t.level() && chef.distanceTo(t) < 12 && t.hasLineOfSight(chef)) { t.dire(corps); return; }
         Courrier c = de(sl.getServer());
         Lettre l = c.nouvelle(t.prenom, t.getUUID(), t.chef, objet, Messages.lettre(t, corps), t.level());
+        l.type = type;
+        l.importante = importante;
         c.expedier(t, l, urgent);
     }
 
