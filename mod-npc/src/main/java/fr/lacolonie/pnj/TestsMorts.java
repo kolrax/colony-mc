@@ -374,4 +374,63 @@ public class TestsMorts {
         Suivi s = suivre(h, t);
         h.runAtTickTime(h.getTick() + 1100, () -> finir(h, "creuseSousDuGravier", t, s, 0.5, ETOUFFE));
     }
+
+    // --- 6. Réflexe de survie (tout métier) ---------------------------------------------------------------
+
+    /**
+     * Il attend, debout dans un feu (sur de la netherrack, qui ne s'éteint pas) : il ne reste pas à brûler, il en sort
+     * aussitôt. Sans le réflexe, l'attente le gardait dans les flammes jusqu'à tomber à terre.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true, batch = "morts")
+    public static void sortDuFeu(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        h.setBlock(12, 1, 12, Blocks.NETHERRACK);
+        h.setBlock(12, 2, 12, Blocks.FIRE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Attendre(400));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertFalse(rel(h, t.blockPosition()).equals(new BlockPos(12, 2, 12)), "il doit être sorti du feu (" + s.texte() + ")");
+            finir(h, "sortDuFeu", t, s, 0.25);
+        });
+    }
+
+    /**
+     * Il attend, enseveli de la tête aux pieds dans du gravier tombé sur lui : il s'en dégage (par un côté libre) au lieu
+     * d'étouffer. Sans le réflexe, l'attente le laissait étouffer jusqu'à tomber à terre.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true, batch = "morts")
+    public static void sortDuGravier(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 2, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(4, 2, 4));
+        debutant(t);
+        h.setBlock(12, 2, 12, Blocks.GRAVEL);
+        h.setBlock(12, 3, 12, Blocks.GRAVEL);
+        Cerveau.lancer(t, new Actions.Attendre(400));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertFalse(t.isInWall(), "il doit s'être dégagé (" + s.texte() + ")");
+            finir(h, "sortDuGravier", t, s, 0.5);
+        });
+    }
+
+    /**
+     * Il attend dans un trou de lave d'un bloc, une mare d'eau à 3 pas : il en sort, puis va éteindre ses flammes dans
+     * l'eau (sinon le feu de la lave, 15 secondes, l'achevait).
+     */
+    @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true, batch = "morts")
+    public static void sortDeLaLave(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        h.setBlock(12, 1, 12, Blocks.LAVA);
+        for (int z = 11; z <= 13; z++) h.setBlock(15, 1, z, Blocks.WATER);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 1, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Attendre(500));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 400, () -> {
+            h.assertFalse(t.isInLava() || t.isOnFire(), "il doit être sorti de la lave et éteint (" + s.texte() + ")");
+            finir(h, "sortDeLaLave", t, s, 0);
+        });
+    }
 }

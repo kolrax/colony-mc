@@ -10,6 +10,7 @@ import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -81,6 +82,36 @@ final class Monde {
     static String liquide(Level l, BlockPos p) {
         var f = l.getBlockState(p).getFluidState();
         return f.isEmpty() ? null : f.is(FluidTags.LAVA) ? "lave" : f.is(FluidTags.WATER) ? "eau" : "autre";
+    }
+
+    /** Un bloc qui tombe dès qu'on lui retire son appui : gravier, sable, poudre de béton… */
+    static boolean tombe(Level l, BlockPos p) { return l.isLoaded(p) && l.getBlockState(p).getBlock() instanceof FallingBlock; }
+
+    /**
+     * Le liquide à boucher avant de casser q : de la lave contre lui (elle coulerait dans la galerie), ou, si {@code eau},
+     * de l'eau juste au-dessus (elle lui tomberait dessus). Null s'il n'y en a pas.
+     */
+    static BlockPos coulee(Level l, BlockPos q, boolean eau) {
+        for (Direction d : Direction.values()) {
+            BlockPos n = q.relative(d);
+            if (!l.isLoaded(n)) continue;
+            var f = l.getFluidState(n);
+            if (f.is(FluidTags.LAVA) || eau && d == Direction.UP && f.is(FluidTags.WATER)) return n;
+        }
+        return null;
+    }
+
+    /** De l'eau où se jeter (les pieds dedans, la tête à l'air), à r blocs au plus : pour éteindre le feu. Null s'il n'y en a pas. */
+    static BlockPos eauProche(Level l, BlockPos c, int r) {
+        BlockPos meilleur = null;
+        double dMin = Double.MAX_VALUE;
+        for (BlockPos q : BlockPos.betweenClosed(c.offset(-r, -2, -r), c.offset(r, 1, r))) {
+            double d = q.distSqr(c);
+            if (d >= dMin || !l.isLoaded(q) || !l.getFluidState(q).is(FluidTags.WATER) || !traversable(l, q.above())) continue;
+            meilleur = q.immutable();
+            dMin = d;
+        }
+        return meilleur;
     }
 
     /** Le bloc touche de l'air (on le voit). */

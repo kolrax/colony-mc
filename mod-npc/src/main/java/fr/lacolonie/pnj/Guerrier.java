@@ -29,7 +29,7 @@ final class Guerrier extends Metier {
     /** Un ennemi surgit pendant qu'il fait autre chose (il marche, il est au bureau…) : il lâche tout. */
     @Override
     void vigilance(Travailleur t) {
-        if (t.action instanceof Actions.Attaquer || t.action instanceof Actions.Reposer && t.isSleeping()) return;
+        if (t.action instanceof Actions.Attaquer || t.action instanceof Actions.Echapper || t.action instanceof Actions.Reposer && t.isSleeping()) return;
         List<LivingEntity> c = Monde.cibles(t, 10);
         if (!c.isEmpty()) { armer(t); Cerveau.lancer(t, new Actions.Attaquer(c.get(0))); }
     }

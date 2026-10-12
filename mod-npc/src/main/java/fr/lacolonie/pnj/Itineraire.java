@@ -581,11 +581,15 @@ final class Itineraire {
         }
     }
 
-    /** On peut le casser sans risque : pas de construction, pas d'incassable, et pas de lave à côté (l'eau, il la traverse à la nage). */
+    /**
+     * On peut le casser sans risque : pas de construction, pas d'incassable, pas de lave à côté (l'eau, il la traverse à la
+     * nage), et pas de gravier ni de sable au-dessus (il tomberait sur lui, ou dans la marche où il va monter).
+     */
     static boolean creusable(Level l, BlockPos b) {
         if (!l.isLoaded(b)) return false;
         BlockState st = l.getBlockState(b);
         if (Monde.traversable(l, b)) return true;
+        if (Monde.tombe(l, b.above())) return false;
         if (st.getDestroySpeed(l, b) < 0 || Monde.construit(l, b) || !st.getFluidState().isEmpty()) return false;
         for (Direction d : Direction.values()) if (l.getBlockState(b.relative(d)).getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) return false;
         return true;

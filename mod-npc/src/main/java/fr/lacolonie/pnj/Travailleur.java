@@ -560,6 +560,7 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
+        if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {
@@ -632,6 +633,32 @@ public class Travailleur extends PathfinderMob {
         if (enDanger()) return;
         ecouteTicks = Math.max(ecouteTicks, ticks);
         ecoutePar = qui;
+    }
+
+    /** Dans la lave ou le feu, enseveli dans un bloc (il étouffe), ou à bout d'air sous l'eau. */
+    boolean enPeril() {
+        if (isInLava() || isInWall()) return true;
+        if (level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE)) return true;
+        return getAirSupply() < 100 && isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
+    }
+
+    /**
+     * Le réflexe de survie, pour tout métier, tous les 5 ticks (quelques lectures de blocs) : en péril ({@link #enPeril}),
+     * ou en feu avec de l'eau tout près, il lâche ce qu'il fait (une lettre, une écoute, son action) pour {@link Actions.Echapper}.
+     * À bout d'air sans place au sec à 4 blocs, il continue sa route : la lâcher sous l'eau le noierait.
+     */
+    void survivre() {
+        if (action instanceof Actions.Echapper e && (!e.eau || !enPeril()) || isPassenger()) return; // en route vers l'eau, il tombe dans la lave : il en sort d'abord
+        boolean peril = enPeril(), feu = !peril && isOnFire() && !isInWaterRainOrBubble();
+        if (!peril && !feu) return;
+        Actions.Echapper e = new Actions.Echapper(feu);
+        boolean refuge = e.choisir(this);
+        if (!refuge && (feu || !isInLava() && !isInWall() && !level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE))) return;
+        if (lettreEnMain != null) { garder(lettreEnMain, true); lettreEnMain = null; }
+        ecouteTicks = 0;
+        ecoutePar = null;
+        if (action != null) finirAction("danger");
+        Cerveau.lancer(this, e);
     }
 
     /** À terre, tout juste frappé, au combat ou en fuite (même pour une consigne du chef). */
