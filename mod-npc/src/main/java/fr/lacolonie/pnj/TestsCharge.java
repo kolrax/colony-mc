@@ -128,4 +128,46 @@ public class TestsCharge {
             h.succeed();
         });
     }
+
+    /**
+     * Des étapes sobres (0.8.5) : 8 ouvriers, chacun enfermé dans un enclos sans sortie, envoyés à 40 blocs dehors.
+     * Aucune étape n'est atteignable. Sur 300 ticks, tous ensemble ne font jamais plus de 6 recherches d'étape sur un
+     * tick du serveur (budget de 4, plus un seul passe-droit de 2), et peu de recherches ratées : un point raté n'est pas
+     * recherché de nouveau avant 30 s, et le délai entre deux choix ratés double. Avant la 0.8.5 : 16 par tick et plus,
+     * et chacun refaisait ses 18 recherches ratées toutes les 20 ticks.
+     */
+    @GameTest(template = "vide", timeoutTicks = 450, skyAccess = true, batch = "etapes")
+    public static void etapesSobres(GameTestHelper h) {
+        var l = h.getLevel();
+        List<Travailleur> pnj = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            BlockPos prison = TestsJeu.sol(h, i * 16, 90300);
+            for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++)
+                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) for (int y = 0; y < 3; y++) l.setBlockAndUpdate(prison.offset(dx, y, dz), Blocks.STONE_BRICKS.defaultBlockState());
+            Travailleur e = TestsJeu.employe(h, "mineur", TestsJeu.sol(h, i * 16, 90280), Vec3.atBottomCenterOf(prison), ItemStack.EMPTY);
+            e.mode = Travailleur.Mode.ATTENDRE; // le cerveau ne lui donne rien d'autre à faire
+            e.forcerChunk();
+            Cerveau.lancer(e, new Actions.Aller(Vec3.atBottomCenterOf(TestsJeu.sol(h, i * 16, 90340)), 1));
+            pnj.add(e);
+        }
+        // La fenêtre de Charge garde 100 ticks : on la relève tous les 100 ticks pour couvrir les 300.
+        int[] bilan = new int[3]; // recherches d'étape, dont ratées, et le plus sur un tick
+        for (int k = 1; k <= 3; k++) {
+            boolean dernier = k == 3;
+            h.runAtTickTime(h.getTick() + 100 * k, () -> {
+                Charge c = Charge.ICI;
+                bilan[0] += c.recherches(Charge.Origine.ETAPE);
+                bilan[1] += c.echecs(Charge.Origine.ETAPE);
+                bilan[2] = Math.max(bilan[2], c.recherchesPireTick(Charge.Origine.ETAPE));
+                if (!dernier) return;
+                String texte = bilan[0] + " recherches d'étape en 300 ticks, dont " + bilan[1] + " ratées, au plus " + bilan[2] + " sur un tick ; "
+                        + pnj.stream().map(t -> t.prenom + " " + (t.action == null ? "-" : t.action.nom) + " (" + t.diag + ")").toList();
+                ColoniePnj.LOG.info("[étapes sobres] {}", texte);
+                for (Travailleur t : pnj) t.discard();
+                h.assertTrue(bilan[2] <= 6, "trop de recherches d'étape sur un même tick (" + texte + ")");
+                h.assertTrue(bilan[1] <= 600, "trop de recherches d'étape ratées (" + texte + ")");
+                h.succeed();
+            });
+        }
+    }
 }

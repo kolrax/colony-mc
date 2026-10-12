@@ -62,6 +62,9 @@ final class Charge {
     /** Recherches de chemin du tick : [origine] puis [ORIGINES.length + origine] pour les échecs. */
     private final int[] recherchesCourant = new int[ORIGINES.length * 2];
     private final int[][] recherchesFenetre;
+    /** Temps des recherches du tick (ns), rangé comme {@link #recherchesCourant} : réussies, puis échouées. */
+    private final long[] tempsCourant = new long[ORIGINES.length * 2];
+    private final long[][] tempsFenetre;
     /** Le plus de recherches faites par un même PNJ sur un tick. */
     private int pirePnjCourant;
     private final int[] pirePnjFenetre;
@@ -74,17 +77,19 @@ final class Charge {
         fenetre = new long[taille][PARTIES.length];
         pnjFenetre = new int[taille];
         recherchesFenetre = new int[taille][ORIGINES.length * 2];
+        tempsFenetre = new long[taille][ORIGINES.length * 2];
         pirePnjFenetre = new int[taille];
         jetonsFenetre = new int[taille][2];
     }
 
     /**
      * Une recherche de chemin vient d'être faite. {@code echec} : pas de chemin, ou un chemin qui n'atteint pas la cible.
-     * {@code duPnjCeTick} : combien ce PNJ en a déjà fait sur ce tick (celle-ci comprise).
+     * {@code duPnjCeTick} : combien ce PNJ en a déjà fait sur ce tick (celle-ci comprise). {@code nanos} : ce qu'elle a duré.
      */
-    void recherche(Origine o, boolean echec, int duPnjCeTick) {
+    void recherche(Origine o, boolean echec, int duPnjCeTick, long nanos) {
         recherchesCourant[o.ordinal()]++;
         if (echec) recherchesCourant[ORIGINES.length + o.ordinal()]++;
+        tempsCourant[(echec ? ORIGINES.length : 0) + o.ordinal()] += nanos;
         pirePnjCourant = Math.max(pirePnjCourant, duPnjCeTick);
     }
 
@@ -120,6 +125,8 @@ final class Charge {
         pnjCourant = 0;
         System.arraycopy(recherchesCourant, 0, recherchesFenetre[curseur], 0, recherchesCourant.length);
         java.util.Arrays.fill(recherchesCourant, 0);
+        System.arraycopy(tempsCourant, 0, tempsFenetre[curseur], 0, tempsCourant.length);
+        java.util.Arrays.fill(tempsCourant, 0);
         pirePnjFenetre[curseur] = pirePnjCourant;
         pirePnjCourant = 0;
         System.arraycopy(jetonsCourant, 0, jetonsFenetre[curseur], 0, 2);
@@ -166,6 +173,14 @@ final class Charge {
         return s;
     }
 
+    /** Durée moyenne (ms) d'une recherche de cette origine sur la fenêtre, échouée ou réussie ; 0 s'il n'y en a pas eu. */
+    double tempsMoyenMs(Origine o, boolean echec) {
+        long ns = 0;
+        for (int i = 0; i < remplis; i++) ns += tempsFenetre[i][(echec ? ORIGINES.length : 0) + o.ordinal()];
+        int n = echec ? echecs(o) : recherches(o) - echecs(o);
+        return n == 0 ? 0 : ns / (double) n / 1e6;
+    }
+
     /** Jetons d'étape refusés faute de budget sur la fenêtre. */
     int jetonsRefuses() { return jetons(0); }
 
@@ -179,11 +194,14 @@ final class Charge {
     }
 
     /** Le plus de recherches (tous les PNJ) sur un même tick de la fenêtre. */
-    int recherchesPireTick() {
+    int recherchesPireTick() { return recherchesPireTick(null); }
+
+    /** Le plus de recherches de cette origine (null = toutes), tous les PNJ, sur un même tick de la fenêtre. */
+    int recherchesPireTick(Origine o) {
         int m = 0;
         for (int i = 0; i < remplis; i++) {
             int s = 0;
-            for (Origine x : ORIGINES) s += recherchesFenetre[i][x.ordinal()];
+            for (Origine x : ORIGINES) if (o == null || o == x) s += recherchesFenetre[i][x.ordinal()];
             m = Math.max(m, s);
         }
         return m;
@@ -212,6 +230,11 @@ final class Charge {
         StringBuilder b = new StringBuilder(" - par origine :");
         for (Origine o : ORIGINES) b.append(String.format(Locale.ROOT, " %s %d (%d échecs) ·", o.nom, recherches(o), echecs(o)));
         l.add(b.substring(0, b.length() - 2));
+        b = new StringBuilder(" - durée moyenne d'une recherche, réussie / échouée :");
+        for (Origine o : ORIGINES)
+            if (recherches(o) > 0) b.append(String.format(Locale.ROOT, " %s %.2f / %.2f ms ·", o.nom, tempsMoyenMs(o, false), tempsMoyenMs(o, true)));
+        l.add(b.substring(0, b.length() - 2));
+        l.add(String.format(Locale.ROOT, " - au plus %d recherches d'étape sur un tick (tous les PNJ)", recherchesPireTick(Origine.ETAPE)));
         l.add(String.format(Locale.ROOT, " - jetons d'étape refusés faute de budget : %d (un par PNJ et par tick d'attente), accordés hors budget après 10 ticks d'attente : %d",
                 jetonsRefuses(), jetonsForces()));
         return l;

@@ -64,11 +64,11 @@ class ChargeTest {
     @Test
     void recherchesDeChemin() {
         Charge c = new Charge(3);
-        c.recherche(Charge.Origine.ETAPE, true, 1);
-        c.recherche(Charge.Origine.ETAPE, true, 2);
-        c.recherche(Charge.Origine.DIRECT, false, 1);
+        c.recherche(Charge.Origine.ETAPE, true, 1, 0);
+        c.recherche(Charge.Origine.ETAPE, true, 2, 0);
+        c.recherche(Charge.Origine.DIRECT, false, 1, 0);
         c.clore();
-        c.recherche(Charge.Origine.SORTIE, false, 1);
+        c.recherche(Charge.Origine.SORTIE, false, 1, 0);
         c.clore();
         assertEquals(4, c.recherches(null));
         assertEquals(2, c.recherches(Charge.Origine.ETAPE));
@@ -80,6 +80,26 @@ class ChargeTest {
         for (int i = 0; i < 3; i++) c.clore();
         assertEquals(0, c.recherches(null), "les vieux ticks sortent de la fenêtre");
         assertEquals(0, c.recherchesPirePnj());
+    }
+
+    @Test
+    void dureeDesRecherches() {
+        Charge c = new Charge(3);
+        c.recherche(Charge.Origine.ETAPE, true, 1, (long) (8 * MS));
+        c.recherche(Charge.Origine.ETAPE, true, 2, (long) (10 * MS));
+        c.recherche(Charge.Origine.ETAPE, false, 3, (long) (1 * MS));
+        c.clore();
+        c.recherche(Charge.Origine.ETAPE, false, 1, (long) (3 * MS));
+        c.recherche(Charge.Origine.DIRECT, false, 1, (long) (2 * MS));
+        c.clore();
+        assertEquals(9, c.tempsMoyenMs(Charge.Origine.ETAPE, true), 1e-9, "moyenne des étapes ratées");
+        assertEquals(2, c.tempsMoyenMs(Charge.Origine.ETAPE, false), 1e-9, "moyenne des étapes réussies");
+        assertEquals(0, c.tempsMoyenMs(Charge.Origine.DIRECT, true), 1e-9, "aucun échec : 0");
+        assertEquals(3, c.recherchesPireTick(Charge.Origine.ETAPE));
+        assertEquals(3, c.recherchesPireTick());
+        assertTrue(c.lignes(0, 0).stream().anyMatch(l -> l.contains("étapes 2.00 / 9.00 ms")), "/pnj charge doit les montrer");
+        for (int i = 0; i < 3; i++) c.clore();
+        assertEquals(0, c.tempsMoyenMs(Charge.Origine.ETAPE, true), "les vieux ticks sortent de la fenêtre");
     }
 
     @Test

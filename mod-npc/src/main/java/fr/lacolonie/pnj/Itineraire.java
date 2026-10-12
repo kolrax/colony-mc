@@ -61,7 +61,12 @@ final class Itineraire {
     private Path cheminSortie;
 
     // Le choix d'une étape, étalé sur plusieurs ticks (au plus PAR_TICK recherches par tick, BUDGET pour tout le serveur).
-    static final int PAR_TICK = 4, BUDGET = 16, DELAI_APRES_ECHEC = 20, RECALCUL = 10;
+    // Une recherche ratée explore tout ce qu'elle peut (jusqu'à 1024 nœuds, ~9 ms) : c'est elle qu'il faut rendre rare et courte.
+    static final int PAR_TICK = 2, BUDGET = 4, DELAI_APRES_ECHEC = 20, DELAI_MAX = 200, RECALCUL = 10;
+    /** Portée des recherches vers les points d'étape (à 28 blocs au plus) : 36 au lieu de 64, et la moitié des nœuds. */
+    static final float PORTEE_ETAPE = 36, NOEUDS_ETAPE = 0.5f;
+    /** Un point d'étape raté depuis une cellule n'est pas recherché de nouveau avant 30 s. */
+    static final int OUBLI = 600;
     /** Recherches « étape » qui restent à tous les PNJ pour ce tick du serveur (remis à BUDGET à chaque tick). */
     static int budget = BUDGET;
     /** -1 : pas de choix en cours ; 0 : le but ; 1 : la trace ; 2 : la sortie de sous terre ; 3 : les étapes autour. */
@@ -70,6 +75,8 @@ final class Itineraire {
     private final List<BlockPos> rates = new ArrayList<>();
     /** Après un choix où rien n'était atteignable, il ne recommence pas avant ce moment (temps du monde). */
     private long prochainChoix;
+    /** Choix entièrement ratés de suite : le délai avant le suivant double à chaque fois (remis à zéro par une étape réussie). */
+    private int choixRates;
 
     /** Un PNJ qui attend un jeton depuis tant de ticks en reçoit un, même si le budget du tick est épuisé. */
     static final int ATTENTE_MAX = 10;
@@ -77,25 +84,36 @@ final class Itineraire {
     private long attendDepuis = -1;
     /** Le tick où il est passé hors budget : ce tick-là, il a droit à toutes ses recherches (PAR_TICK). */
     private long passeDroit = -1;
+    /** Un seul passe-droit par tick du serveur, au PNJ qui attend depuis le plus longtemps ({@link #plusAncienne}). */
+    static boolean passeDroitDonne;
+    /** Le début de la plus vieille attente vue au tick précédent, et celle qu'on relève pendant ce tick. */
+    static long plusAncienne = Long.MAX_VALUE, plusAncienneVue = Long.MAX_VALUE;
 
-    /** Un nouveau tick du serveur : le budget des étapes repart. */
-    static void nouveauTick() { budget = BUDGET; }
+    /** Un nouveau tick du serveur : le budget des étapes repart, et le passe-droit ira au plus ancien des affamés. */
+    static void nouveauTick() {
+        budget = BUDGET;
+        passeDroitDonne = false;
+        plusAncienne = plusAncienneVue;
+        plusAncienneVue = Long.MAX_VALUE;
+    }
 
     /**
      * Une recherche « étape » de plus est permise maintenant (au plus PAR_TICK pour lui, BUDGET pour tous) ; elle est
      * décomptée. Les PNJ passent toujours dans le même ordre : sans recours, ceux de la fin de la liste n'auraient jamais
      * de jeton et finiraient faussement « coincés ». Après {@link #ATTENTE_MAX} ticks d'attente, il passe hors budget
-     * (pour ce tick, jusqu'à PAR_TICK recherches).
+     * (pour ce tick, jusqu'à PAR_TICK recherches) ; mais un seul par tick du serveur, celui qui attend depuis le plus
+     * longtemps : les autres affamés attendent les ticks suivants, chacun son tour.
      * Les refus et les passe-droits sont comptés dans {@link Charge}.
      */
     private boolean jeton(long maintenant) {
         if (recherchesCeTick >= PAR_TICK) return false;
         if (budget <= 0) {
             if (attendDepuis < 0) attendDepuis = maintenant;
-            boolean force = maintenant - attendDepuis >= ATTENTE_MAX || passeDroit == maintenant;
+            boolean force = passeDroit == maintenant
+                    || !passeDroitDonne && maintenant - attendDepuis >= ATTENTE_MAX && attendDepuis <= plusAncienne;
             Charge.ICI.jeton(force);
-            if (!force) return false;
-            passeDroit = maintenant;
+            if (!force) { plusAncienneVue = Math.min(plusAncienneVue, attendDepuis); return false; }
+            if (passeDroit != maintenant) { passeDroitDonne = true; passeDroit = maintenant; }
         }
         attendDepuis = -1;
         recherchesCeTick++;
@@ -193,7 +211,8 @@ final class Itineraire {
      * Choisit la prochaine étape : le but, la trace, la sortie de sous terre, puis des points autour, dans cet ordre.
      * Le choix s'étale sur plusieurs ticks (au plus {@link #PAR_TICK} recherches par tick, {@link #BUDGET} pour tout le
      * serveur) : en attendant, il ne part sur aucun chemin partiel. Si rien n'est atteignable, il attend
-     * {@link #DELAI_APRES_ECHEC} ticks avant de recommencer (un échec coûte cher : la recherche explore tout).
+     * {@link #DELAI_APRES_ECHEC} ticks avant de recommencer, puis le double à chaque nouvel échec ({@link #DELAI_MAX} au
+     * plus), sauf s'il creuse (un échec coûte cher : la recherche explore tout).
      */
     void choisirEtape(Travailleur t, double v) {
         Level l = t.level();
@@ -212,7 +231,7 @@ final class Itineraire {
         if (phase == 0) {
             if (dh <= 48 && Math.abs(but.y - p.y) <= 24) {
                 if (!jeton(maintenant)) return;
-                if (aller(t, BlockPos.containing(but), but, v)) { finChoix(); return; }
+                if (aller(t, BlockPos.containing(but), but, v, false)) { finChoix(); return; }
             }
             phase = 1;
             curseur = Math.max(0, t.trace.size() - 4);
@@ -224,7 +243,7 @@ final class Itineraire {
                 for (; curseur < t.trace.size(); curseur++) {
                     if (!jeton(maintenant)) return;
                     BlockPos q = t.trace.get(curseur);
-                    if (aller(t, q, Vec3.atBottomCenterOf(q), v)) {
+                    if (aller(t, q, Vec3.atBottomCenterOf(q), v, false)) {
                         while (t.trace.size() > curseur) t.trace.remove(t.trace.size() - 1);
                         finChoix();
                         return;
@@ -253,12 +272,16 @@ final class Itineraire {
         }
 
         // d) Une étape sûre : des points à 28 et 14 blocs, vers le but d'abord, puis de plus en plus de côté.
+        // Un point raté depuis cette cellule il y a moins de 30 s n'est pas recherché de nouveau (le terrain n'a pas changé).
         for (; curseur < candidats.size() && essais < 18; curseur++) {
             BlockPos c = candidats.get(curseur);
             if (rates.stream().anyMatch(r -> r.distSqr(c) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
+            long cle = cellule(ici) * 31 + cellule(c);
+            Long oubli = t.etapesRatees.get(cle);
+            if (oubli != null && oubli > maintenant) continue;
             if (!jeton(maintenant)) return;
             essais++;
-            if (aller(t, c, Vec3.atBottomCenterOf(c), v)) {
+            if (aller(t, c, Vec3.atBottomCenterOf(c), v, true)) {
                 finChoix();
                 // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
                 // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
@@ -267,13 +290,16 @@ final class Itineraire {
                 return;
             }
             rates.add(c);
+            if (t.etapesRatees.size() > 256) t.etapesRatees.values().removeIf(f -> f <= maintenant);
+            t.etapesRatees.put(cle, maintenant + OUBLI);
         }
         finChoix();
-        prochainChoix = maintenant + DELAI_APRES_ECHEC;
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
+        // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
         commencerCreusage(t);
-        if (aCreuser != null) return;
+        if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; return; }
+        prochainChoix = maintenant + Math.min(DELAI_MAX, DELAI_APRES_ECHEC << Math.min(4, choixRates++));
         if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
         etape = null;
     }
@@ -320,16 +346,35 @@ final class Itineraire {
     }
 
     /** Une recherche de chemin, comptée sous son origine pour le banc de charge ({@link Charge}). */
-    static Path chercher(Travailleur t, BlockPos q, int precision, Charge.Origine o) {
+    static Path chercher(Travailleur t, BlockPos q, int precision, Charge.Origine o) { return chercher(t, q, precision, o, 0, 1); }
+
+    /**
+     * Une recherche de chemin bornée : {@code portee} (0 : la portée normale, 64) limite la distance parcourue et la région
+     * chargée, {@code noeuds} la part des 1024 nœuds qu'elle peut explorer. Les deux sont remis comme avant après l'appel.
+     */
+    static Path chercher(Travailleur t, BlockPos q, int precision, Charge.Origine o, float portee, float noeuds) {
+        var nav = t.getNavigation();
         t.origineChemin = o;
-        try { return t.getNavigation().createPath(q, precision); }
-        finally { t.origineChemin = Charge.Origine.AUTRE; }
+        t.porteeChemin = portee;
+        nav.setMaxVisitedNodesMultiplier(noeuds);
+        try { return nav.createPath(q, precision); }
+        finally {
+            t.origineChemin = Charge.Origine.AUTRE;
+            t.porteeChemin = 0;
+            nav.resetMaxVisitedNodesMultiplier();
+        }
     }
 
-    /** Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. */
-    private boolean aller(Travailleur t, BlockPos q, Vec3 cible, double v) {
-        Path c = chercher(t, q, 1, Charge.Origine.ETAPE);
+    /**
+     * Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. Vers un point d'étape ({@code court}) : portée de
+     * {@link #PORTEE_ETAPE} blocs et moitié des nœuds (le point est à 28 blocs au plus ; un chemin plus long n'est pas une
+     * bonne étape). Vers le but ou la trace : la distance plus 16 blocs de détour (36 au moins, 64 au plus), tous les nœuds.
+     */
+    private boolean aller(Travailleur t, BlockPos q, Vec3 cible, double v, boolean court) {
+        float portee = court ? PORTEE_ETAPE : Math.max(PORTEE_ETAPE, (float) Math.sqrt(t.blockPosition().distSqr(q)) + 16);
+        Path c = chercher(t, q, 1, Charge.Origine.ETAPE, portee, court ? NOEUDS_ETAPE : 1);
         if (c == null || !c.canReach()) return false;
+        choixRates = 0;
         chemin = c;
         etape = cible;
         t.diag = "étape " + q.getX() + " " + q.getZ() + " (but à " + (int) horizontale(t.position(), but) + " blocs)";

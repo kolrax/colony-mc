@@ -496,18 +496,22 @@ public class Travailleur extends PathfinderMob {
 
     /** D'où vient la prochaine recherche de chemin (posé par {@link Itineraire} le temps de l'appel), pour le banc de charge. */
     Charge.Origine origineChemin = Charge.Origine.AUTRE;
+    /** Portée réduite de la prochaine recherche (posée par {@link Itineraire} le temps de l'appel) ; 0 : la portée normale (FOLLOW_RANGE). */
+    float porteeChemin;
+    /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
+    final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
     private int recherchesCeTick;
     private long tickRecherches = -1;
 
     /** Une vraie recherche de chemin vient d'être faite (pas un chemin déjà en cours rendu tel quel). */
-    private void compterRecherche(Path c) {
+    private void compterRecherche(Path c, long nanos) {
         long tick = level().getGameTime();
         if (tick != tickRecherches) { tickRecherches = tick; recherchesCeTick = 0; }
         recherches++;
         recherchesPireTick = Math.max(recherchesPireTick, ++recherchesCeTick);
-        Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick);
+        Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick, nanos);
     }
 
     /** Le calcul des chemins, mesuré et compté pour le banc de charge (tous les appels passent par ici). */
@@ -520,8 +524,9 @@ public class Travailleur extends PathfinderMob {
                 return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
                     @Override
                     public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
+                        long debut = System.nanoTime();
                         Path c = super.findPath(r, m, cibles, portee, precision, profondeur);
-                        if (!level().isClientSide) compterRecherche(c);
+                        if (!level().isClientSide) compterRecherche(c, System.nanoTime() - debut);
                         return c;
                     }
                 };
@@ -530,6 +535,7 @@ public class Travailleur extends PathfinderMob {
             @Override
             protected Path createPath(java.util.Set<BlockPos> cibles, int decalage, boolean auDessus, int precision, float portee) {
                 if (level.isClientSide) return super.createPath(cibles, decalage, auDessus, precision, portee);
+                if (porteeChemin > 0) portee = Math.min(portee, porteeChemin); // une recherche courte (étapes) : région et exploration réduites
                 long debut = System.nanoTime();
                 try { return super.createPath(cibles, decalage, auDessus, precision, portee); }
                 finally { Charge.ICI.mesurer(Charge.Partie.CHEMINS, debut); }
