@@ -1,11 +1,12 @@
 # Reprise : où on en est
 
-Mise à jour : 12/10/2026, 12 h 20 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 12/10/2026, 14 h 30 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.8.8** dans le dépôt et sur le serveur (livrée le 12/10 à 12 h 13 UTC, relue deux fois, 74 JUnit et 124 tests en jeu verts). 0.8.8 = plus de morts bêtes : le mineur bouche la lave (et l'eau sous terre), ne se met jamais sous du gravier/sable qui tombe ; réflexe de survie pour tous (`Travailleur.survivre`/`enPeril`, `Actions.Echapper`, `Actions.Boucher`, `Monde.ligneSure`/`refuge`/`eboulement`/`coulee`/`tombe`/`eauProche`), tests `TestsMorts` (lot `morts`, 24 tests).
+- Mod `colonie_pnj` : **0.8.9** dans le dépôt et sur le serveur (livrée le 12/10 à 14 h 08 UTC, 85 JUnit et 136 en jeu verts). 0.8.9 = messages du poste (lot 2) : classe `Boite` (regroupement « ×N », lettre unique pour la colonie : dépôt plein, paie en retard, sans poste, poste détruit ; purge des lues d'abord ; tri importantes en tête), boutons Tout lu / Archiver / Archives / Tout effacer (`Bureau.Entite.action` : `tout_lu`, `archiver`, `desarchiver`, `tout_effacer`), tests `BoiteTest` et `TestsMessages`. Écran jamais vu en vrai.
+- Avant : 0.8.8 (livrée le 12/10 à 12 h 13 UTC, relue deux fois, 74 JUnit et 124 tests en jeu verts). 0.8.8 = plus de morts bêtes : le mineur bouche la lave (et l'eau sous terre), ne se met jamais sous du gravier/sable qui tombe ; réflexe de survie pour tous (`Travailleur.survivre`/`enPeril`, `Actions.Echapper`, `Actions.Boucher`, `Monde.ligneSure`/`refuge`/`eboulement`/`coulee`/`tombe`/`eauProche`), tests `TestsMorts` (lot `morts`, 24 tests).
 - Avant : 0.8.7 = déblocage : pilier et pont de blocs (repris ensuite), retour au poste après 5 min coincé avec un avis au chef (classe `Coince`, `Travailleur.surveillerCoince`/`ramenerAuPoste`, `Itineraire.commencerAPoser`, tests `TestsDeblocage`).
-- Modpack : **0.4.8**. Il n'a pas à changer tant que le client ne change pas (canal réseau toujours `"6"`).
+- Modpack : **0.4.9** (12/10, non obligatoire : nouveaux boutons du poste ; ModernFix 5.27.26 côté joueurs, 5.27.24 sur le serveur). Il n'a pas à changer tant que le client ne change pas (canal réseau toujours `"6"`).
 - Serveur : MintServers, monde de test **`test-andesite`** (jetable). Le vrai monde sera créé à l'ouverture (vendredi 16/10 au soir ou samedi).
 
 ## Ce que le mod sait faire aujourd'hui
@@ -24,16 +25,17 @@ Mise à jour : 12/10/2026, 12 h 20 UTC. Une page à lire en début de session, a
 - **0.8.5 (12/10, 1 h 50 UTC, mêmes conditions) : objectif atteint.** Part du mod 2,6 / 3,9 / 5,1 / 4,0 ms en moyenne à 91 s / 130 s / 3 min / 5 min (pire 7 / 19 / 20 / 25 ms) ; chemins 0,5 à 2,8 ms ; 40 à 93 recherches par fenêtre (contre 882) ; **20 TPS**. Une recherche d'étape ratée coûte maintenant 1,5-5 ms ; un **chemin direct raté ~9-12 ms**, un échec « autres »/« montée » ~10-12 ms : ce sont eux qui font les pires ticks. Le tick serveur monte au fil du banc (8 → 13 ms) alors que le mod reste vers 4 ms : hors mod, non analysé. Réserve honnête : moins de recherches veut aussi dire des PNJ coincés qui attendent plus longtemps (délai jusqu'à 10 s) ; non mesuré en jeu réel.
 
 ## Prochaine étape (exacte)
-1. **`TestsCharge.etapeEnMontee` instable** (délai de 200 ticks dépassé, vu 2 fois : chez le développeur le 12/10 vers 5 h, chez moi le 12/10 à 11 h 40) : trouver la cause (ordre des tests ? génération du terrain ? délai croissant des étapes ?) et la corriger. Ne pas simplement allonger le délai.
-2. Lot 2 : messages du poste (moins, regroupés, lu/archivé/tout effacer).
+1. Lot 3 : **journal des phrases non comprises** (côté serveur), relu pour enrichir le répertoire ; puis ordres longs.
+2. Restes du lot 2 : regarder l'écran du poste en vrai (banc photo, il faut un écran) ; message de la barre d'action non testé.
 3. Restes du lot « morts » : `Boucher` ne se déplace pas ; à 1 PV par la faim le moindre coup le met à terre ; non testés : coup pendant une fuite grave, messager/lettre en péril, « à bout d'air », montée de 2 blocs refusée par `ligneSure`.
-3. Restes faibles : compteur « coincé » et nombre de retours non sauvegardés ; allers-retours de plus de 8 blocs jamais comptés coincés ; changement de dimension non testé ; sortie par des lianes (15 s) ; chemin direct raté ~10 ms (pires ticks) ; cahier 14.8 au lot 5.
-4. Instabilité vue une fois : `TestsIA.iaDevineLeDestinataire`. `TestsDeblocage.quiMarcheNEstJamaisRamene` (attente du terrain comptée coincé) corrigé en 0.8.8.
+4. Restes faibles : compteur « coincé » et retours non sauvegardés ; allers-retours de plus de 8 blocs jamais comptés coincés ; changement de dimension non testé ; sortie par des lianes (15 s) ; chemin direct raté ~10 ms ; `Biomes.chercher` sur les fils de génération ; bancs `charge*` sensibles à des chunks lents (même cause que `etapeEnMontee`, corrigé le 12/10).
+5. Instabilités vues une fois : `TestsIA.iaDevineLeDestinataire` ; sous charge (deux serveurs de test en même temps) `panneauRepond`, `rentreATempsSansLit`. **Ne jamais lancer deux `runGameTestServer` en même temps** (port 25776 partagé, machine à 4 cœurs).
 
 ## Envoi du jar depuis le cloud
 `panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.
 
 ## Fichiers à ouvrir
+- Messages du poste : `Boite`, `Courrier`, `Bureau` (`fiche`, `action`), `Client.EcranPoste`, `Messages` (`IMPORTANTES`, `SEULES`), `TestsMessages`, `BoiteTest`.
 - Morts bêtes : `Travailleur.survivre`, `Actions` (`Casser`, `Echapper`, `Boucher`), `Mineur.creuserCase`, `Monde`, `TestsMorts.java`.
 - Chemins : `Itineraire.java` (`avancer`, `choisirEtape`, `jeton`, `suivreSortie`), `Travailleur.java` (`createNavigation`, compteurs, `blocsInaccessibles`, `coupVu`), `Charge.java`, `TestsCharge.java`.
 - Combat : `Cerveau.java` (`decider`), `Monde.java` (`cibles`), `Guerrier.java`.
