@@ -1,5 +1,287 @@
 [
  {
+  "version": "0.4.9",
+  "date": "2026-10-12",
+  "notes": "Mod des PNJ 0.8.9 : la boîte aux lettres du poste est plus claire. Les lettres identiques sont regroupées (« ×3 »), un dépôt plein ou une paie en retard ne fait plus qu'une seule lettre pour toute la colonie, avec les noms, et les lettres importantes passent en tête, en orange avec un « ! ». Nouveaux boutons : « Tout lu », « Archiver » / « Ressortir », « Archives » et « Tout effacer » (deux clics, garde les lettres non lues et archivées). Moins de lettres bavardes : puits fini = simple bulle, retour d'expédition et dépôt plein au plus une fois par jour. Pas obligatoire : l'ancienne version se connecte toujours, mais sans les nouveaux boutons.",
+  "minecraft": "1.21.1",
+  "neoforge": "21.1.255",
+  "mods": [
+   {
+    "file": "Chunky-NeoForge-1.4.23.jar",
+    "url": "https://cdn.modrinth.com/data/fALzjamp/versions/LuFhm4eU/Chunky-NeoForge-1.4.23.jar",
+    "sha1": "ab0c74743a653020fe2dfc4986b43e893947f3e9",
+    "sha512": "2db769dd723f243a21e1881e7c9f825e9c193da6f2bed454b70cb6fa9e51c57f63fdcf017c0657bbd26f7bba30815413e27c74d3c7be0783390a96ee9baa4bf7",
+    "size": 340572,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "cloth-config-15.0.140-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/izKINKFg/cloth-config-15.0.140-neoforge.jar",
+    "sha1": "c3e5733ba4503b102589a026000fd5ce0212f6f2",
+    "sha512": "aaf9b010955b8cd294e5a92f069985b18729fd5e2cf22d351f1dff9680f15488688803ec41e77e941cbde130ceb535014ca4c868047d80ab69c2d508e216654d",
+    "size": 1163890,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "CraterLib-Neoforge-1.21-3.1.3.jar",
+    "url": "https://cdn.modrinth.com/data/Nn8Wasaq/versions/e962b1SA/CraterLib-Neoforge-1.21-3.1.3.jar",
+    "sha1": "b20a3a2ada7f1dbd6e6413e6a287a12f1b53ff66",
+    "sha512": "d257b2da4654da9c54399a9521f352c415c6221904faa99098e79c0650f133a710a4515a987e7417d7e54c88533e967cbe48589250688155ec1445eaf17a9336",
+    "size": 1485401,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "create-1.21.1-6.0.10.jar",
+    "url": "https://cdn.modrinth.com/data/LNytGWDc/versions/UjX6dr61/create-1.21.1-6.0.10.jar",
+    "sha1": "0e97e49837bed766e6f28a4c95b04885d6acc353",
+    "sha512": "11cc8fc049d2f67f6548c7abfada6b82a3adb5c7ca410a742de04bbca76e03862c518721b88d806f6e6d768a4d68531fdb903a85859b25d1484d550cc7bafd4b",
+    "size": 19123767,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "CreateDragonsPlus-1.11.9.jar",
+    "url": "https://cdn.modrinth.com/data/dzb1a5WV/versions/b0u9vk8C/CreateDragonsPlus-1.11.9.jar",
+    "sha1": "67ffcb61207a7dbc6b1e70f0473ddbacb19d44eb",
+    "sha512": "43299e49afe7132515aa8ad545b8c9566d90f12cfb39456b3d6e1ebc8e03f05787fbc420e7cc9495df4d6b585d13e7a4c4c7385f82f20aeb829c9491b725af53",
+    "size": 1085674,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "create-enchantment-industry-2.4.2.jar",
+    "url": "https://cdn.modrinth.com/data/JWGBpFUP/versions/qUpvzZ83/create-enchantment-industry-2.4.2.jar",
+    "sha1": "4ad5c181c805a548e15892500b07c0c0f88f0734",
+    "sha512": "16bd3dcd82159d6793bd9cc24dcb911b90e838c67f781581afea8c6af21f53106ac54de7f2dffe1a8576cf8908e68658538a1c76d3c44691109a24bc60460436",
+    "size": 1283517,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "create_ltab-4.1.0.jar",
+    "url": "https://cdn.modrinth.com/data/fUa6OtBG/versions/dQQazoxf/create_ltab-4.1.0.jar",
+    "sha1": "c5725961ba8585693a84cf06becb21e8f4b13f11",
+    "sha512": "05d2c6df728fbfe8d3522ffd88be492be5dfa6f06c806dc1f6d948afff39455f695add1edbb38fee2ed7f197668d13b5d72909bc60192c40d94df3ff0048d138",
+    "size": 2894822,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "railways-0.2.1+neoforge-mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/L3Jv0QZI/versions/HOPX5oro/railways-0.2.1%2Bneoforge-mc1.21.1.jar",
+    "sha1": "f2d71927ef504b597a6c992d02118c1e6ee6e369",
+    "sha512": "dac8efb7c8b4b525114c2548bd2a8254d3b1e9e44664ba84b0f4e8467e1584029f8a219dd1ddf4389ab0a94e525183ee7753d33babdf319926cd63d2fc9cdffd",
+    "size": 12118736,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "create-stuff-additions1.21.1_v2.1.4b.jar",
+    "url": "https://cdn.modrinth.com/data/aq9qUUQG/versions/gMWQ1LX9/create-stuff-additions1.21.1_v2.1.4b.jar",
+    "sha1": "246915560f74b92e0186c22da26be8995380c443",
+    "sha512": "75cd8a0a2f898b3599cb267c26c02691e53f8ca8f6c6c4f16d1a82db8fea4494988f163559cc3a8b471683d5b52353ba065def8846a7ff2073bddf42e68b5e7d",
+    "size": 1347181,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "cristellib-neoforge-1.21.1-3.1.7.jar",
+    "url": "https://cdn.modrinth.com/data/cl223EMc/versions/Sduz0AWP/cristellib-neoforge-1.21.1-3.1.7.jar",
+    "sha1": "d250804b7ecea365bc736ec36ec6fc3f933917f1",
+    "sha512": "6d21ceb6cd91e63a248251ded3812208ed5ea4f36abb11e8c6e16aa119a95b0e714f59ec7689ae1b1248c9831e5e3e63aa681aa7dfa9b220d93741118466cbd6",
+    "size": 583525,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "ferritecore-7.0.3-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/x7kQWVju/ferritecore-7.0.3-neoforge.jar",
+    "sha1": "9563692efb708b6b568df27a01ec52f6311928ef",
+    "sha512": "19af89a2075bb10a63884fa853ebf84b02c79dc3242430ecdad056fd764fdcde367a7303276b329df01b0736e2ef264c5d80c7dc92c6aebd244f556a230bb417",
+    "size": 121559,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "gravestone-neoforge-1.21.1-1.0.40.jar",
+    "url": "https://cdn.modrinth.com/data/RYtXKJPr/versions/rMGJpjaM/gravestone-neoforge-1.21.1-1.0.40.jar",
+    "sha1": "97230b93af34ac6581ed36b0cc98f6b16b06c04e",
+    "sha512": "5504a222d4085da1898ff6d4dff8eb1821fd14a8caaaac785554277147f984262e63925a411db3f1a34e9c7874652fb6737176bea4c0c3f01243f5eae4ea6eaa",
+    "size": 322082,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "iris-neoforge-1.8.12+mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/t3ruzodq/iris-neoforge-1.8.12%2Bmc1.21.1.jar",
+    "sha1": "a3e6355915c7d3b2bc392724795113e51d289378",
+    "sha512": "57b8026a3c3c433cf6123d63dc6ce7e11f6d480a72926370db1fc7f2b06059bc16a753ecd7e7af659c19e90b592103196b0e89585ce4f0744a4ca433f59bcf1a",
+    "size": 2438548,
+    "client": "required",
+    "server": "unsupported"
+   },
+   {
+    "file": "jei-1.21.1-neoforge-19.51.0.418.jar",
+    "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/ufHUqt9b/jei-1.21.1-neoforge-19.51.0.418.jar",
+    "sha1": "d19552586f686eae4ef5e7199f31604d1d3cfca7",
+    "sha512": "a6ca3abc3080f6f41033a77cb955fefe9f9ebae795c33546227f555b2d31e8d4131cc705126d14a3fbabb31097fc0e876dc0bbeb05ad907a1b796f21e57527bf",
+    "size": 1804792,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "kotlinforforge-5.12.0-all.jar",
+    "url": "https://cdn.modrinth.com/data/ordsPcFz/versions/uhJhCT7X/kotlinforforge-5.12.0-all.jar",
+    "sha1": "d10d062caf1aad9aec82d7852f2fee1781735c1f",
+    "sha512": "b8c3942f4d33179edf3f102f3d870b99dd436f8b8236dbbd31aa51b888162c692cfd88927295f24dc8b4375232f4c6c17360c5d6c4823f93cbcd7cf4bdc8bd14",
+    "size": 7279264,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "lithostitched-1.8.0-neoforge-21.1.jar",
+    "url": "https://cdn.modrinth.com/data/XaDC71GB/versions/sPmtDq1X/lithostitched-1.8.0-neoforge-21.1.jar",
+    "sha1": "fe7eb612a0fa0c41ce94d914162d298755bb25a3",
+    "sha512": "0ba80383039270dec739f669fe936d091b87027c350972c88085729333e73e723e0c722d734c0592c08ffd6c5a21c16099f2e54cf7cfbcbd3061f5e3cbd62cb4",
+    "size": 979783,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "modernfix-neoforge-5.27.26+mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/nmDcB62a/versions/7Jy58lnT/modernfix-neoforge-5.27.26%2Bmc1.21.1.jar",
+    "sha1": "69d468b70e53f6a014c778a81116a41a38fbab33",
+    "sha512": "37c76fc5bc72cfc1035260f891ffeb45b4f32651d2e490c5eb8c60f3b5686deca3145b32d4fab9036f65f5277b0ac66f4ad3855e52cd973e791b09e9c4b896d8",
+    "size": 611043,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "CreateNumismatics-1.1.0+neoforge-mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/Jdbbtt0i/versions/kVi3TESX/CreateNumismatics-1.1.0%2Bneoforge-mc1.21.1.jar",
+    "sha1": "5cd4817442ae95f886a2d31534166e9883ed4bb2",
+    "sha512": "f0a8e65828f4a36c500f4f2cad99dce89f4899711f3ebe4b8a691bf26a8be9ac8f83386507f87aaead712ab8c5f8a847cd06befb1927cb1f81de95f6cb6b7754",
+    "size": 1894517,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "SimpleDiscordLink-Universal-3.4.5.jar",
+    "url": "https://cdn.modrinth.com/data/Sh0YauEf/versions/gRJBLNWh/SimpleDiscordLink-Universal-3.4.5.jar",
+    "sha1": "6321b1003c1e6df824b1f851a7e5089a53441c41",
+    "sha512": "626e3c424abbaf9dfb69f73906dbad01d2d1d0d2fdb83b6767395860297c6f55a4b7a91e17fbd76666c032ad8519ff54bf8c4529e7912ba706c986197b88a770",
+    "size": 10071903,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "SimpleBackups-1.21-4.0.21.jar",
+    "url": "https://cdn.modrinth.com/data/fzSKSXVK/versions/6JQL4qSR/SimpleBackups-1.21-4.0.21.jar",
+    "sha1": "35bb3b98f330e0f6d08466860157a578a1ecfca2",
+    "sha512": "e31b437c9c2000f38d9d130fdde62276932081dbd3f62d1db9575a55a97164889efe5a40e7754c1e964483b1ca49327ce88c565879a59263b2523bd1dc0e64b1",
+    "size": 48608,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "voicechat-neoforge-1.21.1-2.6.22.jar",
+    "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/2s7zUspF/voicechat-neoforge-1.21.1-2.6.22.jar",
+    "sha1": "3b2001d8df61fe6dc03dcd5f5cd4a8f49821feb0",
+    "sha512": "309e3b18e299b2bccf9128dbb05c2603a9860f7cd68858d23f8fdb8265ea85ec7fb1655c95b87c0a9522ae1fd6380b26e4a4c31207f9c7af80870fcc6207abad",
+    "size": 4918442,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "sliceanddice-4.3.4-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/GmjmRQ0A/versions/D6mQaFRW/sliceanddice-4.3.4-neoforge.jar",
+    "sha1": "bfcb12d13465caf6743f200fbd755b72705011e4",
+    "sha512": "18fc9c70d2958ad6a0e7106ca2a5659d664fe9d5001a02afbd0c7d6980749764fcd90203abb2b9c6d7b1c8e564e421be04dfca1aeb25974371d7deeabf4b96a3",
+    "size": 1356389,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "sodium-neoforge-0.6.13+mc1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/AANobbMI/versions/Pb3OXVqC/sodium-neoforge-0.6.13%2Bmc1.21.1.jar",
+    "sha1": "38af70fa4dc4b2aaac636e92fdba3bedd5a025e1",
+    "sha512": "ce58f34d05d96c0a109a5cea23c741f6bdb2e6be31fc087c5989274cefca5f10ba0c08c62083cf554a51f2c7667bf46e4164383f675c844e77633aef2659996b",
+    "size": 1162994,
+    "client": "required",
+    "server": "unsupported"
+   },
+   {
+    "file": "spark-1.10.124-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/l6YH9Als/versions/v5qtqRQi/spark-1.10.124-neoforge.jar",
+    "sha1": "9430cc2ab64ff89d698be593769fb9f9ee4efae6",
+    "sha512": "f86ce34f2759c69df82578c397ff55b666c84626229a98f598458b960c21b38c95d6bfef4772af7f963c4f4868e5e2d9aef6b99c1d51bab55bf45e0e6e6b5ed4",
+    "size": 3642581,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "tectonic-3.0.28-neoforge-21.1.jar",
+    "url": "https://cdn.modrinth.com/data/lWDHr9jE/versions/n4iyW7aB/tectonic-3.0.28-neoforge-21.1.jar",
+    "sha1": "db15156eec4320c2997c4dd4948119472de01224",
+    "sha512": "e07b9cb54f078b7bf74c925c5cebd6643f0b4c210b8f94474e68659b69468ece7d61432f70eafe7abaa1dfa798e4638aad297987c121dc127588c2623b7f7a81",
+    "size": 451757,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "Terralith_1.21.1_v2.6.2_Neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/8oi3bsk5/versions/IY93YaEe/Terralith_1.21.1_v2.6.2_Neoforge.jar",
+    "sha1": "d4a9fe71b841f70edfb4b280f9bf5c58e4a28224",
+    "sha512": "35298f1682567f63dc16658b04cee5498b30819f1c05f9712b4480d7f5eb17059db3b13ab14f81a05fe257149d11ced2cce2030d3727c1747edd8657c53e2a85",
+    "size": 2814865,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "t_and_t-fabric-neoforge-1.13.11.jar",
+    "url": "https://cdn.modrinth.com/data/DjLobEOy/versions/DZxwgj6V/t_and_t-fabric-neoforge-1.13.11.jar",
+    "sha1": "8f00e36a11568c0b66bbdf5c0e9ee492e511b303",
+    "sha512": "7464b1556250ceee25b4b531e07f65568c98a9d26f97232c1f6016be63ff243891de8283e072981deb968ea7d8b83bdc1579ee842b6b792446f4c26a43af4b62",
+    "size": 3553006,
+    "client": "unsupported",
+    "server": "required"
+   },
+   {
+    "file": "xaerominimap-neoforge-1.21.1-26.6.0.jar",
+    "url": "https://cdn.modrinth.com/data/1bokaNcj/versions/irjR7dHk/xaerominimap-neoforge-1.21.1-26.6.0.jar",
+    "sha1": "551e8e2aa3498b506cc949a74606cdc0380e5e00",
+    "sha512": "d56b93ddb921285624b491d6a85aba23748bec9974867399c881c257eb25a746df92a735473adf3a6875e0928a56ff78245d5238eb9207b0e45c3fec20c896dc",
+    "size": 2186351,
+    "client": "required",
+    "server": "required"
+   },
+   {
+    "file": "xaeroworldmap-neoforge-1.21.1-1.47.0.jar",
+    "url": "https://cdn.modrinth.com/data/NcUtCpym/versions/SnQ4SoDe/xaeroworldmap-neoforge-1.21.1-1.47.0.jar",
+    "sha1": "2936c9cb9dfbdab145fe6f1e8ae2c68915246a5f",
+    "sha512": "4d2d78bc85afa002f682ef344b7284cf1baa4903cc5a11cd1d7bd260ac63952580ae717bab47079540ead633cdd5d8e4fdf230dc99a68bcb7a269500e7dada13",
+    "size": 1427078,
+    "client": "required",
+    "server": "required"
+   }
+  ],
+  "overrides": [
+   {
+    "path": "servers.dat",
+    "b64": "CgAACQAHc2VydmVycwoAAAABCAAEbmFtZQAKTGEgQ29sb25pZQgAAmlwABhsYWNvbG9uaWUubWludHNlcnZlcnMuZnIIAARpY29uDvRpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBSUFBQUFsQythSkFBQUsvRWxFUVZSNDJ0VmErMjhWeHhYZVA2Q0JCSUxOdzhiMnRlKzl4azlpRzNJeHR1TW5EckZqQTM3N1hwdUNYMVNxaUhta3JjQlJsYXBKR3FTNmFyR0JSQlNTaU5pbUFSS01BeVFCRXhKKzZDTnRJclZORlNYaVlaNC85ay9vTnpPN3N6T3pzM3ZYMktwazZmdGg3NzE3ZDcvdnpEbG56cHdaNDBjckV3aFdKVDZSQkN4L0lubjVvdVFWaTFhdldKU3ljakdRdW9vZ0xlbEpJSkFNUEpVT3JINHFBMGdCbGdRWlVnbENJdEtBcFJSTFRBaS9zdnZwZjlsenlBUHgyUFJrOWhhOERpODEzNTZ5RW1RSXBlUVZvRWRJSmlXQ01HTnVxT3h4MytxVmxMMGY2allud2pYc0c2SWVxaVNPakpSVlZBT1JvV2d3OU93MWh0ZFRsM2huQmppZWRrRDhWYVBFSWNNNUZGb05oaHQ3U2oxSk1ieEVYZVpOV0s0QjBuMUEwR005eENGREhBcGlSemNOaHNoK3NjUmVNcnlHdXMxYklKY0ZaQ3h6d2RNRXNoaFppVmFHUFJROEpBUU5ob3Z0OWV6MTFFWFMyUXhCRjlCZm5XS2NNancxaU9OZzBKd1RqejNOS3B5OVFGM2tUU25tRUNRUWhEaXFTdE1hS2xJamtVQk9VVHE1Z1l2aFNrUVpwZ1ltSTU2RzVCV0dtVEYxN0czRGh3VERXMVlYZVlOWjJ0b01RamRYUVJqNDdtekgvVTkyWEQreStmcm84MVhWV1V5Vm9vU1BoajBVSVhFbzNEUkFnSlV4WGRrcmhwZXBWNVdrN1drSlhScXVlZVVuRVVJM0w1d29vM3BUTnRnRDl5Ny8rTjZsN2RIb0JxcUt5aU5LZERMMDd1VFFRSE9yWVFhdW5YTmMySXMrUTErSmQvZHZEWDh6MXZwb2VnQjRPTjIvb1RJM01TOHpNVi9DbS91Zkl3TEFuZ21JRlROaGtHb3FFV1VJSHVXcGdjOFBFQ0RrZThIdlhkZ3p3ek1YencxdDJWYkUyRE1CTjk1dEJlUGxhOWVJdUhpNFhoWEF0RUVxVTBKbHdBTUJOaFJ1R3FSNHNPWUhnenNQeWZkQzFDcnN1ZHNrV094aHdrQkI2TkUxTG1EZzRkWCtnV2hCWTFXZ3N6WjFaTSs2a3k4WG50eGZlUC9UbmFiL1hONSs3MUwzM3Q0SUUyYVBVbDQ0VXA0OWZiVHVqM3Z5RWVpMk8yazA4SmkySGNsWUxMbSt4VDdreHQ0TVRXbzg4dnJMUjdhSWcvRDkrUzdnNFpXK0IxZDZIM3pXOCtEVEhsdkFKU0xncTVPTkovWTlBNUY1a1JDVFVWMlQ5ZSt4cmJjL2FyMzFZZXYwN3lvN2ExTDBHc1M4WkFVRHlCdWk4MWl1NzRNOU5SNFlIUHA1cFRBSS9SaUVoMWY3M0FUY3ZkaDk5MkxYM1k5ajM1NXVudnBOR2FLLzhRWEd2dTMyaHhEUWN1dGM4L2lySlNSSDZUU1EzS29FQXhFZ09ZL2wrbmJPa2RublNleGh5TXZEbXg1ZDJ5VjZFWUdIZ0krN1pxWmlNeGVpZHk1MDNwbnNVTmpmT3R2Y3NTMlBSYllVRDFaZWtvT0JESUtoT28vbytoWjdET3VaUTdYUjFrTEdIdFRUaThKRG5hRnZ4dG9JZXdKckVDUUJ2UTRCeFB3elU5RVp5djdPK1hiQy9pUEd2Z1hzancrVldnbEsxYUFKQmpvSWh0NzhkcjRQSXJCdXZOM0FpTDc3K3ZQRlZYa2JOZ1pIOXE3L1lYSzd4WDZYTUFpbUZ6a0VrQUNBZ0JrcWdKbi9OaFVBMXlmc3p6WGZQTnUwb1NLSGhiV1ZZWGx1RlIxSkdnUkROYi9sUEl3OVV0czdQMXNuRWIyMnkzUWJGYllYZmYxK3k1Zkg2aysrWElRc3hIQjlkUE5YN3pSYS9pT1lYMkEvK2V0aW1NWk1VRXdEbjdBMWptUU9ndUZxL214VHdJMzMyblYwTmZoaHN2dk1yMHBmYXNvb2Z6YTVxQ0Q1U1F5eEJYekVseTl0U3ovOVN1VGJpU1pxZnU0OGhQM05NOXVBMy84MEg4N0owNnZzU1BwQk1Eek1UMUorYmdqeksvV1dBVy8yb0Y1Zm1wU1VLZkYyQWpmZ3RvbWg5ZFI1SlBiQVA5K3JQOWllYmcxQ3BoVU1Yb05nNk13dlpoNVd6K1RBdW00YUlHK29QU016MTZiTzEyNHliQm00K1dCYjRGK25Ha1QyREg4K3RnbkpqV25BUk5ud1luNXZZOUFaelh3UURISG1jcHFmSjgwdGRkbEVBeUpWbG9INDdtMEl1bElQVXJqSTZLa1BYQjB1VndRQUNJYlhkMGNtRDFWd1NTZ1pwVUVRNWpWRDhoOGgrWER6czd5NXB6WE1aMXdxdzdTOXpGN2tuZXFBTFlQL1pXZDlBRzdqMUtCZ3NDbkRKUjBSQVRyL29lWlBzT29GVFBzb21FbUtsRFFNd0hOVTloWjF1Y1ZDb01qZ2Z6elFHb2dyQUdOQ0ZrTTZMeUlDZFA0VDR2N0RabHhTNGJCSnlwS0JxT1YrYjdFbkZLdnFDbU5kWlZtUkxNejhzZTR5QUJmNGlDL3hreWxEMElDSGpCOG84aFp3b09jWnMxWlZ2SWdJc00ydkNMRDlCeG1kVkRnRWJKN3EvMzZ5RzhuRXlSNVBHeHVOL3ZmdnZ5Qzh3Mm00QUhDQmo3akFUL1pRQ0Jyd0tEZEh1anBTaTFyVm5CTzRnRFYyTGpJMDZUOG5XRldURmUzYUdPc3FpWFdYN08wdi92cFVNNm9ERTFUSkI2K1dzSXhwUmkzMUhMWjA1Z0x3VENZQUY0S0FORXVESGRONGxITVFJS212TFUvTXAzUlNVOFBBY0FZQXZPMkxZM1drRkNQb05YSEZCSk9CMlVveHY5bE9ERnNDdGorM05EUGRFcENPajZZQWE4R3VETUx1clFHbkFKNVBFeVVCR2E0Q2VQSHp4VkV1UUFFUjg0OVR6WmhXSGVhbnpNS0JzU05Fd1BSRUg3c2d2STlFOFpGZDRBWjJweklJZUNEU3BhSUJDeU5SZ0RpamlRTFVDRVlMaEZSZ0FoNFE5Smo0ckFmand5b0ZwL201QUMxTUFicEJ3QU9kY3dJcUMxbEFTSWxqUEVjakFHMmM3ODUxM3Y5a3B3MVpENG96Ti8rQllVUUJ3NjgxQWFJQTNPRG1SY2NIOHhRQitDYStBSmNjR3E2dXlYNXpmOW5GUDlTeHBvZ0lTVUJRRkJCUUJIVHZxQUFjQWdKS0tQc1RFSFlLV09vaGdPZlFFL3NMN3JHZWdnVjg4LzhSUUthd1F4VW9LNnFxMTdnS1dCSnZGanV4cjRDdXgyM2dHNTh1ZE8xMEgvRFlMcVFrSmZpMnJ4aFFCQndlTEtTTGNZNnV6MGRxZlFheFU4Q3NnbGdCc290V2dKcEd4VG9VQXBETDZGcVdJUWI4N1VSRDNEUUtqQitOTFNOTHFoQXVKQUcrMDZnMEpRK1htMTBqajNsQXJPVEVRdWcvZjJvaFM4RXB1aDRuUy9JbzFsYmVFeGtMQUNhQWg4R3NKaktuQUcwOXB5OGx4RkswdjJNdDJqaXNsVUNXczNSRk96SDBySGNwNFNyQWR5bUJBUm5jVWRUUnNiNmpIVmhYV1pVWnQ1UlFFMUdrSXVmenR4dEUzdVppL0h3NytqbmV4Wnk3QUwvRm5GY09sWW81WFRtTjJuV292OGppTFZHbm5SelNUWmc0dUU1YlRvK05kcm9MNlBSWlRqc0xJVzBPTmRjRDJucHU2bzB5azdlRE91L2tZQzNDU0ZSdUxvakdTZ2k2U3FmSGUvazB6T1lCUGhuako5ekE3c1JmUEJZMFdNRmdGYVVyUlRVTEd2MlNjckE1ZUdleVhhSk8rNjlXSzRGMEUyQW5yQWxCWXQvdVRlK1BkTm9ZZFlGd0QvN2lzYVRFMi9YK28xdFM2aGYxV0VmLzlmZ0x0SHZUZHVHMzFXOE1GbDk0cllRM29XNmVhZUxKZ1dsNGpFWDlUcGRGUGZHZnpXdms3bERRZFZIdjBWYnAyeEpzYUZpTDNnYlBwMzk1cTliWkNNSDc0QWF6YmF2Z0x4N0xlVEx2Vm1kSjVuZHJxOFJ0YlBGOENnM29Pcm05RllIb3Y3RVZkeEhNTkVUS3MvdzB0cnhhaTJKWkFhRHZoeHJkNDVWZ2hpbkpyYldJbjNDRG56NEt3NVhEdGNLK2sxdHIwYk81YTIySDJjVXArcTlJRWQ0dnhod0U1MFlpNThCSDcwcUJaUjduVktBMkl6VE4zWGp0ZGRPUkxBM29nUHUwbjM5Z1REQ3dNQTBlZm55b1JGUDhlTFRYL1d4d2lOc3ovQVh6Qll3TVFndk95Zk1tTm1uR2Y3bVJiNWJGMmVDWTFSWVRIdTAwM2x6WXcyM3NHWmNsVGQzMmpPY1cwMncyK1dBWVo4TEdwQU1lajZjRXF5MkpmYTdFM3RjbTM2eTJXVEdzZk9veFV6V05iRXo3TUNSaXpqdFM4UmRGSjFhTWZOUGJtNzNyTnV0c043b1JXQ0NLQklja3pkTXIzNkJIQWV6TUpBQmlGQXNqaUVTelRia0JFeVYzRyt2TXdhdzJ1bWQvMUlBZEN4QjJ2TVA4aUFUS2Q4WEF5c2tEM0lOMnA3UlFmREhmTkh4TzhMR09Hc3poc0FmZit1YUhWTEQ0VUZ4Y09mc0JxV2pXaWlrSUd6QnpPdXd4eCtNMmdneWlCRXNuVVFEYUljcnBHM1pJQmUxeXhEMjJMY3l0bDdrY3Q1bVhBMC9MckNOYVdQZ2h5bG1nSTE3WmdTZjFGRlFPT1p0Q0Y3anpjdUJwdm8rY2dSa0NIUzBRdEhIRWcyY0pPZWFCdEhrK2NyYmdELzB0L0dPWEMvM2c2NEkvZXJ6d0QzOHY4T1AzL3dQZldtaFA2c3lBb0FBQUFBQkpSVTVFcmtKZ2dnPT0AAA=="
+   }
+  ],
+  "embarques": [
+   {
+    "file": "colonie_pnj-0.8.9.jar",
+    "sha1": "49b2928d9ddfb18926e493d7cc19d91730aa08b1"
+   }
+  ]
+ },
+ {
   "version": "0.4.8",
   "date": "2026-10-11",
   "notes": "Mod des PNJ 0.8.0 : tes ouvriers savent faire 347 actions en plus de leur travail, et tu les vois les faire. Garde-à-vous, repos, salut militaire, assis, à genoux, danse, gigue, révérence, pompes, imitations d'animaux, musique (flûte, tambour, luth…), chansons, blagues ; « mets-toi derrière moi », « va là-bas », « en rang ! », « donne-moi ton pain », « où est le poste ? », « tais-toi ». Le guerrier attaque sur ordre le monstre que tu regardes, se met en garde, lève son bouclier, protège quelqu'un ; le mineur creuse le bloc que tu regardes, perce un tunnel, pose des torches ; le bûcheron abat l'arbre que tu regardes et replante. Demande-leur « que sais-tu faire ? ». Obligatoire pour rejoindre le serveur.",
