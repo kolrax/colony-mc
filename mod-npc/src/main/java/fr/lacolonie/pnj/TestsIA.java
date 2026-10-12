@@ -475,6 +475,34 @@ public class TestsIA {
                 () -> { for (Travailleur t : e) t.discard(); });
     }
 
+    /** Combien de fois cette phrase est au journal des phrases non comprises avec ce motif (0 : absente). */
+    static int fois(String phrase, String motif) {
+        String cle = Incompris.normaliser(phrase);
+        return Incompris.JOURNAL.plusFrequentes(Incompris.MAX).stream().filter(x -> cle.equals(x.get("phrase_normalisee")) && motif.equals(x.get("motif")))
+                .mapToInt(x -> (int) x.get("nombre")).sum();
+    }
+
+    /**
+     * Lot 3 : une phrase que seule l'IA comprend (une action du répertoire) va au journal des phrases non comprises,
+     * motif « ia_seule » ; une phrase à laquelle l'IA répond seulement par des mots, motif « ia_parole ».
+     */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
+    public static void iaSeuleNotee(GameTestHelper h) {
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 41);
+        String piquet = "Droit comme un piquet, l'ami !", soleil = "Peins le soleil en vert";
+        h.assertTrue(Ordres.lire(piquet, "guerrier").vide() && Ordres.lire(soleil, "guerrier").vide(), "l'interpréteur seul ne doit rien y comprendre");
+        int[] avant = {fois(piquet, Incompris.IA_SEULE), fois(soleil, Incompris.IA_PAROLE)};
+        etapes(h, chef, e,
+                () -> { regarder(chef, e[1]); e[1].parler(chef, piquet); },
+                () -> h.assertTrue(e[1].consigne != null && e[1].consigne.id.equals("garde_a_vous") && !Dialogue.EN_ATTENTE.contains(chef.getUUID()),
+                        "garde-à-vous par l'IA : " + IA.echange(e[1]) + " (" + diag(chef, e[1]) + ")"),
+                () -> h.assertTrue(fois(piquet, Incompris.IA_SEULE) > avant[0], "notée « ia_seule » : " + Incompris.JOURNAL.plusFrequentes(3)),
+                () -> e[1].parler(chef, soleil),
+                () -> h.assertTrue(fois(soleil, Incompris.IA_PAROLE) > avant[1], "notée « ia_parole » : " + Incompris.JOURNAL.plusFrequentes(3)),
+                () -> { for (Travailleur t : e) t.discard(); });
+    }
+
     /** Le chef regarde cet ouvrier droit dans les yeux. */
     static void regarder(net.minecraft.server.level.ServerPlayer chef, Travailleur t) {
         Vec3 d = t.getEyePosition().subtract(chef.getEyePosition()); // sans paquet envoyé : le faux joueur n'a pas de vraie connexion

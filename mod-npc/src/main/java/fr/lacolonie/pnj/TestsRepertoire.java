@@ -396,4 +396,30 @@ public class TestsRepertoire {
                 () -> h.assertTrue(odon.consigne == null && !odon.geste().equals("danser"), "la danse est finie : " + c(odon)),
                 () -> fin(e));
     }
+
+    /**
+     * Lot 3 : une phrase que personne ne comprend (sans IA) va au journal des phrases non comprises, motif « rien »,
+     * avec le métier visé ; une phrase comprise n'y va pas.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void phraseIncompriseNotee(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 40);
+        Travailleur raoul = e[1];
+        // « Fais tourner la lune à l'envers » est compris par le répertoire (action « lune ») : une autre phrase absurde.
+        String absurde = "Fais pousser des ailes au cochon !";
+        h.assertFalse(IA.conversationDisponible(), "ce test se joue sans IA");
+        h.assertTrue(Ordres.lire(absurde, "guerrier").vide(), "l'interpréteur ne doit rien y comprendre");
+        int[] avant = {TestsIA.fois(absurde, Incompris.RIEN), TestsIA.fois("Suis-moi", Incompris.RIEN)};
+        etapes(h, chef, e,
+                () -> { regarder(chef, raoul); raoul.parler(chef, absurde); raoul.parler(chef, "Suis-moi"); },
+                () -> {
+                    h.assertTrue(TestsIA.fois(absurde, Incompris.RIEN) == avant[0] + 1, "notée une fois de plus, motif rien : " + Incompris.JOURNAL.plusFrequentes(3));
+                    h.assertTrue(Incompris.JOURNAL.plusFrequentes(Incompris.MAX).stream().anyMatch(x -> "fais pousser des ailes au cochon".equals(x.get("phrase_normalisee"))
+                            && ((java.util.List<?>) x.get("metiers")).contains("guerrier")), "avec le métier de Raoul");
+                    h.assertTrue(TestsIA.fois("Suis-moi", Incompris.RIEN) == avant[1] && TestsIA.fois("Suis-moi", Incompris.IA_SEULE) == 0, "« suis-moi » est compris : pas noté");
+                    h.assertTrue(raoul.mode == Travailleur.Mode.SUIVRE, "et il suit toujours : " + raoul.mode);
+                },
+                () -> fin(e));
+    }
 }

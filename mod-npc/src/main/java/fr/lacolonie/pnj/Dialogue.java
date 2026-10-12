@@ -166,6 +166,7 @@ final class Dialogue {
         List<Voix.Replique> parlent = new ArrayList<>(), suivent = new ArrayList<>();
         String chef = dest.size() > 1 ? "Chef (à " + String.join(", ", dest.stream().map(t -> t.prenom).toList()) + ")" : "Chef";
         long maintenant = System.currentTimeMillis();
+        noterIncompris(dit, dest, decisions, maintenant);
         for (int i = 0; i < dest.size(); i++) {
             Travailleur t = dest.get(i);
             if (!t.isAlive() || t.aTerre) continue;
@@ -197,6 +198,26 @@ final class Dialogue {
         }
         parlent.addAll(suivent);
         Voix.direEnSuite(parlent);
+    }
+
+    /**
+     * Une phrase que l'interpréteur ne comprend pour aucun destinataire va au journal des phrases non comprises
+     * ({@link Incompris}) : « ia_seule » si l'IA y a vu une action, « ia_parole » si elle a seulement répondu,
+     * « rien » sinon (IA absente, en échec ou muette). Ne change rien à ce que font les ouvriers.
+     */
+    static void noterIncompris(String dit, List<Travailleur> dest, List<ReponsesIA.Decision> decisions, long maintenant) {
+        List<String> metiers = new ArrayList<>();
+        for (Travailleur t : dest) {
+            if (!Ordres.lire(dit, t.metier).vide()) return; // compris sans l'IA
+            metiers.add(t.metier);
+        }
+        String motif = Incompris.RIEN;
+        if (decisions != null) for (ReponsesIA.Decision d : decisions) {
+            if (d == null) continue;
+            if (!d.lecture().vide()) { motif = Incompris.IA_SEULE; break; }
+            if (!d.reponse().isBlank()) motif = Incompris.IA_PAROLE;
+        }
+        Incompris.JOURNAL.noter(dit, motif, metiers, maintenant);
     }
 
     // --- Le journal d'écoute (pour le panneau, en mémoire seulement) ---------------------------------------------

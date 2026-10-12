@@ -129,6 +129,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
           <tbody id="act-liste"></tbody>
         </table></div>
       </div>
+      <div class="card" style="margin-top:14px">
+        <h2>Phrases non comprises</h2>
+        <p class="sub">Ce que les chefs ont dit et que l'interpréteur n'a pas compris, des plus fréquentes aux plus rares : de quoi enrichir le répertoire.
+          « Personne » : ni l'interpréteur ni l'IA ; « IA seule » : l'IA y a vu une action ; « IA, paroles » : l'IA a seulement répondu.
+          Sans nom de joueur. Gardé dans <code>config/colonie_pnj/incompris.json</code> (500 phrases au plus) ; <code>/pnj incompris vider</code> pour repartir de zéro.</p>
+        <p id="inc-compte" class="sub"></p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Fois</th><th>Phrase</th><th>Compris par</th><th>Métiers</th><th>Dernière fois</th></tr></thead>
+          <tbody id="inc-liste"></tbody>
+        </table></div>
+      </div>
     </section>
 
     <section id="economie" hidden>
@@ -374,7 +385,17 @@ async function chargerActions() {
   }
   $("#act-liste").replaceChildren(...lignes);
 }
-document.querySelector('[data-tab="actions"]').addEventListener("click", () => chargerActions().catch(e => flash(e.message)));
+async function chargerIncompris() {
+  const r = await api("/api/incompris"), MOTIF = { rien: "Personne", ia_seule: "IA seule", ia_parole: "IA, paroles" };
+  $("#inc-compte").textContent = r.total ? r.total + " phrase" + (r.total > 1 ? "s" : "") : "Aucune phrase non comprise pour l'instant.";
+  $("#inc-liste").replaceChildren(...r.entrees.map(x => el("tr", {},
+    el("td", { class: "num", text: x.nombre }),
+    el("td", { text: "« " + x.phrase + " »" }),
+    el("td", {}, el("span", { class: "pill" + (x.motif === "rien" ? " ko" : x.motif === "ia_seule" ? " or" : ""), text: MOTIF[x.motif] || x.motif })),
+    el("td", { class: "sub", text: x.metiers.map(m => METIER_NOM[m] || m).join(", ") }),
+    el("td", { class: "sub", text: new Date(x.derniere).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) }))));
+}
+document.querySelector('[data-tab="actions"]').addEventListener("click", () => { chargerActions().catch(e => flash(e.message)); chargerIncompris().catch(e => flash(e.message)); });
 $("#act-cherche").addEventListener("input", () => chargerActions().catch(() => {}));
 $("#act-metier").addEventListener("change", () => chargerActions().catch(() => {}));
 

@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Mod(ColoniePnj.MODID)
@@ -109,10 +110,12 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
             ReglagesIA.charger();
+            chargerIncompris();
             PanneauWeb.demarrer(e.getServer());
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             PanneauWeb.arreter();
+            Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
             laisserFinirLaGeneration(e.getServer());
         });
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
@@ -133,6 +136,8 @@ public class ColoniePnj {
                 Courrier.tick(e.getServer());
                 h = mesure.mesurer(Charge.Partie.COURRIER, h);
             }
+            if (e.getServer().getTickCount() % 600 == 0) // les phrases non comprises, si elles ont changé (écrites en arrière-plan)
+                Incompris.JOURNAL.sauver(fichierIncompris(), false, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
             Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
             mesure.mesurer(Charge.Partie.VOIX, h);
             mesure.clore();
@@ -308,6 +313,13 @@ public class ColoniePnj {
                                         .then(Commands.argument("pos", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos())
                                                 .executes(c -> banc(c, StringArgumentType.getString(c, "metier"),
                                                         net.minecraft.commands.arguments.coordinates.BlockPosArgument.getBlockPos(c, "pos")))))))
+                .then(Commands.literal("incompris")
+                        .executes(c -> { for (String l : incompris()) c.getSource().sendSuccess(() -> Component.literal(l), false); return 1; })
+                        .then(Commands.literal("vider").executes(c -> {
+                            Incompris.JOURNAL.vider();
+                            c.getSource().sendSuccess(() -> Component.literal("Journal des phrases non comprises remis à zéro."), true);
+                            return 1;
+                        })))
                 .then(Commands.literal("charge").executes(c -> {
                     for (String l : charge(c.getSource().getServer())) c.getSource().sendSuccess(() -> Component.literal(l), false);
                     return 1;
@@ -319,6 +331,29 @@ public class ColoniePnj {
                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copier le mot de passe")))), false);
                     return 1;
                 })));
+    }
+
+    // --- Phrases non comprises : /pnj incompris ------------------------------------------------------------
+
+    static java.nio.file.Path fichierIncompris() { return Reglages.dossier().resolve("incompris.json"); }
+
+    static void chargerIncompris() {
+        try { Incompris.JOURNAL.charger(fichierIncompris()); }
+        catch (Exception e) { LOG.error("Phrases non comprises illisibles (incompris.json), journal repris à zéro", e); }
+    }
+
+    static final Map<String, String> MOTIFS = Map.of(Incompris.RIEN, "personne", Incompris.IA_SEULE, "l'IA seule (action)", Incompris.IA_PAROLE, "l'IA seule (paroles)");
+
+    /** Les 10 phrases non comprises les plus fréquentes, pour /pnj incompris. */
+    static List<String> incompris() {
+        List<String> l = new ArrayList<>();
+        var top = Incompris.JOURNAL.plusFrequentes(10);
+        l.add(Incompris.JOURNAL.taille() + " phrases non comprises" + (top.isEmpty() ? "." : ". Les plus fréquentes (compris par) :"));
+        for (var e : top)
+            l.add(" - " + e.get("nombre") + "× « " + e.get("phrase") + " » (" + MOTIFS.getOrDefault((String) e.get("motif"), (String) e.get("motif"))
+                    + (((List<?>) e.get("metiers")).isEmpty() ? "" : " ; " + String.join(", ", ((List<?>) e.get("metiers")).stream().map(String::valueOf).toList()))
+                    + " ; dernière fois " + String.valueOf(e.get("derniere")).substring(0, 16).replace('T', ' ') + " UTC)");
+        return l;
     }
 
     // --- Banc de charge : /pnj banc, /pnj charge ----------------------------------------------------------
