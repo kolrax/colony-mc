@@ -532,6 +532,153 @@ public class TestsJeu {
     }
 
     /**
+     * Un golem de fer et un loup apprivoisé frappent chacun un guerrier : il ne lève pas son arme sur eux (sans ordre,
+     * un PNJ ne frappe que des monstres), il recule. Avant, il les attaquait comme des monstres.
+     */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void guerrierNAttaquePasLesBetes(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur g1 = ouvrier(h, "guerrier", 2, 2, 2, new ItemStack(Items.IRON_SWORD));
+        Travailleur g2 = ouvrier(h, "guerrier", 2, 2, 6, new ItemStack(Items.IRON_SWORD));
+        Guerrier.armer(g1);
+        Guerrier.armer(g2);
+        var golem = h.spawn(net.minecraft.world.entity.EntityType.IRON_GOLEM, 6, 2, 2);
+        golem.setNoAi(true);
+        var loup = h.spawn(net.minecraft.world.entity.EntityType.WOLF, 6, 2, 6);
+        loup.setNoAi(true);
+        loup.tame(h.makeMockServerPlayerInLevel());
+        boolean[] vu = {false, false, false, false}; // g1 attaque le golem, g2 attaque le loup ; g1 recule, g2 recule
+        h.onEachTick(() -> {
+            if (g1.action instanceof Actions.Attaquer a && a.cible == golem) vu[0] = true;
+            if (g2.action instanceof Actions.Attaquer a && a.cible == loup) vu[1] = true;
+            if (g1.action instanceof Actions.Fuir) vu[2] = true;
+            if (g2.action instanceof Actions.Fuir) vu[3] = true;
+        });
+        // Frappés avant leur première décision (comme guerrierNeRipostePasAUnJoueur).
+        g1.hurt(g1.damageSources().mobAttack(golem), 1);
+        g2.hurt(g2.damageSources().mobAttack(loup), 1);
+        h.runAtTickTime(h.getTick() + 120, () -> {
+            h.assertFalse(vu[0], "il ne doit pas attaquer le golem");
+            h.assertFalse(vu[1], "il ne doit pas attaquer le loup apprivoisé");
+            h.assertTrue(golem.getHealth() == golem.getMaxHealth() && loup.getHealth() == loup.getMaxHealth(), "aucune bête ne doit être blessée (golem "
+                    + golem.getHealth() + ", loup " + loup.getHealth() + ")");
+            h.assertTrue(vu[2] && vu[3], "ils doivent reculer (" + (g1.action == null ? "-" : g1.action.nom) + ", " + (g2.action == null ? "-" : g2.action.nom) + ")");
+            g1.discard();
+            g2.discard();
+            golem.discard();
+            loup.discard();
+            h.succeed();
+        });
+    }
+
+    /** Un gréviste frappé par un monstre s'enfuit comme les autres. Avant, la grève passait avant : il restait sur place. */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void grevisteFrappeSEnfuit(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
+        t.mode = Travailleur.Mode.GREVE;
+        var z = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 6, 2, 4);
+        z.setNoAi(true);
+        boolean[] fui = {false};
+        h.onEachTick(() -> { if (t.action instanceof Actions.Fuir) fui[0] = true; });
+        t.hurt(t.damageSources().mobAttack(z), 1);
+        h.runAtTickTime(h.getTick() + 60, () -> {
+            h.assertTrue(fui[0], "en grève, frappé, il doit s'enfuir (" + (t.action == null ? "-" : t.action.nom) + ", " + t.mode + ")");
+            t.discard();
+            z.discard();
+            h.succeed();
+        });
+    }
+
+    /**
+     * Une lettre arrive par corbeau pendant qu'il fuit un monstre : il continue de fuir (avant, il s'arrêtait 3 s pour
+     * la lire, sans défense), et la lit une fois au calme, sans la perdre.
+     */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void lettreLueAuCalme(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 96000);
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(sol(h, 8, 96000)), ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        Courrier c = Courrier.de(l.getServer());
+        c.definirPoste(t.chef, l, bureau);
+        t.mode = Travailleur.Mode.ATTENDRE; // il ne bouge que pour fuir
+        t.forcerChunk();
+        var z = net.minecraft.world.entity.EntityType.ZOMBIE.create(l);
+        Vec3 zp = Vec3.atBottomCenterOf(sol(h, 12, 96000));
+        z.moveTo(zp.x, zp.y, zp.z);
+        z.setNoAi(true);
+        l.addFreshEntity(z);
+        Actions.Action fuite = new Actions.Fuir(z);
+        Cerveau.lancer(t, fuite);
+        Courrier.Lettre lettre = c.nouvelle(chef.getName().getString(), chef.getUUID(), t.getUUID(), "Lettre du chef", "Ramène-moi 10 bûches de bouleau.", l);
+        lettre.duChef = true;
+        t.recevoirLettre(lettre);
+        h.assertTrue(t.action == fuite && t.lettreEnMain == null, "en fuite, la lettre ne doit pas l'arrêter (action "
+                + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat + ")");
+        boolean[] fige = {false};
+        h.onEachTick(() -> { if (t.lettreEnMain != null && t.action instanceof Actions.Fuir) fige[0] = true; });
+        h.runAtTickTime(h.getTick() + 3, z::discard);
+        h.succeedWhen(() -> {
+            h.assertFalse(fige[0], "il ne doit pas lire en fuyant");
+            h.assertTrue(t.missions.stream().anyMatch(m -> m.id.equals("bouleau") && m.nombre == 10), "au calme, il doit lire la lettre (" + etat(t, bureau) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Le corbeau arrive en biais : entre le tronçon du poste et le tronçon actif d'où il part, son trajet coupe sur moins
+     * d'un bloc le coin d'un tronçon figé. Avant, le trajet n'était vérifié que tous les 4 blocs : il partait de trop
+     * loin, se figeait dans ce coin, et la lettre n'arrivait qu'au bout de 30 s, par le secours du courrier.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void corbeauNeCoupePasUnCoinFige(GameTestHelper h) {
+        var l = h.getLevel();
+        BlockPos o = sol(h, 0, 99000);
+        int x = (o.getX() & ~15) + 12, z = (o.getZ() & ~15) + 12;
+        BlockPos poste = new BlockPos(x, l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z), z);
+        var tronc = new net.minecraft.world.level.ChunkPos(poste);
+        l.setChunkForced(tronc.x, tronc.z, true);
+        l.setChunkForced(tronc.x + 1, tronc.z + 1, true); // en diagonale : les deux autres voisins restent figés
+        l.setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
+        var chef = h.makeMockServerPlayerInLevel();
+        chef.moveTo(poste.getX() + 0.5, poste.getY(), poste.getZ() - 1.5); // le témoin
+        Courrier c = Courrier.de(l.getServer());
+        c.definirPoste(chef.getUUID(), l, poste);
+        Courrier.Lettre lettre = c.nouvelle("Aliénor", null, chef.getUUID(), "Essai en biais", "Bonjour chef.", l);
+        c.envoyerCorbeau(l, poste.offset(31, 0, 26), chef.getUUID(), lettre, true); // cap à 40° : le coin du tronçon voisin, sur 0,9 bloc
+        h.succeedWhen(() -> {
+            h.assertTrue(c.boite(chef.getUUID()).stream().anyMatch(x2 -> x2.objet.equals("Essai en biais")), "la lettre doit être livrée par le corbeau posé");
+            l.setChunkForced(tronc.x, tronc.z, false);
+            l.setChunkForced(tronc.x + 1, tronc.z + 1, false);
+        });
+    }
+
+    /**
+     * Muré sous terre, et sous chaque marche qu'il pourrait creuser, un puits : il ne creuse pas une marche sans sol
+     * (il y tomberait). Avant, il creusait la marche, sautait dessus et tombait au fond du puits.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400)
+    public static void neCreusePasUneMarcheSurLeVide(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 12; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int y = 4; y <= 5; y++) h.setBlock(12, y, 12, Blocks.AIR);
+        for (Direction d : Direction.Plane.HORIZONTAL) for (int y = 1; y <= 4; y++) h.setBlock(12 + d.getStepX(), y, 12 + d.getStepZ(), Blocks.AIR);
+        Travailleur t = ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 13, 3));
+        t.mode = Travailleur.Mode.ATTENDRE; // il ne fait rien d'autre que chercher à sortir
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        double fond = h.absoluteVec(new Vec3(0, 4, 0)).y - 0.5;
+        boolean[] tombe = {false};
+        h.onEachTick(() -> { if (t.getY() < fond) tombe[0] = true; });
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            String e = etat(t, t.bureau) + ", " + t.diag;
+            t.discard();
+            h.assertFalse(tombe[0], "il ne doit pas tomber dans un puits (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
      * Envoyé sur un îlot entouré d'une douve de lave d'un bloc : le chemin s'arrête au bord, à deux blocs du but. Il
      * reste au bord et finit par renoncer, sans jamais entrer dans la lave. Dans la première 0.8.4, au bout de ce chemin
      * inachevé, il marchait tout droit vers le but… et dans la lave.
@@ -551,8 +698,11 @@ public class TestsJeu {
         h.onEachTick(() -> { if (t.isInLava() || t.getY() < ilot.getY() - 0.4) lave[0] = true; });
         h.runAtTickTime(h.getTick() + 220, () -> {
             String e = etat(t, t.bureau) + ", " + t.diag + ", feu " + t.isOnFire();
+            double bord = Itineraire.horizontale(t.position(), Vec3.atBottomCenterOf(ilot));
             t.discard();
             h.assertFalse(lave[0], "il ne doit jamais entrer dans la lave (" + e + ")");
+            // Le bord est à 2 blocs du centre de l'îlot : il doit y être arrivé (pas resté au départ, à 8 blocs).
+            h.assertTrue(bord < 3, "il doit être arrivé au bord de la lave (à " + String.format("%.1f", bord) + " blocs de l'îlot, " + e + ")");
             h.succeed();
         });
     }

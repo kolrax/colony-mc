@@ -197,6 +197,8 @@ public class Travailleur extends PathfinderMob {
     public final List<Courrier.Lettre> lettresADeposer = new ArrayList<>(), lettresALire = new ArrayList<>();
     /** Une lettre arrivée par corbeau, qu'il est en train de lire (il s'arrête un instant). */
     Courrier.Lettre lettreEnMain;
+    /** Les lettres arrivées par corbeau pendant un danger (combat, fuite, monstre tout près) : il les lira au calme. */
+    final List<Courrier.Lettre> lettresAuCalme = new ArrayList<>();
     /** Il attend la réponse de l'IA (il « réfléchit ») : on ne lui en redemande pas une autre en même temps. */
     boolean reflechit;
     /**
@@ -553,6 +555,7 @@ public class Travailleur extends PathfinderMob {
         tickCorps();
         if (tickCount % 20 == 0) tickCourrier();
         h = mesure.mesurer(Charge.Partie.CORPS, h);
+        if (lettreEnMain != null && vientDEtreFrappe()) { lettresAuCalme.add(0, lettreEnMain); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {
             getNavigation().stop();
             getLookControl().setLookAt(getX(), getEyeY() - 1, getZ());
@@ -596,6 +599,7 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 200 == 0) c.inscrire(this);
         Courrier.Poste p = c.poste(chef);
         if (p != null && p.monde() == level().dimension() && !p.pos().equals(bureau)) { bureau = p.pos(); lit = null; }
+        if (!lettresAuCalme.isEmpty() && lettreEnMain == null && !enDanger()) recevoirLettre(lettresAuCalme.remove(0)); // le danger passé, il lit
         if (!lettresADeposer.isEmpty() && bureau != null && distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(bureau)) < 16) {
             swing(InteractionHand.OFF_HAND); // au poste, quoi qu'il fasse : il y pose ses lettres
             Courrier.deposer(this);
@@ -617,10 +621,15 @@ public class Travailleur extends PathfinderMob {
      * consigne du chef), ni à terre, ni tout juste frappé, ni avec un monstre à quelques pas : il resterait sans défense.
      */
     void ecouter(net.minecraft.world.entity.Entity qui, int ticks) {
-        if (aTerre || vientDEtreFrappe() || enCombat(action) || action instanceof Consignes.Faire f && enCombat(f.sous)) return;
-        if (!level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(8), Monde::hostile).isEmpty()) return;
+        if (enDanger()) return;
         ecouteTicks = Math.max(ecouteTicks, ticks);
         ecoutePar = qui;
+    }
+
+    /** À terre, tout juste frappé, au combat ou en fuite (même pour une consigne du chef), ou un monstre à 8 blocs. */
+    boolean enDanger() {
+        if (aTerre || vientDEtreFrappe() || enCombat(action) || action instanceof Consignes.Faire f && enCombat(f.sous)) return true;
+        return !level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(8), Monde::hostile).isEmpty();
     }
 
     static boolean enCombat(Actions.Action a) { return a instanceof Actions.Attaquer || a instanceof Actions.Fuir; }
@@ -631,8 +640,12 @@ public class Travailleur extends PathfinderMob {
 
     boolean vientDEtreFrappe() { return getLastHurtByMob() != null && Monde.recent(this, getLastHurtByMobTimestamp()); }
 
-    /** Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. */
+    /**
+     * Un corbeau lui apporte une lettre de son chef : il s'arrête pour la lire. Pas au milieu d'un danger (il se battait
+     * ou fuyait, et restait figé 3 s) ni d'une autre lecture : il la garde et la lit au calme ({@link #tickCourrier}).
+     */
     void recevoirLettre(Courrier.Lettre l) {
+        if (lettreEnMain != null || enDanger()) { lettresAuCalme.add(l); return; }
         lettreEnMain = l;
         lectureTicks = 60;
         finirAction("lettre");
@@ -1231,6 +1244,7 @@ public class Travailleur extends PathfinderMob {
         missions.clear();
         lettresADeposer.clear();
         lettresALire.clear();
+        lettresAuCalme.clear();
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
         libererChunk();
@@ -1327,6 +1341,7 @@ public class Travailleur extends PathfinderMob {
         ListTag ad = new ListTag(), al = new ListTag();
         for (Courrier.Lettre l : lettresADeposer) ad.add(l.sauver());
         for (Courrier.Lettre l : lettresALire) al.add(l.sauver());
+        for (int i = lettresAuCalme.size() - 1; i >= 0; i--) al.add(0, lettresAuCalme.get(i).sauver()); // lues au poste après un redémarrage
         if (lettreEnMain != null) al.add(0, lettreEnMain.sauver());
         t.put("LettresADeposer", ad);
         t.put("LettresALire", al);

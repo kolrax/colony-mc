@@ -130,6 +130,44 @@ public class TestsCharge {
     }
 
     /**
+     * Les jetons de recherche d'étape, tick par tick, budget épuisé : le PNJ affamé est servi hors budget au bout de
+     * {@link Itineraire#ATTENTE_MAX} (10) ticks d'attente ; un seul passe-droit par tick, au plus ancien ; le second
+     * affamé est servi 10 ticks après le début de son attente, pas en même temps que le premier. Avec du budget, servi tout
+     * de suite. Calcul seul (le temps est simulé), les compteurs du serveur sont remis comme avant.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void jetonPourLAffame(GameTestHelper h) {
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 2, ItemStack.EMPTY);
+        Itineraire a = new Itineraire(t, t.position().add(60, 0, 0)), b = new Itineraire(t, t.position().add(0, 0, 60)), c = new Itineraire(t, t.position().add(-60, 0, 0));
+        int budget = Itineraire.budget;
+        boolean donne = Itineraire.passeDroitDonne;
+        long ancienne = Itineraire.plusAncienne, vue = Itineraire.plusAncienneVue;
+        int servi = -1, serviB = -1;
+        boolean libre;
+        try {
+            long debut = 1_000_000;
+            for (int k = 0; k <= 20; k++) {
+                Itineraire.nouveauTick();
+                Itineraire.budget = 0;
+                if (servi < 0 && a.jeton(debut + k)) servi = k;
+                if (k >= 2 && serviB < 0 && b.jeton(debut + k)) serviB = k;
+            }
+            Itineraire.nouveauTick();
+            libre = c.jeton(debut + 21);
+        } finally {
+            Itineraire.budget = budget;
+            Itineraire.passeDroitDonne = donne;
+            Itineraire.plusAncienne = ancienne;
+            Itineraire.plusAncienneVue = vue;
+        }
+        t.discard();
+        h.assertTrue(servi == 10, "le premier affamé doit être servi au bout de 10 ticks (servi au tick " + servi + ")");
+        h.assertTrue(serviB == 12, "le second, 10 ticks après le début de son attente (servi au tick " + serviB + ")");
+        h.assertTrue(libre, "avec du budget, il doit être servi tout de suite");
+        h.succeed();
+    }
+
+    /**
      * Une étape en montée (0.8.5) : le coin d'une pyramide à degrés (hauteur = le plus grand écart, en x ou en z). Le
      * point d'étape est à 28 blocs en diagonale, 20 plus haut. En montée, Minecraft ne coupe pas en diagonale : le chemin
      * marché fait 20 marches et 20 pas, ~48 blocs. La portée borne la longueur marchée : avec 36 (première 0.8.5), la

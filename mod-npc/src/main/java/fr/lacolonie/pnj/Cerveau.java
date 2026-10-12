@@ -65,6 +65,20 @@ final class Cerveau {
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
 
+        // Attaqué (même en grève) : un combattant riposte contre un monstre ou un autre PNJ, sinon il recule ; les autres
+        // s'enfuient. Sans ordre de son chef, il ne frappe ni un joueur (une consigne, en guerre), ni une bête, ni un golem.
+        LivingEntity agresseur = t.getLastHurtByMob();
+        if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
+            if (m.combattant && Monde.combattable(agresseur)) lancer(t, new Actions.Attaquer(agresseur));
+            else {
+                if (!m.combattant) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
+                else if (agresseur instanceof Player) dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
+                else dire(t, "fuite", 30, "Holà, tout doux ! Je ne lève pas mon arme sur une bête.");
+                lancer(t, new Actions.Fuir(agresseur));
+            }
+            return;
+        }
+
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
             long du = t.du();
@@ -73,19 +87,6 @@ final class Cerveau {
             if (t.bureau != null && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 16) { lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3)); return; }
             ecrire(t, "greve", 1800, "toujours_greve", Reglages.texte(du));
             attendre(t, 20);
-            return;
-        }
-
-        // Attaqué : un combattant riposte, les autres s'enfuient. Frappé par un joueur, personne ne riposte : il ne frappe un
-        // joueur que sur ordre de son chef (une consigne, en guerre). Il recule.
-        LivingEntity agresseur = t.getLastHurtByMob();
-        if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
-            if (agresseur instanceof Player && m.combattant) {
-                dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
-                lancer(t, new Actions.Fuir(agresseur));
-            }
-            else if (m.combattant) lancer(t, new Actions.Attaquer(agresseur));
-            else { dire(t, "fuite", 30, "À l'aide ! On m'attaque !"); lancer(t, new Actions.Fuir(agresseur)); }
             return;
         }
 

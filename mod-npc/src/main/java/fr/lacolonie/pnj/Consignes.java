@@ -196,6 +196,9 @@ final class Consignes {
                 else if (!a.equals("cible")) {
                     BlockPos p = lieu(t, chef, a, lieu);
                     if (p == null && entite == null) return introuvable(a);
+                    // Cahier 8.5 : un ordre qui le tuerait (lave, feu, vide), il refuse. Pas pour aller près d'un bloc (« va au feu de camp »).
+                    if (p != null && !BLOCS_LIEUX.containsKey(a) && t.level().isLoaded(p) && Monde.mortel(t.level(), p))
+                        return "Non, chef : là-bas, c'est la mort assurée. Je n'irai pas.";
                     lieu = p;
                 }
             }
@@ -976,6 +979,9 @@ final class Consignes {
 
     // --- L'action qui joue la consigne -----------------------------------------------------------------------------
 
+    /** Un message à porter : 2 minutes au plus pour rattraper l'ouvrier ; il le hèle (le fige) 7 secondes au plus. */
+    static final int MESSAGE_MAX = 20 * 120, HELER_MAX = 140;
+
     static final class Faire extends Actions.Action {
         final Consigne c;
         final Repertoire.Entree e;
@@ -984,6 +990,8 @@ final class Consignes {
         Vec3 but;
         Entity vise;
         int etape, vides;
+        /** Ticks pendant lesquels le messager a hélé l'ouvrier visé (il ne le fige pas plus de {@link #HELER_MAX}). */
+        int hele;
         boolean arrive;
         final List<BlockPos> chantier = new ArrayList<>();
         String instrument;
@@ -1378,7 +1386,7 @@ final class Consignes {
         LivingEntity menace(Travailleur t, Vec3 centre, Entity protege) {
             if (protege instanceof LivingEntity p) {
                 LivingEntity a = p.getLastHurtByMob();
-                if (a != null && a.isAlive() && a != t && !(a instanceof Player) && !(a instanceof Travailleur) && Monde.recent(p, p.getLastHurtByMobTimestamp())) return a;
+                if (a != null && a != t && Monde.hostile(a) && Monde.recent(p, p.getLastHurtByMobTimestamp())) return a; // un monstre : pas une bête, ni un golem
             }
             return t.level().getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(12), x -> Monde.hostile(x) && Math.abs(x.getY() - centre.y) < 6
                             && !t.inaccessibles.containsKey(x.getId())).stream().min(Comparator.comparingDouble(x -> x.distanceToSqr(centre))).orElse(null);
@@ -1514,9 +1522,18 @@ final class Consignes {
         Actions.Etat message(Travailleur t) {
             if (vise == null) vise = entite(t, c.entite);
             if (vise == null) return rate(t, "Je ne le trouve pas, chef.");
+            // Il ne court pas après lui sans fin : au bout de 2 minutes, il renonce et le dit.
+            if (age > MESSAGE_MAX) {
+                raisonSous = "trop_long";
+                return rate(t, "Je n'ai pas pu le rattraper, chef. Mieux vaut lui écrire.");
+            }
             // À portée de voix, il le hèle : l'autre l'attend sur place, et l'écoute jusqu'à la fin (s'il marchait, il ne le rattrapait jamais).
             // Seulement un ouvrier du même chef : sinon, on pourrait figer à volonté les ouvriers d'un autre. Celui-là, il va jusqu'à lui.
-            if (vise instanceof Travailleur w && t.chef != null && t.chef.equals(w.chef) && t.distanceTo(w) <= 16 && t.hasLineOfSight(w)) w.ecouter(t, 20);
+            // Quelques secondes au plus : s'il ne le rejoint pas (passage fermé), l'autre ne reste pas planté là.
+            if (vise instanceof Travailleur w && t.chef != null && t.chef.equals(w.chef) && hele < HELER_MAX && t.distanceTo(w) <= 16 && t.hasLineOfSight(w)) {
+                hele++;
+                w.ecouter(t, 20);
+            }
             if (t.distanceTo(vise) > 3) {
                 if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(vise.position()) > 4) { sous.fin(t); sous = null; }
                 Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5));

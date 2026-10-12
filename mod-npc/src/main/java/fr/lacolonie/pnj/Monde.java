@@ -6,10 +6,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -141,8 +139,32 @@ final class Monde {
     static boolean recent(LivingEntity qui, int quand) { return qui.tickCount - quand < 200; }
 
     /**
-     * Ce qu'un PNJ combattant peut frapper : les créatures hostiles proches, celui qui l'a attaqué, celui qui a
-     * attaqué son chef, et ce que son chef combat s'il s'agit d'une créature hostile ou de son agresseur.
+     * Ce qu'un PNJ peut frapper sans ordre de son chef quand on s'en prend à lui ou à son chef : un monstre, ou un autre
+     * PNJ. Jamais une bête (loup apprivoisé, chèvre, abeille…), un golem ni un joueur : il recule (règle du serveur).
+     */
+    static boolean combattable(LivingEntity e) { return hostile(e) || e instanceof Travailleur w && w.isAlive(); }
+
+    /**
+     * Un endroit où l'envoyer le tuerait (cahier 8.5 : il refuse) : de la lave ou du feu à ses pieds, sous lui ou à
+     * hauteur de tête, ou rien pour le retenir en dessous (le vide, ou une chute de plus de 20 blocs, ou de la lave au fond).
+     */
+    static boolean mortel(Level l, BlockPos p) {
+        for (int dy = -1; dy <= 1; dy++) {
+            BlockState s = l.getBlockState(p.above(dy));
+            if (s.getFluidState().is(FluidTags.LAVA) || s.is(BlockTags.FIRE)) return true;
+        }
+        for (BlockPos q = p.below(); q.getY() >= l.getMinBuildHeight(); q = q.below()) {
+            BlockState s = l.getBlockState(q);
+            if (s.getFluidState().is(FluidTags.LAVA)) return true;
+            if (!s.getCollisionShape(l, q).isEmpty() || !s.getFluidState().isEmpty()) return false;
+            if (p.getY() - q.getY() > 20) return true;
+        }
+        return true;
+    }
+
+    /**
+     * Ce qu'un PNJ combattant peut frapper : les créatures hostiles proches, celui qui l'a attaqué ou qui a attaqué son
+     * chef (un monstre ou un autre PNJ, {@link #combattable}), et le monstre que son chef combat.
      * Jamais un villageois, un golem, un animal ni un joueur, même agresseur : un joueur, seulement sur ordre du chef
      * (une consigne, voir Consignes.combat).
      */
@@ -154,14 +176,13 @@ final class Monde {
         List<LivingEntity> l = new ArrayList<>(t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(rayon),
                 e -> hostile(e) && Math.abs(e.getY() - t.getY()) < 6 && t.getSensing().hasLineOfSight(e)));
         LivingEntity mien = t.getLastHurtByMob();
-        if (mien != null && mien.isAlive() && !(mien instanceof Player) && recent(t, t.getLastHurtByMobTimestamp()) && !t.estDe(mien) && !l.contains(mien)) l.add(mien);
+        if (mien != null && combattable(mien) && recent(t, t.getLastHurtByMobTimestamp()) && !t.estDe(mien) && !l.contains(mien)) l.add(mien);
         ServerPlayer c = t.chefJoueur();
         if (c != null && c.level() == t.level() && c.distanceTo(t) < rayon * 2) {
             LivingEntity agresseur = c.getLastHurtByMob();
-            if (agresseur != null && agresseur.isAlive() && agresseur != t && !(agresseur instanceof Player) && recent(c, c.getLastHurtByMobTimestamp()) && !l.contains(agresseur)) l.add(agresseur);
+            if (agresseur != null && agresseur != t && combattable(agresseur) && recent(c, c.getLastHurtByMobTimestamp()) && !l.contains(agresseur)) l.add(agresseur);
             LivingEntity vise = c.getLastHurtMob();
-            if (vise != null && vise.isAlive() && vise != t && !(vise instanceof Player) && recent(c, c.getLastHurtMobTimestamp()) && !l.contains(vise)
-                    && (hostile(vise) || vise instanceof Mob m && m.getTarget() == c)) l.add(vise);
+            if (vise != null && vise != t && hostile(vise) && recent(c, c.getLastHurtMobTimestamp()) && !l.contains(vise)) l.add(vise);
         }
         l.removeIf(e -> t.inaccessibles.containsKey(e.getId()));
         l.sort(Comparator.comparingDouble(t::distanceToSqr));

@@ -307,6 +307,82 @@ public class TestsRepertoire {
                 () -> fin(e));
     }
 
+    /** Le chef regarde un bain de lave et dit « va là-bas » : il refuse (cahier 8.5), et dit pourquoi. Avant, il y allait. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void refuseDAllerDansLaLave(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 37);
+        Travailleur raoul = e[1];
+        BlockPos lave = TestsJeu.sol(h, 37 * 400, 60000).offset(0, -1, 9);
+        for (Travailleur t : e) t.mode = Travailleur.Mode.ATTENDRE; // personne ne s'approche du bain
+        // Un grand bain (7 x 7, à 6 blocs du chef) : le regard du chef traverse la lave (il ne la « voit » pas) et touche
+        // le fond, encore sous le bain.
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) h.getLevel().setBlockAndUpdate(lave.offset(dx, 0, dz), Blocks.LAVA.defaultBlockState());
+        etapes(h, chef, e,
+                () -> {
+                    regarderPoint(chef, new Vec3(lave.getX() + 0.5, lave.getY() + 1, lave.getZ() - 2.7)); // la surface, près du bord
+                    BlockPos vu = Consignes.regardBloc(chef, 48);
+                    h.assertTrue(vu != null && h.getLevel().getFluidState(vu.above()).is(net.minecraft.tags.FluidTags.LAVA), "le chef doit regarder le fond du bain : " + vu);
+                    raoul.parler(chef, "Raoul, va là-bas !");
+                },
+                () -> h.assertTrue(raoul.consigne == null, "il doit refuser d'y aller : " + c(raoul) + " / " + IA.echange(raoul)),
+                () -> h.assertTrue(IA.echange(raoul).contains("mort"), "il doit dire pourquoi : " + IA.echange(raoul)),
+                () -> fin(e));
+    }
+
+    /** Le chef regarde un point (sans paquet envoyé : le faux joueur n'a pas de vraie connexion). */
+    static void regarderPoint(ServerPlayer chef, Vec3 p) {
+        Vec3 d = p.subtract(chef.getEyePosition());
+        chef.setXRot((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+        chef.setYRot((float) Math.toDegrees(Math.atan2(d.z, d.x)) - 90f);
+        chef.setYHeadRot(chef.getYRot());
+    }
+
+    /** Un message à porter ne dure pas sans fin : au bout de 2 minutes sans avoir rattrapé l'ouvrier, il renonce. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void messagerRenonceAuBoutDeDeuxMinutes(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 38);
+        Travailleur bertrand = e[0];
+        boolean[] renonce = {false};
+        h.onEachTick(() -> { if (bertrand.resultat.equals("trop_long")) renonce[0] = true; });
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
+                () -> h.assertTrue(bertrand.action instanceof Consignes.Faire f && f.c.id.equals("message"), "il doit porter le message : " + c(bertrand)),
+                () -> bertrand.action.age = 20 * 120 + 1, // deux minutes ont passé
+                () -> h.assertTrue(renonce[0] && bertrand.consigne == null, "il doit renoncer : " + c(bertrand) + ", résultat " + bertrand.resultat),
+                () -> fin(e));
+    }
+
+    /**
+     * Le messager ne peut pas rejoindre Odon (il est enfermé dans un enclos) : Odon, hélé, ne reste pas planté là plus de
+     * quelques secondes. Avant, il restait figé tant que le messager le voyait.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void heleNeFigePasLongtemps(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 39);
+        Travailleur bertrand = e[0], odon = e[2];
+        odon.mode = Travailleur.Mode.ATTENDRE;
+        BlockPos b = odon.blockPosition().offset(0, 0, -9);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++)
+            if (Math.max(Math.abs(dx), Math.abs(dz)) == 2) h.getLevel().setBlockAndUpdate(b.offset(dx, 0, dz), Blocks.OAK_FENCE.defaultBlockState());
+        Vec3 enclos = Vec3.atBottomCenterOf(b);
+        bertrand.moveTo(enclos.x, enclos.y, enclos.z);
+        int[] fige = {0, 0}; // l'arrêt en cours d'Odon, le plus long
+        h.onEachTick(() -> {
+            fige[0] = odon.ecouteTicks > 0 ? fige[0] + 1 : 0;
+            fige[1] = Math.max(fige[1], fige[0]);
+        });
+        etapes(h, chef, e,
+                () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
+                () -> h.assertTrue(c(bertrand).equals("message"), "consigne : " + c(bertrand)),
+                () -> h.assertTrue(fige[1] > 0, "Odon doit d'abord être hélé"),
+                attendre(h, 300),
+                () -> h.assertTrue(fige[1] <= 170, "Odon ne doit pas rester figé plus de quelques secondes (" + fige[1] + " ticks)"),
+                () -> fin(e));
+    }
+
     /** « Danse ! » : il danse dix secondes, puis reprend son travail tout seul. */
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void danseUnMoment(GameTestHelper h) {

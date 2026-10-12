@@ -111,7 +111,7 @@ final class Itineraire {
      * longtemps : les autres affamés attendent les ticks suivants, chacun son tour.
      * Les refus et les passe-droits sont comptés dans {@link Charge}.
      */
-    private boolean jeton(long maintenant) {
+    boolean jeton(long maintenant) {
         if (recherchesCeTick >= PAR_TICK) return false;
         if (budget <= 0) {
             if (attendDepuis < 0) attendDepuis = maintenant;
@@ -502,15 +502,21 @@ final class Itineraire {
         boolean dernier = cible == sortie.size() - 1;
         // Le dernier pas se fait jusqu'au bout : à un bloc près, il resterait sous le plafond et chercherait encore la sortie.
         if (t.position().distanceToSqr(c) < (dernier ? 0.3 : 2.25)) { indexSortie = cible + 1; sortieAvance = 0; return; }
-        if (dernier && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
+        // Arrivé à un point de la route plus proche (par le chemin de secours ci-dessous) : la route avance aussi.
+        while (indexSortie < cible && t.position().distanceToSqr(Vec3.atBottomCenterOf(sortie.get(indexSortie))) < 2.25) { indexSortie++; sortieAvance = 0; }
+        // Des pas tout droit (le dernier, ou au bout du chemin, sans le recalculer à chaque tick) seulement si le dernier
+        // chemin calculé mène bien à ce point : sinon, entre lui et le point, il peut y avoir un trou ou de la lave.
+        boolean complet = cheminSortie != null && cheminSortie.canReach() && cheminSortie.getTarget().equals(q);
+        if (dernier && complet && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         boolean fini = t.getNavigation().isDone();
-        // Au bout du dernier chemin vers ce point : les derniers pas tout droit, sans le recalculer à chaque tick.
-        if (fini && cheminSortie != null && cheminSortie.getTarget().equals(q) && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
+        if (fini && complet && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         if (age % 20 == 0 || fini && age - sortieDate >= RECALCUL) {
             sortieDate = age;
             Path ch = cheminSortie = chercher(t, q, 0, Charge.Origine.SORTIE);
-            if (ch != null) t.getNavigation().moveTo(ch, v);
-            else t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v);
+            // Pas de chemin complet jusqu'au point visé : le point suivant de la route, tout près (jamais un chemin partiel).
+            if ((ch == null || !ch.canReach()) && cible > indexSortie) ch = cheminSortie = chercher(t, sortie.get(indexSortie), 0, Charge.Origine.SORTIE);
+            if (ch != null && ch.canReach()) t.getNavigation().moveTo(ch, v);
+            else t.getNavigation().stop();
         }
     }
 
@@ -540,7 +546,10 @@ final class Itineraire {
             // Rien à creuser : ce n'est une solution que si la marche est déjà prête (il retente de monter dessus).
             BlockPos marche = i < dirs.size() ? p.relative(d).above() : p.relative(d);
             boolean aCreuserIci = blocs.stream().anyMatch(b -> !Monde.traversable(l, b));
-            if (blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
+            // Une marche sans sol dessous (un trou, un puits) ou posée sur de la lave ou du magma : il tomberait.
+            BlockState sol = l.getBlockState(marche.below());
+            boolean appui = Monde.solide(l, marche.below()) && !sol.getFluidState().is(FluidTags.LAVA) && !sol.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK);
+            if (appui && blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();

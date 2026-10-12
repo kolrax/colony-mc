@@ -156,15 +156,38 @@ public class Corbeau extends Entity {
         if (!sl.isPositionEntityTicking(BlockPos.containing(c.but))) return false;
         c.phase = Phase.APPROCHE;
         c.lettre = lettre;
-        Vec3 debut = c.but;
-        for (int k = 4; k <= 36; k += 4) { // un point tous les 4 blocs : un tronçon en fait 16
-            Vec3 p = c.but.add(c.cap.scale(-k)).add(0, k * 24.0 / 36, 0);
-            if (!sl.isPositionEntityTicking(BlockPos.containing(p))) break;
-            debut = p;
-        }
+        // Chaque tronçon traversé est vérifié (un point tous les 4 blocs pouvait couper le coin d'un tronçon figé), et il
+        // part un bloc avant le premier qui ne l'est pas.
+        double k = Math.max(0, actifSur(sl, c.but, c.cap.scale(-1), 36) - 1);
+        Vec3 debut = c.but.add(c.cap.scale(-k)).add(0, k * 24.0 / 36, 0);
         c.moveTo(debut.x, debut.y, debut.z, (float) (Mth.atan2(c.cap.z, c.cap.x) * Mth.RAD_TO_DEG) - 90f, 0);
         return l.addFreshEntity(c);
     }
+
+    /**
+     * Vu d'en haut, la distance sur laquelle on peut aller de {@code depuis} dans la direction {@code dir} (horizontale,
+     * de longueur 1) sans quitter les tronçons où les entités bougent : là où commence le premier tronçon figé, {@code max}
+     * au plus. Tous les tronçons que touche le trait sont vérifiés, un par un (au plus 5 pour 36 blocs).
+     */
+    static double actifSur(ServerLevel sl, Vec3 depuis, Vec3 dir, double max) {
+        int cx = Mth.floor(depuis.x) >> 4, cz = Mth.floor(depuis.z) >> 4, sx = dir.x >= 0 ? 1 : -1, sz = dir.z >= 0 ? 1 : -1;
+        double prochainX = Math.abs(dir.x) < 1e-9 ? Double.MAX_VALUE : ((sx > 0 ? (cx + 1) * 16 : cx * 16) - depuis.x) / dir.x;
+        double prochainZ = Math.abs(dir.z) < 1e-9 ? Double.MAX_VALUE : ((sz > 0 ? (cz + 1) * 16 : cz * 16) - depuis.z) / dir.z;
+        double pasX = Math.abs(dir.x) < 1e-9 ? Double.MAX_VALUE : 16 / Math.abs(dir.x), pasZ = Math.abs(dir.z) < 1e-9 ? Double.MAX_VALUE : 16 / Math.abs(dir.z);
+        double d = 0;
+        while (true) {
+            if (!actif(sl, cx, cz)) return d;
+            d = Math.min(prochainX, prochainZ);
+            if (d >= max) return max;
+            if (Math.abs(prochainX - prochainZ) < 1e-6) { // juste par le coin : les deux voisins comptent aussi
+                if (!actif(sl, cx + sx, cz) || !actif(sl, cx, cz + sz)) return d;
+                cx += sx; cz += sz; prochainX += pasX; prochainZ += pasZ;
+            } else if (prochainX < prochainZ) { cx += sx; prochainX += pasX; }
+            else { cz += sz; prochainZ += pasZ; }
+        }
+    }
+
+    static boolean actif(ServerLevel sl, int cx, int cz) { return sl.isPositionEntityTicking(new BlockPos(cx << 4, 0, cz << 4)); }
 
     /** Où il se pose : sur le poste s'il est à ciel ouvert, sinon au plus près dehors. */
     static Vec3 perchoir(Level l, BlockPos poste) {
