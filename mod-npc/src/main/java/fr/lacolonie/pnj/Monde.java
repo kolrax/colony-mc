@@ -100,12 +100,16 @@ final class Monde {
         Vec3 c = Vec3.atBottomCenterOf(vers);
         int n = (int) Math.ceil(depuis.distanceTo(c) * 2);
         BlockPos dep = BlockPos.containing(depuis);
+        int avant = dep.getY();
         for (int i = 1; i <= n; i++) {
             Vec3 v = depuis.lerp(c, i / (double) n);
             BlockPos q = BlockPos.containing(v);
             if (q.getX() == dep.getX() && q.getZ() == dep.getZ()) continue;
             if (!traversable(l, q) && !traversable(l, q.above())) return false;
             BlockPos pied = traversable(l, q) ? q : q.above();
+            // Une marche d'un bloc au plus d'un pas à l'autre, et la place pour la tête.
+            if (pied.getY() - avant > 1 || !traversable(l, pied.above())) return false;
+            avant = pied.getY();
             boolean appui = false;
             for (int k = 1; k <= 4 && !appui; k++) {
                 BlockPos b = pied.below(k);
@@ -113,7 +117,11 @@ final class Monde {
                 if (s.getFluidState().is(FluidTags.LAVA) || s.is(Blocks.MAGMA_BLOCK)) {
                     if (brulantes.add(b.immutable()) && brulantes.size() > lave) return false;
                     appui = true; // il y nage (déjà compté comme lave traversée)
-                } else appui = !s.getCollisionShape(l, b).isEmpty() || s.getFluidState().is(FluidTags.WATER);
+                } else {
+                    var forme = s.getCollisionShape(l, b);
+                    if (!forme.isEmpty() && forme.max(Direction.Axis.Y) > 1) return false; // une clôture, un muret : un mur
+                    appui = !forme.isEmpty() || s.getFluidState().is(FluidTags.WATER);
+                }
             }
             if (!appui) return false;
             for (int dy = -1; dy <= 1; dy++) {
@@ -140,7 +148,7 @@ final class Monde {
      * ou en train de tomber dans la colonne. Il n'y entre pas tant que ça dure.
      */
     static boolean eboulement(Level l, BlockPos p, int haut) {
-        return tombe(l, p.above(haut)) && !solide(l, p.above(haut - 1)) || !l.getEntitiesOfClass(FallingBlockEntity.class,
+        return tombe(l, p.above(haut)) && FallingBlock.isFree(l.getBlockState(p.above(haut - 1))) || !l.getEntitiesOfClass(FallingBlockEntity.class,
                 new AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + haut + 8, p.getZ() + 1)).isEmpty();
     }
 

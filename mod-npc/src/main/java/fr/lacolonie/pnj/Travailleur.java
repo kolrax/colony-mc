@@ -652,7 +652,9 @@ public class Travailleur extends PathfinderMob {
      */
     void survivre() {
         if (action instanceof Actions.Echapper e && (!e.eau || !enPeril()) || isPassenger()) return; // en route vers l'eau, il tombe dans la lave : il en sort d'abord
-        boolean peril = enPeril(), feu = !peril && isOnFire() && !isInWaterRainOrBubble();
+        // Juste en feu au milieu d'un combat (frappé, se bat, fuit) : pas d'aller-retour entre la fuite et l'eau.
+        boolean peril = enPeril(), feu = !peril && isOnFire() && !isInWaterRainOrBubble()
+                && !vientDEtreFrappe() && !enCombat(action) && !(action instanceof Consignes.Faire f && enCombat(f.sous));
         if (!peril && !feu) return;
         boolean grave = isInLava() || isInWall() || level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE);
         // Pas de refuge à portée tout à l'heure : il ne refait pas la recherche avant une seconde (sauf danger grave).

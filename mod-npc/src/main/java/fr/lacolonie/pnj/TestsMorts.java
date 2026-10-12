@@ -502,4 +502,58 @@ public class TestsMorts {
             t.discard();
         });
     }
+
+    /**
+     * En feu, de l'eau à 4 pas mais derrière une clôture, un monstre qui le frappe : il ne reste pas à pousser contre la
+     * clôture (avant : 10 s sans réagir aux coups), il fuit le monstre.
+     */
+    @GameTest(template = "grand", timeoutTicks = 300, batch = "morts")
+    public static void fuitSiFrappeEnFeu(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        for (int z = 11; z <= 13; z++) h.setBlock(16, 1, z, Blocks.WATER);
+        for (int x = 15; x <= 17; x++) for (int z = 10; z <= 14; z++)
+            if (x != 16 || z == 10 || z == 14) h.setBlock(x, 2, z, Blocks.OAK_FENCE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        net.minecraft.world.entity.monster.Zombie z = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 9, 2, 12);
+        z.setNoAi(true);
+        t.igniteForSeconds(10);
+        Cerveau.lancer(t, new Actions.Attendre(300));
+        Suivi s = suivre(h, t);
+        long debut = h.getTick();
+        int[] fuite = {-1};
+        h.onEachTick(() -> {
+            int age = (int) (h.getTick() - debut);
+            if (age >= 20 && age % 20 == 0 && t.isAlive()) t.hurt(t.damageSources().mobAttack(z), 1);
+            if (fuite[0] < 0 && t.action instanceof Actions.Fuir) fuite[0] = age;
+        });
+        h.runAtTickTime(debut + 200, () -> {
+            h.assertTrue(fuite[0] >= 0 && fuite[0] <= 80, "frappé à partir du tick 20, il doit fuir vite (fuite au tick " + fuite[0] + ", " + s.texte() + ")");
+            z.discard();
+            finir(h, "fuitSiFrappeEnFeu", t, s, 0);
+        });
+    }
+
+    /**
+     * Un canal d'irrigation au ras du sol, contre la première marche de l'escalier : il ne le bouche pas (ce serait
+     * détruire le travail d'un autre) ; son escalier passe ailleurs.
+     */
+    @GameTest(template = "grand", timeoutTicks = 700, skyAccess = true, batch = "morts")
+    public static void canalAuSoleilPasBouche(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 11; x <= 15; x++) h.setBlock(x, 10, 13, Blocks.WATER);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 11, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(6, 11, 6));
+        debutant(t);
+        t.mission("charbon", "stock", 64);
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
+        t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
+        t.memoire.putString("chantier", "charbon@" + Mineur.cle(t.bureau) + "/" + t.profondeurForcee);
+        t.memoire.putLong("puits", h.absolutePos(new BlockPos(12, 11, 12)).asLong());
+        t.memoire.putInt("marche", 0);
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 600, () -> {
+            for (int x = 11; x <= 15; x++) h.assertBlockPresent(Blocks.WATER, x, 10, 13);
+            finir(h, "canalAuSoleilPasBouche", t, s, 0.5);
+        });
+    }
 }

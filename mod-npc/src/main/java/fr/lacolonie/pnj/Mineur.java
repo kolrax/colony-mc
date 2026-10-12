@@ -76,18 +76,29 @@ final class Mineur extends Metier {
     /** Au plus tant de blocs posés dans l'eau ou la lave pour une même case ; au-delà, il abandonne (un lac). */
     static final int BOUCHONS = 10;
 
+    /** Au plus tant d'attentes qu'un éboulement finisse de tomber dans une même case ; au-delà, il l'abandonne. */
+    static final int EBOULIS = 6;
+
     /**
-     * Prépare une case de tunnel (pieds en p, {@code haut} blocs de hauteur). De l'eau ou de la lave autour : il la bouche
-     * avec un bloc banal de son sac ({@link Actions.Boucher}), sinon il abandonne la case. Du gravier ou du sable au-dessus :
-     * il le creuse depuis la case d'à côté, où il se tient, et n'entre qu'une fois la colonne tombée (jamais dessous).
+     * Prépare une case de tunnel (pieds en p, {@code haut} blocs de hauteur). De la lave qui touche la case, ou de l'eau
+     * sous terre loin de toute construction (jamais un canal ou un puits de joueur) : il la bouche avec un bloc banal de son
+     * sac ({@link Actions.Boucher}) ; tout autre liquide autour, ou sans bloc : il abandonne la case (l'escalier tourne).
+     * Du gravier ou du sable au-dessus : il le creuse depuis la case d'à côté, où il se tient, et n'entre qu'une fois la
+     * colonne tombée (jamais dessous).
      */
     static Case creuserCase(Travailleur t, BlockPos p, int haut) {
         Level l = t.level();
         for (int h = -1; h <= haut; h++)
             for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
                 BlockPos q = p.offset(d[0], h, d[1]);
-                if (Monde.liquide(l, q) == null) continue;
-                if (echecSur(t, q) || t.memoire.getInt("bouchons") >= BOUCHONS || Itineraire.caseDeChantier(t, true) < 0) return Case.LIQUIDE;
+                String quoi = Monde.liquide(l, q);
+                if (quoi == null) continue;
+                boolean touche = d[0] == 0 && d[1] == 0 || h >= 0 && h < haut;
+                boolean bouchable = touche && ("lave".equals(quoi) || "eau".equals(quoi) && !l.canSeeSky(q.above()) && !Monde.construitAutour(l, q));
+                if (!bouchable || echecSur(t, q) || t.memoire.getInt("bouchons") >= BOUCHONS || Itineraire.caseDeChantier(t, true) < 0) {
+                    t.memoire.remove("bouchons");
+                    return Case.LIQUIDE;
+                }
                 t.memoire.putInt("bouchons", t.memoire.getInt("bouchons") + 1);
                 t.memoire.putString("cible", cle(q));
                 Cerveau.lancer(t, new Actions.Boucher(q));
@@ -111,8 +122,14 @@ final class Mineur extends Metier {
             return Case.ACTION;
         }
         // Du gravier ou du sable va tomber dans la case : il attend qu'il soit tombé (il le recassera) avant d'y entrer.
-        if (Monde.eboulement(l, p, haut)) { Cerveau.attendre(t, 0.5); return Case.ACTION; }
+        if (Monde.eboulement(l, p, haut)) {
+            t.memoire.putInt("eboulis", t.memoire.getInt("eboulis") + 1);
+            if (t.memoire.getInt("eboulis") > EBOULIS) { t.memoire.remove("eboulis"); return Case.BLOQUE; }
+            Cerveau.attendre(t, 0.5);
+            return Case.ACTION;
+        }
         t.memoire.remove("bouchons");
+        t.memoire.remove("eboulis");
         return Case.PRETE;
     }
 

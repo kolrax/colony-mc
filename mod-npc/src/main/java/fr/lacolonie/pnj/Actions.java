@@ -160,6 +160,9 @@ public final class Actions {
         Etat echec(String r) { raison = r; return Etat.ECHEC; }
     }
 
+    /** Portée des petites recherches de chemin (fuite, place à côté d'un bloc) : quelques blocs suffisent. */
+    static final float PORTEE_FUITE = 8;
+
     static boolean aPortee(Travailleur t, BlockPos p) { return t.getEyePosition().distanceToSqr(Vec3.atCenterOf(p)) <= 4.5 * 4.5; }
 
     /** Durée (en ticks) pour casser un bloc avec l'outil en main, comme un joueur. */
@@ -334,7 +337,7 @@ public final class Actions {
             if (t.position().distanceToSqr(c) > 2.25) {
                 // Une recherche de chemin par seconde au plus ; une place qu'aucun chemin complet n'atteint : il renonce.
                 if (aCote % 20 == 1) {
-                    net.minecraft.world.level.pathfinder.Path ch = t.getNavigation().createPath(cote, 0);
+                    net.minecraft.world.level.pathfinder.Path ch = Itineraire.chercher(t, cote, 0, Charge.Origine.AUTRE, PORTEE_FUITE, Itineraire.NOEUDS_ETAPE);
                     if (ch == null || !ch.canReach()) { t.blocInaccessible(pos); return echec("danger"); }
                     t.getNavigation().moveTo(ch, 0.8);
                 }
@@ -403,7 +406,7 @@ public final class Actions {
             toutDroit = false;
             for (int essai = 0; essai < 3 && refuge != null; essai++) {
                 if (Monde.ligneSure(t.level(), t.position(), refuge, t.isInLava() || t.level().getBlockState(t.blockPosition()).is(BlockTags.FIRE) ? 3 : 0)) { t.getNavigation().stop(); toutDroit = true; return; }
-                net.minecraft.world.level.pathfinder.Path ch = t.getNavigation().createPath(refuge, 0);
+                net.minecraft.world.level.pathfinder.Path ch = Itineraire.chercher(t, refuge, 0, Charge.Origine.AUTRE, PORTEE_FUITE, Itineraire.NOEUDS_ETAPE);
                 if (ch != null && ch.canReach()) { t.getNavigation().moveTo(ch, 1.3); return; }
                 if (eau) { refuge = null; return; }
                 exclus.add(refuge);
@@ -444,6 +447,8 @@ public final class Actions {
                     return age > 200 ? echec("perdu") : Etat.EN_COURS;
                 }
             }
+            // En feu sans eau qu'il puisse atteindre : il renonce (pause de 5 s), pour rester libre de fuir ou de se défendre.
+            if (eau && refuge == null) { t.sansRefugeJusqua = t.tickCount + 100; return echec("sans_eau"); }
             boolean peril = eau ? t.isOnFire() && !t.isInWaterRainOrBubble() || t.enPeril() : t.enPeril();
             if (!peril && (eau || age > 40 || refuge == null)) return Etat.OK; // hors de danger (éteint) : il ne s'attarde pas
             if (age % 20 == 0) { // une fois par seconde, pas plus
