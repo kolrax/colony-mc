@@ -1202,7 +1202,7 @@ final class Consignes {
             if (d <= 3) { if (sous != null) { sous.fin(t); sous = null; } t.getNavigation().stop(); return Actions.Etat.EN_COURS; }
             if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(vise.position()) > 4) { sous.fin(t); sous = null; }
             t.setSprinting(d > 10);
-            Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5));
+            Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5).mobile(true));
             if (r == Actions.Etat.ECHEC && raisonSous.equals("bloque")) return rate(t, "Je n'arrive pas à le suivre, chef.");
             return Actions.Etat.EN_COURS;
         }
@@ -1212,7 +1212,7 @@ final class Consignes {
             if (vise == null || vise.level() != t.level()) return rate(t, "Il n'est plus là.");
             if (t.distanceTo(vise) > 2.5) {
                 if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(vise.position()) > 4) { sous.fin(t); sous = null; }
-                Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.2));
+                Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.2).mobile(true));
                 if (r == Actions.Etat.ECHEC) return rate(t, "Je n'arrive pas jusqu'à toi, chef.");
                 return Actions.Etat.EN_COURS;
             }
@@ -1348,7 +1348,7 @@ final class Consignes {
                     }
                     if (t.position().distanceToSqr(place) > portee * portee) {
                         if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(place) > 4) { sous.fin(t); sous = null; }
-                        Actions.Etat r = deleguer(t, new Actions.Aller(place, portee));
+                        Actions.Etat r = deleguer(t, new Actions.Aller(place, portee).mobile(protege != null));
                         if (r == Actions.Etat.OK && e.arg().equals("patrouiller")) etape++;
                         if (r == Actions.Etat.ECHEC && e.arg().equals("patrouiller")) etape++;
                         t.setGeste("");
@@ -1375,7 +1375,7 @@ final class Consignes {
                     t.setSprinting(true);
                     if (t.distanceTo(chef) <= 3) return ok(t);
                     if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(chef.position()) > 4) { sous.fin(t); sous = null; }
-                    Actions.Etat r = deleguer(t, new Actions.Aller(chef.position(), 2.5));
+                    Actions.Etat r = deleguer(t, new Actions.Aller(chef.position(), 2.5).mobile(true));
                     return r == Actions.Etat.ECHEC ? rate(t, "") : Actions.Etat.EN_COURS;
                 }
                 default -> { return ok(t); }
@@ -1536,7 +1536,7 @@ final class Consignes {
             }
             if (t.distanceTo(vise) > 3) {
                 if (sous instanceof Actions.Aller a && a.cible.distanceToSqr(vise.position()) > 4) { sous.fin(t); sous = null; }
-                Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5));
+                Actions.Etat r = deleguer(t, new Actions.Aller(vise.position(), 2.5).mobile(true));
                 if (r == Actions.Etat.ECHEC) return rate(t, "Je n'arrive pas jusqu'à lui, chef.");
                 return Actions.Etat.EN_COURS;
             }

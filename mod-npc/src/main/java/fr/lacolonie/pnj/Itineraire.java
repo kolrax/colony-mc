@@ -163,7 +163,13 @@ final class Itineraire {
         if (aCreuser != null) { t.diag = "creuse " + aCreuser.toShortString(); creuser(t); return; }
         if (pilier != null || !pont.isEmpty()) { poser(t, age); return; }
         if (montee != null) {
-            if (t.blockPosition().equals(montee) || age > monteeFin) { montee = null; etape = null; finChoix(); }
+            if (t.blockPosition().equals(montee) || age > monteeFin) {
+                boolean sorti = t.blockPosition().equals(montee);
+                montee = null;
+                etape = null;
+                finChoix();
+                if (sorti) reprendre(t);
+            }
             else {
                 t.diag = "monte en " + montee.toShortString();
                 if (t.onGround() && age % 10 == 0) {
@@ -277,7 +283,7 @@ final class Itineraire {
                 sortieAvance = 0;
                 if (sortie != null) { finChoix(); choixRates = 0; return; }
                 sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
-                commencerCreusage(t);
+                if (evasionPermise(t)) commencerCreusage(t);
                 if (aCreuser != null) { finChoix(); choixRates = 0; return; }
             }
             candidats = candidats(t, l, ici, p, dh);
@@ -322,11 +328,11 @@ final class Itineraire {
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
-        commencerCreusage(t);
+        if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
         // il monte sur des blocs de son sac, ou jette un petit pont.
-        if ((montee == null || !monte) && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
+        if ((montee == null || !monte) && evasionPermise(t) && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         prochainChoix = maintenant + Math.min(DELAI_MAX, DELAI_APRES_ECHEC << Math.min(4, choixRates++));
         if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
         etape = null;
@@ -587,7 +593,7 @@ final class Itineraire {
 
     private void creuser(Travailleur t) {
         Level l = t.level();
-        if (!creusable(l, aCreuser)) { aCreuser = null; aCasser.clear(); return; }
+        if (!creusable(l, aCreuser)) { aCreuser = null; aCasser.clear(); reprise = false; return; }
         BlockState st = l.getBlockState(aCreuser);
         if (Monde.traversable(l, aCreuser) || st.isAir()) { suivantACreuser(t); return; }
         meilleurOutil(t, st, aCreuser);
@@ -607,7 +613,8 @@ final class Itineraire {
         aCasser.remove(aCreuser);
         progres = 0;
         aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
-        if (aCreuser == null) monter(t);
+        if (aCreuser == null && !reprise) monter(t);
+        if (aCreuser == null) reprise = false;
     }
 
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
@@ -625,58 +632,94 @@ final class Itineraire {
     /** Les blocs banals qu'il veut bien poser pour se tirer d'affaire (ni gravier ni sable : ils tombent). */
     static final Set<Item> BLOCS_CHANTIER = Set.copyOf(List.of(Items.DIRT, Items.COARSE_DIRT, Items.COBBLESTONE, Items.COBBLED_DEEPSLATE,
             Items.STONE, Items.ANDESITE, Items.DIORITE, Items.GRANITE, Items.TUFF, Items.NETHERRACK));
-    /** Il ne monte pas plus haut que ça sur ses blocs. */
-    static final int PILIER_MAX = 8;
+    /** Il ne monte pas plus haut que ça sur ses blocs ; affaibli (vie de 10 ou moins), 3 blocs, comme pour sauter d'un à-pic. */
+    static final int PILIER_MAX = 8, PILIER_AFFAIBLI = 3;
+    /** Au plus tant de blocs posés pour un même trajet. */
+    static final int POSES_MAX = 24;
     /** Où ira le prochain bloc du pilier (sous lui, une fois en l'air) ; null s'il ne monte pas. */
     private BlockPos pilier;
-    private int pilierHaut, poseFin;
-    /** Où il sort, une fois en haut du pilier ou au bout du pont. */
-    private BlockPos issue;
+    private int pilierHaut, poseFin, posesFaites;
+    /** Où il sort, une fois en haut du pilier ou au bout du pont ; d'où il a commencé à poser. */
+    private BlockPos issue, departPose;
     /** Les blocs du pont qui restent à poser. */
     private final List<BlockPos> pont = new ArrayList<>();
+    /** Les blocs posés pendant ce trajet : une fois sorti, il reprend ceux qu'il a à portée de main. */
+    private final List<BlockPos> poses = new ArrayList<>();
+    /** Les endroits d'où une pose n'a rien donné : il n'y recommence pas. */
+    private final Set<BlockPos> posesRatees = new HashSet<>();
+    /** Il casse ses propres blocs pour les reprendre (le creusage, sans monter ensuite). */
+    private boolean reprise;
+
+    /** Un ouvrier qui doit attendre là (gardé, prisonnier) ne creuse ni ne pose de blocs pour s'en aller. */
+    static boolean evasionPermise(Travailleur t) { return t.mode != Travailleur.Mode.ATTENDRE; }
 
     static boolean blocDeChantier(ItemStack s) { return !s.isEmpty() && (BLOCS_CHANTIER.contains(s.getItem()) || s.is(ItemTags.PLANKS)); }
 
+    /**
+     * La case de son sac d'où prendre un bloc à poser, -1 s'il n'en a pas. Ce que sa mission demande n'y passe pas : de cet
+     * objet, il garde au moins le nombre demandé.
+     */
+    static int caseDeChantier(Travailleur t) {
+        Metier.Commande c = Metier.commande(t);
+        Actions.Filtre f = c == null ? null : c.objet;
+        int garder = f == null ? 0 : t.missionActive().nombre, compte = 0, caseMission = -1;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+            ItemStack s = t.inventaire.getItem(i);
+            if (!blocDeChantier(s)) continue;
+            if (f == null || !f.objet(s)) return i;
+            compte += s.getCount();
+            caseMission = i;
+        }
+        return compte > garder ? caseMission : -1;
+    }
+
+    /** Combien de blocs il peut poser (sans toucher à ce que sa mission demande). */
     static int blocsDeChantier(Travailleur t) {
-        int n = 0;
-        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (blocDeChantier(t.inventaire.getItem(i))) n += t.inventaire.getItem(i).getCount();
-        return n;
+        Metier.Commande c = Metier.commande(t);
+        Actions.Filtre f = c == null ? null : c.objet;
+        int libres = 0, mission = 0;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+            ItemStack s = t.inventaire.getItem(i);
+            if (!blocDeChantier(s)) continue;
+            if (f != null && f.objet(s)) mission += s.getCount(); else libres += s.getCount();
+        }
+        return libres + (f == null ? 0 : Math.max(0, mission - t.missionActive().nombre));
     }
 
     /** Pose en q un bloc de chantier de son sac, comme un joueur ; seulement à une place vide (jamais dans la lave ni dans l'eau). */
     static boolean poserBloc(Travailleur t, BlockPos q) {
         BlockState st = t.level().getBlockState(q);
         if (!st.canBeReplaced() || !st.getFluidState().isEmpty()) return false;
-        for (int i = 0; i < t.inventaire.getContainerSize(); i++)
-            if (blocDeChantier(t.inventaire.getItem(i))) return Actions.placer(t, q, t.inventaire.getItem(i)) == null;
-        return false;
+        int i = caseDeChantier(t);
+        return i >= 0 && Actions.placer(t, q, t.inventaire.getItem(i)) == null;
     }
 
     /**
      * Au fond d'un trou ou dans un enclos qu'il ne peut pas creuser, avec des blocs de chantier dans son sac : il monte en
      * pilier (comme un joueur : il saute et pose un bloc sous lui) jusqu'à pouvoir marcher sur un bord sûr ; sinon, devant
-     * un vide d'un ou deux blocs, il pose un petit pont jusqu'à l'autre bord. Rien vers la lave, le feu ou le vide.
+     * un vide d'un ou deux blocs, il pose un petit pont jusqu'à l'autre bord. Rien vers la lave, le feu ou le vide ; pas
+     * deux fois d'un endroit où ça n'a rien donné, et au plus {@link #POSES_MAX} blocs par trajet.
      */
     private boolean commencerAPoser(Travailleur t) {
         Level l = t.level();
         BlockPos p = t.blockPosition();
-        int blocs = blocsDeChantier(t);
-        if (blocs == 0 || !t.onGround() || t.isInWater() || !Monde.solide(l, p.below())) return false;
+        int blocs = Math.min(blocsDeChantier(t), POSES_MAX - posesFaites);
+        if (blocs <= 0 || posesRatees.contains(p) || !t.onGround() || t.isInWater() || !Monde.solide(l, p.below())) return false;
         Vec3 pos = t.position();
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
-        // Le pilier : la plus petite hauteur d'où il peut marcher sur un bord, s'il a la place de sauter jusque-là.
-        for (int k = 1; k <= Math.min(PILIER_MAX, blocs); k++) {
+        // Le pilier : la plus petite hauteur d'où il peut marcher sur un bord, s'il a la place de sauter jusque-là. Il faut
+        // que la place de ses pieds soit vide : debout sur une dalle, un chemin, une terre labourée, une torche, le bloc n'irait pas.
+        BlockState pieds = l.getBlockState(p);
+        int haut = pieds.canBeReplaced() && pieds.getFluidState().isEmpty() ? Math.min(blocs, t.getHealth() > 10 ? PILIER_MAX : PILIER_AFFAIBLI) : 0;
+        for (int k = 1; k <= haut; k++) {
             if (!Monde.libre(l, p.above(k)) || !Monde.libre(l, p.above(k + 1))) break; // un plafond, un liquide
             for (Direction d : dirs) {
                 BlockPos bord = p.above(k).relative(d);
                 if (Monde.debout(l, bord) && Monde.solide(l, bord.below()) && !Monde.mortel(l, bord)) {
                     pilier = p;
                     pilierHaut = p.getY() + k;
-                    issue = bord;
-                    poseFin = ageCourant + 100;
-                    Cerveau.dire(t, "pilier", 600, "Je suis coincé : je monte sur des blocs pour sortir.");
-                    return true;
+                    return commencer(t, p, bord, "pilier", "Je suis coincé : je monte sur des blocs pour sortir.");
                 }
             }
         }
@@ -695,35 +738,60 @@ final class Itineraire {
                 if (!passe || blocsPont.isEmpty() || blocsPont.size() > blocs) continue;
                 pont.clear();
                 pont.addAll(blocsPont);
-                issue = arrivee;
-                poseFin = ageCourant + 100;
-                Cerveau.dire(t, "pont", 600, "Je pose quelques blocs pour franchir ce trou.");
-                return true;
+                return commencer(t, p, arrivee, "pont", "Je pose quelques blocs pour franchir ce trou.");
             }
         return false;
     }
 
-    /** Un pas du pilier ou du pont (à chaque tick). Ça n'avance plus (plus de blocs, poussé de côté) : il y renonce. */
+    private boolean commencer(Travailleur t, BlockPos depart, BlockPos sortie, String cle, String texte) {
+        departPose = depart;
+        issue = sortie;
+        poseFin = ageCourant + 100;
+        Cerveau.dire(t, cle, 600, texte);
+        return true;
+    }
+
+    /** Un pas du pilier ou du pont (à chaque tick, sans recherche de chemin). */
     private void poser(Travailleur t, int age) {
         t.getNavigation().stop();
-        if (age > poseFin) { pilier = null; pont.clear(); return; } // le prochain choix décidera
+        if (age > poseFin) { abandonner(t); return; } // ça n'avance plus (poussé de côté, bloc qui ne tient pas)
         if (!pont.isEmpty()) {
             t.diag = "pose un pont";
             BlockPos q = pont.get(0);
             t.getLookControl().setLookAt(Vec3.atCenterOf(q));
             if (age % 5 != 0) return;
-            if (!poserBloc(t, q)) { pont.clear(); return; }
+            if (!poserBloc(t, q)) { abandonner(t); return; }
+            poses.add(q);
+            posesFaites++;
             pont.remove(0);
+            poseFin = age + 100;
             if (pont.isEmpty()) sortirSurLeBord(age);
             return;
         }
         t.diag = "monte sur des blocs (" + (pilierHaut - pilier.getY()) + " à poser)";
         if (pilier.getY() >= pilierHaut) { if (t.onGround()) sortirSurLeBord(age); return; }
+        if (caseDeChantier(t) < 0) { abandonner(t); return; }
         // En l'air, les pieds au-dessus de la place : il pose le bloc sous lui.
-        if (t.getY() >= pilier.getY() + 1 && poserBloc(t, pilier)) { pilier = pilier.above(); poseFin = age + 100; return; }
+        if (t.getY() >= pilier.getY() + 1 && poserBloc(t, pilier)) {
+            poses.add(pilier);
+            posesFaites++;
+            pilier = pilier.above();
+            poseFin = age + 100;
+            return;
+        }
         double cx = pilier.getX() + 0.5, cz = pilier.getZ() + 0.5, dx = t.getX() - cx, dz = t.getZ() - cz;
         t.getMoveControl().setWantedPosition(cx, t.getY(), cz, 0.6);
         if (t.onGround() && dx * dx + dz * dz < 0.09) t.getJumpControl().jump();
+    }
+
+    /** La pose n'a rien donné : il n'y recommence pas d'ici, attend un peu plus à chaque fois, et finit par se dire coincé. */
+    private void abandonner(Travailleur t) {
+        pilier = null;
+        pont.clear();
+        if (departPose != null) posesRatees.add(departPose);
+        prochainChoix = t.level().getGameTime() + Math.min(DELAI_MAX, DELAI_APRES_ECHEC << Math.min(4, choixRates++));
+        if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
+        etape = null;
     }
 
     /** En haut du pilier ou au bout du pont : il marche jusqu'au bord, puis reprend son chemin. */
@@ -734,6 +802,35 @@ final class Itineraire {
         echecs = 0;
         directRate = 0;
         etape = null;
+    }
+
+    /**
+     * Sorti sur le bord : il reprend les blocs qu'il a posés, du dernier au premier, s'il les a à portée de main et sait
+     * les récolter (une pioche pour la pierre). Sinon, tant pis : ils restent.
+     */
+    private void reprendre(Travailleur t) {
+        Level l = t.level();
+        List<BlockPos> liste = new ArrayList<>();
+        for (int i = poses.size() - 1; i >= 0; i--) {
+            BlockPos q = poses.get(i);
+            BlockState st = l.getBlockState(q);
+            if (blocDeChantier(new ItemStack(st.getBlock().asItem())) && Actions.aPortee(t, q) && recolte(t, st) && creusable(l, q)
+                    && !q.equals(t.blockPosition().below())) liste.add(q);
+        }
+        poses.clear();
+        if (liste.isEmpty()) return;
+        aCasser.clear();
+        aCasser.addAll(liste);
+        aCreuser = aCasser.get(0);
+        progres = 0;
+        reprise = true;
+    }
+
+    /** Il a de quoi récolter ce bloc (un bloc qui ne demande pas d'outil, ou le bon outil dans la main ou dans son sac). */
+    static boolean recolte(Travailleur t, BlockState st) {
+        if (!st.requiresCorrectToolForDrops() || t.getMainHandItem().isCorrectToolForDrops(st)) return true;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (t.inventaire.getItem(i).isCorrectToolForDrops(st)) return true;
+        return false;
     }
 
     // --- En bateau -----------------------------------------------------------------------------------

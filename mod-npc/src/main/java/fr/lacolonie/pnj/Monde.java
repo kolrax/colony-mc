@@ -51,20 +51,31 @@ final class Monde {
     }
 
     /**
-     * Une place sûre à côté de {@code centre} (le poste), de plus en plus loin jusqu'à 4 blocs : un sol solide (pas le
-     * centre lui-même), deux blocs libres, ni liquide, ni lave, ni feu, ni vide. Null s'il n'y en a pas.
+     * Une place sûre à côté de {@code centre} (le poste), de plus en plus loin jusqu'à 4 blocs, d'abord à la hauteur du
+     * centre sur tout l'anneau, puis un bloc plus haut ou plus bas, puis deux : un sol solide (pas le centre lui-même, ni
+     * feu de camp ni magma), deux blocs libres, rien de mortel, et pas de cactus ni de baies tout contre. Null s'il n'y en a pas.
      */
     static BlockPos placeSure(Level l, BlockPos centre) {
         for (int r = 1; r <= 4; r++)
-            for (int dx = -r; dx <= r; dx++)
-                for (int dz = -r; dz <= r; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
-                    for (int dy : new int[]{0, 1, -1, 2, -2}) {
+            for (int dy : new int[]{0, 1, -1, 2, -2})
+                for (int dx = -r; dx <= r; dx++)
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
                         BlockPos q = centre.offset(dx, dy, dz);
-                        if (libre(l, q) && libre(l, q.above()) && solide(l, q.below()) && debout(l, q) && !mortel(l, q)) return q;
+                        if (libre(l, q) && libre(l, q.above()) && solide(l, q.below()) && debout(l, q) && !mortel(l, q) && !piquant(l, q)) return q;
                     }
-                }
         return null;
+    }
+
+    /** Un cactus ou des baies tout contre (pieds ou tête), ou un feu de camp sous les pieds : on s'y blesse. */
+    static boolean piquant(Level l, BlockPos q) {
+        if (l.getBlockState(q.below()).is(BlockTags.CAMPFIRES)) return true;
+        for (BlockPos x : List.of(q, q.above()))
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                BlockState s = l.getBlockState(x.relative(d));
+                if (s.is(Blocks.CACTUS) || s.is(Blocks.SWEET_BERRY_BUSH)) return true;
+            }
+        return false;
     }
 
     static String liquide(Level l, BlockPos p) {

@@ -18,7 +18,7 @@ final class Messages {
     /** L'objet de la lettre, tel qu'il apparaît dans la liste du courrier. */
     static final Map<String, String> OBJETS = new HashMap<>();
     /** Les lettres qui ne peuvent pas attendre qu'il passe au poste : un corbeau part tout de suite. */
-    static final java.util.Set<String> URGENTES = java.util.Set.of("a_terre", "greve", "coince");
+    static final java.util.Set<String> URGENTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place");
 
     static void m(String type, String objet, String... variantes) {
         CORPS.put(type, variantes);
@@ -83,6 +83,12 @@ final class Messages {
                 "Je n'arrive pas à rentrer au poste : je suis coincé en {0}.",
                 "Je suis bloqué en {0} et je ne trouve pas de passage. Il faudra peut-être venir me chercher.");
         t("coince", "peureux", "Je suis coincé en {0}… J'ai essayé tous les passages. Viens me chercher, je t'en prie.");
+        m("sans_place", "Je ne peux pas rentrer",
+                "Je suis coincé en {0}, et je ne puis rentrer : il n'y a plus une place libre autour du poste. Dégage ses abords, je t'en prie.",
+                "Coincé en {0}. On voudrait me ramener au poste, mais ses abords sont tout encombrés : il n'y a plus où poser le pied.");
+        m("ramene_attend", "Je reste au poste",
+                "Deux fois de suite, je me suis perdu en {0} et l'on m'a ramené au poste. J'y reste et j'attends tes ordres.",
+                "Je me suis encore retrouvé coincé en {0}. Plutôt que de m'y perdre une troisième fois, j'attends tes ordres au poste.");
         m("fin_expedition", "Je rentre",
                 "Mon expédition touche à sa fin : je rentre au poste ({0} blocs).",
                 "Il est temps de rentrer : je suis à {0} blocs du poste, je me mets en route.");

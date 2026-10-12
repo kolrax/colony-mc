@@ -559,7 +559,7 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
-        if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); }
+        if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {
@@ -705,26 +705,32 @@ public class Travailleur extends PathfinderMob {
         else if ("ok".equals(r) && action != null && action.aMarche()
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());
+        if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser)) coince.travail();
         if (action != null) action.fin(this);
         action = null;
         resultat = r;
     }
 
     /**
-     * Toutes les secondes : le temps qu'il passe coincé ({@link Coince}). Au bout de 5 minutes, s'il a un poste, qu'il
-     * travaille (ou fait grève), hors de tout danger et à plus de 6 blocs du poste, il y est ramené en dernier recours.
+     * Toutes les secondes : le temps qu'il passe coincé ({@link Coince}). Ce temps ne compte que s'il pourrait être ramené :
+     * il a un poste, il travaille (ou fait grève), sans danger, ni bateau, ni repos, ni sommeil, ne suit pas une créature
+     * qui bouge, et il est à plus de 6 blocs du poste ; sinon le compte repart de zéro. Au bout de 5 minutes, il est ramené.
      */
     void surveillerCoince() {
-        if (!coince.relever(getX(), getY(), getZ(), 20, level().getGameTime())) return;
-        if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger()
-                || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) return;
-        ramenerAuPoste();
+        Actions.Action a = action instanceof Consignes.Faire f && f.sous != null ? f.sous : action;
+        if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger() || isSleeping()
+                || a instanceof Actions.Reposer || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) {
+            coince.progres(getX(), getY(), getZ());
+            return;
+        }
+        if (coince.relever(getX(), getY(), getZ(), 20, level().getGameTime(), action == null || action instanceof Actions.Attendre)) ramenerAuPoste();
     }
 
     /**
      * Le dernier recours (cahier 11.3, exception accordée le 11/10, la seule téléportation permise) : coincé depuis
      * longtemps, il est ramené à côté de son poste, dans sa dimension (celle du poste s'il est ailleurs). Il le dit, et le
-     * poste en avertit son chef.
+     * poste en avertit son chef. Pas de place sûre au poste : il réessaie une minute plus tard (une lettre, une fois). Ramené
+     * deux fois sans avoir travaillé entre-temps : il attend les ordres au poste au lieu de repartir se perdre.
      */
     void ramenerAuPoste() {
         if (!(level() instanceof ServerLevel ici)) return;
@@ -735,19 +741,27 @@ public class Travailleur extends PathfinderMob {
         if (l == null || b == null) return;
         l.getChunk(b.getX() >> 4, b.getZ() >> 4); // sans chunk chargé, tout y paraît vide
         BlockPos q = Monde.placeSure(l, b);
-        if (q == null) return;
         BlockPos avant = blockPosition();
+        long maintenant = level().getGameTime();
+        if (q == null) {
+            coince.reporter(maintenant);
+            if (!coince.sansPlaceEcrit) { coince.sansPlaceEcrit = true; Courrier.ecrire(this, "sans_place", avant.toShortString()); }
+            return;
+        }
         int minutes = Math.max(1, coince.ticks / 1200);
-        coince.ramene(level().getGameTime());
+        coince.ramene(maintenant);
+        if (isSleeping()) stopSleeping();
         finirAction("ramene");
         getNavigation().stop();
         trace.clear();
         etapesRatees.clear();
         Vec3 v = Vec3.atBottomCenterOf(q);
         Entity e = this;
-        if (ailleurs) e = changeDimension(new net.minecraft.world.level.portal.DimensionTransition(l, v, Vec3.ZERO, getYRot(), getXRot(),
-                net.minecraft.world.level.portal.DimensionTransition.DO_NOTHING));
-        else teleportTo(v.x, v.y, v.z);
+        if (ailleurs) {
+            libererChunk(); // la copie dans l'autre monde garde les siens
+            e = changeDimension(new net.minecraft.world.level.portal.DimensionTransition(l, v, Vec3.ZERO, getYRot(), getXRot(),
+                    net.minecraft.world.level.portal.DimensionTransition.DO_NOTHING));
+        } else teleportTo(v.x, v.y, v.z);
         if (!(e instanceof Travailleur t)) return;
         t.setDeltaMovement(Vec3.ZERO);
         t.resetFallDistance();
@@ -756,6 +770,11 @@ public class Travailleur extends PathfinderMob {
         Courrier.avis(ici.getServer(), chef, "Ouvrier ramené au poste", prenom + " était coincé en " + avant.toShortString() + " depuis "
                 + minutes + (minutes > 1 ? " minutes" : " minute") + " : je l'ai ramené au poste.");
         Cerveau.journal("[" + prenom + "] coincé en " + avant.toShortString() + " depuis " + minutes + " min : ramené au poste en " + q.toShortString());
+        if (t == this && coince.retours >= Coince.RETOURS_MAX) {
+            mode = Mode.ATTENDRE;
+            majNom();
+            Courrier.ecrire(this, "ramene_attend", avant.toShortString());
+        }
     }
 
     void tickCorps() {
@@ -1162,6 +1181,7 @@ public class Travailleur extends PathfinderMob {
     String appliquer(Ordres.Lecture l, ServerPlayer enFace) {
         List<String> r = new ArrayList<>();
         long maintenant = level().getGameTime();
+        coince.progres(getX(), getY(), getZ()); // un ordre du chef : la situation change, le compte « coincé » repart de zéro
         boolean confirmation = memoire.getLong("renvoi") > maintenant;
         if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
             memoire.remove("renvoi");
@@ -1322,6 +1342,7 @@ public class Travailleur extends PathfinderMob {
         lettresAuCalme.clear();
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
+        coince.progres(getX(), getY(), getZ());
         libererChunk();
         majNom();
     }
@@ -1366,6 +1387,7 @@ public class Travailleur extends PathfinderMob {
         chef = p.getUUID();
         chefNom = p.getName().getString();
         mode = Mode.SUIVRE;
+        coince.progres(getX(), getY(), getZ());
         impayes = 0;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();

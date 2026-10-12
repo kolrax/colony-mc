@@ -105,6 +105,8 @@ public final class Actions {
         private Vec3 dernier;
         private int immobile, sansProgres;
         private double meilleure = Double.MAX_VALUE;
+        /** Sa cible bouge (le chef, une créature) : ne pas l'atteindre n'est pas être coincé (Coince). */
+        boolean mobile;
 
         Action(String nom) { this.nom = nom; }
 
@@ -117,7 +119,6 @@ public final class Actions {
 
         /** Marche vers la cible, à n'importe quelle distance, sans foncer dans un cul-de-sac (voir {@link Itineraire}). */
         void marcher(Travailleur t, Vec3 cible, double vitesse) {
-            t.coince.marche = true; // il veut avancer : le temps compte, s'il n'avance pas vraiment (Coince)
             if (route == null || route.but.distanceToSqr(cible) > 16) route = new Itineraire(t, cible);
             Vec3 p = t.position();
             // Il n'entre pas dans un coin que le monde n'a pas fini de préparer (terrain neuf en cours de génération) :
@@ -127,12 +128,15 @@ public final class Actions {
                     && !sl.isPositionEntityTicking(BlockPos.containing(p.add(cap.normalize().scale(5))))) {
                 t.getNavigation().stop();
                 t.diag = "attend que le terrain soit prêt";
+                if (!mobile) t.coince.marche = true;
                 sansProgres++; // au bout de 2 minutes d'attente, il se dira coincé
                 immobile = 0;
                 dernier = null;
                 return;
             }
             route.avancer(t, vitesse, age);
+            // Il veut aller à un endroit fixe et ne creuse ni ne pose : ce temps compte s'il n'avance pas vraiment (Coince).
+            if (!mobile && !route.occupe()) t.coince.marche = true;
             double d = p.distanceTo(cible);
             if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
@@ -192,12 +196,15 @@ public final class Actions {
 
         Aller(Vec3 cible, double portee, boolean auSol) { super("aller"); this.cible = cible; this.portee = Math.max(0.8, portee); this.auSol = auSol; }
 
+        /** Vers une créature qui bouge (le chef, un autre ouvrier) : pas compté comme coincé s'il ne l'atteint pas. */
+        Aller mobile(boolean oui) { mobile = oui; return this; }
+
         Etat tick(Travailleur t) {
             if (auSol && age % 20 == 0) {
                 int x = (int) Math.floor(cible.x), z = (int) Math.floor(cible.z);
                 if (t.level().hasChunkAt(x, z)) cible = new Vec3(cible.x, t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), cible.z);
             }
-            if (t.position().distanceToSqr(cible) <= portee * portee) return Etat.OK;
+            if (t.position().distanceToSqr(cible) <= portee * portee) { t.coince.progres(t.getX(), t.getY(), t.getZ()); return Etat.OK; }
             if (coince()) return echec("bloque");
             if (age > 20 * 60 * 15) return echec("trop_loin");
             marcher(t, cible, 1.0);
@@ -206,14 +213,14 @@ public final class Actions {
     }
 
     static final class SuivreChef extends Action {
-        SuivreChef() { super("suivre"); }
+        SuivreChef() { super("suivre"); mobile = true; }
 
         Etat tick(Travailleur t) {
             ServerPlayer c = t.chefJoueur();
             if (c == null || c.level() != t.level()) return echec("chef_absent");
             double d = t.distanceTo(c);
             t.getLookControl().setLookAt(c);
-            if (d <= 3.5) return Etat.OK;
+            if (d <= 3.5) { t.coince.progres(t.getX(), t.getY(), t.getZ()); return Etat.OK; }
             if (age > 20 * 30) return Etat.OK;
             marcher(t, c.position(), d > 12 ? 1.3 : 1.1);
             return Etat.EN_COURS;
@@ -224,7 +231,7 @@ public final class Actions {
         final Entity danger;
         Vec3 refuge;
 
-        Fuir(Entity danger) { super("fuir"); this.danger = danger; }
+        Fuir(Entity danger) { super("fuir"); this.danger = danger; mobile = true; }
 
         Etat tick(Travailleur t) {
             if (refuge == null) refuge = DefaultRandomPos.getPosAway(t, 16, 7, danger.position());
@@ -424,7 +431,7 @@ public final class Actions {
         final LivingEntity cible;
         int recharge;
 
-        Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; }
+        Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; mobile = true; }
 
         Etat tick(Travailleur t) {
             if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > 32 * 32) return Etat.OK;
