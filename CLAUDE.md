@@ -133,6 +133,14 @@ Quand écrire :
 5. **Décision qui revient à KOLRAX** : `demandes/<mot>` (pour `kolrax`, avec des `options` si possible), puis avance sur autre chose. Si c'est urgent, envoie aussi un message privé.
 6. **Demande à l'Admin** : `docs/demandes-admin.md`, et une copie dans `demandes/<mot>` (pour `admin`) pour que KOLRAX la voie. Recopie la réponse de l'Admin quand elle arrive.
 
+## Rythme jusqu'à vendredi (décidé le 12/10)
+Bilan du 12/10 : lots 0 à 2 faits en 8 sessions, avec une très bonne qualité, mais il reste 12 lots et le quota hebdomadaire ne suffira pas au même rythme. Donc :
+- **Une seule relecture par lot.** Une deuxième relecture, uniquement si la première trouve un bloquant, et seulement sur les corrections.
+- **Première passe d'abord** : chaque lot restant reçoit d'abord sa version simple, complète et testée (le comportement principal du cahier des charges). On approfondit seulement quand tous les lots ont leur première passe.
+- **Les restes mineurs** (cas limites rares, finitions, « non testé » sans danger) vont dans `docs/plus-tard.md`, jamais dans une session dédiée. Exception : ce qui peut tuer un PNJ, perdre des objets, planter le serveur ou le faire ralentir.
+- **Moins de tests garde-fous** : un test par comportement nouveau (qui échoue avant), pas une batterie de variantes.
+- **Un seul serveur de test à la fois**, jamais deux agents qui lancent `runGameTestServer` en même temps.
+
 ## Quota
 KOLRAX a un abonnement Claude Max 5x, partagé avec ses autres projets. Travaille par lots courts qui se terminent proprement : un commit à chaque étape qui marche. Si le quota coupe une session, la suivante reprend grâce au plan et au journal.
 
