@@ -126,3 +126,14 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Échecs vus pendant que deux agents lançaient leurs tests en même temps (machine à 4 cœurs chargée) : `panneauRepond` (2 fois, fil serveur bloqué 15 s), `rentreATempsSansLit` (1 fois) ; port du panneau 25776 déjà pris quand deux serveurs de test tournent ensemble. Tous verts ensuite. **Leçon : ne pas faire tourner deux `runGameTestServer` en même temps.**
 - À surveiller (non corrigé) : `Biomes.chercher` lance une recherche de biome (rayon jusqu'à 6400) sur les fils de génération du monde ; les bancs `charge10/50/100` ont le même risque de chunks lents que `etapeEnMontee`.
 - Prochaine étape exacte : lot 3, **journal des phrases non comprises** (côté serveur), puis ordres longs.
+
+## 2026-10-12 16 h - 18 h 10 UTC : session routine (cloud)
+- **0.9.0 « phrases non comprises »** (lot 3, 1re case), livrée sur le serveur à 17 h 58 UTC (personne connecté), « Done » sans erreur du mod, `/pnj incompris` répond (« 0 phrases non comprises »). `colonie_pnj-0.8.9.jar` rangé dans `/mods-off`. **Modpack inchangé** (0.4.9 : le client n'a pas changé).
+  - Quand le chef parle (fenêtre ou micro) et que l'interpréteur sans IA ne comprend pas, la phrase est gardée sur le serveur (`config/colonie_pnj/incompris.json`), regroupée avec un compteur, avec le métier visé et un motif : `rien` (personne n'a compris), `ia_seule` (seule l'IA a trouvé une action : la phrase à apprendre au répertoire), `ia_parole` (l'IA a seulement répondu). Noms des joueurs et des PNJ remplacés par `@`. À lire avec `/pnj incompris`, au panneau web (onglet Actions) ou `python3 tools/incompris.py` (jamais dans le dépôt).
+  - Tests : `IncomprisTest` (8 JUnit), `TestsRepertoire.phraseIncompriseNotee`, `TestsIA.iaSeuleNotee` ; chacun échouait sur le code d'avant. **93/93 JUnit, 138/138 en jeu**, chez moi avant chaque push.
+  - Relu une fois : rien de bloquant ; 8 points corrigés (noms de joueurs dans le fichier, petits gestes de l'IA comptés comme « compris par l'IA », sérialisation sur le fil serveur, écriture ratée jamais refaite, fichier abîmé écrasé, rien sauvé après un plantage, accents qui séparaient des phrases, relecture répétée par ouvrier). Corrigé aussi : le tableau « Écoute » du panneau ne se remplissait jamais (identifiant en double).
+- KOLRAX a posé le **rythme jusqu'à vendredi** dans CLAUDE.md pendant la session (une relecture par lot, première passe d'abord, sessions toutes les 6 h, gel jeudi 18 h UTC) : appliqué dès cette session (une seule relecture).
+- Non vérifié : l'anonymisation avec de vrais joueurs, la carte du panneau dans un vrai navigateur, `tools/incompris.py` contre le vrai serveur. Restes dans `docs/plus-tard.md` (lettres non notées, action « lune » trop large).
+- Le développeur a mis 1 h 30 pour la première version : trop long pour le rythme voulu.
+- Prochaine étape exacte : lot 3, **ordres longs** (première passe).
+- Point du jour envoyé 2026-10-12

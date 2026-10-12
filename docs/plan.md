@@ -27,7 +27,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Beaucoup moins de messages, regroupés et triés ; gestion simple (lu, archivé, tout effacer) — livré en 0.8.9 (12/10) : lettres identiques regroupées (« ×N »), une seule lettre pour toute la colonie (dépôt plein, paie en retard, sans poste, poste détruit), importantes en tête en orange, boutons Tout lu / Archiver / Archives / Tout effacer ; modpack 0.4.9 (non obligatoire)
 
 ## 3. Ordres et IA
-- [ ] Journal des phrases non comprises (côté serveur), relu pour enrichir le répertoire
+- [x] Journal des phrases non comprises (côté serveur), relu pour enrichir le répertoire (0.9.0, 12/10 ; à relire quand des joueurs auront parlé)
 - [ ] Ordres longs : chaque jour, garder un stock, « quand tu as fini », « si tu vois… », emploi du temps, conditions, ordres de groupe
 - [ ] Obéissance selon le moral et le caractère (refuser, négocier) ; refus d'un ordre mortel
 - [ ] OpenRouter : conversation payante (5 € par mois, limite posée par KOLRAX sur sa clé), clé propre à chaque serveur ; Groq et Gemini gratuits restent en premier
