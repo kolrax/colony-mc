@@ -77,6 +77,8 @@ final class Guerrier extends Metier {
         double a = poste * 2 * Math.PI / postes;
         int x = b.getX() + (int) Math.round(Math.cos(a) * rayon), z = b.getZ() + (int) Math.round(Math.sin(a) * rayon);
         int y = Monde.surface(t.level(), x, z);
-        Cerveau.lancer(t, new Actions.Aller(new Vec3(x + 0.5, y == Integer.MIN_VALUE ? b.getY() : y, z + 0.5), 2, true));
+        Actions.Aller ronde = new Actions.Aller(new Vec3(x + 0.5, y == Integer.MIN_VALUE ? b.getY() : y, z + 0.5), 2, true);
+        ronde.travail = true; // arrivé à son poste de ronde : il fait son travail
+        Cerveau.lancer(t, ronde);
     }
 }

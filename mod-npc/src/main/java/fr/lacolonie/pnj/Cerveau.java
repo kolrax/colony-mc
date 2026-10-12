@@ -110,7 +110,8 @@ final class Cerveau {
         if (libre && !t.lettresADeposer.isEmpty()) { lancer(t, new Actions.PorterLettres()); return; }
 
         // La paie : il va la chercher à la caisse du poste (parti loin, à son retour).
-        if (t.paieDue() && !dehors && t.mode != Travailleur.Mode.ATTENDRE) { lancer(t, new Actions.ToucherPaie()); return; } // « attends ici » : il ne bouge pas
+        // « Attends ici » : il ne bouge pas ; mais mis à attendre au poste après s'être perdu (Coince), il y touche sa paie.
+        if (t.paieDue() && !dehors && (t.mode != Travailleur.Mode.ATTENDRE || t.coince.attenteAuto)) { lancer(t, new Actions.ToucherPaie()); return; }
 
         // Les ordres du chef.
         if (t.mode == Travailleur.Mode.SUIVRE) {

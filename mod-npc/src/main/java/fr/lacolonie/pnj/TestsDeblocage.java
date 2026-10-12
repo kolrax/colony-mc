@@ -21,13 +21,30 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsDeblocage {
-    static int delaiAvant;
+    static int delaiAvant, entreDeuxAvant, fenetreAvant;
 
     @BeforeBatch(batch = "deblocage")
-    public static void avant(ServerLevel l) { delaiAvant = Coince.DELAI; Coince.DELAI = 300; }
+    public static void avant(ServerLevel l) {
+        delaiAvant = Coince.DELAI;
+        entreDeuxAvant = Coince.ENTRE_DEUX;
+        Coince.DELAI = 300;
+        Coince.ENTRE_DEUX = 400;
+    }
 
     @AfterBatch(batch = "deblocage")
-    public static void apres(ServerLevel l) { Coince.DELAI = delaiAvant; }
+    public static void apres(ServerLevel l) { Coince.DELAI = delaiAvant; Coince.ENTRE_DEUX = entreDeuxAvant; }
+
+    /** Le lot « deblocage2 » : délai de 15 s, et un échec ne compte que 5 s (au lieu d'une minute). */
+    @BeforeBatch(batch = "deblocage2")
+    public static void avant2(ServerLevel l) {
+        delaiAvant = Coince.DELAI;
+        fenetreAvant = Coince.FENETRE_ECHEC;
+        Coince.DELAI = 300;
+        Coince.FENETRE_ECHEC = 100;
+    }
+
+    @AfterBatch(batch = "deblocage2")
+    public static void apres2(ServerLevel l) { Coince.DELAI = delaiAvant; Coince.FENETRE_ECHEC = fenetreAvant; }
 
     /** Un sol de pierre et, autour de (12, 4, 12), un enclos de planches (une construction : il n'y touche pas) de 4 blocs de haut. */
     static void enclos(GameTestHelper h) {
@@ -223,6 +240,76 @@ public class TestsDeblocage {
         });
         h.runAtTickTime(h.getTick() + 500, () -> {
             String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", dort " + t.isSleeping();
+            t.discard();
+            h.assertTrue(saut[0] < 2, "il ne doit pas être ramené (saut de " + String.format("%.1f", saut[0]) + " blocs, " + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Affamé, sans rien à manger au poste, il va demander à manger à son chef, perché sur une tour qu'il ne peut pas
+     * atteindre : marcher vers quelqu'un n'est pas être coincé, il n'est pas ramené au poste.
+     */
+    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true, batch = "deblocage")
+    public static void demanderAuChefNeComptePas(GameTestHelper h) {
+        var chef = chefSurUneTour(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 10, 4, 10, ItemStack.EMPTY, new BlockPos(20, 4, 20));
+        t.chef = chef.getUUID();
+        t.faim = 5;
+        double[] saut = sauts(h, t);
+        h.runAtTickTime(h.getTick() + 500, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", besoin " + t.besoin;
+            t.discard();
+            h.assertTrue(saut[0] < 2, "il ne doit pas être ramené (saut de " + String.format("%.1f", saut[0]) + " blocs, " + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Ramené deux fois, il attend au poste ; son chef le remet au travail, il se coince encore : il est ramené une
+     * troisième fois (et attend de nouveau), au lieu de rester coincé pour toujours.
+     */
+    @GameTest(template = "grand", timeoutTicks = 2400, skyAccess = true, batch = "deblocage")
+    public static void remisAuTravailIlPeutEtreRameneEncore(GameTestHelper h) {
+        enclos(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, ItemStack.EMPTY, new BlockPos(12, 4, 2));
+        Vec3 dedans = h.absoluteVec(new Vec3(12.5, 4, 12.5));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        var boite = Courrier.de(h.getLevel().getServer()).boite(t.chef);
+        int[] etape = {1};
+        h.onEachTick(() -> {
+            long retours = boite.stream().filter(l -> l.texte.contains("ramené au poste")).count();
+            if (retours < etape[0]) return;
+            if (etape[0] == 2) { // ramené deux fois : il attend ; son chef le remet au travail
+                if (t.mode != Travailleur.Mode.ATTENDRE) return;
+                t.mode = Travailleur.Mode.TRAVAIL;
+            }
+            if (etape[0] < 3) { // de nouveau coincé dans l'enclos
+                t.teleportTo(dedans.x, dedans.y, dedans.z);
+                Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+            }
+            etape[0]++;
+        });
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", étape " + etape[0] + ", mode " + t.mode;
+            h.assertTrue(etape[0] > 3, "il doit être ramené une troisième fois (" + e + ")");
+            h.assertTrue(t.mode == Travailleur.Mode.ATTENDRE, "puis attendre de nouveau au poste (" + e + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Un échec « inaccessible », puis il attend tranquillement (sans mission, rien à faire) loin du poste : passé la
+     * fenêtre de l'échec (abaissée à 5 s), cette attente ne compte plus, il n'est pas ramené.
+     */
+    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true, batch = "deblocage2")
+    public static void attenteOrdinaireApresEchecNeComptePas(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 16, ItemStack.EMPTY, new BlockPos(12, 4, 2));
+        double[] saut = sauts(h, t);
+        h.runAtTickTime(h.getTick() + 40, () -> t.finirAction("inaccessible")); // après le premier relevé du compte
+        h.runAtTickTime(h.getTick() + 500, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
             t.discard();
             h.assertTrue(saut[0] < 2, "il ne doit pas être ramené (saut de " + String.format("%.1f", saut[0]) + " blocs, " + e + ")");
             h.succeed();

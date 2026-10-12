@@ -701,11 +701,12 @@ public class Travailleur extends PathfinderMob {
 
     void finirAction(String r) {
         // Arrivé où il allait : un vrai progrès. Échoué à y aller : le temps « coincé » compte, même à l'arrêt (Coince).
-        if ("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) coince.echec = true;
+        if ("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) coince.echec(level().getGameTime());
         else if ("ok".equals(r) && action != null && action.aMarche()
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());
-        if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser)) coince.travail();
+        if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser
+                || action instanceof Actions.Attaquer || action != null && action.travail)) coince.travail();
         if (action != null) action.fin(this);
         action = null;
         resultat = r;
@@ -717,6 +718,7 @@ public class Travailleur extends PathfinderMob {
      * qui bouge, et il est à plus de 6 blocs du poste ; sinon le compte repart de zéro. Au bout de 5 minutes, il est ramené.
      */
     void surveillerCoince() {
+        coince.mode(mode == Mode.ATTENDRE);
         Actions.Action a = action instanceof Consignes.Faire f && f.sous != null ? f.sous : action;
         if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger() || isSleeping()
                 || a instanceof Actions.Reposer || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) {
@@ -771,9 +773,12 @@ public class Travailleur extends PathfinderMob {
                 + minutes + (minutes > 1 ? " minutes" : " minute") + " : je l'ai ramené au poste.");
         Cerveau.journal("[" + prenom + "] coincé en " + avant.toShortString() + " depuis " + minutes + " min : ramené au poste en " + q.toShortString());
         if (t == this && coince.retours >= Coince.RETOURS_MAX) {
-            mode = Mode.ATTENDRE;
-            majNom();
-            Courrier.ecrire(this, "ramene_attend", avant.toShortString());
+            if (mode != Mode.GREVE) { // un gréviste reste en grève, au poste
+                mode = Mode.ATTENDRE;
+                coince.attenteAuto = true;
+                majNom();
+                Courrier.ecrire(this, "ramene_attend", avant.toShortString());
+            }
         }
     }
 
@@ -1179,9 +1184,17 @@ public class Travailleur extends PathfinderMob {
      * Une lettre ne peut pas le faire suivre, attendre sur place, montrer son sac ni le renvoyer : il faut être là.
      */
     String appliquer(Ordres.Lecture l, ServerPlayer enFace) {
+        Mode avant = mode;
+        Actions.Action actionAvant = action;
+        String reponse = appliquerOrdre(l, enFace);
+        // Un ordre qui change ce qu'il fait (pas une question, pas une lettre de nouvelles) : le compte « coincé » repart de zéro.
+        if (mode != avant || action != actionAvant) coince.progres(getX(), getY(), getZ());
+        return reponse;
+    }
+
+    private String appliquerOrdre(Ordres.Lecture l, ServerPlayer enFace) {
         List<String> r = new ArrayList<>();
         long maintenant = level().getGameTime();
-        coince.progres(getX(), getY(), getZ()); // un ordre du chef : la situation change, le compte « coincé » repart de zéro
         boolean confirmation = memoire.getLong("renvoi") > maintenant;
         if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
             memoire.remove("renvoi");

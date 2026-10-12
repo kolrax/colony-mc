@@ -32,11 +32,40 @@ class CoinceTest {
     void unEchecNeCompteQuEnAttente() {
         Coince c = new Coince();
         c.relever(0, 64, 0, 20, 0, true);
-        c.echec = true;
-        for (int t = 20; t <= 20 * 60 * 30; t += 20) assertFalse(c.relever(0, 64, 0, 20, t, false), "occupé à autre chose : l'échec ne compte pas");
-        int t = 20 * 60 * 30 + 20, debut = t;
-        while (!c.relever(0, 64, 0, 20, t, true)) t += 20;
-        assertEquals(Coince.DELAI, t - debut + 20);
+        c.echec(0);
+        for (int t = 20; t <= Coince.FENETRE_ECHEC; t += 20) assertFalse(c.relever(0, 64, 0, 20, t, false), "occupé à autre chose : l'échec ne compte pas");
+        assertEquals(0, c.ticks);
+    }
+
+    @Test
+    void unEchecNeCompteQuUneMinute() {
+        Coince c = new Coince();
+        c.relever(0, 64, 0, 20, 0, true);
+        c.echec(0);
+        for (int t = 20; t <= 20 * 60 * 30; t += 20) assertFalse(c.relever(0, 64, 0, 20, t, true), "une attente ordinaire après l'échec ne compte pas au-delà d'une minute");
+        assertEquals(Coince.FENETRE_ECHEC, c.ticks);
+    }
+
+    @Test
+    void remisAuTravailApresLAttenteUnRetourDePlus() {
+        Coince c = new Coince();
+        c.retours = Coince.RETOURS_MAX;
+        c.attenteAuto = true;
+        c.mode(true);
+        assertEquals(Coince.RETOURS_MAX, c.retours, "tant qu'il attend, rien ne change");
+        c.mode(false); // son chef le remet au travail
+        assertFalse(c.attenteAuto);
+        assertEquals(Coince.RETOURS_MAX - 1, c.retours, "un seul retour de plus est permis");
+    }
+
+    @Test
+    void lesRetoursSOublientAuBoutDUneHeure() {
+        Coince c = new Coince();
+        c.ramene(0);
+        c.ramene(Coince.ENTRE_DEUX);
+        c.relever(0, 64, 0, 20, Coince.ENTRE_DEUX + Coince.OUBLI_RETOURS + 20, false);
+        c.relever(0, 64, 0, 20, Coince.ENTRE_DEUX + Coince.OUBLI_RETOURS + 40, false);
+        assertEquals(0, c.retours);
     }
 
     @Test
@@ -44,7 +73,7 @@ class CoinceTest {
         Coince c = new Coince();
         c.relever(0, 64, 0, 20, 0, false);
         for (int t = 20; t < Coince.DELAI - 20; t += 20) { c.marche = true; c.relever(0, 64, 0, 20, t, false); }
-        c.echec = true;
+        c.echec(Coince.DELAI);
         c.marche = true;
         assertFalse(c.relever(9, 64, 0, 20, Coince.DELAI, true)); // 9 blocs plus loin : un vrai progrès
         assertEquals(0, c.ticks);

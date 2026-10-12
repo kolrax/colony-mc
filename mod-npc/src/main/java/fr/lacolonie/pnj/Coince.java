@@ -19,6 +19,10 @@ final class Coince {
     static final int REESSAI = 60 * 20;
     /** Après tant de retours sans vrai travail entre eux, plus de téléportation : il attend les ordres au poste. */
     static final int RETOURS_MAX = 2;
+    /** Un échec ne compte que pendant la minute qui le suit (les tests l'abaissent) : ensuite, il attend pour autre chose. */
+    static int FENETRE_ECHEC = 60 * 20;
+    /** Le dernier retour date de plus d'une heure : les retours ne s'enchaînent plus. */
+    static final int OUBLI_RETOURS = 60 * 60 * 20;
     /** Se trouver à plus de 8 blocs de l'endroit où le compte a commencé, c'est avoir vraiment avancé. */
     static final double PROGRES = 8;
 
@@ -30,6 +34,10 @@ final class Coince {
     boolean marche;
     /** Il a échoué à se rendre quelque part (« bloque », « inaccessible ») depuis son dernier vrai progrès. */
     boolean echec;
+    /** Quand (temps du monde) : l'échec ne compte que pendant {@link #FENETRE_ECHEC} ticks. */
+    long echecDate;
+    /** Il a été mis à attendre au poste après {@link #RETOURS_MAX} retours (pas par son chef). */
+    boolean attenteAuto;
     /** Retours au poste sans vrai travail entre eux. */
     int retours;
     /** La lettre « pas de place au poste » est partie (une seule fois, jusqu'au prochain retour ou travail). */
@@ -47,6 +55,17 @@ final class Coince {
         marche = false;
     }
 
+    /** Il a échoué à se rendre quelque part, maintenant. */
+    void echec(long maintenant) { echec = true; echecDate = maintenant; }
+
+    /**
+     * Son mode, à chaque relevé. Mis à attendre au poste après deux retours, puis remis au travail par son chef : un seul
+     * retour de plus est permis (et le remet à attendre), pour qu'il ne reste jamais coincé pour de bon.
+     */
+    void mode(boolean attend) {
+        if (attenteAuto && !attend) { attenteAuto = false; retours = RETOURS_MAX - 1; }
+    }
+
     /** Il a fait un vrai travail (casser, abattre, poser) : les retours au poste ne s'enchaînent plus. */
     void travail() { retours = 0; sansPlaceEcrit = false; }
 
@@ -60,7 +79,8 @@ final class Coince {
         boolean voulu = marche;
         marche = false;
         if (!depart || dx * dx + dy * dy + dz * dz > PROGRES * PROGRES) { progres(x, y, z); return false; }
-        if (voulu || echec && attente) ticks += pas;
+        if (maintenant - dernierRetour > OUBLI_RETOURS) retours = 0;
+        if (voulu || echec && attente && maintenant - echecDate <= FENETRE_ECHEC) ticks += pas;
         return ticks >= DELAI && maintenant - dernierRetour >= ENTRE_DEUX && maintenant >= pasAvant && retours < RETOURS_MAX;
     }
 

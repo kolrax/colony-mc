@@ -594,6 +594,7 @@ final class Itineraire {
     private void creuser(Travailleur t) {
         Level l = t.level();
         if (!creusable(l, aCreuser)) { aCreuser = null; aCasser.clear(); reprise = false; return; }
+        if (reprise && occupe(t, aCreuser)) { suivantACreuser(t); return; } // quelqu'un d'autre se tient dessus : il le laisse
         BlockState st = l.getBlockState(aCreuser);
         if (Monde.traversable(l, aCreuser) || st.isAir()) { suivantACreuser(t); return; }
         meilleurOutil(t, st, aCreuser);
@@ -631,7 +632,7 @@ final class Itineraire {
 
     /** Les blocs banals qu'il veut bien poser pour se tirer d'affaire (ni gravier ni sable : ils tombent). */
     static final Set<Item> BLOCS_CHANTIER = Set.copyOf(List.of(Items.DIRT, Items.COARSE_DIRT, Items.COBBLESTONE, Items.COBBLED_DEEPSLATE,
-            Items.STONE, Items.ANDESITE, Items.DIORITE, Items.GRANITE, Items.TUFF, Items.NETHERRACK));
+            Items.ANDESITE, Items.DIORITE, Items.GRANITE, Items.TUFF, Items.NETHERRACK));
     /** Il ne monte pas plus haut que ça sur ses blocs ; affaibli (vie de 10 ou moins), 3 blocs, comme pour sauter d'un à-pic. */
     static final int PILIER_MAX = 8, PILIER_AFFAIBLI = 3;
     /** Au plus tant de blocs posés pour un même trajet. */
@@ -649,6 +650,8 @@ final class Itineraire {
     private final Set<BlockPos> posesRatees = new HashSet<>();
     /** Il casse ses propres blocs pour les reprendre (le creusage, sans monter ensuite). */
     private boolean reprise;
+    /** La case du sac d'où vient le bloc de ce saut (-1 : pas encore cherchée). */
+    private int caseSaut = -1;
 
     /** Un ouvrier qui doit attendre là (gardé, prisonnier) ne creuse ni ne pose de blocs pour s'en aller. */
     static boolean evasionPermise(Travailleur t) { return t.mode != Travailleur.Mode.ATTENDRE; }
@@ -686,12 +689,14 @@ final class Itineraire {
         return libres + (f == null ? 0 : Math.max(0, mission - t.missionActive().nombre));
     }
 
-    /** Pose en q un bloc de chantier de son sac, comme un joueur ; seulement à une place vide (jamais dans la lave ni dans l'eau). */
-    static boolean poserBloc(Travailleur t, BlockPos q) {
+    /**
+     * Pose en q un bloc de chantier de son sac (la case {@code i}, de {@link #caseDeChantier}), comme un joueur ; seulement
+     * à une place vide (jamais dans la lave ni dans l'eau).
+     */
+    static boolean poserBloc(Travailleur t, BlockPos q, int i) {
         BlockState st = t.level().getBlockState(q);
-        if (!st.canBeReplaced() || !st.getFluidState().isEmpty()) return false;
-        int i = caseDeChantier(t);
-        return i >= 0 && Actions.placer(t, q, t.inventaire.getItem(i)) == null;
+        if (i < 0 || !blocDeChantier(t.inventaire.getItem(i)) || !st.canBeReplaced() || !st.getFluidState().isEmpty()) return false;
+        return Actions.placer(t, q, t.inventaire.getItem(i)) == null;
     }
 
     /**
@@ -760,7 +765,7 @@ final class Itineraire {
             BlockPos q = pont.get(0);
             t.getLookControl().setLookAt(Vec3.atCenterOf(q));
             if (age % 5 != 0) return;
-            if (!poserBloc(t, q)) { abandonner(t); return; }
+            if (!poserBloc(t, q, caseDeChantier(t))) { abandonner(t); return; }
             poses.add(q);
             posesFaites++;
             pont.remove(0);
@@ -770,15 +775,19 @@ final class Itineraire {
         }
         t.diag = "monte sur des blocs (" + (pilierHaut - pilier.getY()) + " à poser)";
         if (pilier.getY() >= pilierHaut) { if (t.onGround()) sortirSurLeBord(age); return; }
-        if (caseDeChantier(t) < 0) { abandonner(t); return; }
-        // En l'air, les pieds au-dessus de la place : il pose le bloc sous lui.
-        if (t.getY() >= pilier.getY() + 1 && poserBloc(t, pilier)) {
-            poses.add(pilier);
-            posesFaites++;
-            pilier = pilier.above();
-            poseFin = age + 100;
-            return;
-        }
+        // En l'air, les pieds au-dessus de la place : il pose le bloc sous lui (la case du sac, cherchée une fois par saut).
+        if (t.getY() >= pilier.getY() + 1) {
+            if (caseSaut < 0) caseSaut = caseDeChantier(t);
+            if (caseSaut < 0) { abandonner(t); return; }
+            if (poserBloc(t, pilier, caseSaut)) {
+                poses.add(pilier);
+                posesFaites++;
+                pilier = pilier.above();
+                poseFin = age + 100;
+                caseSaut = -1;
+                return;
+            }
+        } else caseSaut = -1;
         double cx = pilier.getX() + 0.5, cz = pilier.getZ() + 0.5, dx = t.getX() - cx, dz = t.getZ() - cz;
         t.getMoveControl().setWantedPosition(cx, t.getY(), cz, 0.6);
         if (t.onGround() && dx * dx + dz * dz < 0.09) t.getJumpControl().jump();
@@ -824,6 +833,11 @@ final class Itineraire {
         aCreuser = aCasser.get(0);
         progres = 0;
         reprise = true;
+    }
+
+    /** Une autre créature que lui (un joueur, un ouvrier, une bête) se tient sur ce bloc. */
+    static boolean occupe(Travailleur t, BlockPos q) {
+        return !t.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(q.above()).inflate(-0.01, 0, -0.01), e -> e != t).isEmpty();
     }
 
     /** Il a de quoi récolter ce bloc (un bloc qui ne demande pas d'outil, ou le bon outil dans la main ou dans son sac). */

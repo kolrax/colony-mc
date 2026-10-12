@@ -107,6 +107,8 @@ public final class Actions {
         private double meilleure = Double.MAX_VALUE;
         /** Sa cible bouge (le chef, une créature) : ne pas l'atteindre n'est pas être coincé (Coince). */
         boolean mobile;
+        /** Y arriver, c'est du travail (un poste de ronde) : les retours au poste ne s'enchaînent plus (Coince). */
+        boolean travail;
 
         Action(String nom) { this.nom = nom; }
 
@@ -204,7 +206,7 @@ public final class Actions {
                 int x = (int) Math.floor(cible.x), z = (int) Math.floor(cible.z);
                 if (t.level().hasChunkAt(x, z)) cible = new Vec3(cible.x, t.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), cible.z);
             }
-            if (t.position().distanceToSqr(cible) <= portee * portee) { t.coince.progres(t.getX(), t.getY(), t.getZ()); return Etat.OK; }
+            if (t.position().distanceToSqr(cible) <= portee * portee) { if (aMarche()) t.coince.progres(t.getX(), t.getY(), t.getZ()); return Etat.OK; }
             if (coince()) return echec("bloque");
             if (age > 20 * 60 * 15) return echec("trop_loin");
             marcher(t, cible, 1.0);
@@ -595,7 +597,7 @@ public final class Actions {
             if (age > 20 * 150) return echec("pas_recu");
             ServerPlayer c = t.chefJoueur();
             if (c != null && c.level() == t.level() && t.distanceTo(c) < 96) {
-                if (t.distanceTo(c) > 3) marcher(t, c.position(), 1.15);
+                if (t.distanceTo(c) > 3) { mobile = true; marcher(t, c.position(), 1.15); }
                 else {
                     t.getNavigation().stop();
                     t.getLookControl().setLookAt(c);
@@ -605,7 +607,7 @@ public final class Actions {
                 if (!ecrit && Cerveau.parfois(t, "demande_" + type, 1800)) Courrier.ecrire(t, type, vals);
                 ecrit = true;
                 BlockPos bureau = t.bureau;
-                if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) marcher(t, Vec3.atBottomCenterOf(bureau), 1.0);
+                if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) { mobile = false; marcher(t, Vec3.atBottomCenterOf(bureau), 1.0); }
                 else if (bureau != null && !t.lettresADeposer.isEmpty()) { t.swing(InteractionHand.OFF_HAND); Courrier.deposer(t); }
             }
             return Etat.EN_COURS;
