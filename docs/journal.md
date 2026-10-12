@@ -70,3 +70,18 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **0.8.5 livrée** à 1 h 48 UTC (personne connecté), démarrage sans erreur du mod. Modpack inchangé (0.4.8).
 - **Mesure réelle** (test-andesite, 50 PNJ du banc + Raoul, mêmes conditions que la 0.8.4) : **part du mod 2,6 / 3,9 / 5,1 / 4,0 ms en moyenne** à 91 s, 130 s, 3 min et 5 min (pire 7 à 25 ms), chemins 0,5 à 2,8 ms, 40 à 93 recherches par fenêtre de 100 ticks (882 avant), **20 TPS** (10-12 avant). **Objectif < 10 ms atteint**, case cochée. Restent des pires ticks à 17-25 ms (un chemin direct raté coûte encore ~10 ms) et un tick serveur qui monte de 8 à 13 ms au fil du banc, hors mod. Réserve : un PNJ vraiment coincé attend maintenant jusqu'à 10 s entre deux essais (voulu, pas mesuré en jeu réel).
 - Prochaine étape exacte : `docs/reprise.md` (restes de relecture en un lot, puis déblocage et morts dues à un bug).
+
+## 2026-10-12 4 h - 5 h 15 UTC : session routine (cloud)
+- **0.8.6 « restes de relecture du lot 1 »**, livrée à 5 h 09 UTC (personne connecté), démarrage sans erreur du mod. Modpack inchangé (0.4.8).
+  - Combat : sans ordre, un PNJ ne riposte que contre un monstre ou un autre PNJ ; frappé par une bête (loup apprivoisé, golem, chèvre), il recule (« Holà, tout doux ! »). Un gréviste frappé s'enfuit.
+  - Lettre par corbeau pendant un danger (combat, fuite, monstre en vue) : gardée et lue au calme, au plus tard 60 s après s'il n'est ni frappé ni au combat ; jamais perdue (sauvegardée). L'écran du poste les compte.
+  - Messager : 2 min au plus pour rattraper l'ouvrier, puis il renonce et le dit ; l'ouvrier hélé reste figé 8 s au plus.
+  - « Va là » vers la lave, le feu ou un vide de plus de 20 blocs : il refuse (cahier 8.5).
+  - Corbeau : chaque tronçon traversé est vérifié (plus de corbeau figé sur un coin inactif).
+  - Sortie de sous terre : pas tout droit seulement au bout d'un chemin complet ; pas de recalcul en plein saut ; pas de marche creusée au-dessus d'une chute de plus de 3 blocs ou de lave.
+  - 10 tests en jeu ajoutés : 9 échouaient sur l'ancien code (dont `guerrierNAttaquePasLesBetes`, `grevisteFrappeSEnfuit`, `lettreLueAuCalme`, `refuseDAllerDansLaLave`, `lettreLueMalgreLeMonstreEmmure`) ; `jetonPourLAffame` et le bord de `neMarchePasDansLaLave` vérifiés en cassant exprès le code. **63 JUnit, 89 en jeu**, 2 passes vertes chez moi, 2 chez le développeur.
+  - Relu : 2 défauts à corriger (recalcul de sortie en plein saut qui jetait le chemin ; lettre jamais lue près d'une ferme à monstres ou dans le Nether), corrigés ; 5 faibles, dont 4 corrigés.
+- **Instabilités vues, non expliquées** (une fois chacune chez le développeur, jamais chez moi) : `TestsIA.iaDevineLeDestinataire` (« autour=2 » : un ouvrier hors de portée du chef) et `TestsCharge.etapeEnMontee` (délai de 200 ticks dépassé). À surveiller.
+- Non testé : la sortie de sous terre « chemin complet exigé » (pas de géométrie fiable), la lecture forcée au bout de 60 s, la sauvegarde des lettres gardées. Rien de mesuré en jeu réel.
+- Reste faible de la relecture : une route de sortie par des lianes fait attendre 15 s avant qu'il creuse un escalier ; un point inaccessible peut coûter 2 recherches ratées toutes les 10 ticks pendant 15 s en sortie de sous terre.
+- Prochaine étape exacte : lot 1, **déblocage** (il creuse ou pose des blocs pour sortir d'un trou ; en dernier recours, téléportation au poste avec un message), puis **morts dues à un bug** (chutes, noyade, lave, faim).
