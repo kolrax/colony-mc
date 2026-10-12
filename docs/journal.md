@@ -58,3 +58,15 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **0.8.4 livrée** à 23 h 32 UTC (personne connecté), démarrage sans erreur du mod.
 - **Mesure réelle 0.8.4** (mêmes conditions que la 0.8.2) : **échec de l'objectif**. 1re fenêtre (97 s après le banc) : mod 14 ms (pire 85), chemins 12 ms, 150 recherches dont 101 ratées. 2e fenêtre (128 s) : **mod 80 ms (pire 192), chemins 77 ms, 882 recherches dont 784 ratées (793 « étapes »), serveur à 10-12 TPS**. Le budget n'a presque rien refusé (4 jetons) : le problème est le coût d'une recherche d'étape ratée (~9 ms chacune). Banc retiré, serveur revenu à 1,3 ms par tick. Je garde la 0.8.4 (elle corrige la marche dans la lave ; personne ne joue sur le monde de test), mais **les 50 PNJ ne sont pas encore jouables sur un vrai terrain**.
 - Prochaine étape exacte : `docs/reprise.md`, point 1 (coût par recherche, recherches d'étape courtes, budget de 2-4, pourquoi 96 % d'étapes ratées, test sur terrain accidenté).
+
+## 2026-10-12 1 h - 2 h UTC : session routine (cloud)
+- **0.8.5 « chemins ratés moins chers »** (lot 1, objectif de charge) :
+  - recherches d'étape courtes : portée = distance + 16 blocs, 512 nœuds au lieu de 1024 ; recherche du but allégée quand le chemin direct vient d'échouer ;
+  - au plus 2 recherches d'étape par PNJ et 4 pour tout le serveur par tick (16 avant) ; un seul passe-droit par tick, au plus ancien ;
+  - mémoire des étapes ratées par PNJ (30 s, avec la hauteur) ; délai qui double après un choix tout raté (20 → 200 ticks), remis à zéro dès qu'il avance ; l'attente d'un tour ne compte plus comme « immobile » ;
+  - `/pnj charge` donne la durée moyenne d'une recherche réussie et ratée, par origine.
+  - 2 nouveaux tests en jeu, qui échouaient sur l'ancien code : `etapesSobres` (8 PNJ enfermés : 1940 étapes ratées et 16 sur un tick avant ; 329 à 531 et 6 au plus après) et `etapeEnMontee` (pente sans diagonale : la portée 36 de la première version échouait). 1 JUnit de plus. **63 JUnit, 79 en jeu**, verts chez moi et 2 fois chez le développeur.
+  - Relu deux fois : 3 défauts réels à la 1re relecture (montées refusées à tort, mémoire sans hauteur, ouvriers nombreux finissant « bloqués » en attendant leur tour), corrigés ; 2e relecture sans bloquant.
+- **0.8.5 livrée** à 1 h 48 UTC (personne connecté), démarrage sans erreur du mod. Modpack inchangé (0.4.8).
+- **Mesure réelle** (test-andesite, 50 PNJ du banc + Raoul, mêmes conditions que la 0.8.4) : **part du mod 2,6 / 3,9 / 5,1 / 4,0 ms en moyenne** à 91 s, 130 s, 3 min et 5 min (pire 7 à 25 ms), chemins 0,5 à 2,8 ms, 40 à 93 recherches par fenêtre de 100 ticks (882 avant), **20 TPS** (10-12 avant). **Objectif < 10 ms atteint**, case cochée. Restent des pires ticks à 17-25 ms (un chemin direct raté coûte encore ~10 ms) et un tick serveur qui monte de 8 à 13 ms au fil du banc, hors mod. Réserve : un PNJ vraiment coincé attend maintenant jusqu'à 10 s entre deux essais (voulu, pas mesuré en jeu réel).
+- Prochaine étape exacte : `docs/reprise.md` (restes de relecture en un lot, puis déblocage et morts dues à un bug).
