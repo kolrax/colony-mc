@@ -120,8 +120,8 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **MonnaieTest** (48, 5) : paiements en pièces.
 - **Entrainement** (577, 0 test) : outil, pas un test : entraîne l'adressage (`./gradlew entrainer`). Écrit `adressage.json`.
 
-## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 88 tests : 47 TestsJeu, 18 TestsRepertoire, 16 TestsIA, 7 TestsCharge)
-- **TestsJeu** (~950, 47 tests) : cerveau et métiers pour de vrai (retour à temps, expédition, mineur, bûcheron, guerrier, dépôt, lit, à terre, grève, panneau, sorties de sous terre, nage…). Outils : `ouvrier(h, metier, x, y, z, outil)` et `employe(h, metier, bureau, pos, outil)` font apparaître un PNJ employé en service toute la journée, sans paie ; `sol(h, dx, dz)` : sol plat loin des autres tests.
+## Tests en jeu (`src/main`, `./gradlew runGameTestServer`, 89 tests : 48 TestsJeu, 18 TestsRepertoire, 16 TestsIA, 7 TestsCharge)
+- **TestsJeu** (~980, 48 tests) : cerveau et métiers pour de vrai (retour à temps, expédition, mineur, bûcheron, guerrier, dépôt, lit, à terre, grève, panneau, sorties de sous terre, nage…). Outils : `ouvrier(h, metier, x, y, z, outil)` et `employe(h, metier, bureau, pos, outil)` font apparaître un PNJ employé en service toute la journée, sans paie ; `sol(h, dx, dz)` : sol plat loin des autres tests.
 - **TestsIA** (639, 16 tests) : IA contre un faux Groq et un faux Gemini (serveur local `avant`/`apres`). Outils : `equipe(h, chef, coin)` (3 ouvriers autour d'un faux chef), `etapes(...)` (attendre qu'ils soient visibles puis enchaîner), `attendre(h, ticks)`.
 - **TestsRepertoire** (~370, 18 tests) : actions du répertoire jouées sans IA, chacune dans son coin de monde plat.
 - Pièges : structure fermée par un plafond de barrières (sauf `skyAccess = true`) ; pas de `runAfterDelay` dans un déclencheur ; un PNJ juste apparu n'est visible qu'au tick suivant (`TestsIA.etapes`) ; `rm -rf run/world` avant de lancer.
@@ -135,7 +135,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 ## Restes de relecture du lot 1 (12/10, après la 0.8.5)
 - `Monde.combattable(e)` : sans ordre, un PNJ ne riposte que contre un monstre (`hostile`) ou un autre PNJ ; frappé par une bête, un golem ou un joueur, il recule (`Cerveau.decider`, `Monde.cibles`, `Consignes.Faire.menace`). Le bloc « attaqué » passe avant la grève.
 - `Monde.mortel(l, p)` : lave, feu ou vide (chute de plus de 20 blocs) : « va là » refusé (cahier 8.5, `Consignes.ordonner`, cas `aller`).
-- `Travailleur.enDanger()` (à terre, frappé, combat, fuite, monstre à 8 blocs) ; `lettresAuCalme` : lettres reçues en danger, lues au calme (`tickCourrier`), sauvegardées avec `LettresALire`.
-- `Consignes.MESSAGE_MAX` (2 min, puis il renonce, résultat `trop_long`) et `HELER_MAX` (7 s de hélage au plus).
+- `Travailleur.menace()` (à terre, frappé, combat, fuite) et `enDanger()` (menace, ou monstre à 8 blocs en vue ou qui le vise) ; `lettresAuCalme` : lettres reçues en danger, lues au calme (`tickCourrier`), ou après 60 s sans menace (`auCalmeDepuis`) ; sauvegardées avec `LettresALire`, comptées dans « à lire » au poste.
+- `Consignes.MESSAGE_MAX` (2 min, puis il renonce, résultat `trop_long`) et `HELER_MAX` (7 s de hélage, l'autre figé 8 s au plus) ; la limite ne joue plus une fois le message commencé.
 - `Corbeau.actifSur` : tous les tronçons traversés par le trajet d'arrivée sont vérifiés (avant : un point tous les 4 blocs).
-- `Itineraire.suivreSortie` : pas tout droit seulement au bout d'un chemin complet (`canReach`), sinon le point suivant de la route ; `commencerCreusage` : pas de marche sans sol (ni lave, ni magma). `jeton` n'est plus privé (test `TestsCharge.jetonPourLAffame`).
+- `Itineraire.suivreSortie` : pas tout droit seulement au bout d'un chemin complet (`canReach`), sinon le point suivant de la route ; pas de recalcul en l'air, et une recherche vide ne jette pas le chemin en cours ; `commencerCreusage` : pas de marche au-dessus d'une chute de plus de 3 blocs, ni de lave ou de magma. `jeton` n'est plus privé (test `TestsCharge.jetonPourLAffame`).

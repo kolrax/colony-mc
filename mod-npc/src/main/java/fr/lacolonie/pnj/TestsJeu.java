@@ -628,6 +628,42 @@ public class TestsJeu {
     }
 
     /**
+     * Un monstre enfermé derrière un mur, à 5 blocs (une ferme à monstres) : il ne le voit pas, ce n'est pas un danger, il
+     * lit sa lettre. Dans la première version de ce lot, tout monstre à 8 blocs comptait, même derrière un mur, et la
+     * lettre n'était jamais lue.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void lettreLueMalgreLeMonstreEmmure(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos bureau = sol(h, 0, 102000);
+        var chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(sol(h, 8, 102000)), ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        Courrier c = Courrier.de(l.getServer());
+        c.definirPoste(t.chef, l, bureau);
+        t.mode = Travailleur.Mode.ATTENDRE;
+        t.forcerChunk();
+        BlockPos cage = sol(h, 13, 102000);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = 0; dy <= 2; dy++)
+            if (dx != 0 || dz != 0 || dy == 2) l.setBlockAndUpdate(cage.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
+        var z = net.minecraft.world.entity.EntityType.ZOMBIE.create(l);
+        Vec3 zp = Vec3.atBottomCenterOf(cage);
+        z.moveTo(zp.x, zp.y, zp.z);
+        z.setNoAi(true);
+        z.setPersistenceRequired(); // loin de tout joueur, il disparaîtrait aussitôt
+        l.addFreshEntity(z);
+        Courrier.Lettre lettre = c.nouvelle(chef.getName().getString(), chef.getUUID(), t.getUUID(), "Lettre du chef", "Ramène-moi 10 bûches de bouleau.", l);
+        lettre.duChef = true;
+        h.runAtTickTime(h.getTick() + 2, () -> t.recevoirLettre(lettre));
+        h.runAtTickTime(h.getTick() + 40, () -> h.assertTrue(z.isAlive() && z.distanceTo(t) < 8, "le monstre doit être là, à moins de 8 blocs"));
+        h.succeedWhen(() -> {
+            h.assertTrue(t.missions.stream().anyMatch(m -> m.id.equals("bouleau") && m.nombre == 10), "il doit lire la lettre (" + etat(t, bureau) + ")");
+            t.discard();
+            z.discard();
+        });
+    }
+
+    /**
      * Le corbeau arrive en biais : entre le tronçon du poste et le tronçon actif d'où il part, son trajet coupe sur moins
      * d'un bloc le coin d'un tronçon figé. Avant, le trajet n'était vérifié que tous les 4 blocs : il partait de trop
      * loin, se figeait dans ce coin, et la lettre n'arrivait qu'au bout de 30 s, par le secours du courrier.
@@ -663,7 +699,7 @@ public class TestsJeu {
     public static void neCreusePasUneMarcheSurLeVide(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 12; y++) h.setBlock(x, y, z, Blocks.STONE);
         for (int y = 4; y <= 5; y++) h.setBlock(12, y, 12, Blocks.AIR);
-        for (Direction d : Direction.Plane.HORIZONTAL) for (int y = 1; y <= 4; y++) h.setBlock(12 + d.getStepX(), y, 12 + d.getStepZ(), Blocks.AIR);
+        for (Direction d : Direction.Plane.HORIZONTAL) for (int y = -3; y <= 4; y++) h.setBlock(12 + d.getStepX(), y, 12 + d.getStepZ(), Blocks.AIR); // 8 blocs de fond
         Travailleur t = ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 13, 3));
         t.mode = Travailleur.Mode.ATTENDRE; // il ne fait rien d'autre que chercher à sortir
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));

@@ -295,7 +295,7 @@ public final class Bureau {
             ListTag ms = new ListTag();
             for (Travailleur.Mission m : t.missions) ms.add(net.minecraft.nbt.StringTag.valueOf(Metier.avancementTexte(t, m)));
             e.put("missions", ms);
-            e.putInt("aLire", t.lettresALire.size());
+            e.putInt("aLire", t.lettresALire.size() + t.lettresAuCalme.size());
             return e;
         }
 

@@ -979,7 +979,7 @@ final class Consignes {
 
     // --- L'action qui joue la consigne -----------------------------------------------------------------------------
 
-    /** Un message à porter : 2 minutes au plus pour rattraper l'ouvrier ; il le hèle (le fige) 7 secondes au plus. */
+    /** Un message à porter : 2 minutes au plus pour rattraper l'ouvrier ; il le hèle 7 s au plus (l'autre reste figé 8 s au plus). */
     static final int MESSAGE_MAX = 20 * 120, HELER_MAX = 140;
 
     static final class Faire extends Actions.Action {
@@ -1522,8 +1522,8 @@ final class Consignes {
         Actions.Etat message(Travailleur t) {
             if (vise == null) vise = entite(t, c.entite);
             if (vise == null) return rate(t, "Je ne le trouve pas, chef.");
-            // Il ne court pas après lui sans fin : au bout de 2 minutes, il renonce et le dit.
-            if (age > MESSAGE_MAX) {
+            // Il ne court pas après lui sans fin : au bout de 2 minutes, il renonce et le dit (pas s'il a commencé à le lui dire).
+            if (age > MESSAGE_MAX && etape == 0) {
                 raisonSous = "trop_long";
                 return rate(t, "Je n'ai pas pu le rattraper, chef. Mieux vaut lui écrire.");
             }

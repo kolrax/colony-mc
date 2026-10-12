@@ -510,13 +510,16 @@ final class Itineraire {
         if (dernier && complet && t.position().distanceToSqr(c) < 4) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
         boolean fini = t.getNavigation().isDone();
         if (fini && complet && auBout(t, cheminSortie) && age % 20 != 0) { t.getMoveControl().setWantedPosition(c.x, c.y, c.z, v); return; }
-        if (age % 20 == 0 || fini && age - sortieDate >= RECALCUL) {
+        // Minecraft ne cherche pas de chemin en l'air (en plein saut d'une marche) : il garde celui qu'il suit.
+        if ((age % 20 == 0 || fini && age - sortieDate >= RECALCUL) && (t.onGround() || t.isInWater())) {
             sortieDate = age;
-            Path ch = cheminSortie = chercher(t, q, 0, Charge.Origine.SORTIE);
+            Path ch = chercher(t, q, 0, Charge.Origine.SORTIE);
             // Pas de chemin complet jusqu'au point visé : le point suivant de la route, tout près (jamais un chemin partiel).
-            if ((ch == null || !ch.canReach()) && cible > indexSortie) ch = cheminSortie = chercher(t, sortie.get(indexSortie), 0, Charge.Origine.SORTIE);
-            if (ch != null && ch.canReach()) t.getNavigation().moveTo(ch, v);
-            else t.getNavigation().stop();
+            if ((ch == null || !ch.canReach()) && cible > indexSortie) ch = chercher(t, sortie.get(indexSortie), 0, Charge.Origine.SORTIE);
+            if (ch == null) return; // rien de trouvé : il ne lâche pas le chemin en cours
+            cheminSortie = ch;
+            if (ch.canReach()) t.getNavigation().moveTo(ch, v);
+            else t.getNavigation().stop(); // un chemin partiel : il ne le suit pas
         }
     }
 
@@ -546,9 +549,14 @@ final class Itineraire {
             // Rien à creuser : ce n'est une solution que si la marche est déjà prête (il retente de monter dessus).
             BlockPos marche = i < dirs.size() ? p.relative(d).above() : p.relative(d);
             boolean aCreuserIci = blocs.stream().anyMatch(b -> !Monde.traversable(l, b));
-            // Une marche sans sol dessous (un trou, un puits) ou posée sur de la lave ou du magma : il tomberait.
-            BlockState sol = l.getBlockState(marche.below());
-            boolean appui = Monde.solide(l, marche.below()) && !sol.getFluidState().is(FluidTags.LAVA) && !sol.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK);
+            // Sous la marche, un trou de plus de 3 blocs (un puits), ou de la lave ou du magma au fond : il ne la creuse pas.
+            boolean appui = false;
+            for (int k = 1; k <= 4 && !appui; k++) {
+                BlockPos q = marche.below(k);
+                BlockState sol = l.getBlockState(q);
+                if (sol.getFluidState().is(FluidTags.LAVA) || sol.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)) break;
+                appui = Monde.solide(l, q) || sol.getFluidState().is(FluidTags.WATER);
+            }
             if (appui && blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
                 monte = i < dirs.size();
                 sens = d;
