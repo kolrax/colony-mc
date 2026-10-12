@@ -24,7 +24,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Plus de morts dues à un bug (chutes, noyade, lave, faim) — livré en 0.8.8 (12/10) : 14 essais de morts en jeu, 5 trouvées (mineur près de la lave ou sous du gravier/sable), corrigées ; il bouche la lave ; réflexe de survie (feu, lave, enseveli, noyade)
 
 ## 2. Interface du poste (indispensable, noté 2/5)
-- [ ] Beaucoup moins de messages, regroupés et triés ; gestion simple (lu, archivé, tout effacer)
+- [x] Beaucoup moins de messages, regroupés et triés ; gestion simple (lu, archivé, tout effacer) — livré en 0.8.9 (12/10) : lettres identiques regroupées (« ×N »), une seule lettre pour toute la colonie (dépôt plein, paie en retard, sans poste, poste détruit), importantes en tête en orange, boutons Tout lu / Archiver / Archives / Tout effacer ; modpack 0.4.9 (non obligatoire)
 
 ## 3. Ordres et IA
 - [ ] Journal des phrases non comprises (côté serveur), relu pour enrichir le répertoire

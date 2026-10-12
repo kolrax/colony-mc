@@ -107,3 +107,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Non testé : coup reçu pendant une fuite grave, messager ou lettre pendant un péril, place inatteignable de `seMettreACote`, montée de 2 blocs refusée par `ligneSure`, « à bout d'air ». Pas de mesure de charge en jeu réel.
 - Restes faibles : `Boucher` ne se déplace pas (le bouchage ne sert que s'il est déjà au bord) ; lave sous la nage comptée en double ; largeur du corps ignorée dans `ligneSure` ; à 1 PV par la faim, le moindre coup le met à terre ; la longue nage est lente (61 blocs en ~1800 ticks).
 - Prochaine étape exacte : chercher la cause de `TestsCharge.etapeEnMontee` (instable), puis lot 2 (messages du poste : moins, regroupés, lu/archivé/tout effacer).
+
+## 2026-10-12 14 h UTC : livraison 0.8.9 et modpack 0.4.9 (cloud)
+- **0.8.9 « messages du poste »** (lot 2), livrée sur le serveur à 14 h 08 UTC (personne connecté, pas de préavis), « Done » à 14 h 09, aucune erreur du mod au démarrage (seules erreurs : recettes de Steam 'n' Rails et Create Enchantment Industry, déjà là avant). `colonie_pnj-0.8.8.jar` rangé dans `/mods-off`.
+  - Contenu : lettres de routine identiques regroupées (« ×N ») ; dépôt plein, paie en retard, sans poste, poste détruit = une seule lettre pour toute la colonie, avec les noms ; lettres importantes en tête, en orange avec « ! » ; boutons « Tout lu » (sauf importantes), « Archiver » / « Ressortir », « Archives », « Tout effacer » (deux clics, garde non lues et archivées) ; moins de lettres bavardes (puits fini = simple bulle ; retour d'expédition et dépôt plein au plus une fois par jour de jeu).
+  - Tests : **85/85 JUnit, 136/136 en jeu** (les tests en jeu ont tourné juste avant le commit qui ne change que le numéro de version).
+- **Modpack 0.4.9** publié et annoncé dans 📦┃modpacks : jar du mod vérifié dans le .mrpack téléchargé (sha1 `49b2928d…` identique). **Non obligatoire** : canal réseau inchangé, les anciens clients se connectent toujours, sans les nouveaux boutons. Au passage, `build.py` a pris ModernFix 5.27.26 côté joueurs (le serveur garde 5.27.24 ; mod sans échange réseau).
+- Non mesuré en jeu réel avec des joueurs.
