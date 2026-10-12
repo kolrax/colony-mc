@@ -63,10 +63,16 @@ final class Itineraire {
     // Le choix d'une étape, étalé sur plusieurs ticks (au plus PAR_TICK recherches par tick, BUDGET pour tout le serveur).
     // Une recherche ratée explore tout ce qu'elle peut (jusqu'à 1024 nœuds, ~9 ms) : c'est elle qu'il faut rendre rare et courte.
     static final int PAR_TICK = 2, BUDGET = 4, DELAI_APRES_ECHEC = 20, DELAI_MAX = 200, RECALCUL = 10;
-    /** Portée des recherches vers les points d'étape (à 28 blocs au plus) : 36 au lieu de 64, et la moitié des nœuds. */
-    static final float PORTEE_ETAPE = 36, NOEUDS_ETAPE = 0.5f;
-    /** Un point d'étape raté depuis une cellule n'est pas recherché de nouveau avant 30 s. */
+    /**
+     * La portée d'une recherche borne la longueur MARCHÉE du chemin (pas le rayon) : on donne la distance du point plus
+     * {@link #DETOUR} blocs (44 pour une étape à 28 blocs), 36 au moins vers le but et la trace. Vers un point d'étape,
+     * la moitié des 1024 nœuds ({@link #NOEUDS_ETAPE}).
+     */
+    static final float DETOUR = 16, PORTEE_MIN = 36, NOEUDS_ETAPE = 0.5f;
+    /** Un point d'étape raté depuis le même endroit n'est pas recherché de nouveau avant 30 s. */
     static final int OUBLI = 600;
+    /** Le choix en cours a déjà été repris sans la mémoire des points ratés (tout y était : elle est peut-être fausse). */
+    private boolean sansMemoire;
     /** Recherches « étape » qui restent à tous les PNJ pour ce tick du serveur (remis à BUDGET à chaque tick). */
     static int budget = BUDGET;
     /** -1 : pas de choix en cours ; 0 : le but ; 1 : la trace ; 2 : la sortie de sous terre ; 3 : les étapes autour. */
@@ -121,7 +127,13 @@ final class Itineraire {
         return true;
     }
 
-    private void finChoix() { phase = -1; candidats = null; rates.clear(); }
+    private void finChoix() { phase = -1; candidats = null; rates.clear(); attendDepuis = -1; }
+
+    /**
+     * Il attend son tour pour chercher une étape (jeton refusé) ou le délai après un choix raté : il est immobile, mais
+     * ce n'est pas d'être coincé (l'action ne doit pas compter ce temps-là comme « immobile »).
+     */
+    boolean attend(long maintenant) { return attendDepuis >= 0 || maintenant < prochainChoix; }
 
     Itineraire(Travailleur t, Vec3 but) {
         this.but = but;
@@ -188,6 +200,7 @@ final class Itineraire {
                     nav.moveTo(c, v);
                     direct = c;
                     directRate = 0;
+                    choixRates = 0;
                 } else {
                     direct = null;
                     // Un chemin qui s'arrête en route, recalculé à chaque instant, le ferait hésiter et revenir sur ses pas
@@ -227,11 +240,11 @@ final class Itineraire {
             phase = 0;
         }
 
-        // a) Le but lui-même, s'il est à portée d'un chemin complet.
+        // a) Le but lui-même, s'il est à portée d'un chemin complet. Si le chemin direct vient d'échouer, la moitié des nœuds.
         if (phase == 0) {
             if (dh <= 48 && Math.abs(but.y - p.y) <= 24) {
                 if (!jeton(maintenant)) return;
-                if (aller(t, BlockPos.containing(but), but, v, false)) { finChoix(); return; }
+                if (aller(t, BlockPos.containing(but), but, v, false, directRate >= 2 ? NOEUDS_ETAPE : 1)) { finChoix(); return; }
             }
             phase = 1;
             curseur = Math.max(0, t.trace.size() - 4);
@@ -243,7 +256,7 @@ final class Itineraire {
                 for (; curseur < t.trace.size(); curseur++) {
                     if (!jeton(maintenant)) return;
                     BlockPos q = t.trace.get(curseur);
-                    if (aller(t, q, Vec3.atBottomCenterOf(q), v, false)) {
+                    if (aller(t, q, Vec3.atBottomCenterOf(q), v, false, 1)) {
                         while (t.trace.size() > curseur) t.trace.remove(t.trace.size() - 1);
                         finChoix();
                         return;
@@ -260,28 +273,31 @@ final class Itineraire {
                 sortie = sortieRatee ? null : versLeCiel(l, ici, 30000);
                 indexSortie = 0;
                 sortieAvance = 0;
-                if (sortie != null) { finChoix(); return; }
+                if (sortie != null) { finChoix(); choixRates = 0; return; }
                 sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
                 commencerCreusage(t);
-                if (aCreuser != null) { finChoix(); return; }
+                if (aCreuser != null) { finChoix(); choixRates = 0; return; }
             }
             candidats = candidats(t, l, ici, p, dh);
             curseur = 0;
             essais = 0;
             rates.clear();
+            sansMemoire = false;
         }
 
         // d) Une étape sûre : des points à 28 et 14 blocs, vers le but d'abord, puis de plus en plus de côté.
-        // Un point raté depuis cette cellule il y a moins de 30 s n'est pas recherché de nouveau (le terrain n'a pas changé).
+        // Un point raté depuis ce même endroit (cellule de 8 blocs, hauteur à 4 blocs près) il y a moins de 30 s n'est pas
+        // recherché de nouveau : le terrain n'a pas changé.
+        long depart = cellule(ici) * 31 + (ici.getY() >> 2);
         for (; curseur < candidats.size() && essais < 18; curseur++) {
             BlockPos c = candidats.get(curseur);
             if (rates.stream().anyMatch(r -> r.distSqr(c) < 64)) continue; // même obstacle qu'un point déjà essayé : on essaie ailleurs
-            long cle = cellule(ici) * 31 + cellule(c);
+            long cle = depart * 31 + cellule(c);
             Long oubli = t.etapesRatees.get(cle);
-            if (oubli != null && oubli > maintenant) continue;
+            if (!sansMemoire && oubli != null && oubli > maintenant) { rates.add(c); continue; }
             if (!jeton(maintenant)) return;
             essais++;
-            if (aller(t, c, Vec3.atBottomCenterOf(c), v, true)) {
+            if (aller(t, c, Vec3.atBottomCenterOf(c), v, true, NOEUDS_ETAPE)) {
                 finChoix();
                 // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
                 // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
@@ -293,12 +309,19 @@ final class Itineraire {
             if (t.etapesRatees.size() > 256) t.etapesRatees.values().removeIf(f -> f <= maintenant);
             t.etapesRatees.put(cle, maintenant + OUBLI);
         }
+        // Tous les points étaient en mémoire, aucun essai : ce n'est pas un échec. Il reprend le choix sans la mémoire.
+        if (essais == 0 && !sansMemoire && !candidats.isEmpty()) {
+            sansMemoire = true;
+            curseur = 0;
+            rates.clear();
+            return; // au tick suivant (le choix est toujours en cours : phase 3)
+        }
         finChoix();
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
         commencerCreusage(t);
-        if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; return; }
+        if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         prochainChoix = maintenant + Math.min(DELAI_MAX, DELAI_APRES_ECHEC << Math.min(4, choixRates++));
         if (++echecs >= 3) { bloque = true; t.diag = "coincé"; }
         etape = null;
@@ -365,14 +388,17 @@ final class Itineraire {
         }
     }
 
+    /** La portée d'une recherche vers q : sa distance plus {@link #DETOUR} blocs (la portée borne la longueur marchée). */
+    static float portee(BlockPos depuis, BlockPos q) { return (float) Math.sqrt(depuis.distSqr(q)) + DETOUR; }
+
     /**
-     * Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. Vers un point d'étape ({@code court}) : portée de
-     * {@link #PORTEE_ETAPE} blocs et moitié des nœuds (le point est à 28 blocs au plus ; un chemin plus long n'est pas une
-     * bonne étape). Vers le but ou la trace : la distance plus 16 blocs de détour (36 au moins, 64 au plus), tous les nœuds.
+     * Calcule le chemin complet jusqu'à q ; s'il y arrive, part dessus. Portée : {@link #portee}, et au moins
+     * {@link #PORTEE_MIN} vers le but ou la trace (pas un point d'étape, {@code court}) ; {@code noeuds} : la part des
+     * 1024 nœuds.
      */
-    private boolean aller(Travailleur t, BlockPos q, Vec3 cible, double v, boolean court) {
-        float portee = court ? PORTEE_ETAPE : Math.max(PORTEE_ETAPE, (float) Math.sqrt(t.blockPosition().distSqr(q)) + 16);
-        Path c = chercher(t, q, 1, Charge.Origine.ETAPE, portee, court ? NOEUDS_ETAPE : 1);
+    private boolean aller(Travailleur t, BlockPos q, Vec3 cible, double v, boolean court, float noeuds) {
+        float portee = Math.max(court ? 0 : PORTEE_MIN, portee(t.blockPosition(), q));
+        Path c = chercher(t, q, 1, Charge.Origine.ETAPE, portee, noeuds);
         if (c == null || !c.canReach()) return false;
         choixRates = 0;
         chemin = c;

@@ -135,8 +135,10 @@ public final class Actions {
             double d = p.distanceTo(cible);
             if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
+            // Il attend son tour pour chercher une étape, ou le délai après un choix raté : ce temps-là ne compte pas.
             if (age % 40 == 0) {
-                immobile = dernier != null && dernier.distanceToSqr(p) < 0.25 && !route.occupe() ? immobile + 40 : 0;
+                if (!route.attend(t.level().getGameTime()))
+                    immobile = dernier != null && dernier.distanceToSqr(p) < 0.25 && !route.occupe() ? immobile + 40 : 0;
                 dernier = p;
             }
         }

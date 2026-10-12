@@ -130,6 +130,53 @@ public class TestsCharge {
     }
 
     /**
+     * Une étape en montée (0.8.5) : le coin d'une pyramide à degrés (hauteur = le plus grand écart, en x ou en z). Le
+     * point d'étape est à 28 blocs en diagonale, 20 plus haut. En montée, Minecraft ne coupe pas en diagonale : le chemin
+     * marché fait 20 marches et 20 pas, ~48 blocs. La portée borne la longueur marchée : avec 36 (première 0.8.5), la
+     * recherche échoue ; avec la distance plus 16 blocs ({@link Itineraire#portee}, ~50), elle réussit, avec la moitié
+     * des nœuds.
+     */
+    @GameTest(template = "vide", timeoutTicks = 200, skyAccess = true, batch = "pente")
+    public static void etapeEnMontee(GameTestHelper h) {
+        var l = h.getLevel();
+        BlockPos o = TestsJeu.sol(h, 4, 90404);
+        for (int dx = -3; dx <= 24; dx++) for (int dz = -3; dz <= 24; dz++) {
+            int haut = Math.max(0, Math.max(dx, dz));
+            for (int y = 0; y < haut; y++) l.setBlock(o.offset(dx, y, dz), Blocks.STONE.defaultBlockState(), 2);
+        }
+        BlockPos cible = o.offset(20, 20, 20);
+        Travailleur t = TestsJeu.employe(h, "mineur", o, Vec3.atBottomCenterOf(o), ItemStack.EMPTY);
+        t.mode = Travailleur.Mode.ATTENDRE;
+        t.forcerChunk();
+        long debut = h.getTick();
+        boolean[] fait = {false};
+        h.onEachTick(() -> { // une recherche ne se fait qu'au sol : il attend d'avoir atterri
+            if (fait[0] || h.getTick() < debut + 20 || !t.onGround()) return;
+            fait[0] = true;
+            BlockPos ici = t.blockPosition();
+            float portee = Itineraire.portee(ici, cible);
+            var court = Itineraire.chercher(t, cible, 1, Charge.Origine.ETAPE, 36, Itineraire.NOEUDS_ETAPE);
+            t.getNavigation().stop();
+            var bon = Itineraire.chercher(t, cible, 1, Charge.Origine.ETAPE, portee, Itineraire.NOEUDS_ETAPE);
+            String bilan = "depuis " + ici.toShortString() + " (au sol " + t.onGround() + ") vers " + cible.toShortString() + " : portée 36 "
+                    + longueur(court) + ", portée " + (int) portee + " " + longueur(bon);
+            ColoniePnj.LOG.info("[étape en montée] {}", bilan);
+            t.discard();
+            h.assertTrue(court == null || !court.canReach(), "avec la portée 36, le terrain doit faire échouer la recherche (" + bilan + ")");
+            h.assertTrue(bon != null && bon.canReach(), "l'étape en montée doit être trouvée (" + bilan + ")");
+            h.succeed();
+        });
+    }
+
+    /** La longueur marchée d'un chemin, pour le journal. */
+    static String longueur(net.minecraft.world.level.pathfinder.Path c) {
+        if (c == null) return "aucun chemin";
+        double s = 0;
+        for (int i = 1; i < c.getNodeCount(); i++) s += Math.sqrt(c.getNodePos(i).distSqr(c.getNodePos(i - 1)));
+        return (c.canReach() ? "atteint" : "partiel") + " (" + (int) s + " blocs marchés, " + c.getNodeCount() + " nœuds)";
+    }
+
+    /**
      * Des étapes sobres (0.8.5) : 8 ouvriers, chacun enfermé dans un enclos sans sortie, envoyés à 40 blocs dehors.
      * Aucune étape n'est atteignable. Sur 300 ticks, tous ensemble ne font jamais plus de 6 recherches d'étape sur un
      * tick du serveur (budget de 4, plus un seul passe-droit de 2), et peu de recherches ratées : un point raté n'est pas
@@ -164,8 +211,9 @@ public class TestsCharge {
                         + pnj.stream().map(t -> t.prenom + " " + (t.action == null ? "-" : t.action.nom) + " (" + t.diag + ")").toList();
                 ColoniePnj.LOG.info("[étapes sobres] {}", texte);
                 for (Travailleur t : pnj) t.discard();
+                h.assertTrue(bilan[0] > 8 * 10, "trop peu de recherches d'étape : les jetons ne sont plus donnés (" + texte + ")");
                 h.assertTrue(bilan[2] <= 6, "trop de recherches d'étape sur un même tick (" + texte + ")");
-                h.assertTrue(bilan[1] <= 600, "trop de recherches d'étape ratées (" + texte + ")");
+                h.assertTrue(bilan[1] <= 900, "trop de recherches d'étape ratées (" + texte + ")");
                 h.succeed();
             });
         }
