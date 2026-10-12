@@ -63,7 +63,12 @@ final class OrdresLongs {
     /** Les déclencheurs, à chercher dans le texte « à plat » (minuscules, sans accents, mots séparés). */
     static final List<Object[]> DECLENCHEURS = new ArrayList<>();
 
-    static void d(String quand, String regex) { DECLENCHEURS.add(new Object[]{quand, Pattern.compile("\\b" + regex.replace(" ", " +") + "\\b")}); }
+    static void d(String quand, String regex) { d(quand, regex, false); }
+
+    /** {@code simple} : une période nommée seule (« la nuit », « le soir ») ; elle ne compte que bien placée (voir {@link #periodeValable}). */
+    static void d(String quand, String regex, boolean simple) {
+        DECLENCHEURS.add(new Object[]{quand, Pattern.compile("\\b" + regex.replace(" ", " +") + "\\b"), simple});
+    }
 
     static {
         String fini = "(?:fini|finie|finis|termine|terminee|termines|acheve)";
@@ -78,16 +83,19 @@ final class OrdresLongs {
         d("PLUIE", "(?:s il|quand il|lorsqu il|des qu il) (?:pleut|se met a pleuvoir|commence a pleuvoir)");
         d("PLUIE", "(?:en cas de|sous la|par temps de|pendant la|s il y a de la|quand il y a de la|a la) pluie");
         d("NUIT", "(?:quand|lorsqu|lorsque|s|des qu|des que) (?:il fait nuit|la nuit tombe|la nuit vient|la nuit arrive)");
-        d("NUIT", "(?:a la tombee de la nuit|a la nuit tombee|la nuit venue|des la nuit|pendant la nuit|de nuit)");
-        d("NUIT", "(?<!toute )(?<!bonne )(?<!cette )la nuit");
+        d("NUIT", "(?:a la tombee de la nuit|a la nuit tombee|la nuit venue|des la nuit|pendant la nuit|chaque nuit|toutes les nuits)");
+        d("NUIT", "(?<!toute )(?<!bonne )(?<!cette )(?:la|de) nuit", true);
         d("JOUR", "(?:quand|lorsqu|lorsque|s|des qu|des que) (?:il fait jour|le jour se leve|le soleil se leve)");
-        d("JOUR", "(?:au lever du jour|au lever du soleil|a l aube|des l aube|au point du jour|pendant le jour|de jour)");
-        d("JOUR", "(?<!tout )le jour(?! et)");
-        d("MATIN", "(?:le|au|chaque|les|ce|tous les) matins?");
-        d("MATIN", "(?:dans la|en|pendant la|toute la) matinee");
-        d("APRES_MIDI", "(?:l |cet |chaque |les |dans l |en |pendant l |tous les |tout l )?apres midis?");
-        d("SOIR", "(?:le|au|chaque|les|ce|tous les) soirs?");
-        d("SOIR", "(?:dans la|en|pendant la) soiree");
+        d("JOUR", "(?:au lever du jour|au lever du soleil|a l aube|des l aube|au point du jour|pendant le jour)");
+        d("JOUR", "(?<!tout )(?:le|de) jour(?! et)", true);
+        d("MATIN", "(?:chaque|tous les) matins?");
+        d("MATIN", "(?:dans la|pendant la) matinee");
+        d("MATIN", "(?:le|au|les) matins?", true);
+        d("APRES_MIDI", "(?:chaque |tous les |pendant l )apres midis?");
+        d("APRES_MIDI", "(?:l |les |dans l |en )?apres midis?", true);
+        d("SOIR", "(?:chaque|tous les) soirs?");
+        d("SOIR", "(?:dans la|pendant la) soiree");
+        d("SOIR", "(?:le|au|les) soirs?", true);
         d("VOIT", "(?:si|quand|lorsque|lorsqu|des que|des qu|chaque fois que|a chaque fois que|au cas ou) (?:tu |t )?(?:vois|verras|voyais|apercois|apercevras|croises|croiseras|rencontres|reperes|tombes sur|as vu|trouves) (?:un |une |des |le |la |les |du |l |d |encore )?(quelqu un|\\w+)");
     }
 
@@ -131,7 +139,41 @@ final class OrdresLongs {
         return b.toString();
     }
 
-    private record Trouve(String quand, int debut, int fin) {}
+    private record Trouve(String quand, int debut, int fin, boolean simple) {}
+
+    /** Après ces mots, une période dit une échéance ou une durée (« avant la nuit », « jusqu'au soir », « pour la nuit »), pas une règle. */
+    static final java.util.Set<String> ECHEANCES = java.util.Set.of("avant", "jusqu", "jusque", "ici", "pour", "depuis", "toute", "tout", "cette",
+            "demain", "est", "c", "hier", "vers", "durant", "aujourd", "hui");
+    static final Pattern NEGATION = Pattern.compile("\\b(?:ne|n|pas|jamais|plus|point)\\b");
+    /** Ce qui sépare deux propositions dans le texte à plat : une virgule, « et », « puis », « mais ». */
+    static final Pattern SEPARATEUR = Pattern.compile("[,:]|\\b(?:et|puis|mais|ensuite)\\b");
+
+    /** En tête de proposition : début de phrase, après une virgule, « et », « puis », « alors »… */
+    static boolean enTete(String p, int s0, int debut) {
+        String avant = p.substring(s0, debut).strip();
+        return avant.isEmpty() || avant.matches("(?s).*(?:[,:]|\\b(?:et|puis|mais|alors|ensuite|ou))$");
+    }
+
+    /**
+     * Une période nommée seule compte en tête de proposition (« Le soir, rentre »), ou à la fin d'une proposition sans
+     * négation, avec son article (« rentre la nuit ») ; jamais après « avant », « jusqu'au », « pour », « d'ici »… : « Ramène 64
+     * bûches avant la nuit », « Suis-moi jusqu'au soir », « on part de nuit », « ne travaille pas la nuit » se font tout de suite.
+     */
+    static boolean periodeValable(String p, int s0, int s1, int debut, int fin) {
+        String[] mots = p.substring(s0, debut).strip().split("[^a-z0-9]+");
+        if (mots.length > 0 && ECHEANCES.contains(mots[mots.length - 1])) return false;
+        if (enTete(p, s0, debut)) return true;
+        if (!p.substring(debut, fin).matches("(?:la|le|l|les) .*")) return false;
+        String apres = p.substring(fin, s1);
+        Matcher sep = SEPARATEUR.matcher(apres);
+        if (!(sep.find() ? apres.substring(0, sep.start()) : apres).isBlank()) return false;
+        // La proposition qui la porte, depuis le dernier séparateur : sans négation.
+        String avant = p.substring(s0, debut);
+        Matcher m = SEPARATEUR.matcher(avant);
+        int depuis = 0;
+        while (m.find()) depuis = m.end();
+        return !NEGATION.matcher(avant.substring(depuis)).find();
+    }
 
     /** Lit les règles d'un message, la mission quotidienne et « oublie tes ordres » ; {@code reste} : le texte sans les règles. */
     static Lu lire(String texte) {
@@ -173,27 +215,46 @@ final class OrdresLongs {
                     if (vu == null) continue; // « si tu vois Raoul » : pas une créature à guetter
                     quand = "VOIT:" + vu;
                 }
-                t.add(new Trouve(quand, s0 + m.start(), s0 + m.end()));
+                t.add(new Trouve(quand, s0 + m.start(), s0 + m.end(), (Boolean) d[2]));
             }
         }
         // Les plus longs d'abord à début égal ; un déclencheur pris dans un autre ne compte pas.
         t.sort(Comparator.comparingInt(Trouve::debut).thenComparing(x -> -(x.fin() - x.debut())));
         List<Trouve> gardes = new ArrayList<>();
         for (Trouve x : t) if (gardes.isEmpty() || x.debut() >= gardes.get(gardes.size() - 1).fin()) gardes.add(x);
+        gardes.removeIf(x -> x.simple() && !periodeValable(p, s0, s1, x.debut(), x.fin()));
         if (gardes.isEmpty()) {
             if (!texte.substring(s0, s1).isBlank()) reste.add(texte.substring(s0, s1).strip());
             return;
         }
-        boolean avantPris = false;
-        for (int k = 0; k < gardes.size(); k++) {
-            Trouve x = gardes.get(k);
-            int fin = k + 1 < gardes.size() ? gardes.get(k + 1).debut() : s1;
-            String suite = nettoyer(texte.substring(x.fin(), fin));
-            if (suite.isEmpty() && k == 0) { suite = nettoyer(texte.substring(s0, x.debut())); avantPris = true; }
-            if (!suite.isEmpty()) lu.regles.add(new Regle(x.quand(), suite));
+        // Un déclencheur en tête de proposition (« S'il pleut, rentre ») : sa conséquence le suit. Placé après
+        // (« Rentre au poste s'il pleut, et ramène 10 fers ») : c'est la seule proposition qui le précède ; le reste se fait tout de suite.
+        int cur = s0;
+        Trouve enAttente = null;
+        for (Trouve x : gardes) {
+            if (enTete(p, s0, x.debut())) {
+                attribuer(texte, cur, x.debut(), enAttente, lu, reste);
+                enAttente = x;
+            } else {
+                Matcher m = SEPARATEUR.matcher(p.substring(cur, x.debut()));
+                int coupe = cur;
+                while (m.find()) coupe = cur + m.end();
+                attribuer(texte, cur, coupe, enAttente, lu, reste);
+                enAttente = null;
+                String suite = nettoyer(texte.substring(coupe, x.debut()));
+                if (!suite.isEmpty()) lu.regles.add(new Regle(x.quand(), suite));
+            }
+            cur = x.fin();
         }
-        String avant = nettoyer(texte.substring(s0, gardes.get(0).debut()));
-        if (!avantPris && !avant.isEmpty()) reste.add(avant);
+        attribuer(texte, cur, s1, enAttente, lu, reste);
+    }
+
+    /** Ce texte est la conséquence de la règle en tête qui le précède, ou (sans elle) se fait tout de suite. */
+    private static void attribuer(String texte, int a, int b, Trouve tete, Lu lu, List<String> reste) {
+        String x = nettoyer(texte.substring(a, b));
+        if (x.isEmpty()) return;
+        if (tete != null) lu.regles.add(new Regle(tete.quand(), x));
+        else reste.add(x);
     }
 
     static final Pattern BORDS = Pattern.compile("^[\\s,:;\\-]*(?:(?:alors|et|puis|donc)\\b[\\s,]*)?|[\\s,:;\\-]*(?:\\b(?:et|puis|mais|ou)[\\s,]*)?$", Pattern.CASE_INSENSITIVE);

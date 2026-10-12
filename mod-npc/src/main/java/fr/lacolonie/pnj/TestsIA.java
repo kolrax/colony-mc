@@ -304,6 +304,22 @@ public class TestsIA {
         });
     }
 
+    /** Un ordre long (« s'il pleut, rentre ») : l'interpréteur le garde en règle, sans passer par l'IA (qui l'aurait perdu). */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 200)
+    public static void iaOrdreLongSansIA(GameTestHelper h) {
+        sol(h);
+        var chef = h.makeMockServerPlayerInLevel();
+        Vec3 p = h.absoluteVec(new Vec3(4.5, 2, 4.5));
+        chef.moveTo(p.x, p.y, p.z);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        t.parler(chef, "S'il pleut, rentre au poste.");
+        h.succeedWhen(() -> {
+            h.assertTrue(!t.reflechit && t.regles.size() == 1 && t.regles.get(0).quand.equals("PLUIE"), "une règle, sans l'IA (" + t.reflechit + ", " + t.regles + ")");
+            t.discard();
+        });
+    }
+
     /** Une lettre : l'IA la comprend et écrit la réponse, envoyée comme les autres lettres. */
     @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
     public static void iaLettre(GameTestHelper h) {

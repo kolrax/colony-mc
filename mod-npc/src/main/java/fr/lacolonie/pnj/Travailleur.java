@@ -202,6 +202,10 @@ public class Travailleur extends PathfinderMob {
         long maintenant = level().getGameTime();
         int heure = (int) ((level().getDayTime() + 6000) % 24000 / 1000);
         java.util.List<LivingEntity> autour = null;
+        // Un ordre du chef donné après la règle passe avant elle : il le suit, il attend où on le lui a dit, il tient une consigne
+        // (garde, escorte…), il est en grève. La règle ne se déclenche pas (« quand tu as fini » attend qu'il soit libre).
+        boolean bloque = mode == Mode.SUIVRE || mode == Mode.GREVE || mode == Mode.ATTENDRE && regles.stream().noneMatch(x -> x.mene)
+                || consigne != null && consigne.tenue();
         for (OrdresLongs.Regle r : List.copyOf(regles)) {
             LivingEntity vu = null;
             boolean vrai;
@@ -212,7 +216,9 @@ public class Travailleur extends PathfinderMob {
                 vrai = vu != null;
             } else vrai = OrdresLongs.vrai(r.quand, heure, level().isRaining(), level().isThundering());
             if (vrai && !r.actif) {
-                if (!r.voit() || maintenant - r.dernierAvis >= 2400) declencher(r, vu, maintenant); // un avis toutes les 2 minutes au plus
+                if (bloque) { if (r.quand.equals("FINI")) continue; }
+                else if (!r.voit() || maintenant - r.dernierAvis >= 2400) declencher(r, vu, maintenant); // un avis toutes les 2 minutes au plus
+                if (r.quand.equals("FINI")) regles.remove(r); // « quand tu as fini » ne sert qu'une fois
             } else if (!vrai && r.actif && r.mene) reprendre(r);
             r.actif = vrai;
         }
@@ -240,6 +246,7 @@ public class Travailleur extends PathfinderMob {
         Ordres.Lecture x = Ordres.lire(r.suite, metier);
         x.regles.clear();
         x.annulerRegles = false;
+        x.ajouter = true; // une règle n'efface jamais ses autres missions
         if (r.voit()) {
             r.dernierAvis = maintenant;
             if (r.previens()) {
@@ -840,12 +847,17 @@ public class Travailleur extends PathfinderMob {
      * c'est elle qui comprend et qui écrit la réponse ; sans elle (ou si elle ne répond pas), l'interpréteur.
      */
     void lireLettre(Courrier.Lettre l) {
+        // Des ordres longs (« s'il pleut, rentre ») : l'interpréteur seul les comprend, sans dépenser l'IA.
+        Ordres.Lecture seul = Ordres.lire(l.texte, metier);
+        if (!seul.regles.isEmpty() || seul.annulerRegles) { lireLettreSansIA(l); return; }
         if (IA.conversationDisponible() && level().getServer() != null) {
             var serveur = level().getServer();
             IA.converser(this, l.texte, false).whenComplete((d, err) -> serveur.execute(() -> {
                 if (!isAlive()) return;
                 if (d == null || d.reponse().isEmpty()) { lireLettreSansIA(l); return; }
-                appliquer(d.lecture(), null);
+                Ordres.Lecture li = d.lecture();
+                li.quotidien |= seul.quotidien;
+                appliquer(li, null);
                 IA.noter(this, "Lettre du chef", l.texte);
                 IA.noter(this, "Ta réponse", d.reponse());
                 Courrier.ecrireTexte(this, "Réponse à ta lettre", d.reponse(), false);
@@ -1381,6 +1393,8 @@ public class Travailleur extends PathfinderMob {
         if (!l.missions.isEmpty()) {
             if (!l.ajouter) missions.clear();
             for (Ordres.Mission m : l.missions) {
+                // Une règle qui redonne une mission déjà en cours ne la remet pas à zéro.
+                if (parRegle && missions.stream().anyMatch(x -> x.id.equals(m.id()) && !Metier.remplie(this, x))) continue;
                 missions.removeIf(x -> x.id.equals(m.id()));
                 Mission nm = new Mission(m.id(), m.mode(), m.nombre());
                 nm.quotidienne = l.quotidien && nm.quantite();
@@ -1413,7 +1427,12 @@ public class Travailleur extends PathfinderMob {
             r.add(Messages.corps(this, "dit_jours", joursExpedition));
         }
 
-        // Les déplacements.
+        // Les déplacements. « Au travail », « suis-moi » : il ne rentre plus au poste qu'on lui avait demandé.
+        if (!l.intentions.contains(Ordres.Intention.RENTRER) && (l.intentions.contains(Ordres.Intention.TRAVAIL)
+                || l.intentions.contains(Ordres.Intention.SUIVRE) || l.intentions.contains(Ordres.Intention.ARRETER_SUIVRE))) {
+            memoire.remove("rappel");
+            memoire.remove("attendre_apres");
+        }
         boolean arreter = l.intentions.contains(Ordres.Intention.ARRETER_SUIVRE);
         if (arreter || l.intentions.contains(Ordres.Intention.TRAVAIL) && l.missions.isEmpty()) {
             auTravail = true;
@@ -1421,7 +1440,7 @@ public class Travailleur extends PathfinderMob {
         }
         if (l.intentions.contains(Ordres.Intention.RENTRER)) {
             if (bureau == null) r.add(Messages.corps(this, "sans_poste"));
-            else {
+            else if (mode != Mode.GREVE) {
                 memoire.putBoolean("rappel", true);
                 if (l.intentions.contains(Ordres.Intention.ATTENDRE)) memoire.putBoolean("attendre_apres", true);
                 auTravail = true;
@@ -1443,7 +1462,9 @@ public class Travailleur extends PathfinderMob {
         // Les actions du répertoire (gestes, postures, déplacements, tâches, paroles…).
         for (Ordres.Faire f : l.faire) {
             // Une règle qui se déclenche (« quand tu as fini, va aider Raoul ») : comme un ordre de son chef, s'il est dans le monde.
-            String dit = Consignes.ordonner(this, f, enFace != null || !parRegle ? enFace : chefJoueur(), l.texte, l.rang, l.total);
+            ServerPlayer c = chefJoueur();
+            String dit = Consignes.ordonner(this, f, enFace != null || !parRegle ? enFace
+                    : c != null && c.level() == level() && c.distanceToSqr(this) < 48 * 48 ? c : null, l.texte, l.rang, l.total);
             if (!dit.isEmpty()) r.add(dit);
         }
 

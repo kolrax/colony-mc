@@ -130,6 +130,74 @@ public class TestsOrdres {
                 () -> fin(h, e));
     }
 
+    /** La condition vraie en ce moment (le jour ou la nuit). */
+    static String maintenant(GameTestHelper h) { return OrdresLongs.vrai("JOUR", TestsJeu.heure(h), false, false) ? "JOUR" : "NUIT"; }
+
+    /** Une règle qui donne une mission l'ajoute aux autres, et ne remet pas à zéro la même mission en cours. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void regleAjouteSansEffacer(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 48);
+        Travailleur b = e[0];
+        OrdresLongs.Regle r = new OrdresLongs.Regle(maintenant(h), "ramène 5 fers");
+        etapes(h, chef, e,
+                () -> { b.mission("charbon", "quantite", 10); OrdresLongs.ajouter(b.regles, r); },
+                () -> h.assertTrue(b.missions.size() == 2 && b.missions.get(0).id.equals("charbon") && b.missions.get(1).id.equals("fer"),
+                        "charbon puis fer (" + b.missions.stream().map(m -> m.id).toList() + ")"),
+                () -> { b.missions.get(1).livre = 2; b.declencher(r, null, h.getLevel().getGameTime()); },
+                () -> h.assertTrue(b.missions.size() == 2 && b.missions.get(1).livre == 2, "le fer en cours n'est pas remis à zéro (" + b.missions.get(1).livre + ")"),
+                () -> fin(h, e));
+    }
+
+    /** Une règle ne défait pas un ordre donné après elle : il suit son chef, la règle attend. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void regleNEcrasePasSuivre(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 49);
+        Travailleur b = e[0];
+        etapes(h, chef, e,
+                () -> { regarder(chef, b); b.parler(chef, "Suis-moi"); OrdresLongs.ajouter(b.regles, new OrdresLongs.Regle(maintenant(h), "rentre au poste")); },
+                attendre(h, 50),
+                () -> h.assertTrue(b.mode == Travailleur.Mode.SUIVRE && !b.memoire.contains("rappel"), "il suit toujours (" + b.mode + ", " + b.memoire + ")"),
+                () -> fin(h, e));
+    }
+
+    /** « Au travail » après « rentre au poste » : il ne rentre plus. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void auTravailEffaceLeRappel(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 50);
+        Travailleur b = e[0];
+        etapes(h, chef, e,
+                () -> {
+                    b.memoire.putBoolean("rappel", true);
+                    b.memoire.putBoolean("attendre_apres", true);
+                    regarder(chef, b);
+                    b.parler(chef, "Au travail !");
+                    h.assertTrue(!b.memoire.contains("rappel") && !b.memoire.contains("attendre_apres"), "plus de retour au poste (" + b.memoire + ")");
+                },
+                () -> fin(h, e));
+    }
+
+    /** « Quand tu as fini, va aider Raoul », chef absent : il y va quand même, et la règle ne sert qu'une fois. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void finiChefAbsent(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 51);
+        Travailleur b = e[0];
+        java.util.UUID absent = java.util.UUID.randomUUID();
+        etapes(h, chef, e,
+                () -> {
+                    for (Travailleur t : e) t.chef = absent; // un chef qui n'est pas dans le monde
+                    b.mission("fer", "quantite", 5);
+                    OrdresLongs.ajouter(b.regles, new OrdresLongs.Regle("FINI", "va aider Raoul"));
+                },
+                attendre(h, 30),
+                () -> b.missions.get(0).livre = 5,
+                () -> h.assertTrue("aller_voir_cible".equals(TestsRepertoire.c(b)) && b.regles.isEmpty(), "il va voir Raoul, règle usée (" + TestsRepertoire.c(b) + ", " + b.regles + ")"),
+                () -> fin(h, e));
+    }
+
     /** Ses règles sont sauvegardées avec lui, et « où en es-tu » les dit ; « oublie tes ordres » les efface. */
     @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
     public static void reglesSauvegardees(GameTestHelper h) {

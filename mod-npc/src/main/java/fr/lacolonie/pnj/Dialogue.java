@@ -134,7 +134,8 @@ final class Dialogue {
      * {@code tenu} : ce chef est déjà marqué « en attente » (par l'avis de l'IA).
      */
     static void repondreAvec(ServerPlayer p, String dit, List<Travailleur> dest, Travailleur vise, boolean auMicro, boolean tenu) {
-        if (!IA.conversationDisponible()) {
+        // Des ordres longs (« s'il pleut, rentre », « oublie tes ordres ») : l'interpréteur seul les comprend, sans dépenser l'IA.
+        if (!IA.conversationDisponible() || dest.stream().anyMatch(t -> { Ordres.Lecture x = Ordres.lire(dit, t.metier); return !x.regles.isEmpty() || x.annulerRegles; })) {
             if (tenu) EN_ATTENTE.remove(p.getUUID());
             repondre(p, dit, dest, null);
             return;
@@ -175,7 +176,10 @@ final class Dialogue {
             String r, humeur = "calme";
             boolean ia = false;
             Ordres.Lecture lecture = d == null ? Ordres.lire(dit, t.metier) : d.lecture();
-            lecture.texte = dit; // on y cherche qui ou quoi est visé
+            if (d != null) {
+                lecture.texte = dit; // on y cherche qui ou quoi est visé (l'interpréteur l'a déjà fait, sans la partie des règles)
+                lecture.quotidien |= Ordres.lire(dit, t.metier).quotidien; // « tous les jours » : l'IA ne le dit pas
+            }
             lecture.rang = i;
             lecture.total = dest.size();
             if (d == null) r = t.appliquer(lecture, enFace);

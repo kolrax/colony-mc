@@ -126,7 +126,9 @@ final class Consignes {
             if (c != null && (c.id.equals(e.id()) || memeGeste(c.entree(), e))) { annuler(t); return "D'accord, j'arrête."; }
             return "";
         }
-        if (chef == null) return "Pour ça, il faut que tu sois là, chef.";
+        // Aller voir quelqu'un de nommé (« va aider Raoul », par lettre ou par une règle) se fait sans le chef.
+        boolean versQuelquUn = e.comportement().equals("aller") && e.arg().equals("cible") && e.visePersonne();
+        if (chef == null && !versQuelquUn) return "Pour ça, il faut que tu sois là, chef.";
         boolean parole = e.comportement().equals("parler") || e.comportement().equals("info");
         if (t.mode == Travailleur.Mode.GREVE && !parole) return "Je suis en grève, chef. Paie-moi d'abord.";
 
@@ -335,7 +337,7 @@ final class Consignes {
             if (g == chef && mots.stream().noneMatch(w -> w.equals(n.get(0)))) continue; // « suis-moi » n'est pas d'ici
             for (String w : mots) if (Ordres.proche(w, n.get(0))) return g;
         }
-        Entity vu = regardEntite(chef, 32, x -> (x instanceof Travailleur w && w != t) || x instanceof Player);
+        Entity vu = chef == null ? null : regardEntite(chef, 32, x -> (x instanceof Travailleur w && w != t) || x instanceof Player);
         if (vu != null) return vu;
         // « Suis-le », « protège-la » : le seul autre ouvrier du chef dans les parages.
         List<Entity> proches = gens.stream().filter(g -> g instanceof Travailleur && g.distanceToSqr(t) < 24 * 24).toList();

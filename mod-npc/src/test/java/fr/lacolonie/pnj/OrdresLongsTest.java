@@ -102,4 +102,26 @@ class OrdresLongsTest {
         assertEquals(OrdresLongs.MAX, r.size());
         assertEquals("VOIT:x9", r.get(r.size() - 1).quand);
     }
+
+    /** Relecture du lot 3 : une période qui dit une échéance n'est pas une règle ; la conséquence est la seule proposition voisine. */
+    @Test
+    void pasDeFauxPositifs() {
+        for (String s : List.of("Ramène 64 bûches avant la nuit", "Suis-moi jusqu'au soir", "Rentre au poste pour la nuit", "Travaille jusqu'au soir",
+                "Ramène 20 charbons d'ici ce soir", "Viens avec moi, on part de nuit", "Ne travaille pas la nuit"))
+            assertTrue(Ordres.lire(s, "bucheron").regles.isEmpty(), s + " → " + regles(Ordres.lire(s, "bucheron")));
+        assertEquals(List.of(new Mission("tout", "quantite", 64)), Ordres.lire("Ramène 64 bûches avant la nuit", "bucheron").missions);
+        assertTrue(Ordres.lire("Suis-moi jusqu'au soir", "mineur").intentions.contains(Intention.SUIVRE));
+        assertTrue(Ordres.lire("Rentre au poste pour la nuit", "mineur").intentions.contains(Intention.RENTRER));
+        assertEquals(List.of(new Mission("charbon", "quantite", 20)), Ordres.lire("Ramène 20 charbons d'ici ce soir", "mineur").missions);
+        assertTrue(Ordres.lire("Viens avec moi, on part de nuit", "mineur").intentions.contains(Intention.SUIVRE));
+
+        Ordres.Lecture a = Ordres.lire("Ramène 64 pierres et préviens-moi si tu vois un creeper", "mineur");
+        assertEquals(List.of(new Mission("pierre", "quantite", 64)), a.missions);
+        assertEquals(List.of("VOIT:creeper → préviens-moi"), regles(a));
+        Ordres.Lecture b = Ordres.lire("Rentre au poste s'il pleut, et ramène 10 fers", "mineur");
+        assertEquals(List.of("PLUIE → Rentre au poste"), regles(b));
+        assertEquals(List.of(new Mission("fer", "quantite", 10)), b.missions);
+        assertFalse(b.intentions.contains(Intention.RENTRER));
+        assertEquals(List.of("VOIT:zombie → Préviens-moi", "NUIT → rentre"), regles(Ordres.lire("Préviens-moi si tu vois un zombie, et rentre la nuit", "mineur")));
+    }
 }
