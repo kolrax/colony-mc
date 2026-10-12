@@ -83,7 +83,11 @@ public final class Client {
 
     static void ouvrirConversation(Reseau.Conversation f) { Minecraft.getInstance().setScreen(new EcranConversation(f.id(), f.infos())); }
 
-    static void ouvrirPoste(Reseau.Poste f) { Minecraft.getInstance().setScreen(new EcranPoste(f.pos(), f.infos())); }
+    static void ouvrirPoste(Reseau.Poste f) {
+        // Une nouvelle ouverture repart du courrier ; une mise à jour (après un bouton) reste où l'on était.
+        if (!(Minecraft.getInstance().screen instanceof EcranPoste e && e.pos.equals(f.pos()))) EcranPoste.archivesMemo = false;
+        Minecraft.getInstance().setScreen(new EcranPoste(f.pos(), f.infos()));
+    }
 
     // --- La parole : une bulle au-dessus de la tête, et l'historique de la conversation -----------------
 
@@ -673,7 +677,7 @@ public final class Client {
             }
             // Ranger le courrier : tout marquer lu, voir les archives, effacer les lettres lues (deux clics).
             bouton("Tout lu", x0 + 8, y0 + 200, 72, b -> envoyer("tout_lu", new CompoundTag()))
-                    .active = !archivesMemo && lettres.stream().anyMatch(l -> !l.getBoolean("lue"));
+                    .active = !archivesMemo && f.getInt("aMarquer") > 0; // compté par le serveur, au-delà des 60 lettres envoyées
             bouton(archivesMemo ? "◂ Courrier" : "Archives", x0 + 82, y0 + 200, 76, b -> {
                 archivesMemo = !archivesMemo;
                 lettreMemo = -1;
@@ -690,7 +694,7 @@ public final class Client {
                 lettreMemo = -1;
                 envoyer("tout_effacer", new CompoundTag());
             });
-            effacer.active = !archivesMemo && lettres.stream().anyMatch(l -> l.getBoolean("lue"));
+            effacer.active = !archivesMemo && f.getInt("lues") > 0;
             effacer.setTooltip(Tooltip.create(Component.literal(confirmer ? "Clique encore pour effacer les lettres lues." : "Efface les lettres déjà lues. Les non lues et les archives restent.")));
             if (!ecrire) {
                 bouton("Écrire", x0 + 164, y0 + 222, 60, b -> { ecrire = true; rebuildWidgets(); }).active = !vivants().isEmpty();
@@ -710,8 +714,18 @@ public final class Client {
 
         @Override
         public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+            if (confirmer) { confirmer = false; rebuildWidgets(); } // « Sûr ? » se désarme
             if (ongletMemo.equals("lettres") && mx < x0 + 160) { defilement -= (int) Math.signum(dy); rebuildWidgets(); return true; }
             return super.mouseScrolled(mx, my, dx, dy);
+        }
+
+        /** Tout autre clic que le second sur « Sûr ? » (une lettre, une liste, un bouton, à côté) le désarme. */
+        @Override
+        public boolean mouseClicked(double mx, double my, int bouton) {
+            boolean arme = confirmer;
+            boolean r = super.mouseClicked(mx, my, bouton);
+            if (arme && confirmer) { confirmer = false; rebuildWidgets(); }
+            return r;
         }
 
         @Override

@@ -84,6 +84,67 @@ public class TestsMessages {
         h.succeed();
     }
 
+    /** Dix ouvriers face au dépôt plein : une seule lettre, qui compte 10 et cite chacun. */
+    @GameTest(template = "vide", batch = "messages")
+    public static void depotPleinTousOuvriersConfondus(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        UUID chef = UUID.randomUUID();
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        List<Travailleur> ts = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            Travailleur t = TestsJeu.ouvrier(h, "mineur", 1 + i % 5, 2, 1 + i / 5 * 6, ItemStack.EMPTY, BUREAU);
+            t.chef = chef;
+            ts.add(t);
+        }
+        c.definirPoste(chef, h.getLevel(), ts.get(0).bureau);
+        for (Travailleur t : ts) { Courrier.ecrire(t, "depot_plein"); Courrier.deposer(t); }
+        List<Courrier.Lettre> b = c.boite(chef);
+        h.assertTrue(b.size() == 1 && b.get(0).nombre == 10, "une seule lettre qui compte 10 (" + b.size() + " lettres)");
+        for (Travailleur t : ts) h.assertTrue(b.get(0).de.contains(t.prenom), t.prenom + " doit être cité : « " + b.get(0).de + " »");
+        ts.forEach(Travailleur::discard);
+        h.succeed();
+    }
+
+    /** « Mission terminée, je passe à la suivante » n'est jamais regroupée : chaque lettre dit quelle mission est finie. */
+    @GameTest(template = "vide", batch = "messages")
+    public static void missionFinieSuiteJamaisRegroupee(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY, BUREAU);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(t.chef, h.getLevel(), t.bureau);
+        Courrier.ecrire(t, "mission_finie_suite", "10 fers", "5 ors");
+        Courrier.ecrire(t, "mission_finie_suite", "5 ors", "3 diamants");
+        Courrier.deposer(t);
+        h.assertTrue(c.boite(t.chef).size() == 2, "deux lettres, pas " + c.boite(t.chef).size());
+        t.discard();
+        h.succeed();
+    }
+
+    /** « Tout lu » laisse les importantes non lues (elles se lisent en les ouvrant). */
+    @GameTest(template = "vide", batch = "messages")
+    public static void toutLuLaisseLesImportantes(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        Courrier.Lettre imp = lettre(h, chef.getUUID(), "À l'aide", "", true), routine = lettre(h, chef.getUUID(), "Routine", "", false);
+        e.action(chef, "tout_lu", new CompoundTag());
+        h.assertTrue(routine.lue && !imp.lue, "la routine est lue, l'importante attend d'être ouverte");
+        h.succeed();
+    }
+
+    /** Plus de 60 non lues : l'écran sait quand même qu'il y a des lues à effacer et de la routine à marquer lue. */
+    @GameTest(template = "vide", batch = "messages")
+    public static void compteursAuDelaDeSoixante(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        lettre(h, chef.getUUID(), "Vieille lue", "", false).lue = true;
+        for (int i = 0; i < 70; i++) lettre(h, chef.getUUID(), "Non lue " + i, "", true);
+        CompoundTag f = e.fiche(chef);
+        h.assertTrue(f.getList("lettres", Tag.TAG_COMPOUND).size() == 60, "60 lettres envoyées");
+        h.assertTrue(f.getInt("lues") == 1, "une lue à effacer, même hors des 60 : " + f.getInt("lues"));
+        h.assertTrue(f.getInt("aMarquer") == 0, "rien à marquer lu : ce sont des importantes (" + f.getInt("aMarquer") + ")");
+        h.succeed();
+    }
+
     /** L'important n'est jamais regroupé ; les avis du poste « ramené au poste » se regroupent, sans perdre qui. */
     @GameTest(template = "vide", batch = "messages")
     public static void importanteJamaisFusionnee(GameTestHelper h) {

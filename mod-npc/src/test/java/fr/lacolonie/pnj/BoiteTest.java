@@ -29,14 +29,54 @@ class BoiteTest {
     void laRoutineDuMemeOuvrierSeRegroupe() {
         List<Courrier.Lettre> b = new ArrayList<>();
         assertTrue(Boite.ranger(b, l(ALIENOR, "faim", false), 200));
-        for (int i = 0; i < 4; i++) assertFalse(Boite.ranger(b, l(ALIENOR, "faim", false), 200), "fondue, pas nouvelle");
+        Courrier.Lettre derniere = null;
+        for (int i = 0; i < 4; i++) assertFalse(Boite.ranger(b, derniere = l(ALIENOR, "faim", false), 200), "fondue, pas nouvelle");
+        String texteDerniere = derniere.texte;
         assertTrue(Boite.ranger(b, l(BERTRAND, "faim", false), 200), "un autre ouvrier : une autre lettre");
         assertTrue(Boite.ranger(b, l(ALIENOR, "torches", false), 200), "une autre situation : une autre lettre");
         assertEquals(3, b.size());
         Courrier.Lettre faim = b.stream().filter(x -> x.deUuid == ALIENOR && x.type.equals("faim")).findFirst().orElseThrow();
         assertEquals(5, faim.nombre);
         assertEquals("faim ×5", Boite.objet(faim));
-        assertTrue(faim.texte.startsWith("texte "), "le texte le plus récent");
+        assertEquals(texteDerniere, faim.texte, "le texte de la 5e lettre");
+    }
+
+    @Test
+    void laPurgeGardeLesImportantesNonLuesEnDernier() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Courrier.Lettre importante = l(ALIENOR, "", true);
+        Boite.ranger(b, importante, 200);
+        for (int i = 0; i < 205; i++) Boite.ranger(b, l(BERTRAND, "", false), 200);
+        assertEquals(200, b.size());
+        assertTrue(b.contains(importante), "la vieille importante non lue survit : la routine non lue part avant elle");
+    }
+
+    @Test
+    void toutLuLaisseLesImportantes() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Courrier.Lettre imp = l(ALIENOR, "", true), routine = l(BERTRAND, "", false);
+        Boite.ranger(b, imp, 200);
+        Boite.ranger(b, routine, 200);
+        assertTrue(Boite.toutLu(b));
+        assertTrue(routine.lue);
+        assertFalse(imp.lue, "une importante se lit en l'ouvrant");
+    }
+
+    @Test
+    void leDepotPleinSeRegroupeTousOuvriersConfondus() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
+        Boite.ranger(b, l(BERTRAND, "depot_plein", false), 200);
+        Boite.ranger(b, l(ALIENOR, "greve", true), 200);
+        Boite.ranger(b, l(BERTRAND, "greve", true), 200);
+        Boite.ranger(b, l(ALIENOR, "poste_detruit", true), 200);
+        Boite.ranger(b, l(BERTRAND, "poste_detruit", true), 200);
+        assertEquals(1, b.stream().filter(x -> x.type.equals("depot_plein")).count());
+        Courrier.Lettre depot = b.stream().filter(x -> x.type.equals("depot_plein")).findFirst().orElseThrow();
+        assertTrue(depot.nombre == 2 && depot.de.contains("Aliénor") && depot.de.contains("Bertrand"), "cite les deux : " + depot.de);
+        assertEquals(2, b.stream().filter(x -> x.type.equals("greve")).count(), "la grève reste par ouvrier");
+        List<Courrier.Lettre> poste = b.stream().filter(x -> x.type.equals("poste_detruit")).toList();
+        assertTrue(poste.size() == 1 && poste.get(0).importante && poste.get(0).nombre == 2, "poste détruit : une seule lettre, importante");
     }
 
     @Test

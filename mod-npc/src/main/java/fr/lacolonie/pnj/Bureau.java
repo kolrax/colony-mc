@@ -276,6 +276,9 @@ public final class Bureau {
             f.put("lettres", lettres(Boite.affichees(boite, false)));
             f.put("archives", lettres(Boite.affichees(boite, true)));
             f.putLong("nonLues", c.nonLues(p.getUUID()));
+            // Au-delà des 60 envoyées : y a-t-il des lues à effacer, de la routine à marquer lue ?
+            f.putInt("lues", (int) boite.stream().filter(l -> l.lue && !l.archivee).count());
+            f.putInt("aMarquer", (int) boite.stream().filter(l -> !l.lue && !l.archivee && !l.importante).count());
             return f;
         }
 

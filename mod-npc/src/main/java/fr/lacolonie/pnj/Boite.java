@@ -4,15 +4,17 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Les règles de la boîte aux lettres du poste (pur Java). La boîte est rangée de la plus récente (en tête) à la plus
  * ancienne.
  * <ul>
  * <li>Une lettre de routine (pas importante, avec un type) se fond dans la lettre non lue du même auteur et du même
- *   type : texte le plus récent (un avis du poste garde aussi les précédents), date, et un compteur.</li>
- * <li>Trop de lettres : partent d'abord les plus vieilles lues, puis les plus vieilles archivées ; une non lue
- *   seulement s'il ne reste rien d'autre.</li>
+ *   type : texte le plus récent (un avis du poste garde aussi les précédents), date, et un compteur. Les situations
+ *   communes ({@link #TOUS_OUVRIERS}) se regroupent tous ouvriers confondus, la lettre citant chacun.</li>
+ * <li>Trop de lettres : partent d'abord les plus vieilles lues, puis les plus vieilles archivées ; une non lue de routine
+ *   seulement s'il ne reste rien d'autre, une importante non lue en tout dernier.</li>
  * <li>À l'écran : les importantes non lues, puis les non lues, puis les lues ; les plus récentes d'abord.</li>
  * </ul>
  */
@@ -22,13 +24,25 @@ final class Boite {
     /** Au-delà, le texte cumulé d'un avis regroupé est coupé. */
     static final int TEXTE_MAX = 1500;
 
-    static boolean regroupable(Courrier.Lettre l) { return !l.importante && !l.duChef && !l.type.isEmpty(); }
+    /** Au-delà, la liste des auteurs d'une lettre regroupée s'arrête (« … »). */
+    static final int AUTEURS_MAX = 200;
 
-    /** La lettre non lue, non archivée, du même auteur et du même type, où {@code l} se fond ; ou null. */
+    /**
+     * Les situations communes à tous : une seule lettre non lue par situation, tous ouvriers confondus, qui cite
+     * chacun. {@code poste_detruit} reste importante mais se regroupe quand même (une lettre, pas trente).
+     */
+    static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "paie_retard", "toujours_greve", "sans_poste", "poste_detruit");
+
+    static boolean commune(Courrier.Lettre l) { return TOUS_OUVRIERS.contains(l.type); }
+
+    static boolean regroupable(Courrier.Lettre l) { return !l.duChef && !l.type.isEmpty() && (!l.importante || commune(l)); }
+
+    /** La lettre non lue, non archivée, du même type (et du même auteur, sauf situation commune), où {@code l} se fond ; ou null. */
     static Courrier.Lettre semblable(List<Courrier.Lettre> boite, Courrier.Lettre l) {
         if (!regroupable(l)) return null;
         for (Courrier.Lettre x : boite)
-            if (!x.lue && !x.archivee && regroupable(x) && x.type.equals(l.type) && Objects.equals(x.deUuid, l.deUuid) && x.de.equals(l.de)) return x;
+            if (!x.lue && !x.archivee && regroupable(x) && x.type.equals(l.type)
+                    && (commune(l) || Objects.equals(x.deUuid, l.deUuid) && x.de.equals(l.de))) return x;
         return null;
     }
 
@@ -38,7 +52,11 @@ final class Boite {
         if (x != null) {
             boite.remove(x);
             x.nombre += Math.max(1, l.nombre);
-            x.texte = x.deUuid == null ? cumul(l.texte, x.texte) : l.texte;
+            if (commune(x)) { // le texte du dernier ; l'auteur : tous ceux qui l'ont écrit
+                x.texte = l.texte;
+                if (!Objects.equals(x.deUuid, l.deUuid)) x.deUuid = null; // plusieurs auteurs : pas de « Répondre »
+                x.de = auteurs(x.de, l.de);
+            } else x.texte = x.deUuid == null ? cumul(l.texte, x.texte) : l.texte;
             x.date = l.date;
             boite.add(0, x);
             return false;
@@ -54,12 +72,27 @@ final class Boite {
         return s.length() <= TEXTE_MAX ? s : s.substring(0, TEXTE_MAX - 1) + "…";
     }
 
-    /** Ramène la boîte à {@code max} lettres : les plus vieilles lues, puis archivées, puis (seulement s'il le faut) non lues. */
+    /** « Aliénor, Bertrand » : un nom de plus, s'il n'y est pas déjà ; « … » quand la liste est pleine. */
+    static String auteurs(String liste, String nom) {
+        if (List.of(liste.split(", ")).contains(nom) || liste.endsWith("…")) return liste;
+        return liste.length() + nom.length() + 2 <= AUTEURS_MAX ? liste + ", " + nom : liste + ", …";
+    }
+
+    /**
+     * Ramène la boîte à {@code max} lettres, les plus vieilles d'abord : les lues, puis les archivées, puis (seulement
+     * s'il le faut) les non lues de routine, et les importantes non lues en tout dernier.
+     */
     static void purger(List<Courrier.Lettre> boite, int max) {
-        for (int passe = 0; passe < 3 && boite.size() > max; passe++)
+        for (int passe = 0; passe < 4 && boite.size() > max; passe++)
             for (int i = boite.size() - 1; i >= 0 && boite.size() > max; i--) {
                 Courrier.Lettre x = boite.get(i);
-                if (passe == 2 || (passe == 0 ? x.lue && !x.archivee : x.archivee)) boite.remove(i);
+                boolean part = switch (passe) {
+                    case 0 -> x.lue && !x.archivee;
+                    case 1 -> x.archivee;
+                    case 2 -> !x.importante;
+                    default -> true;
+                };
+                if (part) boite.remove(i);
             }
     }
 
@@ -82,10 +115,10 @@ final class Boite {
         return null;
     }
 
-    /** « Tout lu » : vrai si quelque chose a changé. */
+    /** « Tout lu » (sauf les importantes : elles se lisent en les ouvrant) : vrai si quelque chose a changé. */
     static boolean toutLu(List<Courrier.Lettre> boite) {
         boolean change = false;
-        for (Courrier.Lettre x : boite) if (!x.lue && !x.archivee) { x.lue = true; change = true; }
+        for (Courrier.Lettre x : boite) if (!x.lue && !x.archivee && !x.importante) { x.lue = true; change = true; }
         return change;
     }
 

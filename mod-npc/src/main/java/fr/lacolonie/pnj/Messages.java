@@ -25,8 +25,8 @@ final class Messages {
      */
     static final java.util.Set<String> IMPORTANTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place", "ramene_attend",
             "poste_detruit", "mission_finie");
-    /** Ni importantes ni regroupées : chacune répond à une lettre du chef. */
-    static final java.util.Set<String> SEULES = java.util.Set.of("nouvelles");
+    /** Ni importantes ni regroupées : chacune répond à une lettre du chef, ou dit quelle mission est finie. */
+    static final java.util.Set<String> SEULES = java.util.Set.of("nouvelles", "mission_finie_suite");
 
     static void m(String type, String objet, String... variantes) {
         CORPS.put(type, variantes);
