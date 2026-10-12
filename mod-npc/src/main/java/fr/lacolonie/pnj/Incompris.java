@@ -18,13 +18,13 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 /**
  * Le journal des phrases du chef que ses ouvriers n'ont pas comprises, pour enrichir ensuite le répertoire
@@ -59,12 +59,19 @@ final class Incompris {
     private final Map<String, Entree> entrees = new LinkedHashMap<>();
     private boolean change;
 
-    /** Minuscules, espaces simples, sans ponctuation finale, apostrophes droites ; coupée à {@link #LONGUEUR}. */
+    /** La clé de regroupement : comme l'interpréteur ({@link Ordres#normaliser} : minuscules, sans accents ni ponctuation), sans « ? » final. */
     static String normaliser(String phrase) {
-        String n = couper(phrase).toLowerCase(Locale.ROOT).replace('’', '\'').replaceAll("\\s+", " ").strip();
-        int fin = n.length();
-        while (fin > 0 && ".!?…;:, ".indexOf(n.charAt(fin - 1)) >= 0) fin--;
-        return n.substring(0, fin);
+        String n = Ordres.normaliser(couper(phrase)).strip();
+        return n.endsWith("?") ? n.substring(0, n.length() - 1).strip() : n;
+    }
+
+    /** Les noms donnés (joueurs, prénoms des PNJ) remplacés par « @ », mots entiers, sans tenir compte de la casse. */
+    static String anonymiser(String phrase, Collection<String> noms) {
+        String r = phrase;
+        for (String nom : noms.stream().filter(x -> x != null && !x.isBlank()).sorted(Comparator.comparingInt(String::length).reversed()).toList())
+            r = Pattern.compile("(?<![\\p{L}\\p{N}_])" + Pattern.quote(nom.strip()) + "(?![\\p{L}\\p{N}_])", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)
+                    .matcher(r).replaceAll("@");
+        return r;
     }
 
     /** Coupée à {@link #LONGUEUR} caractères (sans couper un caractère en deux), sans espaces autour. */
@@ -131,10 +138,10 @@ final class Incompris {
 
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    synchronized String json() {
+    static String json(List<Map<String, Object>> entrees) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("version", 1);
-        m.put("entrees", plusFrequentes(MAX));
+        m.put("entrees", entrees);
         return GSON.toJson(m);
     }
 
@@ -163,12 +170,15 @@ final class Incompris {
         change = false;
     }
 
-    /** Le texte à écrire s'il a changé depuis la dernière fois (null sinon) ; le changement est alors considéré comme sauvé. */
-    synchronized String aSauver() {
+    /** Une copie des entrées à écrire si elles ont changé (null sinon) ; le changement est alors considéré comme sauvé. */
+    synchronized List<Map<String, Object>> aSauver() {
         if (!change) return null;
         change = false;
-        return json();
+        return plusFrequentes(MAX);
     }
+
+    /** L'écriture a raté : à refaire la prochaine fois. */
+    synchronized void aRefaire() { change = true; }
 
     /** Les écritures, dans l'ordre, hors du fil du serveur. */
     private static final ExecutorService ECRITURE = Executors.newSingleThreadExecutor(r -> {
@@ -177,10 +187,15 @@ final class Incompris {
         return t;
     });
 
-    /** Relit le fichier s'il existe (au démarrage). */
+    /** Relit le fichier s'il existe (au démarrage). Illisible : mis de côté en « .abime », et le journal repart de zéro. */
     void charger(Path fichier) throws IOException {
-        if (Files.exists(fichier)) lire(Files.readString(fichier, StandardCharsets.UTF_8));
-        else lire("{}");
+        if (!Files.exists(fichier)) { lire("{}"); return; }
+        try { lire(Files.readString(fichier, StandardCharsets.UTF_8)); }
+        catch (IOException | RuntimeException e) {
+            lire("{}");
+            Files.move(fichier, fichier.resolveSibling(fichier.getFileName() + ".abime"), StandardCopyOption.REPLACE_EXISTING);
+            throw new IOException("illisible, mis de côté en .abime", e);
+        }
     }
 
     /**
@@ -188,11 +203,11 @@ final class Incompris {
      * {@code erreur} reçoit l'échec éventuel (pour le journal du serveur).
      */
     void sauver(Path fichier, boolean attendre, Consumer<Exception> erreur) {
-        String texte = aSauver();
-        if (texte == null && !attendre) return;
+        var copie = aSauver();
+        if (copie == null && !attendre) return;
         var f = ECRITURE.submit(() -> {
-            try { if (texte != null) ecrire(fichier, texte); }
-            catch (IOException e) { erreur.accept(e); }
+            try { if (copie != null) ecrire(fichier, json(copie)); }
+            catch (IOException | RuntimeException e) { aRefaire(); erreur.accept(e); }
         });
         if (attendre) {
             try { f.get(10, TimeUnit.SECONDS); }

@@ -14,10 +14,29 @@ import static org.junit.jupiter.api.Assertions.*;
 class IncomprisTest {
 
     @Test
-    void normaliseMinusculesEspacesEtPonctuationFinale() {
-        assertEquals("fais tourner la lune à l'envers", Incompris.normaliser("  Fais   tourner la LUNE à l’envers ?! "));
-        assertEquals("hé, toi", Incompris.normaliser("Hé, toi…"));
+    void normaliseCommeLInterpreteur() {
+        assertEquals("fais tourner la lune a l envers", Incompris.normaliser("  Fais   tourner la LUNE à l’envers ?! "));
+        assertEquals("he toi", Incompris.normaliser("Hé, toi…"));
+        assertEquals(Incompris.normaliser("Fais tourner la lune a l'envers"), Incompris.normaliser("fais tourner la lune à l'envers"), "accents : même clé");
         assertEquals("", Incompris.normaliser(" ?! "));
+    }
+
+    @Test
+    void lesNomsDeviennentArobase() {
+        List<String> noms = List.of("KOLRAX_MC", "Raoul", "Aliénor", "Jean Pierre", "");
+        assertEquals("@, dis à @ de suivre @ et @", Incompris.anonymiser("kolrax_mc, dis à RAOUL de suivre aliénor et Jean Pierre", noms));
+        assertEquals("Raoulette et Aliénore restent", Incompris.anonymiser("Raoulette et Aliénore restent", noms), "mot entier seulement");
+        assertEquals("@ ! @?", Incompris.anonymiser("Raoul ! raoul?", noms));
+    }
+
+    @Test
+    void lesGestesSpontanesNeComptentPasCommeUneAction() {
+        ReponsesIA.Action coucou = new ReponsesIA.Action("faire", List.of(), false, -1, -1, -1, "saluer_main", "", 0, 0);
+        ReponsesIA.Action garde = new ReponsesIA.Action("faire", List.of(), false, -1, -1, -1, "garde_a_vous", "", 0, 0);
+        assertTrue(Repertoire.PAR_ID.get("saluer_main").spontane() && !Repertoire.PAR_ID.get("garde_a_vous").spontane());
+        assertTrue(new ReponsesIA.Decision("Bonjour, chef !", "joyeux", List.of(coucou)).lectureDemandee().vide(), "un coucou de politesse n'est pas une action demandée");
+        assertFalse(new ReponsesIA.Decision("Bonjour, chef !", "joyeux", List.of(coucou)).lecture().vide());
+        assertFalse(new ReponsesIA.Decision("À vos ordres !", "fier", List.of(coucou, garde)).lectureDemandee().vide());
     }
 
     @Test
@@ -100,6 +119,10 @@ class IncomprisTest {
         Incompris abime = new Incompris();
         abime.lire("{\"entrees\":[{\"phrase\":\"bonne\",\"motif\":\"rien\",\"nombre\":2,\"premiere\":\"2026-10-12T10:00:00Z\",\"derniere\":\"2026-10-12T11:00:00Z\"},{\"phrase\":42}]}");
         assertEquals(1, abime.taille(), "une entrée abîmée ne perd pas les autres");
+        Files.writeString(f, "{ pas du json");
+        assertThrows(java.io.IOException.class, () -> abime.charger(f));
+        assertEquals(0, abime.taille(), "fichier illisible : on repart de zéro");
+        assertTrue(Files.exists(dossier.resolve("colonie_pnj/incompris.json.abime")) && !Files.exists(f), "mis de côté en .abime");
         relu.vider();
         assertEquals(0, relu.taille());
         assertNotNull(relu.aSauver(), "vider se sauve aussi");

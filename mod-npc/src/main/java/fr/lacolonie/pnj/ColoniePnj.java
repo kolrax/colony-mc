@@ -119,7 +119,10 @@ public class ColoniePnj {
             laisserFinirLaGeneration(e.getServer());
         });
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> PanneauWeb.arreter());
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
+            PanneauWeb.arreter();
+            Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
+        });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
         // Filet de sécurité : un PNJ arrivé dans un chunk inactif (poussé, ou figé avant la 0.3.0) ne peut plus

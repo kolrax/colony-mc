@@ -39,6 +39,12 @@ final class ReponsesIA {
 
     /** Ce que l'IA a décidé : ce que le PNJ répond, sur quel ton, et ce qu'il fait. */
     record Decision(String reponse, String humeur, List<Action> actions) {
+        /** Ce qui est demandé, sans les petits gestes spontanés (marqués « spontane ») que l'IA ajoute d'elle-même. */
+        Ordres.Lecture lectureDemandee() {
+            return new Decision(reponse, humeur, actions.stream().filter(a -> !(a.type().equals("faire")
+                    && Repertoire.PAR_ID.containsKey(a.faire()) && Repertoire.PAR_ID.get(a.faire()).spontane())).toList()).lecture();
+        }
+
         /** Les actions, traduites dans la langue de l'interpréteur (le mod les applique et les revérifie comme un ordre écrit). */
         Ordres.Lecture lecture() {
             Ordres.Lecture l = new Ordres.Lecture();

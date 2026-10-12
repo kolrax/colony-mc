@@ -213,7 +213,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <p class="sub">Les dernières phrases entendues (au micro ou écrites), et pour chaque ouvrier la probabilité qu'elle lui soit adressée :
           celle du code, celle de l'IA (si elle a été consultée), et la finale. Gardé en mémoire seulement (60 phrases), effacé au redémarrage.</p>
         <div class="tablewrap"><table><thead><tr><th>Heure</th><th>Phrase</th><th>Ouvriers (code / IA / final)</th><th>Décision</th></tr></thead>
-          <tbody id="ia-ecoute"></tbody></table></div>
+          <tbody id="ia-journal-ecoute"></tbody></table></div>
       </div>
     </section>
 
@@ -413,7 +413,7 @@ async function chargerIA() {
     iaRempli = true;
   }
   const ec = await api("/api/ia/ecoute");
-  $("#ia-ecoute").replaceChildren(...ec.journal.map(x => el("tr", {},
+  $("#ia-journal-ecoute").replaceChildren(...ec.journal.map(x => el("tr", {},
     el("td", { class: "num", text: x.heure }),
     el("td", {}, el("div", { text: "« " + x.texte + " »" }), el("div", { class: "sub", text: x.joueur + " · " + x.mode + (x.autres_joueurs ? " · " + x.autres_joueurs + " autre(s) joueur(s) près" : "") })),
     el("td", {}, ...x.ouvriers.map(o => el("div", { class: o.choisi ? "" : "sub" },
