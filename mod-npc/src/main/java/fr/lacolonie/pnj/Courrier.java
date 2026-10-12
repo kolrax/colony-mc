@@ -50,6 +50,8 @@ final class Courrier extends SavedData {
     static final class Lettre {
         long id;
         String de = "", objet = "", texte = "", date = "", type = "";
+        /** Lettre regroupée de plusieurs ouvriers : tous les noms (bornés, {@link Boite#AUTEURS_MAX}) ; vide sinon. */
+        String auteurs = "";
         UUID deUuid, pour;
         boolean lue, duChef, importante, archivee;
         int nombre = 1;
@@ -69,6 +71,7 @@ final class Courrier extends SavedData {
             t.putBoolean("importante", importante);
             t.putBoolean("archivee", archivee);
             t.putInt("nombre", nombre);
+            if (!auteurs.isEmpty()) t.putString("auteurs", auteurs);
             return t;
         }
 
@@ -87,6 +90,7 @@ final class Courrier extends SavedData {
             l.importante = t.getBoolean("importante");
             l.archivee = t.getBoolean("archivee");
             l.nombre = t.contains("nombre") ? Math.max(1, t.getInt("nombre")) : 1;
+            l.auteurs = t.getString("auteurs");
             return l;
         }
     }

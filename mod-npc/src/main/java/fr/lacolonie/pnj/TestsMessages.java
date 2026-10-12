@@ -100,7 +100,8 @@ public class TestsMessages {
         for (Travailleur t : ts) { Courrier.ecrire(t, "depot_plein"); Courrier.deposer(t); }
         List<Courrier.Lettre> b = c.boite(chef);
         h.assertTrue(b.size() == 1 && b.get(0).nombre == 10, "une seule lettre qui compte 10 (" + b.size() + " lettres)");
-        for (Travailleur t : ts) h.assertTrue(b.get(0).de.contains(t.prenom), t.prenom + " doit être cité : « " + b.get(0).de + " »");
+        h.assertTrue(b.get(0).de.length() < 30, "l'auteur reste court dans la liste : « " + b.get(0).de + " »");
+        for (Travailleur t : ts) h.assertTrue(b.get(0).texte.contains(t.prenom), t.prenom + " doit être cité dans le texte : « " + b.get(0).texte + " »");
         ts.forEach(Travailleur::discard);
         h.succeed();
     }

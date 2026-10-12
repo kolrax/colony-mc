@@ -24,14 +24,15 @@ final class Boite {
     /** Au-delà, le texte cumulé d'un avis regroupé est coupé. */
     static final int TEXTE_MAX = 1500;
 
-    /** Au-delà, la liste des auteurs d'une lettre regroupée s'arrête (« … »). */
+    /** Au-delà, la liste des auteurs d'une lettre regroupée ({@code Lettre.auteurs}) s'arrête (« … »). */
     static final int AUTEURS_MAX = 200;
 
     /**
      * Les situations communes à tous : une seule lettre non lue par situation, tous ouvriers confondus, qui cite
-     * chacun. {@code poste_detruit} reste importante mais se regroupe quand même (une lettre, pas trente).
+     * chacun. {@code poste_detruit} reste importante mais se regroupe quand même (une lettre, pas trente). Pas
+     * « toujours en grève » : chacun a sa somme due.
      */
-    static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "paie_retard", "toujours_greve", "sans_poste", "poste_detruit");
+    static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "paie_retard", "sans_poste", "poste_detruit");
 
     static boolean commune(Courrier.Lettre l) { return TOUS_OUVRIERS.contains(l.type); }
 
@@ -52,10 +53,11 @@ final class Boite {
         if (x != null) {
             boite.remove(x);
             x.nombre += Math.max(1, l.nombre);
-            if (commune(x)) { // le texte du dernier ; l'auteur : tous ceux qui l'ont écrit
-                x.texte = l.texte;
+            if (commune(x)) { // le texte du dernier ; tous ceux qui l'ont écrit, en tête du texte ; l'auteur, en court
                 if (!Objects.equals(x.deUuid, l.deUuid)) x.deUuid = null; // plusieurs auteurs : pas de « Répondre »
-                x.de = auteurs(x.de, l.de);
+                x.auteurs = auteurs(x.auteurs.isEmpty() ? x.de : x.auteurs, l.de);
+                x.de = court(x.auteurs);
+                x.texte = x.auteurs.contains(", ") ? "Ont écrit : " + x.auteurs + ".\n\n" + l.texte : l.texte;
             } else x.texte = x.deUuid == null ? cumul(l.texte, x.texte) : l.texte;
             x.date = l.date;
             boite.add(0, x);
@@ -76,6 +78,17 @@ final class Boite {
     static String auteurs(String liste, String nom) {
         if (List.of(liste.split(", ")).contains(nom) || liste.endsWith("…")) return liste;
         return liste.length() + nom.length() + 2 <= AUTEURS_MAX ? liste + ", " + nom : liste + ", …";
+    }
+
+    /** L'auteur tel que la liste le montre : « Aliénor », « Aliénor et Bertrand », « Aliénor et 9 autres ». */
+    static String court(String liste) {
+        List<String> noms = List.of(liste.split(", "));
+        if (noms.getLast().equals("…")) return noms.getFirst() + " et bien d'autres";
+        return switch (noms.size()) {
+            case 1 -> noms.getFirst();
+            case 2 -> noms.get(0) + " et " + noms.get(1);
+            default -> noms.getFirst() + " et " + (noms.size() - 1) + " autres";
+        };
     }
 
     /**

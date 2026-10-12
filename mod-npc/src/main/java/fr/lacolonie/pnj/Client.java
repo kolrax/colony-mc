@@ -676,8 +676,10 @@ public final class Client {
                 b.active = lue == null || lue.getLong("id") != l.getLong("id") || ecrire;
             }
             // Ranger le courrier : tout marquer lu, voir les archives, effacer les lettres lues (deux clics).
-            bouton("Tout lu", x0 + 8, y0 + 200, 72, b -> envoyer("tout_lu", new CompoundTag()))
-                    .active = !archivesMemo && f.getInt("aMarquer") > 0; // compté par le serveur, au-delà des 60 lettres envoyées
+            // Pendant qu'il écrit, ni « Tout lu » ni « Tout effacer » : la réponse du serveur referait l'écran et perdrait le brouillon.
+            Button toutLu = bouton("Tout lu", x0 + 8, y0 + 200, 72, b -> envoyer("tout_lu", new CompoundTag()));
+            toutLu.active = !ecrire && !archivesMemo && f.getInt("aMarquer") > 0; // compté par le serveur, au-delà des 60 lettres envoyées
+            toutLu.setTooltip(Tooltip.create(Component.literal("Les lettres importantes (!) restent à ouvrir une par une.")));
             bouton(archivesMemo ? "◂ Courrier" : "Archives", x0 + 82, y0 + 200, 76, b -> {
                 archivesMemo = !archivesMemo;
                 lettreMemo = -1;
@@ -694,7 +696,7 @@ public final class Client {
                 lettreMemo = -1;
                 envoyer("tout_effacer", new CompoundTag());
             });
-            effacer.active = !archivesMemo && f.getInt("lues") > 0;
+            effacer.active = !ecrire && !archivesMemo && f.getInt("lues") > 0;
             effacer.setTooltip(Tooltip.create(Component.literal(confirmer ? "Clique encore pour effacer les lettres lues." : "Efface les lettres déjà lues. Les non lues et les archives restent.")));
             if (!ecrire) {
                 bouton("Écrire", x0 + 164, y0 + 222, 60, b -> { ecrire = true; rebuildWidgets(); }).active = !vivants().isEmpty();
@@ -790,7 +792,9 @@ public final class Client {
                 return;
             }
             texte(g, lue.getString("objet"), x, y0 + 30, lue.getBoolean("importante") ? ORANGE : OR);
-            texte(g, "De " + lue.getString("de") + " · " + lue.getString("date") + (lue.getInt("nombre") > 1 ? " (la dernière)" : ""), x, y0 + 42, GRIS);
+            String suite = " · " + lue.getString("date") + (lue.getInt("nombre") > 1 ? " (la dernière)" : ""), de = "De " + lue.getString("de");
+            if (font.width(de + suite) > w) de = font.plainSubstrByWidth(de, Math.max(40, w - font.width(suite) - font.width("…"))) + "…"; // jamais hors du cadre
+            texte(g, de + suite, x, y0 + 42, GRIS);
             paragraphe(g, lue.getString("texte"), x, y0 + 58, w, BLANC, 16);
         }
     }

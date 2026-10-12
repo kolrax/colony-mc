@@ -52,6 +52,45 @@ class BoiteTest {
     }
 
     @Test
+    void plusieursAuteursSansRepondreEtAuteurCourt() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
+        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
+        assertEquals(ALIENOR, b.get(0).deUuid, "un seul auteur : on peut lui répondre");
+        assertEquals("Aliénor", b.get(0).de);
+        Boite.ranger(b, l(BERTRAND, "depot_plein", false), 200);
+        assertNull(b.get(0).deUuid, "deux auteurs : plus de « Répondre »");
+        assertEquals("Aliénor et Bertrand", b.get(0).de);
+        assertTrue(b.get(0).texte.startsWith("Ont écrit : Aliénor, Bertrand."), b.get(0).texte);
+    }
+
+    @Test
+    void laListeDesAuteursEstBornee() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        for (int i = 0; i < 60; i++) {
+            Courrier.Lettre x = l(UUID.randomUUID(), "depot_plein", false);
+            x.de = "Ouvrier" + i;
+            Boite.ranger(b, x, 200);
+        }
+        assertEquals(1, b.size());
+        Courrier.Lettre x = b.get(0);
+        assertEquals(60, x.nombre);
+        assertTrue(x.auteurs.length() <= Boite.AUTEURS_MAX + 3 && x.auteurs.endsWith("…"), "bornée : " + x.auteurs.length());
+        assertEquals("Ouvrier0 et bien d'autres", x.de);
+        assertEquals("Ouvrier0", Boite.court("Ouvrier0"));
+        assertEquals("A et 9 autres", Boite.court("A, B, C, D, E, F, G, H, I, J"));
+    }
+
+    @Test
+    void toujoursEnGreveResteParOuvrier() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Boite.ranger(b, l(ALIENOR, "toujours_greve", false), 200);
+        Boite.ranger(b, l(BERTRAND, "toujours_greve", false), 200);
+        Boite.ranger(b, l(ALIENOR, "toujours_greve", false), 200);
+        assertEquals(2, b.size(), "chacun a sa somme due : une lettre par ouvrier");
+    }
+
+    @Test
     void toutLuLaisseLesImportantes() {
         List<Courrier.Lettre> b = new ArrayList<>();
         Courrier.Lettre imp = l(ALIENOR, "", true), routine = l(BERTRAND, "", false);
