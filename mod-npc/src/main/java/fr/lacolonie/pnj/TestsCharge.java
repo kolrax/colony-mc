@@ -183,13 +183,31 @@ public class TestsCharge {
             for (int y = 0; y < haut; y++) l.setBlock(o.offset(dx, y, dz), Blocks.STONE.defaultBlockState(), 2);
         }
         BlockPos cible = o.offset(20, 20, 20);
+        // Les 7 x 7 chunks autour de lui, chargés tout de suite. Sinon, il reste figé tant que la génération (en arrière-plan,
+        // en temps réel) n'a pas fini : le serveur de test enchaîne ses ticks sans pause (moins d'une ms chacun), et un
+        // disque ou un processeur chargé suffit pour que ses 3 x 3 chunks ne soient pas actifs avant le délai de 200 ticks.
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) l.getChunk((o.getX() >> 4) + dx, (o.getZ() >> 4) + dz);
         Travailleur t = TestsJeu.employe(h, "mineur", o, Vec3.atBottomCenterOf(o), ItemStack.EMPTY);
         t.mode = Travailleur.Mode.ATTENDRE;
         t.forcerChunk();
         long debut = h.getTick();
         boolean[] fait = {false};
+        StringBuilder suivi = new StringBuilder(); // ses changements d'état, tick par tick, pour comprendre un échec
+        String[] avant = {""};
         h.onEachTick(() -> { // une recherche ne se fait qu'au sol : il attend d'avoir atterri
-            if (fait[0] || h.getTick() < debut + 20 || !t.onGround()) return;
+            if (fait[0]) return;
+            String vu = "sol " + t.onGround() + ", y " + String.format("%.2f", t.getY()) + ", tick PNJ " + (t.tickCount > 0)
+                    + ", chunk actif " + l.isPositionEntityTicking(t.blockPosition()) + ", retiré " + t.isRemoved() + ", " + chunks(l, t.blockPosition());
+            if (!vu.equals(avant[0])) { suivi.append(" | t").append(h.getTick() - debut).append(" : ").append(vu); avant[0] = vu; }
+            if (h.getTick() >= debut + 150 && !t.onGround()) { // jamais au sol : dire pourquoi (chunks, état), avant le délai muet
+                String diag = TestsJeu.etat(t, o) + ", au sol " + t.onGround() + ", position " + t.position() + ", vitesse " + t.getDeltaMovement()
+                        + ", tickCount " + t.tickCount + ", suivi" + suivi;
+                ColoniePnj.LOG.info("[étape en montée] jamais au sol : {}", diag);
+                fait[0] = true;
+                t.discard();
+                h.fail("il n'a jamais atterri en 150 ticks (" + diag + ")");
+            }
+            if (h.getTick() < debut + 20 || !t.onGround()) return;
             fait[0] = true;
             BlockPos ici = t.blockPosition();
             float portee = Itineraire.portee(ici, cible);
@@ -204,6 +222,16 @@ public class TestsCharge {
             h.assertTrue(bon != null && bon.canReach(), "l'étape en montée doit être trouvée (" + bilan + ")");
             h.succeed();
         });
+    }
+
+    /** Autour de p : combien des 7 x 7 chunks sont chargés (générés en entier), et combien des 3 x 3 sont actifs. */
+    static String chunks(net.minecraft.server.level.ServerLevel l, BlockPos p) {
+        int cx = p.getX() >> 4, cz = p.getZ() >> 4, charges = 0, actifs = 0;
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
+            if (l.getChunkSource().getChunkNow(cx + dx, cz + dz) != null) charges++;
+            if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1 && l.isPositionEntityTicking(new BlockPos((cx + dx) * 16, p.getY(), (cz + dz) * 16))) actifs++;
+        }
+        return "chunks chargés " + charges + "/49, actifs " + actifs + "/9";
     }
 
     /** La longueur marchée d'un chemin, pour le journal. */
