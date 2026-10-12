@@ -50,6 +50,23 @@ final class Monde {
                 && !dessous.getFluidState().is(FluidTags.LAVA) || !dessous.getFluidState().isEmpty() && dessous.getFluidState().is(FluidTags.WATER);
     }
 
+    /**
+     * Une place sûre à côté de {@code centre} (le poste), de plus en plus loin jusqu'à 4 blocs : un sol solide (pas le
+     * centre lui-même), deux blocs libres, ni liquide, ni lave, ni feu, ni vide. Null s'il n'y en a pas.
+     */
+    static BlockPos placeSure(Level l, BlockPos centre) {
+        for (int r = 1; r <= 4; r++)
+            for (int dx = -r; dx <= r; dx++)
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    for (int dy : new int[]{0, 1, -1, 2, -2}) {
+                        BlockPos q = centre.offset(dx, dy, dz);
+                        if (libre(l, q) && libre(l, q.above()) && solide(l, q.below()) && debout(l, q) && !mortel(l, q)) return q;
+                    }
+                }
+        return null;
+    }
+
     static String liquide(Level l, BlockPos p) {
         var f = l.getBlockState(p).getFluidState();
         return f.isEmpty() ? null : f.is(FluidTags.LAVA) ? "lave" : f.is(FluidTags.WATER) ? "eau" : "autre";

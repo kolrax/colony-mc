@@ -24,6 +24,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
@@ -50,6 +51,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.phys.AABB;
@@ -188,6 +190,8 @@ public class Travailleur extends PathfinderMob {
     };
     // Cerveau
     public Actions.Action action;
+    /** Le temps qu'il passe coincé, pour le ramener au poste en dernier recours (non sauvegardé). */
+    final Coince coince = new Coince();
     public String resultat = "";
     /** Sa mémoire de travail (où en est sa mine, les coins qu'il connaît…), sauvegardée avec lui. */
     public CompoundTag memoire = new CompoundTag();
@@ -555,7 +559,7 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
-        if (tickCount % 20 == 0) tickCourrier();
+        if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); }
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {
@@ -696,9 +700,62 @@ public class Travailleur extends PathfinderMob {
     }
 
     void finirAction(String r) {
+        // Arrivé où il allait : un vrai progrès. Échoué à y aller : le temps « coincé » compte, même à l'arrêt (Coince).
+        if ("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) coince.echec = true;
+        else if ("ok".equals(r) && action != null && action.aMarche()
+                && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
+            coince.progres(getX(), getY(), getZ());
         if (action != null) action.fin(this);
         action = null;
         resultat = r;
+    }
+
+    /**
+     * Toutes les secondes : le temps qu'il passe coincé ({@link Coince}). Au bout de 5 minutes, s'il a un poste, qu'il
+     * travaille (ou fait grève), hors de tout danger et à plus de 6 blocs du poste, il y est ramené en dernier recours.
+     */
+    void surveillerCoince() {
+        if (!coince.relever(getX(), getY(), getZ(), 20, level().getGameTime())) return;
+        if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger()
+                || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) return;
+        ramenerAuPoste();
+    }
+
+    /**
+     * Le dernier recours (cahier 11.3, exception accordée le 11/10, la seule téléportation permise) : coincé depuis
+     * longtemps, il est ramené à côté de son poste, dans sa dimension (celle du poste s'il est ailleurs). Il le dit, et le
+     * poste en avertit son chef.
+     */
+    void ramenerAuPoste() {
+        if (!(level() instanceof ServerLevel ici)) return;
+        Courrier.Poste poste = Courrier.de(ici.getServer()).poste(chef);
+        boolean ailleurs = poste != null && poste.monde() != ici.dimension();
+        ServerLevel l = ailleurs ? ici.getServer().getLevel(poste.monde()) : ici;
+        BlockPos b = ailleurs ? poste.pos() : bureau;
+        if (l == null || b == null) return;
+        l.getChunk(b.getX() >> 4, b.getZ() >> 4); // sans chunk chargé, tout y paraît vide
+        BlockPos q = Monde.placeSure(l, b);
+        if (q == null) return;
+        BlockPos avant = blockPosition();
+        int minutes = Math.max(1, coince.ticks / 1200);
+        coince.ramene(level().getGameTime());
+        finirAction("ramene");
+        getNavigation().stop();
+        trace.clear();
+        etapesRatees.clear();
+        Vec3 v = Vec3.atBottomCenterOf(q);
+        Entity e = this;
+        if (ailleurs) e = changeDimension(new net.minecraft.world.level.portal.DimensionTransition(l, v, Vec3.ZERO, getYRot(), getXRot(),
+                net.minecraft.world.level.portal.DimensionTransition.DO_NOTHING));
+        else teleportTo(v.x, v.y, v.z);
+        if (!(e instanceof Travailleur t)) return;
+        t.setDeltaMovement(Vec3.ZERO);
+        t.resetFallDistance();
+        t.forcerChunk();
+        t.dire("Me voilà de retour au poste : j'étais coincé là-bas.");
+        Courrier.avis(ici.getServer(), chef, "Ouvrier ramené au poste", prenom + " était coincé en " + avant.toShortString() + " depuis "
+                + minutes + (minutes > 1 ? " minutes" : " minute") + " : je l'ai ramené au poste.");
+        Cerveau.journal("[" + prenom + "] coincé en " + avant.toShortString() + " depuis " + minutes + " min : ramené au poste en " + q.toShortString());
     }
 
     void tickCorps() {

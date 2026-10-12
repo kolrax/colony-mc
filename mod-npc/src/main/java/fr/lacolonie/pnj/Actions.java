@@ -117,6 +117,7 @@ public final class Actions {
 
         /** Marche vers la cible, à n'importe quelle distance, sans foncer dans un cul-de-sac (voir {@link Itineraire}). */
         void marcher(Travailleur t, Vec3 cible, double vitesse) {
+            t.coince.marche = true; // il veut avancer : le temps compte, s'il n'avance pas vraiment (Coince)
             if (route == null || route.but.distanceToSqr(cible) > 16) route = new Itineraire(t, cible);
             Vec3 p = t.position();
             // Il n'entre pas dans un coin que le monde n'a pas fini de préparer (terrain neuf en cours de génération) :
@@ -142,6 +143,9 @@ public final class Actions {
                 dernier = p;
             }
         }
+
+        /** Il a marché pendant cette action (vers une cible). */
+        boolean aMarche() { return route != null; }
 
         /** Coincé : plus aucun passage vers le but, immobile depuis 15 s, ou sans se rapprocher depuis 2 minutes. */
         boolean coince() { return route != null && route.bloque || immobile >= 300 || sansProgres >= 2400; }
@@ -389,19 +393,29 @@ public final class Actions {
                 if (filtre.objet(c) && c.getItem() instanceof BlockItem) s = c;
             }
             if (s.isEmpty()) return echec("pas_d_objet");
-            Direction face = null;
-            for (Direction d : new Direction[]{Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP})
-                if (lvl.getBlockState(pos.relative(d)).isFaceSturdy(lvl, pos.relative(d), d.getOpposite())) { face = d; break; }
-            if (face == null) return echec("rien_pour_tenir");
-            FakePlayer fp = FakePlayerFactory.get(lvl, PROFIL);
-            fp.moveTo(t.getX(), t.getY(), t.getZ(), t.getYRot(), t.getXRot());
-            BlockPos appui = pos.relative(face);
-            BlockHitResult clic = new BlockHitResult(Vec3.atCenterOf(pos).relative(face, 0.5), face.getOpposite(), appui, false);
-            var r = ((BlockItem) s.getItem()).place(new BlockPlaceContext(lvl, fp, InteractionHand.MAIN_HAND, s, clic));
-            t.inventaire.setChanged();
-            t.swing(InteractionHand.MAIN_HAND);
-            return r.consumesAction() ? Etat.OK : echec("impossible");
+            String r = placer(t, pos, s);
+            return r == null ? Etat.OK : echec(r);
         }
+    }
+
+    /**
+     * Pose en pos le bloc de cet objet de son sac, comme un joueur : il faut un appui, et personne à cette place (un joueur,
+     * lui-même). Null si c'est fait, sinon la raison.
+     */
+    static String placer(Travailleur t, BlockPos pos, ItemStack s) {
+        ServerLevel lvl = (ServerLevel) t.level();
+        Direction face = null;
+        for (Direction d : new Direction[]{Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP})
+            if (lvl.getBlockState(pos.relative(d)).isFaceSturdy(lvl, pos.relative(d), d.getOpposite())) { face = d; break; }
+        if (face == null) return "rien_pour_tenir";
+        FakePlayer fp = FakePlayerFactory.get(lvl, PROFIL);
+        fp.moveTo(t.getX(), t.getY(), t.getZ(), t.getYRot(), t.getXRot());
+        BlockPos appui = pos.relative(face);
+        BlockHitResult clic = new BlockHitResult(Vec3.atCenterOf(pos).relative(face, 0.5), face.getOpposite(), appui, false);
+        var r = ((BlockItem) s.getItem()).place(new BlockPlaceContext(lvl, fp, InteractionHand.MAIN_HAND, s, clic));
+        t.inventaire.setChanged();
+        t.swing(InteractionHand.MAIN_HAND);
+        return r.consumesAction() ? null : "impossible";
     }
 
     // --- Combat -----------------------------------------------------------------------------------
