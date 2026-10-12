@@ -21,3 +21,10 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
   - `Ordres.lire` coûte deux fois plus (2,4 ms pour 208 caractères) ;
   - une consigne de règle qui a besoin du chef (autre que « va voir / aider quelqu'un ») est refusée en bulle s'il est loin (plus de 48 blocs) ou absent ; pas de lettre pour le dire ;
   - instabilité vue une fois : `creusesousdugravier` (sous la charge d'un passage avec l'ancien code).
+- Ordres longs, 2e relecture (non corrigés) :
+  - « quand tu as fini, rentre s'il pleut » perd le « fini » (deux déclencheurs à la suite : seul le second garde la conséquence) ;
+  - négation avec un déclencheur long (« ne travaille pas pendant la nuit ») : devient une règle ;
+  - mission envoyée par lettre pendant un retour au poste à cause de la pluie : il reste en attente ;
+  - `bloque` est calculé une fois avant la boucle des règles (une règle qui change son mode ne bloque pas les suivantes du même passage) ;
+  - « attends » du chef pendant une attente posée par une règle : la fin de la règle peut le remettre au travail ;
+  - « rentre » à un gréviste : rien n'est fait, sans message de grève.

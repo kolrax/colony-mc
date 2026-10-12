@@ -107,7 +107,9 @@ class OrdresLongsTest {
     @Test
     void pasDeFauxPositifs() {
         for (String s : List.of("Ramène 64 bûches avant la nuit", "Suis-moi jusqu'au soir", "Rentre au poste pour la nuit", "Travaille jusqu'au soir",
-                "Ramène 20 charbons d'ici ce soir", "Viens avec moi, on part de nuit", "Ne travaille pas la nuit"))
+                "Ramène 20 charbons d'ici ce soir", "Viens avec moi, on part de nuit", "Ne travaille pas la nuit", "Reste ici jusqu'à la nuit",
+                "Garde le poste jusqu'à l'aube", "Coupe du bois jusqu'à la tombée de la nuit", "Rentre avant la tombée de la nuit",
+                "Travaille jusqu'à l'après-midi", "Travaille jusqu'au lever du jour", "Tu rentres la nuit ?"))
             assertTrue(Ordres.lire(s, "bucheron").regles.isEmpty(), s + " → " + regles(Ordres.lire(s, "bucheron")));
         assertEquals(List.of(new Mission("tout", "quantite", 64)), Ordres.lire("Ramène 64 bûches avant la nuit", "bucheron").missions);
         assertTrue(Ordres.lire("Suis-moi jusqu'au soir", "mineur").intentions.contains(Intention.SUIVRE));

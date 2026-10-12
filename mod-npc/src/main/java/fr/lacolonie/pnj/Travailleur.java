@@ -216,8 +216,9 @@ public class Travailleur extends PathfinderMob {
                 vrai = vu != null;
             } else vrai = OrdresLongs.vrai(r.quand, heure, level().isRaining(), level().isThundering());
             if (vrai && !r.actif) {
-                if (bloque) { if (r.quand.equals("FINI")) continue; }
-                else if (!r.voit() || maintenant - r.dernierAvis >= 2400) declencher(r, vu, maintenant); // un avis toutes les 2 minutes au plus
+                // Bloqué, il prévient quand même (« si tu vois un pillard, préviens-moi » pendant sa garde), sans rien faire d'autre.
+                if (bloque && !(r.voit() && r.previens())) { if (r.quand.equals("FINI")) continue; }
+                else if (!r.voit() || maintenant - r.dernierAvis >= 2400) declencher(r, vu, maintenant, bloque); // un avis toutes les 2 minutes au plus
                 if (r.quand.equals("FINI")) regles.remove(r); // « quand tu as fini » ne sert qu'une fois
             } else if (!vrai && r.actif && r.mene) reprendre(r);
             r.actif = vrai;
@@ -241,7 +242,9 @@ public class Travailleur extends PathfinderMob {
     }
 
     /** La règle se déclenche : il prévient son chef, ou fait ce qu'elle dit (comme un ordre reçu par lettre). */
-    void declencher(OrdresLongs.Regle r, LivingEntity vu, long maintenant) {
+    void declencher(OrdresLongs.Regle r, LivingEntity vu, long maintenant) { declencher(r, vu, maintenant, false); }
+
+    void declencher(OrdresLongs.Regle r, LivingEntity vu, long maintenant, boolean bloque) {
         r.depuis = maintenant;
         Ordres.Lecture x = Ordres.lire(r.suite, metier);
         x.regles.clear();
@@ -255,7 +258,7 @@ public class Travailleur extends PathfinderMob {
                 dire(dit);
                 if (level() instanceof ServerLevel sl) Courrier.avis(sl.getServer(), chef, "vu", false, prenom + " a vu " + nom, prenom + " : « " + dit + " »");
                 x.faire.removeIf(f -> f.id().equals("message"));
-                if (x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty()) return;
+                if (bloque || x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty()) return;
             }
         }
         if (x.intentions.isEmpty() && x.missions.isEmpty() && x.faire.isEmpty() && metier.equals(OrdresLongs.metierDuVerbe(r.suite)))
@@ -1428,7 +1431,7 @@ public class Travailleur extends PathfinderMob {
         }
 
         // Les déplacements. « Au travail », « suis-moi » : il ne rentre plus au poste qu'on lui avait demandé.
-        if (!l.intentions.contains(Ordres.Intention.RENTRER) && (l.intentions.contains(Ordres.Intention.TRAVAIL)
+        if (!parRegle && !l.intentions.contains(Ordres.Intention.RENTRER) && (l.intentions.contains(Ordres.Intention.TRAVAIL)
                 || l.intentions.contains(Ordres.Intention.SUIVRE) || l.intentions.contains(Ordres.Intention.ARRETER_SUIVRE))) {
             memoire.remove("rappel");
             memoire.remove("attendre_apres");

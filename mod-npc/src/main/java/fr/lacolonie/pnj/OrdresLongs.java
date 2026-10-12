@@ -148,6 +148,19 @@ final class OrdresLongs {
     /** Ce qui sépare deux propositions dans le texte à plat : une virgule, « et », « puis », « mais ». */
     static final Pattern SEPARATEUR = Pattern.compile("[,:]|\\b(?:et|puis|mais|ensuite)\\b");
 
+    static final java.util.Set<String> PETITS_MOTS = java.util.Set.of("a", "au", "aux", "l", "la", "le", "les", "de", "du", "d", "tombee", "lever",
+            "coucher", "fin", "milieu", "debut");
+
+    /** Juste avant : « avant », « jusqu'à », « d'ici »… (sans les petits mots : « jusqu'à la tombée de la nuit », « avant le lever du jour »). */
+    static boolean echeance(String p, int s0, int debut) {
+        List<String> mots = new ArrayList<>(List.of(p.substring(s0, debut).strip().split("[^a-z0-9]+")));
+        while (!mots.isEmpty() && PETITS_MOTS.contains(mots.get(mots.size() - 1))) mots.remove(mots.size() - 1);
+        return !mots.isEmpty() && ECHEANCES.contains(mots.get(mots.size() - 1));
+    }
+
+    /** Un déclencheur d'heure (et pas la pluie, « quand tu as fini » ou « si tu vois »). */
+    static boolean heure(String quand) { return java.util.Set.of("NUIT", "JOUR", "MATIN", "APRES_MIDI", "SOIR").contains(quand); }
+
     /** En tête de proposition : début de phrase, après une virgule, « et », « puis », « alors »… */
     static boolean enTete(String p, int s0, int debut) {
         String avant = p.substring(s0, debut).strip();
@@ -160,8 +173,7 @@ final class OrdresLongs {
      * bûches avant la nuit », « Suis-moi jusqu'au soir », « on part de nuit », « ne travaille pas la nuit » se font tout de suite.
      */
     static boolean periodeValable(String p, int s0, int s1, int debut, int fin) {
-        String[] mots = p.substring(s0, debut).strip().split("[^a-z0-9]+");
-        if (mots.length > 0 && ECHEANCES.contains(mots[mots.length - 1])) return false;
+        if (echeance(p, s0, debut)) return false;
         if (enTete(p, s0, debut)) return true;
         if (!p.substring(debut, fin).matches("(?:la|le|l|les) .*")) return false;
         String apres = p.substring(fin, s1);
@@ -204,6 +216,7 @@ final class OrdresLongs {
 
     private static void phrase(String texte, String p, int s0, int s1, Lu lu, List<String> reste) {
         if (s1 <= s0) return;
+        if (s1 < p.length() && p.charAt(s1) == '?') { reste.add(texte.substring(s0, s1).strip()); return; } // une question (« Tu rentres la nuit ? ») n'est pas une règle
         String ph = p.substring(s0, s1);
         List<Trouve> t = new ArrayList<>();
         for (Object[] d : DECLENCHEURS) {
@@ -222,7 +235,7 @@ final class OrdresLongs {
         t.sort(Comparator.comparingInt(Trouve::debut).thenComparing(x -> -(x.fin() - x.debut())));
         List<Trouve> gardes = new ArrayList<>();
         for (Trouve x : t) if (gardes.isEmpty() || x.debut() >= gardes.get(gardes.size() - 1).fin()) gardes.add(x);
-        gardes.removeIf(x -> x.simple() && !periodeValable(p, s0, s1, x.debut(), x.fin()));
+        gardes.removeIf(x -> heure(x.quand()) && echeance(p, s0, x.debut()) || x.simple() && !periodeValable(p, s0, s1, x.debut(), x.fin()));
         if (gardes.isEmpty()) {
             if (!texte.substring(s0, s1).isBlank()) reste.add(texte.substring(s0, s1).strip());
             return;

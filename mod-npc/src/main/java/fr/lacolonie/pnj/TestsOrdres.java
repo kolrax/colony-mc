@@ -198,6 +198,29 @@ public class TestsOrdres {
                 () -> fin(h, e));
     }
 
+    /** Au garde-à-vous (une consigne tenue, la règle est bloquée), il prévient quand même du zombie qu'il voit. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void bloquePrevientQuandMeme(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 52);
+        Travailleur raoul = e[1];
+        net.minecraft.world.entity.monster.Zombie[] z = {null};
+        java.util.function.LongSupplier avis = () -> Courrier.de(h.getLevel().getServer()).boite(chef.getUUID()).stream().filter(l -> l.objet.contains("zombie")).count();
+        etapes(h, chef, e,
+                () -> { regarder(chef, raoul); raoul.parler(chef, "Garde à vous !"); OrdresLongs.ajouter(raoul.regles, new OrdresLongs.Regle("VOIT:zombie", "préviens-moi")); },
+                () -> h.assertTrue(raoul.consigne != null && raoul.consigne.tenue(), "au garde-à-vous (" + TestsRepertoire.c(raoul) + ")"),
+                () -> {
+                    Vec3 p = raoul.position().add(5, 0, 0);
+                    z[0] = EntityType.ZOMBIE.create(h.getLevel());
+                    z[0].moveTo(p.x, p.y, p.z);
+                    z[0].setNoAi(true);
+                    z[0].setInvulnerable(true);
+                    h.getLevel().addFreshEntity(z[0]);
+                },
+                () -> h.assertTrue(avis.getAsLong() == 1, "le zombie vu : un avis malgré la garde (" + avis.getAsLong() + ")"),
+                () -> { z[0].discard(); fin(h, e); });
+    }
+
     /** Ses règles sont sauvegardées avec lui, et « où en es-tu » les dit ; « oublie tes ordres » les efface. */
     @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
     public static void reglesSauvegardees(GameTestHelper h) {
