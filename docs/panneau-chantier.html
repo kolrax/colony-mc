@@ -330,7 +330,7 @@ function renderPlan() {
   $("#t-plan").innerHTML = `<div class="card"><h2>Avancement global<small>${a.f} / ${a.t} · mis à jour ${esc(quand(P.maj))}</small></h2><div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div><p class="muted" style="margin:10px 0 0">Livraison visée : vendredi 16 octobre, pour l'ouverture du serveur.</p></div>
     <div class="card">${P.lots.map((l) => {
       const n = l.items.filter((i) => i.fait).length, fini = n === l.items.length, cur = a.cur === l;
-      return `<details class="lot${cur ? " cur" : ""}${fini ? " done" : ""}"${cur ? " open" : ""}><summary><span class="num">${l.num != null ? esc(l.num) : "·"}</span><span class="ti">${esc(l.titre)}</span><span class="cnt">${n}/${l.items.length}</span></summary><div class="bar"><span style="width:${(100 * n / Math.max(1, l.items.length)).toFixed(1)}%"></span></div><ul class="items">${l.items.map((i) => `<li class="${i.fait ? "f" : ""}">${inline(esc(i.texte))}</li>`).join("")}</ul></details>`;
+      return `<details class="lot${cur ? " cur" : ""}${fini ? " done" : ""}"${cur ? " open" : ""}><summary><span class="num">${l.num != null ? esc(l.num) : "·"}</span><span class="ti">${esc(l.titre)}</span><span class="cnt">${n}/${l.items.length}</span></summary><div class="bar"><span style="width:${(100 * n / Math.max(1, l.items.length)).toFixed(1)}%"></span></div><ul class="items">${l.items.map((i) => `<li class="${i.fait ? "f" : ""}"><span>${inline(esc(i.texte))}</span></li>`).join("")}</ul></details>`;
     }).join("")}</div>`;
 }
 
