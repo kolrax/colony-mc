@@ -296,7 +296,7 @@ public final class Actions {
 
         /** Il pose un bloc de chantier dans le liquide (un par tick), ou renonce s'il ne peut pas. */
         Etat boucher(Travailleur t, BlockPos source) {
-            int i = Itineraire.caseDeChantier(t);
+            int i = Itineraire.caseDeChantier(t, true); // pierre ou terre : jamais de planches contre la lave
             String quoi = Monde.liquide(t.level(), source);
             if (i < 0 || ++bouchons > 6 || !aPortee(t, source) || placer(t, source, t.inventaire.getItem(i)) != null) {
                 t.blocInaccessible(pos);
@@ -332,7 +332,12 @@ public final class Actions {
             if (++aCote > 100) { t.blocInaccessible(pos); return echec("danger"); }
             Vec3 c = Vec3.atBottomCenterOf(cote);
             if (t.position().distanceToSqr(c) > 2.25) {
-                if (t.getNavigation().isDone() || aCote % 20 == 1) t.getNavigation().moveTo(c.x, c.y, c.z, 0.8);
+                // Une recherche de chemin par seconde au plus ; une place qu'aucun chemin complet n'atteint : il renonce.
+                if (aCote % 20 == 1) {
+                    net.minecraft.world.level.pathfinder.Path ch = t.getNavigation().createPath(cote, 0);
+                    if (ch == null || !ch.canReach()) { t.blocInaccessible(pos); return echec("danger"); }
+                    t.getNavigation().moveTo(ch, 0.8);
+                }
             } else {
                 t.getNavigation().stop();
                 t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 0.6);
@@ -347,6 +352,25 @@ public final class Actions {
         }
     }
 
+    /** Bouche de l'eau ou de la lave avec un bloc banal de son sac (pierre, terre ; jamais de planches), comme un mineur. */
+    static final class Boucher extends Action {
+        final BlockPos pos;
+
+        Boucher(BlockPos pos) { super("boucher"); this.pos = pos; }
+
+        Etat tick(Travailleur t) {
+            if (Monde.liquide(t.level(), pos) == null) return Etat.OK;
+            int i = Itineraire.caseDeChantier(t, true);
+            if (i < 0) return echec("pas_d_objet");
+            if (!aPortee(t, pos)) return echec("hors_de_portee");
+            t.getLookControl().setLookAt(Vec3.atCenterOf(pos));
+            String r = placer(t, pos, t.inventaire.getItem(i));
+            if (r != null) return echec(r);
+            Cerveau.dire(t, "bouche", 600, "De l'eau ou de la lave devant : je la bouche avant de creuser.");
+            return Etat.OK;
+        }
+    }
+
     /**
      * Le réflexe de survie, pour tout métier ({@link Travailleur#survivre}) : dans la lave ou le feu, enseveli, à bout d'air
      * ou en feu près de l'eau, il a tout lâché ; il gagne une place sûre (cherchée une fois par seconde), se dégage du bloc
@@ -355,29 +379,62 @@ public final class Actions {
     static final class Echapper extends Action {
         BlockPos refuge, fouille;
         float progres;
-        /** En feu, hors de la lave : il ne cherche que de l'eau. */
+        /** En feu, hors de la lave : il ne cherche que de l'eau, et s'arrête dès qu'il est éteint. */
         final boolean eau;
+        /** Il va tout droit au refuge (la ligne est sûre), faute de chemin complet. */
+        boolean toutDroit;
+        /** Les refuges essayés sans chemin sûr : il ne les reprend pas. */
+        final java.util.Set<BlockPos> exclus = new HashSet<>();
 
         Echapper(boolean eau) { super("echapper"); this.eau = eau; }
 
         /** Choisit où aller ; faux s'il n'y a rien à portée. */
         boolean choisir(Travailleur t) {
             Level l = t.level();
-            refuge = eau ? Monde.eauProche(l, t.blockPosition(), 5) : Monde.placeSure(l, t.blockPosition());
+            refuge = eau ? Monde.eauProche(l, t.blockPosition(), 5) : Monde.refuge(l, t.blockPosition(), exclus);
             return refuge != null;
+        }
+
+        /**
+         * Une fois par seconde au plus : tout droit si la ligne ne traverse rien de mortel (déjà dans la lave ou le feu, 3
+         * cases brûlantes au plus : le plus court pour en sortir), sinon le chemin jusqu'au refuge s'il l'atteint, sinon un autre refuge (jamais un chemin partiel).
+         */
+        void partir(Travailleur t) {
+            toutDroit = false;
+            for (int essai = 0; essai < 3 && refuge != null; essai++) {
+                if (Monde.ligneSure(t.level(), t.position(), refuge, t.isInLava() || t.level().getBlockState(t.blockPosition()).is(BlockTags.FIRE) ? 3 : 0)) { t.getNavigation().stop(); toutDroit = true; return; }
+                net.minecraft.world.level.pathfinder.Path ch = t.getNavigation().createPath(refuge, 0);
+                if (ch != null && ch.canReach()) { t.getNavigation().moveTo(ch, 1.3); return; }
+                if (eau) { refuge = null; return; }
+                exclus.add(refuge);
+                choisir(t);
+            }
+            t.getNavigation().stop();
+        }
+
+        /** Enseveli : le côté libre le plus sûr (debout, sinon la plus petite chute, 3 blocs au plus), ou null. */
+        static BlockPos sortie(Level l, BlockPos p) {
+            BlockPos mieux = null;
+            int chuteMin = 4;
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                BlockPos q = p.relative(d);
+                if (!Monde.libre(l, q) || !Monde.libre(l, q.above()) || Monde.mortel(l, q)) continue;
+                int c = Monde.chute(l, q);
+                if (c < chuteMin) { chuteMin = c; mieux = q; }
+            }
+            return mieux;
         }
 
         Etat tick(Travailleur t) {
             Level l = t.level();
             if (t.isInWall()) {
-                // Enseveli : il sort par un côté libre s'il y en a un, sinon il dégage le bloc qu'il a sur la tête (s'il est naturel).
-                BlockPos tete = BlockPos.containing(t.getEyePosition()), p = t.blockPosition();
-                for (Direction d : Direction.Plane.HORIZONTAL)
-                    if (Monde.libre(l, p.relative(d)) && Monde.libre(l, p.relative(d).above()) && !Monde.mortel(l, p.relative(d))) {
-                        Vec3 c = Vec3.atBottomCenterOf(p.relative(d));
-                        t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 1.0);
-                        return age > 200 ? echec("perdu") : Etat.EN_COURS;
-                    }
+                // Enseveli : il sort par le côté le plus sûr, sinon il dégage le bloc qu'il a sur la tête (s'il est naturel).
+                BlockPos tete = BlockPos.containing(t.getEyePosition()), q = sortie(l, t.blockPosition());
+                if (q != null) {
+                    t.getNavigation().stop();
+                    t.getMoveControl().setWantedPosition(q.getX() + 0.5, q.getY(), q.getZ() + 0.5, 1.0);
+                    return age > 200 ? echec("perdu") : Etat.EN_COURS;
+                }
                 BlockState st = l.getBlockState(tete);
                 if (!st.getCollisionShape(l, tete).isEmpty() && st.getDestroySpeed(l, tete) >= 0 && !Monde.construit(l, tete)) {
                     if (!tete.equals(fouille)) { fouille = tete; progres = 0; }
@@ -387,17 +444,22 @@ public final class Actions {
                     return age > 200 ? echec("perdu") : Etat.EN_COURS;
                 }
             }
-            boolean peril = t.enPeril() || eau && t.isOnFire() && !t.isInWaterRainOrBubble();
-            if (age % 20 == 0 && age > 0 && peril) choisir(t); // une fois par seconde, pas plus
-            if (refuge == null) return peril && age <= 200 ? Etat.EN_COURS : peril ? echec("perdu") : Etat.OK;
+            boolean peril = eau ? t.isOnFire() && !t.isInWaterRainOrBubble() || t.enPeril() : t.enPeril();
+            if (!peril && (eau || age > 40 || refuge == null)) return Etat.OK; // hors de danger (éteint) : il ne s'attarde pas
+            if (age % 20 == 0) { // une fois par seconde, pas plus
+                if (age > 0 && peril) choisir(t);
+                partir(t);
+            }
+            boolean nage = t.isInWater() || t.isInLava();
+            t.diag = "échappe vers " + (refuge == null ? "rien" : refuge.toShortString() + (toutDroit ? " tout droit" : " par un chemin"));
+            if (refuge == null) {
+                if (nage) t.getJumpControl().jump(); // dans la lave sans refuge : au moins remonter
+                return age > 200 ? echec("perdu") : Etat.EN_COURS;
+            }
             Vec3 c = Vec3.atBottomCenterOf(refuge);
-            if (t.position().distanceToSqr(c) < 0.5) {
-                if (!peril) return Etat.OK;
-            } else if (age % 20 == 0) {
-                if (!t.getNavigation().moveTo(c.x, c.y, c.z, 1.3)) t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 1.3);
-            } else if (t.getNavigation().isDone()) t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 1.3);
-            if ((t.isInWater() || t.isInLava()) && refuge.getY() >= t.getBlockY()) t.getJumpControl().jump();
-            if (!peril && age > 100) return Etat.OK; // hors de danger : il ne s'attarde pas
+            if (t.position().distanceToSqr(c) < 0.5) { if (!peril) return Etat.OK; }
+            else if (toutDroit) t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 1.3);
+            if (nage && refuge.getY() >= t.getBlockY()) t.getJumpControl().jump();
             return age > 200 ? echec("perdu") : Etat.EN_COURS;
         }
     }

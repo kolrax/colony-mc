@@ -14,8 +14,9 @@ import net.minecraft.world.phys.Vec3;
  * <li>là, il mine en galeries parallèles espacées de 3 blocs, comme un joueur.</li>
  * </ol>
  * Il pose une torche tous les 8 blocs s'il en a, comble les trous du sol avec de la pierre, abandonne une galerie
- * devant la lave ou l'eau ou sous du gravier ; pour un filon, il bouche d'abord la lave qui le touche (ou l'eau au-dessus)
- * et ne le casse jamais en se tenant dessous s'il porte du gravier ou du sable ({@link Actions.Casser}) ; et il vient demander la pioche qu'il lui faut (fer pour le diamant). Pour remonter, il
+ * devant la lave ou l'eau s'il n'a pas de quoi la boucher ; pour un filon, il bouche d'abord la lave qui le touche (ou
+ * l'eau au-dessus) et ne le casse jamais en se tenant dessous s'il porte du gravier ou du sable ({@link Actions.Casser}) ;
+ * et il vient demander la pioche qu'il lui faut (fer pour le diamant). Pour remonter, il
  * reprend son escalier.
  */
 final class Mineur extends Metier {
@@ -70,18 +71,28 @@ final class Mineur extends Metier {
         return t.memoire.getString("cible").equals(cle(p)) && !t.resultat.isEmpty() && !t.resultat.equals("ok");
     }
 
-    enum Case { PRETE, ACTION, LIQUIDE, EBOULIS, BLOQUE }
+    enum Case { PRETE, ACTION, LIQUIDE, BLOQUE }
+
+    /** Au plus tant de blocs posés dans l'eau ou la lave pour une même case ; au-delà, il abandonne (un lac). */
+    static final int BOUCHONS = 10;
 
     /**
-     * Prépare une case de tunnel (pieds en p, {@code haut} blocs de hauteur). Pas près d'un liquide, ni sous du gravier ou
-     * du sable qui tomberait dans la case où il va entrer.
+     * Prépare une case de tunnel (pieds en p, {@code haut} blocs de hauteur). De l'eau ou de la lave autour : il la bouche
+     * avec un bloc banal de son sac ({@link Actions.Boucher}), sinon il abandonne la case. Du gravier ou du sable au-dessus :
+     * il le creuse depuis la case d'à côté, où il se tient, et n'entre qu'une fois la colonne tombée (jamais dessous).
      */
     static Case creuserCase(Travailleur t, BlockPos p, int haut) {
         Level l = t.level();
         for (int h = -1; h <= haut; h++)
-            for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}})
-                if (Monde.liquide(l, p.offset(d[0], h, d[1])) != null) return Case.LIQUIDE;
-        for (int h = 0; h < haut; h++) if (!Monde.libre(l, p.above(h)) && Monde.tombe(l, p.above(h + 1))) return Case.EBOULIS;
+            for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                BlockPos q = p.offset(d[0], h, d[1]);
+                if (Monde.liquide(l, q) == null) continue;
+                if (echecSur(t, q) || t.memoire.getInt("bouchons") >= BOUCHONS || Itineraire.caseDeChantier(t, true) < 0) return Case.LIQUIDE;
+                t.memoire.putInt("bouchons", t.memoire.getInt("bouchons") + 1);
+                t.memoire.putString("cible", cle(q));
+                Cerveau.lancer(t, new Actions.Boucher(q));
+                return Case.ACTION;
+            }
         for (int h = 0; h < haut; h++) {
             BlockPos q = p.above(h);
             if (!Monde.libre(l, q)) {
@@ -99,6 +110,9 @@ final class Mineur extends Metier {
             } else Cerveau.lancer(t, new Actions.Demander("pierre_trou", Actions.Filtre.de("#c:cobblestones"), 8));
             return Case.ACTION;
         }
+        // Du gravier ou du sable va tomber dans la case : il attend qu'il soit tombé (il le recassera) avant d'y entrer.
+        if (Monde.eboulement(l, p, haut)) { Cerveau.attendre(t, 0.5); return Case.ACTION; }
+        t.memoire.remove("bouchons");
         return Case.PRETE;
     }
 
@@ -217,13 +231,11 @@ final class Mineur extends Metier {
                         m.putInt("marche", 0);
                         m.putInt("tours", m.getInt("tours") + 1);
                         m.remove("cible");
-                        Cerveau.dire(t, "escalier_tourne", 120, r == Case.LIQUIDE ? "De l'eau ou de la lave devant mon escalier : je le fais tourner."
-                                : r == Case.EBOULIS ? "Du gravier ou du sable au-dessus de mon escalier : je le fais tourner." : "Un bloc que je ne peux pas casser : mon escalier tourne.");
+                        Cerveau.dire(t, "escalier_tourne", 120, r == Case.LIQUIDE ? "De l'eau ou de la lave devant mon escalier : je le fais tourner." : "Un bloc que je ne peux pas casser : mon escalier tourne.");
                         Cerveau.attendre(t, 1);
                         return;
                     }
-                    t.dire(r == Case.LIQUIDE ? "De l'eau ou de la lave tout autour de mon escalier : je creuse ailleurs."
-                            : r == Case.EBOULIS ? "Trop de gravier ou de sable au-dessus de moi : je creuse ailleurs." : "Je n'arrive pas à creuser ici : je change d'endroit.");
+                    t.dire(r == Case.LIQUIDE ? "De l'eau ou de la lave tout autour de mon escalier : je creuse ailleurs." : "Je n'arrive pas à creuser ici : je change d'endroit.");
                     m.remove("puits");
                     Cerveau.attendre(t, 2);
                     return;
@@ -278,7 +290,6 @@ final class Mineur extends Metier {
         if (r == Case.ACTION) return;
         if (r != Case.PRETE) {
             if (r == Case.LIQUIDE) t.dire("De la lave ou de l'eau devant : j'abandonne cette galerie.");
-            if (r == Case.EBOULIS) t.dire("Du gravier ou du sable au plafond : j'abandonne cette galerie.");
             m.putInt("branche", branche + 1);
             m.putInt("pas", 0);
             Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(sortie), 1));

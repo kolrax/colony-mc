@@ -57,6 +57,7 @@ final class Cerveau {
         LivingEntity coupDe = t.getLastHurtByMob();
         if (t.action != null && coupDe != null && coupDe.isAlive() && !t.estDe(coupDe) && Monde.recent(t, t.getLastHurtByMobTimestamp())
                 && t.getLastHurtByMobTimestamp() != t.coupVu && !(t.action instanceof Actions.Fuir) && !(t.action instanceof Actions.Attaquer)
+                && !(t.action instanceof Actions.Echapper) // il sort de la lave ou du gravier d'abord
                 && !(t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat"))) {
             t.coupVu = t.getLastHurtByMobTimestamp();
             t.finirAction("interrompu");

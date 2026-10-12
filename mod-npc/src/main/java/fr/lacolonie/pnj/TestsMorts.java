@@ -433,4 +433,73 @@ public class TestsMorts {
             finir(h, "sortDeLaLave", t, s, 0);
         });
     }
+
+    /**
+     * Enseveli dans du gravier sur un plateau : au nord, un puits de 10 blocs ; au sud, le plateau. Il sort par le sud,
+     * jamais en sautant dans le puits. Garde-fou : l'ancien code (premier côté libre, le nord) passait aussi, il ne sortait
+     * pas assez loin pour tomber.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true, batch = "morts")
+    public static void sortDuGravierDuBonCote(GameTestHelper h) {
+        roche(h, 11);
+        for (int y = 2; y <= 13; y++) h.setBlock(12, y, 11, Blocks.AIR);
+        for (int x : new int[]{11, 13}) for (int y = 12; y <= 13; y++) h.setBlock(x, y, 12, Blocks.STONE);
+        Travailleur t = mineur(h, 12, 12, 12);
+        Cerveau.lancer(t, new Actions.Attendre(400));
+        h.setBlock(12, 12, 12, Blocks.GRAVEL);
+        h.setBlock(12, 13, 12, Blocks.GRAVEL);
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertFalse(t.isInWall(), "il doit s'être dégagé (" + s.texte() + ")");
+            finir(h, "sortDuGravierDuBonCote", t, s, 0.5, "fall");
+        });
+    }
+
+    /**
+     * Debout au milieu d'un feu de 3 x 3 (sur de la netherrack) ; à l'ouest, un pilier de 2 blocs (un rebord à 2 blocs
+     * au-dessus de lui, qu'il ne peut pas escalader) ; à deux pas, le sol nu. Il traverse les flammes vers le sol nu.
+     * Avant, il visait le haut du pilier, poussait contre lui et restait dans le feu.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true, batch = "morts")
+    public static void feuSansEscaladerUnRebord(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        for (int x = 11; x <= 13; x++) for (int z = 11; z <= 13; z++) { h.setBlock(x, 1, z, Blocks.NETHERRACK); h.setBlock(x, 2, z, Blocks.FIRE); }
+        h.setBlock(11, 2, 12, Blocks.STONE);
+        h.setBlock(11, 3, 12, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Attendre(400));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            BlockPos r = rel(h, t.blockPosition());
+            h.assertFalse(r.getX() >= 11 && r.getX() <= 13 && r.getZ() >= 11 && r.getZ() <= 13, "il doit être sorti du feu (" + s.texte() + ")");
+            finir(h, "feuSansEscaladerUnRebord", t, s, 0.25);
+        });
+    }
+
+    /**
+     * Sur une plage : 7 blocs de sable sur la pierre. Le mineur creuse son escalier dans le sable jusqu'à la profondeur
+     * demandée, sans s'y ensevelir (le sable qui tombe dans la marche, il le recasse de la marche d'au-dessus).
+     */
+    @GameTest(template = "grand", timeoutTicks = 3000, batch = "morts")
+    public static void escalierDansLeSable(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, y <= 3 ? Blocks.STONE : Blocks.SAND);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 11, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(6, 11, 6));
+        debutant(t);
+        t.mission("charbon", "stock", 64);
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 32));
+        t.profondeurForcee = h.absolutePos(new BlockPos(0, 4, 0)).getY();
+        t.memoire.putString("chantier", "charbon@" + Mineur.cle(t.bureau) + "/" + t.profondeurForcee);
+        t.memoire.putLong("puits", h.absolutePos(new BlockPos(12, 11, 12)).asLong());
+        t.memoire.putInt("marche", 0);
+        int but = h.absolutePos(new BlockPos(0, 5, 0)).getY();
+        Suivi s = suivre(h, t);
+        h.succeedWhen(() -> {
+            s.verifier(0.5, ETOUFFE);
+            h.assertTrue(t.getBlockY() <= but, "il doit être descendu dans le sable (y=" + t.getBlockY() + ", attendu <= " + but + ", "
+                    + s.texte() + ", mémoire " + t.memoire + ")");
+            ColoniePnj.LOG.info("[morts] escalierDansLeSable : {}", s.texte());
+            t.discard();
+        });
+    }
 }

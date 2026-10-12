@@ -568,7 +568,10 @@ final class Itineraire {
                 if (sol.getFluidState().is(FluidTags.LAVA) || sol.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)) break;
                 appui = Monde.solide(l, q) || sol.getFluidState().is(FluidTags.WATER);
             }
-            if (appui && blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
+            // Du gravier ou du sable sur un bloc de sa propre colonne lui tomberait dessus ; dans la marche, il attend qu'il
+            // soit tombé (il le recassera de côté) avant d'y monter.
+            boolean surLui = blocs.stream().anyMatch(b -> b.getX() == p.getX() && b.getZ() == p.getZ() && !Monde.traversable(l, b) && Monde.tombe(l, b.above()));
+            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();
@@ -581,15 +584,11 @@ final class Itineraire {
         }
     }
 
-    /**
-     * On peut le casser sans risque : pas de construction, pas d'incassable, pas de lave à côté (l'eau, il la traverse à la
-     * nage), et pas de gravier ni de sable au-dessus (il tomberait sur lui, ou dans la marche où il va monter).
-     */
+    /** On peut le casser sans risque : pas de construction, pas d'incassable, et pas de lave à côté (l'eau, il la traverse à la nage). */
     static boolean creusable(Level l, BlockPos b) {
         if (!l.isLoaded(b)) return false;
         BlockState st = l.getBlockState(b);
         if (Monde.traversable(l, b)) return true;
-        if (Monde.tombe(l, b.above())) return false;
         if (st.getDestroySpeed(l, b) < 0 || Monde.construit(l, b) || !st.getFluidState().isEmpty()) return false;
         for (Direction d : Direction.values()) if (l.getBlockState(b.relative(d)).getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) return false;
         return true;
@@ -624,7 +623,9 @@ final class Itineraire {
 
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
     private void monter(Travailleur t) {
-        montee = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        BlockPos vers = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        if (Monde.eboulement(t.level(), vers, 2)) { etape = null; return; } // du gravier y tombe : il le recreusera d'abord
+        montee = vers;
         monteeFin = ageCourant + 60;
         echecs = 0; // il avance : ce n'est pas un échec
         if (monte) t.getJumpControl().jump();
@@ -666,13 +667,16 @@ final class Itineraire {
      * La case de son sac d'où prendre un bloc à poser, -1 s'il n'en a pas. Ce que sa mission demande n'y passe pas : de cet
      * objet, il garde au moins le nombre demandé.
      */
-    static int caseDeChantier(Travailleur t) {
+    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false); }
+
+    /** Pareil ; {@code sansBois} : pas de planches (pour boucher la lave, elles brûleraient). */
+    static int caseDeChantier(Travailleur t, boolean sansBois) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int garder = f == null ? 0 : t.missionActive().nombre, compte = 0, caseMission = -1;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s)) continue;
+            if (!blocDeChantier(s) || sansBois && s.is(ItemTags.PLANKS)) continue;
             if (f == null || !f.objet(s)) return i;
             compte += s.getCount();
             caseMission = i;

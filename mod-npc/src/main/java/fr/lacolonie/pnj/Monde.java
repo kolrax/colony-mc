@@ -11,6 +11,9 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -66,6 +69,79 @@ final class Monde {
                         if (libre(l, q) && libre(l, q.above()) && solide(l, q.below()) && debout(l, q) && !mortel(l, q) && !piquant(l, q)) return q;
                     }
         return null;
+    }
+
+    /**
+     * Une place sûre où fuir un danger (lave, feu, bloc où il étouffe) : comme {@link #placeSure}, mais d'abord à sa hauteur
+     * ou à un bloc près sur tout le rayon (une rive à deux pas plutôt qu'un rebord à escalader), et jamais une des places
+     * {@code exclues} (déjà essayées sans chemin sûr). Null s'il n'y en a pas.
+     */
+    static BlockPos refuge(Level l, BlockPos centre, java.util.Set<BlockPos> exclues) {
+        for (int[] dys : new int[][]{{0, 1, -1}, {2, -2}})
+            for (int r = 1; r <= 4; r++)
+                for (int dy : dys)
+                    for (int dx = -r; dx <= r; dx++)
+                        for (int dz = -r; dz <= r; dz++) {
+                            if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                            BlockPos q = centre.offset(dx, dy, dz);
+                            if (!exclues.contains(q) && libre(l, q) && libre(l, q.above()) && solide(l, q.below()) && debout(l, q) && !mortel(l, q) && !piquant(l, q))
+                                return q;
+                        }
+        return null;
+    }
+
+    /**
+     * Aller tout droit de {@code depuis} à {@code vers} ne traverse rien de mortel : à chaque demi-bloc, de la place pour le
+     * corps, un appui à 3 blocs au plus sous les pieds (ou de l'eau), et ni lave ni feu, hors de sa propre case qu'il fuit
+     * et de {@code lave} cases de plus (déjà dans la lave, il doit bien la traverser pour en sortir).
+     */
+    static boolean ligneSure(Level l, Vec3 depuis, BlockPos vers, int lave) {
+        java.util.Set<BlockPos> brulantes = new java.util.HashSet<>();
+        Vec3 c = Vec3.atBottomCenterOf(vers);
+        int n = (int) Math.ceil(depuis.distanceTo(c) * 2);
+        BlockPos dep = BlockPos.containing(depuis);
+        for (int i = 1; i <= n; i++) {
+            Vec3 v = depuis.lerp(c, i / (double) n);
+            BlockPos q = BlockPos.containing(v);
+            if (q.getX() == dep.getX() && q.getZ() == dep.getZ()) continue;
+            if (!traversable(l, q) && !traversable(l, q.above())) return false;
+            BlockPos pied = traversable(l, q) ? q : q.above();
+            boolean appui = false;
+            for (int k = 1; k <= 4 && !appui; k++) {
+                BlockPos b = pied.below(k);
+                BlockState s = l.getBlockState(b);
+                if (s.getFluidState().is(FluidTags.LAVA) || s.is(Blocks.MAGMA_BLOCK)) {
+                    if (brulantes.add(b.immutable()) && brulantes.size() > lave) return false;
+                    appui = true; // il y nage (déjà compté comme lave traversée)
+                } else appui = !s.getCollisionShape(l, b).isEmpty() || s.getFluidState().is(FluidTags.WATER);
+            }
+            if (!appui) return false;
+            for (int dy = -1; dy <= 1; dy++) {
+                BlockState s = l.getBlockState(q.above(dy));
+                if ((s.getFluidState().is(FluidTags.LAVA) || s.is(BlockTags.FIRE) || s.is(Blocks.MAGMA_BLOCK)) && brulantes.add(q.above(dy).immutable())
+                        && brulantes.size() > lave) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Combien de blocs il tomberait, les pieds en p (0 : il y tient debout ; 99 : plus de 3, ou de la lave au fond). */
+    static int chute(Level l, BlockPos p) {
+        for (int k = 0; k <= 3; k++) {
+            BlockState s = l.getBlockState(p.below(k + 1));
+            if (s.getFluidState().is(FluidTags.LAVA) || s.is(Blocks.MAGMA_BLOCK)) return 99;
+            if (!s.getCollisionShape(l, p.below(k + 1)).isEmpty() || s.getFluidState().is(FluidTags.WATER)) return k;
+        }
+        return 99;
+    }
+
+    /**
+     * Une case de {@code haut} blocs (les pieds en p) où du gravier ou du sable va tomber : un tel bloc juste au-dessus,
+     * ou en train de tomber dans la colonne. Il n'y entre pas tant que ça dure.
+     */
+    static boolean eboulement(Level l, BlockPos p, int haut) {
+        return tombe(l, p.above(haut)) && !solide(l, p.above(haut - 1)) || !l.getEntitiesOfClass(FallingBlockEntity.class,
+                new AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + haut + 8, p.getZ() + 1)).isEmpty();
     }
 
     /** Un cactus ou des baies tout contre (pieds ou tête), ou un feu de camp sous les pieds : on s'y blesse. */

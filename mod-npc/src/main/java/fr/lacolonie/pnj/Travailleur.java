@@ -635,6 +635,9 @@ public class Travailleur extends PathfinderMob {
         ecoutePar = qui;
     }
 
+    /** Jusqu'à quand (tickCount) ne pas chercher de refuge : il n'y en avait pas. */
+    int sansRefugeJusqua;
+
     /** Dans la lave ou le feu, enseveli dans un bloc (il étouffe), ou à bout d'air sous l'eau. */
     boolean enPeril() {
         if (isInLava() || isInWall()) return true;
@@ -651,9 +654,13 @@ public class Travailleur extends PathfinderMob {
         if (action instanceof Actions.Echapper e && (!e.eau || !enPeril()) || isPassenger()) return; // en route vers l'eau, il tombe dans la lave : il en sort d'abord
         boolean peril = enPeril(), feu = !peril && isOnFire() && !isInWaterRainOrBubble();
         if (!peril && !feu) return;
+        boolean grave = isInLava() || isInWall() || level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE);
+        // Pas de refuge à portée tout à l'heure : il ne refait pas la recherche avant une seconde (sauf danger grave).
+        if (!grave && tickCount < sansRefugeJusqua) return;
         Actions.Echapper e = new Actions.Echapper(feu);
         boolean refuge = e.choisir(this);
-        if (!refuge && (feu || !isInLava() && !isInWall() && !level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE))) return;
+        if (!refuge) sansRefugeJusqua = tickCount + 20;
+        if (!refuge && (feu || !grave)) return;
         if (lettreEnMain != null) { garder(lettreEnMain, true); lettreEnMain = null; }
         ecouteTicks = 0;
         ecoutePar = null;
@@ -661,8 +668,14 @@ public class Travailleur extends PathfinderMob {
         Cerveau.lancer(this, e);
     }
 
-    /** À terre, tout juste frappé, au combat ou en fuite (même pour une consigne du chef). */
-    boolean menace() { return aTerre || vientDEtreFrappe() || enCombat(action) || action instanceof Consignes.Faire f && enCombat(f.sous); }
+    /**
+     * À terre, tout juste frappé, au combat ou en fuite (même pour une consigne du chef), ou en péril (lave, feu, enseveli,
+     * sans air) : ni écoute d'un messager, ni lecture de lettre.
+     */
+    boolean menace() {
+        return aTerre || vientDEtreFrappe() || enCombat(action) || action instanceof Consignes.Faire f && enCombat(f.sous)
+                || action instanceof Actions.Echapper || enPeril();
+    }
 
     /** Menacé, ou un monstre à 8 blocs qu'il voit ou qui le vise (pas celui qu'un mur sépare de lui). */
     boolean enDanger() {
