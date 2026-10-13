@@ -173,7 +173,8 @@ final class IA {
         return t.statut() + " ; " + t.activite() + " Position : " + Messages.ou(t) + ". Santé " + (int) Math.ceil(t.getHealth()) + "/" + (int) t.getMaxHealth()
                 + ", faim " + t.faim + "/20, fatigue " + t.fatigue + "/100. Missions : " + missions + ". Horaires : de " + t.debut + " h à " + t.fin
                 + " h ; expéditions de " + t.joursExpedition + " jours au plus. Salaire : " + Reglages.texte(t.salaireVerse()) + " par paie"
-                + (t.impayes > 0 ? ", " + t.impayes + " paie(s) en retard" : "") + (t.besoin.isEmpty() ? "" : ". Il lui manque : " + t.besoin) + ".";
+                + (t.impayes > 0 ? ", " + t.impayes + " paie(s) en retard" : "") + ". Moral " + t.moral + "/100"
+                + (t.prime > 0 ? ", prime promise : " + Reglages.texte(t.prime) : "") + (t.besoin.isEmpty() ? "" : ". Il lui manque : " + t.besoin) + ".";
     }
 
     static String catalogue(Travailleur t) {

@@ -51,9 +51,11 @@ final class Ordres {
         /** Les ordres longs ({@link OrdresLongs}) : des règles à garder, « oublie tes ordres », des missions à refaire chaque jour. */
         final List<OrdresLongs.Regle> regles = new ArrayList<>();
         boolean annulerRegles, quotidien;
+        /** Un ordre qui le tuerait (« saute dans la lave ») : le danger ({@link Obeissance#mortel}), sinon null. */
+        String mortel;
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
-                && regles.isEmpty() && !annulerRegles; }
+                && regles.isEmpty() && !annulerRegles && mortel == null; }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -244,6 +246,7 @@ final class Ordres {
         // Une mission comprise le remet au travail : « escorte-moi » ou « viens avec 10 fers » ne veulent pas dire « suis-moi ».
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);
+        l.mortel = Obeissance.mortel(texte);
         return l;
     }
 

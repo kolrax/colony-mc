@@ -188,6 +188,66 @@ final class Messages {
         m("dit_jours", null, "Entendu : mes expéditions dureront {0} jours au plus.", "D'accord : {0} jours d'expédition au plus.");
         m("dit_aide", null, "Tu peux me dire : « suis-moi », « arrête de me suivre », « attends ici », « au travail », « rentre au poste », « montre ton sac », « ramène 10 fers et 1 diamant », « garde 32 charbons en stock », « travaille de 8 h à 20 h », « comment ça va ? », « où en es-tu ? », « pourquoi tu ne travailles pas ? ». Et des centaines d'autres choses : « garde à vous », « assieds-toi », « danse », « fais le cochon », « mets-toi derrière moi », « donne-moi ton pain », « raconte une blague », « où est le poste ? », « repos »… (la liste est dans l'onglet Actions du panneau).");
         m("dit_merci_objet", null, "Merci, chef !", "Merci, ça tombe bien.", "Parfait, merci.");
+
+        // L'obéissance (cahier 8.4) : il râle, marchande ou refuse, selon son moral et son caractère.
+        m("rale", null, "Encore moi… Bon, j'y vais, chef.", "Toujours les mêmes qui triment… Soit, j'y vais.", "Hmpf. Si tu le dis, chef.");
+        t("rale", "peureux", "Je n'aime pas ça du tout, chef… mais j'y vais.", "Brr… Bon, puisqu'il le faut.");
+        t("rale", "colerique", "Grr… Toujours les sales besognes ! J'y vais, chef.");
+        t("rale", "fourbe", "Mais bien sûr, chef… comme toujours, c'est pour moi.");
+        m("force", null, "Bien, bien… puisque c'est un ordre. Mais je m'en souviendrai.", "Soit. J'obéis, chef, mais le cœur n'y est pas.");
+        t("force", "colerique", "Grr… À tes ordres, chef. Mais ce n'est pas juste !");
+        t("force", "peureux", "D'accord, d'accord, ne te fâche pas, chef… J'y vais.");
+        m("negocie", null, "Je veux bien, chef, mais ce sera {0} de plus à la paie. Marché conclu ?",
+                "C'est une rude besogne, chef. Pour {0} de plus à la paie, je m'y mets. D'accord ?");
+        t("negocie", "fourbe", "Pour toi, chef, tout est possible… contre {0} de plus à la paie. Marché conclu ?");
+        t("negocie", "peureux", "C'est dangereux, chef… Pour {0} de plus à la paie, je veux bien m'y risquer. D'accord ?");
+        m("marche", null, "Marché conclu, chef !", "Topons là, chef !");
+        t("marche", "fourbe", "Tope là, chef ! Tu ne le regretteras pas.");
+        m("pas_de_marche", null, "Alors ce sera sans moi, chef.", "Tant pis, chef : sans rien de plus, je ne le ferai pas.");
+        t("pas_de_marche", "fourbe", "Dommage… Trouve-toi un autre benêt, alors.");
+        m("sans_marche", null, "Bon… Je le ferai quand même, mais le cœur n'y est pas.", "Soit. Pour rien, alors… J'y vais.");
+        m("refus_paie", null, "Non, chef : ma paie est en retard. Paie-moi ce que tu me dois, et on en reparlera.",
+                "Travailler, oui, mais pas pour rien : ma paie n'est pas venue, chef.");
+        t("refus_paie", "colerique", "Trimer pour rien ? Pas question ! Paie-moi d'abord.");
+        m("refus_faim", null, "J'ai le ventre vide, chef : je ne partirai pas ainsi. Donne-moi d'abord à manger.",
+                "Le ventre creux, je n'irai pas loin, chef. Un morceau de pain d'abord.");
+        m("refus_fatigue", null, "Je tiens à peine debout, chef. Laisse-moi me reposer avant ça.",
+                "Je suis rompu de fatigue, chef. Pas avant une bonne nuit de sommeil.");
+        m("refus_coups", null, "Tu me frappes, et tu voudrais que je trime pour toi ? Non, chef.",
+                "On ne mène pas les hommes à coups de poing, chef. Ce sera non.");
+        t("refus_coups", "peureux", "Tu… tu m'as frappé, chef. Je n'ose plus… Non, pas ça.");
+        m("refus_moral", null, "Non, chef. Le cœur n'y est plus : je ne ferai pas ça aujourd'hui.",
+                "Pas cette fois, chef. Je n'en ai plus la force ni l'envie.");
+        t("refus_moral", "colerique", "Pas question ! Trouve quelqu'un d'autre pour cette besogne.");
+        m("refus_ferme", null, "Non, chef, c'est non. {0}", "Crie tant que tu voudras, chef : c'est non. {0}");
+        // Cahier 8.5 : un ordre qui le tuerait, il refuse, même en insistant.
+        m("mortel_lave", null, "Dans la lave ? On n'en ressort qu'en fumée, chef. Non.", "La lave ? Même pour double paie, je tiens à ma peau. Non, chef.");
+        t("mortel_lave", "peureux", "Dans la lave ?! Rien que d'y penser, mes genoux tremblent. Jamais !");
+        t("mortel_lave", "colerique", "Dans la lave ? Vas-y donc le premier, chef, je te regarde !");
+        t("mortel_lave", "fourbe", "Dans la lave ? Bien sûr, chef… juste après toi.");
+        m("mortel_vide", null, "Sauter dans le vide ? Je n'ai pas d'ailes, chef. Non.", "D'aussi haut, on ne retombe qu'une fois, chef. Non.");
+        t("mortel_vide", "peureux", "Rien qu'à regarder en bas, j'ai le vertige… Jamais, chef !");
+        t("mortel_vide", "colerique", "Saute toi-même si ça te chante ! Moi, je reste là.");
+        t("mortel_vide", "fourbe", "Volontiers, chef… dès qu'il me poussera des ailes.");
+        m("mortel_feu", null, "Dans le feu ? Je ne suis pas une bûche, chef. Non.", "Le feu, c'est pour cuire le pain, chef, pas les ouvriers. Non.");
+        t("mortel_feu", "peureux", "Le feu ?! Non, non et non, chef !");
+        t("mortel_feu", "colerique", "Jette-toi au feu toi-même, chef ! Moi, je n'y vais pas.");
+        m("mortel_noyade", null, "Me noyer ? Je bois l'eau, chef, je ne la laisse pas me boire. Non.", "Je ne suis pas un poisson, chef. Non.");
+        t("mortel_noyade", "peureux", "Je nage déjà si mal… Non, chef, par pitié !");
+        t("mortel_noyade", "fourbe", "Me noyer ? Quelle drôle d'idée, chef. Non, merci.");
+        m("mortel_creuser", null, "Creuser droit sous mes pieds ? Tout mineur sait où ça mène : dans la lave ou au fond d'un trou. Non, chef.",
+                "On ne creuse jamais sous ses pieds, chef : c'est la première chose qu'on apprend à la mine. Non.");
+        t("mortel_creuser", "peureux", "Sous mes pieds ? Et si c'était la lave en dessous ? Jamais, chef !");
+    }
+
+    /** Ce qu'il dit pour refuser encore, même en insistant : ce qui le ferait changer d'avis. */
+    static String remede(String raison) {
+        return switch (raison) {
+            case "paie" -> "Paie-moi d'abord.";
+            case "faim" -> "Donne-moi d'abord à manger.";
+            case "fatigue" -> "Laisse-moi d'abord me reposer.";
+            default -> "Paie-moi bien et laisse-moi souffler : on verra ensuite.";
+        };
     }
 
     // --- Composer --------------------------------------------------------------------------------------
@@ -251,6 +311,7 @@ final class Messages {
         b.append(t.getHealth() < t.getMaxHealth() / 3 ? "Je suis mal en point" : t.getHealth() < t.getMaxHealth() * 0.7 ? "J'ai quelques blessures" : "Je me porte bien");
         b.append(t.faim <= 6 ? ", et j'ai très faim" : t.faim <= 12 ? ", j'ai un peu faim" : "");
         b.append(t.fatigue >= 80 ? ", et je suis épuisé." : t.fatigue >= 50 ? ", un peu fatigué." : ".");
+        b.append(t.moral >= 75 ? " J'ai le cœur à l'ouvrage." : t.moral < 25 ? " Mais j'ai le moral au plus bas." : t.moral < 50 ? " Le moral n'y est pas trop." : "");
         return b.toString();
     }
 

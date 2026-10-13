@@ -187,7 +187,8 @@ final class Dialogue {
                 long renvoiAvant = t.memoire.getLong("renvoi");
                 String regles = t.appliquer(lecture, enFace);
                 // Un renvoi demande toujours confirmation : on pose la question clairement.
-                ia = t.memoire.getLong("renvoi") == renvoiAvant && !d.reponse().isEmpty();
+                // Un refus, un marché ou un ordre mortel : c'est son obéissance qui répond, pas l'IA (cahier 8.4, 8.5).
+                ia = t.memoire.getLong("renvoi") == renvoiAvant && !d.reponse().isEmpty() && !t.reponseImposee;
                 r = ia ? d.reponse() : regles;
                 humeur = d.humeur();
             }

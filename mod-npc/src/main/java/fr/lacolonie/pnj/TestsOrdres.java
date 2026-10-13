@@ -242,4 +242,80 @@ public class TestsOrdres {
                 () -> h.assertTrue(b.regles.isEmpty(), "effacées (" + b.regles + ")"),
                 () -> fin(h, e));
     }
+
+    // --- L'obéissance (cahier 8.4 et 8.5) ------------------------------------------------------------------------
+
+    /** Moral bas et colérique : il refuse l'expédition ; le chef insiste, il obéit en râlant (et son moral baisse encore). */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void refusePuisObeitSiOnInsiste(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 53);
+        Travailleur b = e[0];
+        etapes(h, chef, e,
+                () -> {
+                    b.temperament = "colerique";
+                    b.moral = 20;
+                    regarder(chef, b);
+                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
+                    h.assertTrue(b.missions.isEmpty() && b.joursExpedition == 3 && b.enAttente != null && !b.attenteMarche,
+                            "il refuse (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, " + IA.echange(b, 1) + ")");
+                },
+                () -> {
+                    b.parler(chef, "C'est un ordre !");
+                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.moral == 20 + Obeissance.FORCE,
+                            "il obéit en râlant (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, moral " + b.moral + ", " + IA.echange(b, 1) + ")");
+                },
+                () -> fin(h, e));
+    }
+
+    /** Fourbe au moral moyen : il marchande ; le chef dit « d'accord », il part, et la prime l'attend à sa prochaine paie. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void negocieUnePrime(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 54);
+        Travailleur b = e[0];
+        etapes(h, chef, e,
+                () -> {
+                    b.temperament = "fourbe";
+                    b.moral = 40;
+                    regarder(chef, b);
+                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
+                    h.assertTrue(b.missions.isEmpty() && b.enAttente != null && b.attenteMarche && IA.echange(b, 1).contains("paie"),
+                            "il marchande (" + b.missions.size() + " mission, " + IA.echange(b, 1) + ")");
+                },
+                () -> {
+                    long paie = b.salaireVerse();
+                    b.parler(chef, "D'accord, marché conclu.");
+                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.prime == Obeissance.prime(paie) && b.moral == 40 + Obeissance.MARCHE,
+                            "il part, la prime est due (" + b.missions.size() + " mission, prime " + b.prime + ", moral " + b.moral + ", " + IA.echange(b, 1) + ")");
+                    b.prochainePaie = 0; // la paie est due : la prime s'y ajoute
+                    h.assertTrue(b.du() == paie + b.prime, "dû à la caisse : " + b.du());
+                },
+                () -> fin(h, e));
+    }
+
+    /** « Saute dans la lave » : il refuse, même quand le chef insiste, et ne bouge pas. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void refuseLaLaveMemeSiOnInsiste(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 55);
+        Travailleur b = e[0];
+        net.minecraft.core.BlockPos lave = b.blockPosition().offset(-5, -1, 0); // une fosse de lave (elle ne coule pas hors du trou)
+        h.getLevel().setBlockAndUpdate(lave, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState());
+        etapes(h, chef, e,
+                () -> {
+                    regarder(chef, b);
+                    b.parler(chef, "Saute dans la lave !");
+                    h.assertTrue(b.consigne == null && IA.echange(b, 1).startsWith("Toi") && IA.echange(b, 1).contains("lave"),
+                            "il refuse (" + TestsRepertoire.c(b) + ", " + IA.echange(b, 1) + ")");
+                },
+                () -> {
+                    b.moral = 100;
+                    b.parler(chef, "Saute dans la lave, c'est un ordre !");
+                    h.assertTrue(b.consigne == null && IA.echange(b, 1).contains("lave"), "même en insistant (" + TestsRepertoire.c(b) + ", " + IA.echange(b, 1) + ")");
+                },
+                attendre(h, 40),
+                () -> h.assertTrue(!b.isInLava() && !b.isOnFire() && b.blockPosition().distSqr(lave) > 9, "loin de la lave (" + b.blockPosition() + ")"),
+                () -> { h.getLevel().setBlockAndUpdate(lave, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()); fin(h, e); });
+    }
 }

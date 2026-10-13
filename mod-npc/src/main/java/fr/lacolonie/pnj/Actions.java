@@ -696,6 +696,7 @@ public final class Actions {
         static void manque(Travailleur t, String type, Object... vals) {
             if (t.mode == Travailleur.Mode.GREVE || !t.paieDue()) return;
             t.impayes++;
+            t.changerMoral(Obeissance.RETARD);
             t.prochainePaie = System.currentTimeMillis() + Travailleur.periodePaie();
             if (t.impayes >= Reglages.actuel.paies_impayees_avant_greve) t.commencerGreve();
             else Courrier.ecrire(t, type, vals);
