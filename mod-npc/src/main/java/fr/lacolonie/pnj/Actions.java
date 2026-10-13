@@ -688,22 +688,58 @@ public final class Actions {
     static final class Attaquer extends Action {
         final LivingEntity cible;
         int recharge;
+        /** Il tient un endroit (une porte, un pont) : il ne s'en écarte pas de plus de {@code laisse} blocs pour frapper. */
+        Vec3 poste;
+        double laisse;
+        /** Il a un arc ou une arbalète et des flèches (revu toutes les secondes) ; le recul devant un creeper. */
+        boolean arc;
+        Vec3 recul;
 
         Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; mobile = true; }
+
+        Attaquer tenir(Vec3 poste, double laisse) { this.poste = poste; this.laisse = laisse; return this; }
+
+        @Override
+        void fin(Travailleur t) {
+            super.fin(t);
+            if (t.geste().equals("tirer_arc")) t.setGeste("");
+        }
 
         Etat tick(Travailleur t) {
             if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > 32 * 32) return Etat.OK;
             if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;
-            if (t.isWithinMeleeAttackRange(cible) && t.getSensing().hasLineOfSight(cible)) {
+            if (age % 20 == 0) arc = Guerrier.peutTirer(t);
+            double d2 = t.distanceToSqr(cible);
+            boolean creeper = cible instanceof net.minecraft.world.entity.monster.Creeper;
+            boolean vue = t.getSensing().hasLineOfSight(cible);
+            // De loin, à l'arc : il ne va pas au-devant d'un creeper, il recule et le tire.
+            if (arc && (d2 > 4 * 4 || creeper) && d2 < 24 * 24) {
+                if (creeper && d2 < 7 * 7) {
+                    if (recul == null || age % 20 == 0 || t.position().distanceToSqr(recul) < 2) recul = DefaultRandomPos.getPosAway(t, 10, 4, cible.position());
+                    if (recul != null && (poste == null || recul.distanceToSqr(poste) <= laisse * laisse + 16)) { t.setGeste(""); marcher(t, recul, 1.3); return Etat.EN_COURS; }
+                }
+                if (vue && Monde.ligneDeTir(t, cible)) {
+                    t.getNavigation().stop();
+                    Guerrier.prendreArc(t);
+                    t.setGeste("tirer_arc");
+                    if (recharge == 0) recharge = Guerrier.tirer(t, cible);
+                    return Etat.EN_COURS;
+                }
+            }
+            if (t.geste().equals("tirer_arc")) t.setGeste("");
+            if (t.isWithinMeleeAttackRange(cible) && vue) {
                 t.getNavigation().stop();
+                if (Guerrier.TIR.objet(t.getMainHandItem())) Guerrier.armer(t);
                 if (recharge == 0) {
                     t.swing(InteractionHand.MAIN_HAND);
                     t.doHurtTarget(cible);
                     recharge = (int) Math.max(6, 14 / t.facteurTravail());
                 }
             } else {
+                // Il tient sa place : le monstre trop loin de son poste, il le laisse (il reviendra s'il approche).
+                if (poste != null && cible.position().distanceToSqr(poste) > laisse * laisse) return Etat.OK;
                 if (coince()) return laisser(t, "inaccessible");
                 marcher(t, cible.position(), 1.25);
             }

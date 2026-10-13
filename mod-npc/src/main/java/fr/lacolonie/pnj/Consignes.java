@@ -113,6 +113,9 @@ final class Consignes {
     /** Au plus tant de liquides bouchés pour un chantier ; au-delà, il s'arrête (un lac, une rivière). */
     static final int BOUCHONS = 24;
 
+    /** Tenir un endroit (une porte, un pont) : il ne s'en écarte pas de plus de tant de blocs pour frapper. */
+    static final double TENIR = 6;
+
     static final String[] ACQUIS = {"À tes ordres, chef.", "Bien, chef.", "Tout de suite, chef.", "D'accord, chef.", "C'est parti !", "Compte sur moi."};
 
     // --- Recevoir un ordre ------------------------------------------------------------------------------------
@@ -158,6 +161,11 @@ final class Consignes {
                 vitesse(t, e.arg(), maintenant);
                 return reponse(t, e, "Bien, chef.");
             }
+            case "combat" -> {
+                // Le parcours de sa ronde : l'endroit que regarde le chef, ou tout effacer.
+                if (e.arg().equals("ronde_point")) { BlockPos vu = regardBloc(chef, 64); return Guerrier.retenirPoint(t, vu == null ? null : vu.above()); }
+                if (e.arg().equals("ronde_effacer")) return Guerrier.effacerRonde(t);
+            }
             default -> {}
         }
 
@@ -190,7 +198,11 @@ final class Consignes {
                     }
                     case "garder_ici" -> {
                         if (lieu == null || lieu.distSqr(t.blockPosition()) > 24 * 24) lieu = t.blockPosition();
-                        else lieu = lieu.above();
+                        else if (t.level().getBlockState(lieu).is(BlockTags.DOORS) || t.level().getBlockState(lieu).is(BlockTags.FENCE_GATES)) {
+                            // Une porte : il se poste devant, du côté du chef (pas dans l'embrasure).
+                            if (t.level().getBlockState(lieu.below()).is(BlockTags.DOORS)) lieu = lieu.below();
+                            lieu = debout(t.level(), lieu.relative(Direction.getNearest(chef.getX() - lieu.getX() - 0.5, 0, chef.getZ() - lieu.getZ() - 0.5)));
+                        } else lieu = lieu.above();
                     }
                     case "proteger_chef", "patrouiller", "repli" -> entite = chef.getUUID();
                     default -> {}
@@ -1407,7 +1419,17 @@ final class Consignes {
                     Vec3 centre = protege != null ? protege.position() : Vec3.atBottomCenterOf(c.lieu);
                     if (sous instanceof Actions.Attaquer) { if (deleguer(t, sous) != null) sous = null; return Actions.Etat.EN_COURS; }
                     LivingEntity m = menace(t, centre, protege);
-                    if (m != null) { if (sous != null) sous.fin(t); sous = new Actions.Attaquer(m); return Actions.Etat.EN_COURS; }
+                    // Il tient une porte ou un pont : il n'en bouge que pour un monstre tout proche ; plus loin, il le tire à l'arc s'il peut.
+                    boolean tenir = e.arg().equals("garder_ici");
+                    if (m != null && tenir && m.distanceToSqr(centre) > TENIR * TENIR && !(Guerrier.peutTirer(t) && t.getSensing().hasLineOfSight(m))) {
+                        t.getLookControl().setLookAt(m);
+                        m = null;
+                    }
+                    if (m != null) {
+                        if (sous != null) sous.fin(t);
+                        sous = tenir ? new Actions.Attaquer(m).tenir(centre, TENIR) : new Actions.Attaquer(m);
+                        return Actions.Etat.EN_COURS;
+                    }
                     Vec3 place = centre;
                     double portee = protege != null ? 3 : 1.5;
                     if (e.arg().equals("patrouiller")) {

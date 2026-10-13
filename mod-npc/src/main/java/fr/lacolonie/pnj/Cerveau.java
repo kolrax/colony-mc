@@ -62,6 +62,22 @@ final class Cerveau {
             t.coupVu = t.getLastHurtByMobTimestamp();
             t.finirAction("interrompu");
         }
+        // Un creeper tout près d'un ouvrier qui ne se bat pas : il s'en éloigne et appelle la garde (cahier 14.11), que le
+        // guerrier entend (Guerrier.veille). Seulement s'il a où aller : sinon il ne lâcherait son travail que pour rien.
+        if (!m.combattant && !(t.action instanceof Actions.Fuir) && !(t.action instanceof Actions.Echapper) && !t.isSleeping()) {
+            var creeper = t.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Creeper.class, t.getBoundingBox().inflate(5, 2, 5),
+                    c -> c.isAlive() && t.getSensing().hasLineOfSight(c)).stream().findFirst().orElse(null);
+            Vec3 loin = creeper == null ? null : net.minecraft.world.entity.ai.util.DefaultRandomPos.getPosAway(t, 16, 7, creeper.position());
+            if (loin != null) {
+                t.memoire.putInt("alerte", creeper.getId());
+                t.memoire.putLong("alerte_t", t.level().getGameTime());
+                dire(t, "creeper", 20, "Un creeper ! À la garde !");
+                Actions.Fuir f = new Actions.Fuir(creeper);
+                f.refuge = loin;
+                lancer(t, f);
+                return;
+            }
+        }
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;

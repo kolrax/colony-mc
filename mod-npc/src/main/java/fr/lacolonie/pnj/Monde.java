@@ -5,6 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.monster.Enemy;
@@ -326,6 +327,17 @@ final class Monde {
             if (!s.getCollisionShape(l, q).isEmpty() || !s.getFluidState().isEmpty()) return false;
             if (p.getY() - q.getY() > 20) return true;
         }
+        return true;
+    }
+
+    /**
+     * Rien ni personne à épargner entre l'archer et sa cible : ni un joueur, ni un autre ouvrier, ni une bête sur la
+     * trajectoire (une flèche ne choisit pas qui elle touche).
+     */
+    static boolean ligneDeTir(Travailleur t, LivingEntity cible) {
+        Vec3 de = t.getEyePosition(), a = cible.getBoundingBox().getCenter();
+        for (Entity e : t.level().getEntities(t, new AABB(de, a).inflate(1), x -> x != cible && x instanceof LivingEntity l && l.isAlive() && !hostile(l) && !x.isSpectator()))
+            if (e.getBoundingBox().inflate(0.4).clip(de, a).isPresent()) return false;
         return true;
     }
 
