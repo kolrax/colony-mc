@@ -181,13 +181,16 @@ public class TestsGuerrier {
         t.finirAction("ordre");
         var husk = fige(h, EntityType.HUSK, pont.east(9));
         long[] debut = {-1};
+        String[] faute = {null};
         h.succeedWhen(() -> {
             if (debut[0] < 0) debut[0] = h.getTick();
             long age = h.getTick() - debut[0];
+            // Une faute de la première phase est retenue : le test échouera avec elle (une assertion ici serait seulement retentée).
+            h.assertTrue(faute[0] == null, faute[0]);
             if (age < 160) {
                 // D'abord, il rejoint sa place et y reste malgré le monstre à 9 blocs.
-                if (age > 80) h.assertTrue(t.position().distanceToSqr(Vec3.atBottomCenterOf(pont)) < 2.5 * 2.5, "il tient sa place (" + TestsJeu.etat(t, pont) + ")");
-                h.assertTrue(husk.isAlive(), "le monstre à 9 blocs n'est pas poursuivi");
+                if (age > 80 && t.position().distanceToSqr(Vec3.atBottomCenterOf(pont)) > 2.5 * 2.5) faute[0] = "il doit tenir sa place (" + TestsJeu.etat(t, pont) + ")";
+                if (!husk.isAlive()) faute[0] = "le monstre à 9 blocs ne doit pas être poursuivi";
                 throw new net.minecraft.gametest.framework.GameTestAssertException("on attend");
             }
             if (husk.isAlive() && husk.distanceToSqr(Vec3.atBottomCenterOf(pont)) > 16) husk.moveTo(pont.getX() + 3.5, pont.getY(), pont.getZ() + 0.5);
