@@ -19,6 +19,8 @@ class ConversationsTest {
 
     @Test
     void leFichierSeLit() {
+        // Strict : une seule erreur dans le fichier livré fait échouer le test (le jeu, lui, ignorerait le bloc).
+        assertEquals(Conversations.TOUTES.size(), Conversations.lire(Repertoire.lignes("/conversations.txt")).size());
         assertTrue(Conversations.TOUTES.size() >= 200, "au moins 200 conversations : " + Conversations.TOUTES.size());
         for (Conversations.Conversation c : Conversations.TOUTES) {
             assertTrue(c.repliques().size() >= 2 && c.repliques().size() <= 6, "ligne " + c.ligne());
@@ -39,6 +41,13 @@ class ConversationsTest {
         assertThrows(IllegalStateException.class, () -> Conversations.lire(List.of("= travail |", "A | Salut {c}.", "B | y")), "variable inconnue");
         assertThrows(IllegalStateException.class, () -> Conversations.lire(List.of("= travail", "A | x", "B | y")), "barre obligatoire");
         assertEquals(1, Conversations.lire(List.of("# rien", "", "= travail | nuit, meme_metier, metier_b=macon", "A | x", "B | y")).size());
+        // Lecture du jeu : le bloc fautif est laissé de côté et signalé, les autres sont gardés.
+        List<String> signales = new java.util.ArrayList<>();
+        List<Conversations.Conversation> lues = Conversations.lire(List.of("= a | pluvieux", "A | x", "B | y", "= b |", "A | z", "B | w"), x -> signales.add(x.getMessage()));
+        assertEquals(1, lues.size());
+        assertEquals("b", lues.get(0).sujet());
+        assertEquals(1, signales.size());
+        assertTrue(signales.get(0).contains("ligne 1"), signales.get(0));
     }
 
     @Test

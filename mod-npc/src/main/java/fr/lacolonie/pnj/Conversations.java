@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,7 +49,9 @@ final class Conversations {
 
     static void charger() {
         TOUTES.clear();
-        TOUTES.addAll(lire(Repertoire.lignes("/conversations.txt")));
+        // Un bloc fautif ne doit pas empêcher le mod de démarrer : il est laissé de côté et noté au journal (le test, lui, est strict).
+        // System.err : le jeu le recopie dans latest.log, et la classe reste en pur Java (pas de slf4j sous JUnit).
+        TOUTES.addAll(lire(Repertoire.lignes("/conversations.txt"), e -> System.err.println("[colonie_pnj] Conversation ignorée : " + e.getMessage())));
     }
 
     static boolean connue(String c) {
@@ -63,40 +66,47 @@ final class Conversations {
         };
     }
 
-    /** Lit le fichier ; une erreur (condition inconnue, répliques qui n'alternent pas…) arrête tout, avec le numéro de ligne. */
-    static List<Conversation> lire(List<String> lignes) {
+    /** Lit le fichier, strictement : la première erreur (condition inconnue, répliques qui n'alternent pas…) arrête tout, avec le numéro de ligne. */
+    static List<Conversation> lire(List<String> lignes) { return lire(lignes, e -> { throw e; }); }
+
+    /** Lit le fichier ; un bloc fautif est laissé de côté et signalé à {@code erreurs}, les autres sont gardés. */
+    static List<Conversation> lire(List<String> lignes, Consumer<IllegalStateException> erreurs) {
         List<Conversation> r = new ArrayList<>();
-        int debut = 0;
-        String sujet = null;
-        List<String> conds = null;
-        List<Replique> reps = null;
+        List<Integer> bloc = new ArrayList<>(); // numéros des lignes utiles du bloc en cours
         for (int n = 1; n <= lignes.size() + 1; n++) {
             String l = n <= lignes.size() ? lignes.get(n - 1).strip() : "=";
             if (l.isEmpty() || l.startsWith("#")) continue;
-            if (l.startsWith("=")) {
-                if (sujet != null) {
-                    if (reps.size() < 2 || reps.size() > 6) throw erreur(debut, "il faut 2 à 6 répliques (" + reps.size() + ")");
-                    r.add(new Conversation(debut, sujet, List.copyOf(conds), List.copyOf(reps)));
-                }
-                if (n > lignes.size()) break;
-                int barre = l.indexOf('|');
-                if (barre < 0) throw erreur(n, "la barre « | » manque après le sujet");
-                debut = n;
-                sujet = l.substring(1, barre).strip();
-                if (sujet.isEmpty() || sujet.contains(" ")) throw erreur(n, "sujet vide ou avec un espace");
-                conds = new ArrayList<>();
-                for (String c : l.substring(barre + 1).split(",")) {
-                    c = c.strip();
-                    if (c.isEmpty()) continue;
-                    if (!connue(c)) throw erreur(n, "condition inconnue « " + c + " »");
-                    conds.add(c);
-                }
-                reps = new ArrayList<>();
-                continue;
+            if (l.startsWith("=") && !bloc.isEmpty()) {
+                try { r.add(bloc(lignes, bloc)); }
+                catch (IllegalStateException e) { erreurs.accept(e); }
+                bloc.clear();
             }
-            if (sujet == null) throw erreur(n, "réplique hors d'un bloc");
-            int barre = l.indexOf('|');
-            String qui = barre < 0 ? "" : l.substring(0, barre).strip(), texte = barre < 0 ? "" : l.substring(barre + 1).strip();
+            if (n <= lignes.size()) bloc.add(n);
+        }
+        return r;
+    }
+
+    /** Un bloc : la ligne « = sujet | conditions » puis ses répliques (numéros de lignes à partir de 1). */
+    static Conversation bloc(List<String> lignes, List<Integer> numeros) {
+        int debut = numeros.get(0);
+        String l = lignes.get(debut - 1).strip();
+        if (!l.startsWith("=")) throw erreur(debut, "réplique hors d'un bloc");
+        int barre = l.indexOf('|');
+        if (barre < 0) throw erreur(debut, "la barre « | » manque après le sujet");
+        String sujet = l.substring(1, barre).strip();
+        if (sujet.isEmpty() || sujet.contains(" ")) throw erreur(debut, "sujet vide ou avec un espace");
+        List<String> conds = new ArrayList<>();
+        for (String c : l.substring(barre + 1).split(",")) {
+            c = c.strip();
+            if (c.isEmpty()) continue;
+            if (!connue(c)) throw erreur(debut, "condition inconnue « " + c + " »");
+            conds.add(c);
+        }
+        List<Replique> reps = new ArrayList<>();
+        for (int n : numeros.subList(1, numeros.size())) {
+            l = lignes.get(n - 1).strip();
+            int b = l.indexOf('|');
+            String qui = b < 0 ? "" : l.substring(0, b).strip(), texte = b < 0 ? "" : l.substring(b + 1).strip();
             boolean deA = reps.size() % 2 == 0;
             if (!qui.equals(deA ? "A" : "B")) throw erreur(n, "il faut « " + (deA ? "A" : "B") + " | texte » (A et B alternent, A d'abord)");
             if (texte.isEmpty()) throw erreur(n, "réplique vide");
@@ -104,7 +114,8 @@ final class Conversations {
             while (m.find()) if (!VARIABLES.contains(m.group(1))) throw erreur(n, "variable inconnue {" + m.group(1) + "}");
             reps.add(new Replique(deA, texte));
         }
-        return r;
+        if (reps.size() < 2 || reps.size() > 6) throw erreur(debut, "il faut 2 à 6 répliques (" + reps.size() + ")");
+        return new Conversation(debut, sujet, List.copyOf(conds), List.copyOf(reps));
     }
 
     static IllegalStateException erreur(int ligne, String quoi) { return new IllegalStateException("conversations.txt ligne " + ligne + " : " + quoi); }

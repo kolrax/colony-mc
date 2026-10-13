@@ -66,7 +66,7 @@ final class Causeries {
             Travailleur o = autre;
             // L'autre part, est frappé, reçoit un ordre ou une lettre, un monstre approche : la conversation cesse.
             if (c.rompue || !o.isAlive() || o.isRemoved() || o.level() != t.level() || !(o.action instanceof Bavarder b && b.c == c)
-                    || t.distanceToSqr(o) > LOIN * LOIN || t.hurtTime > 0 || o.hurtTime > 0 || o.lettreEnMain != null || o.ecouteTicks > 0
+                    || t.distanceToSqr(o) > LOIN * LOIN || t.reflechit || o.reflechit || t.hurtTime > 0 || o.hurtTime > 0 || o.lettreEnMain != null || o.ecouteTicks > 0
                     || age % 20 == 10 && t.enDanger() || age > DUREE_MAX) {
                 c.rompue = !c.fini;
                 raison = "interrompu";
@@ -92,13 +92,15 @@ final class Causeries {
     }
 
     /**
-     * Oisif : il attend (au moins 2 s), se repose sans dormir, ou n'a rien en cours ; au travail ou au poste ; ni en grève,
+     * Oisif : il attend (au moins 2 s), se repose arrivé à son lit ou au poste sans dormir, ou n'a rien en cours en mode attente ; au travail ou au poste ; ni en grève,
      * ni à terre, ni menacé (frappé, combat, fuite, péril), ni muet, ni affamé, ni sa paie à toucher, ni une consigne, une
      * lettre, un messager ou l'IA en cours.
      */
     static boolean oisif(Travailleur t) {
         Actions.Action a = t.action;
-        boolean libre = a == null || a instanceof Actions.Attendre at && at.ticks >= 40 || a instanceof Actions.Reposer;
+        // Pas « sans action » en plein travail (entre deux tâches, il reprendrait 25 s plus tard), sauf mis à attendre ; au repos, arrivé.
+        boolean libre = a instanceof Actions.Attendre at && at.ticks >= 40 || a == null && t.mode == Travailleur.Mode.ATTENDRE
+                || a instanceof Actions.Reposer r && r.but != null && t.position().distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(r.but)) <= 2.5 * 2.5;
         return libre && t.chef != null && (t.mode == Travailleur.Mode.TRAVAIL || t.mode == Travailleur.Mode.ATTENDRE)
                 && !t.isSleeping() && !t.aTerre && !t.muet() && t.lettreEnMain == null && t.ecouteTicks <= 0 && !t.reflechit
                 && t.consigne == null && t.faim > 8 && !t.paieDue() && !t.menace();

@@ -85,7 +85,7 @@ public class TestsConversations {
             if (vue[0] == null && (vue[0] = causerie(t1)) == null) return;
             if (coup[0] < 0 && vue[0].dites.size() >= 1) {
                 Travailleur b = vue[0].b;
-                z[0] = h.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(7, 2, 7));
+                z[0] = h.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(4, 2, 7));
                 b.hurt(h.getLevel().damageSources().mobAttack(z[0]), 1f);
                 coup[0] = h.getTick();
             }
