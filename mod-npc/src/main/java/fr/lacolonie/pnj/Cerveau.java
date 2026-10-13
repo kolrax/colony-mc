@@ -83,7 +83,15 @@ final class Cerveau {
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
-        if (t.action != null) { if (!Blessures.horsDeCombat(t)) m.vigilance(t); return; }
+        // Très grave en plein combat (sans consigne du chef) : il rompt et recule ; sinon, il ne cherche pas de nouveau combat.
+        if (t.action != null) {
+            if (!Blessures.horsDeCombat(t)) m.vigilance(t);
+            else if (t.action instanceof Actions.Attaquer a) {
+                dire(t, "fuite", 30, "Je suis trop mal en point pour me battre !");
+                lancer(t, new Actions.Fuir(a.cible));
+            }
+            return;
+        }
         CompoundTag mem = t.memoire;
 
         // Attaqué (même en grève) : un combattant riposte contre un monstre ou un autre PNJ, sinon il recule ; les autres
@@ -144,7 +152,7 @@ final class Cerveau {
 
         // Les ordres du chef.
         if (t.mode == Travailleur.Mode.SUIVRE) {
-            if (!m.escorter(t)) lancer(t, new Actions.SuivreChef());
+            if (Blessures.horsDeCombat(t) || !m.escorter(t)) lancer(t, new Actions.SuivreChef());
             return;
         }
         if (t.mode == Travailleur.Mode.ATTENDRE) { attendre(t, 2); return; }

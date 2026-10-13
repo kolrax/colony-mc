@@ -51,6 +51,7 @@ final class Blessures {
     static void blesser(Travailleur t, Gravite coup) {
         if (coup == Gravite.AUCUNE) return;
         Gravite avant = gravite(t), g = Gravite.cumuler(avant, coup);
+        if (g == avant) return; // la même gravité : la date ne bouge pas (sinon, frappé chaque nuit, il ne guérirait jamais)
         noter(t, g);
         if (g.cle() != null) Besoins.parler(t, g.cle(), null);
     }
@@ -65,6 +66,8 @@ final class Blessures {
     static void lenteur(Travailleur t) {
         var a = t.getAttribute(Attributes.MOVEMENT_SPEED);
         if (a == null) return;
+        // L'heure remise en arrière (« /time set day ») : la blessure repart de maintenant, sinon elle ne guérirait plus.
+        if (t.memoire.contains("blessure") && t.level().getDayTime() < t.memoire.getLong("blessure_le")) t.memoire.putLong("blessure_le", t.level().getDayTime());
         Gravite g = gravite(t);
         if (g == Gravite.AUCUNE && t.memoire.contains("blessure")) { t.memoire.remove("blessure"); t.memoire.remove("blessure_le"); }
         AttributeModifier m = a.getModifier(LENTEUR);
@@ -76,10 +79,12 @@ final class Blessures {
 
     /**
      * Juste avant de travailler : blessé très gravement, un mineur ou un guerrier ne descend pas à la mine et ne se bat
-     * pas. Il rentre au poste et s'y repose. Vrai s'il s'en occupe.
+     * pas. Il rentre au poste et s'y repose (le guerrier boit ou mange d'abord : {@link Guerrier#soigner}). Une consigne
+     * du chef (un ordre de guerre) passe avant : le cerveau la joue plus tôt. Vrai s'il s'en occupe.
      */
     static boolean auRepos(Travailleur t, Metier m) {
         if (!gravite(t).auRepos() || !(m.combattant || "mineur".equals(t.metier)) || t.bureau == null) return false;
+        if (m instanceof Guerrier && Guerrier.soigner(t)) return true;
         if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 5 * 5) { Cerveau.rentrer(t); return true; }
         Besoins.parler(t, "blessure_grave", null);
         Cerveau.attendre(t, 10);
@@ -104,7 +109,7 @@ final class Blessures {
     }
 
     static boolean peutAccourir(Travailleur o) {
-        if ((o.mode != Travailleur.Mode.TRAVAIL && o.mode != Travailleur.Mode.GREVE) || o.consigne != null || o.isSleeping()
+        if ((o.mode != Travailleur.Mode.TRAVAIL && o.mode != Travailleur.Mode.GREVE) || o.consigne != null || o.isSleeping() || o.memoire.getBoolean("rappel")
                 || o.action instanceof Accourir || o.lettreEnMain != null || o.enDanger()) return false;
         if (Metier.de(o.metier) instanceof Guerrier) {
             Metier.Commande c = Metier.commande(o);
@@ -142,7 +147,7 @@ final class Blessures {
                 if (d > 6 * 6) return Actions.Etat.ECHEC; // pas de passage jusqu'à lui
                 arrive = true;
                 t.getNavigation().stop();
-                Besoins.parler(t, "blesse_vu", blesse.prenom);
+                if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
             }
             t.getLookControl().setLookAt(blesse);
             return Actions.Etat.EN_COURS;

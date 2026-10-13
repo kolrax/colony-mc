@@ -19,7 +19,8 @@ import java.util.UUID;
 
 /**
  * Lot 5, les blessures (cahier 1.11 et 5.12) : gravité selon le coup, temps à terre selon la gravité, les compagnons qui
- * accourent autour du blessé, guérison avec les jours, repos forcé quand c'est très grave. Coins 130 à 133 du monde plat.
+ * accourent autour du blessé, guérison avec les jours, repos forcé quand c'est très grave, combat rompu.
+ * Coins 130 à 134 du monde plat.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -122,7 +123,7 @@ public class TestsBlessures {
             h.assertTrue(autour.size() == 3, "les trois se tiennent autour de lui (" + autour.size() + ")");
             for (Travailleur t : aides) h.assertTrue(TestsVie.dites(t, "blesse_vu") == 1, t.prenom + " lui dit un mot (" + t.paroles + ")");
             h.assertTrue(releve[0] >= 0 && !blesse.aTerre, "relevé");
-            h.assertTrue(TestsVie.dites(blesse, "soigne") == 1, "il remercie (" + blesse.paroles + ")");
+            h.assertTrue(TestsVie.dites(blesse, "releve") == 1, "il dit qu'il est debout (" + blesse.paroles + ")");
             h.assertTrue(partis[0], "relevé, ils repartent");
             blesse.discard();
             aides.forEach(Travailleur::discard);
@@ -131,7 +132,7 @@ public class TestsBlessures {
     }
 
     /**
-     * Une chute de 6 points : blessure grave, il le dit et marche 15 % moins vite. Un jour de jeu plus tard (la date de la
+     * Une chute qui lui ôte 35 % de sa vie (sa vie va de 20 à 28 points selon ses étoiles) : blessure grave, il le dit et marche 15 % moins vite. Un jour de jeu plus tard (la date de la
      * blessure reculée d'un jour), elle n'est plus que légère et la lenteur s'en va ; un jour encore, guérie et oubliée.
      */
     @GameTest(template = "vide", timeoutTicks = 300)
@@ -140,8 +141,8 @@ public class TestsBlessures {
         Travailleur t = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
         t.forcerChunk();
         ServerLevel l = h.getLevel();
-        t.hurt(t.damageSources().fall(), 6);
-        h.assertTrue(Blessures.gravite(t) == Gravite.GRAVE, "une chute de 6 : grave (" + Blessures.gravite(t) + ")");
+        t.hurt(t.damageSources().fall(), t.getMaxHealth() * 0.35f);
+        h.assertTrue(Blessures.gravite(t) == Gravite.GRAVE, "une chute de 35 % : grave (" + Blessures.gravite(t) + ", vie " + t.getHealth() + "/" + t.getMaxHealth() + ")");
         h.assertTrue(lenteur(t) == 0.15, "15 % plus lent (" + lenteur(t) + ")");
         h.assertTrue(TestsVie.dites(t, "blessure_grave") == 1, "il le dit (" + t.paroles + ")");
         int[] etape = {0};
@@ -191,6 +192,35 @@ public class TestsBlessures {
             h.assertTrue(lent[0], "30 % plus lent");
             h.assertTrue(gueri[0] && Blessures.gravite(t) == Gravite.GRAVE, "un jour après, grave seulement");
             h.assertFalse(l.getBlockState(filon).is(Blocks.COAL_ORE), "puis il mine le filon (" + TestsJeu.etat(t, base) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Un guerrier frappe un husk (figé, solide) ; en plein combat, sa blessure devient très grave : il rompt et recule, et ne
+     * reprend pas le combat. Avant : il continuait de frapper, sans plus pouvoir boire ni reculer.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void tresGraveRomptLeCombat(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 134 * 400, 60000);
+        Travailleur t = TestsJeu.employe(h, "guerrier", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_SWORD));
+        t.forcerChunk();
+        var husk = TestsGuerrier.fige(h, net.minecraft.world.entity.EntityType.HUSK, base.west(2).south(5));
+        husk.getAttribute(Attributes.MAX_HEALTH).setBaseValue(500);
+        husk.setHealth(500);
+        long[] blesse = {-1}, fuite = {-1};
+        boolean[] reprend = {false};
+        h.onEachTick(() -> {
+            if (blesse[0] < 0 && t.action instanceof Actions.Attaquer) { Blessures.noter(t, Gravite.TRES_GRAVE); blesse[0] = h.getTick(); }
+            if (blesse[0] >= 0 && fuite[0] < 0 && t.action instanceof Actions.Fuir) fuite[0] = h.getTick();
+            if (fuite[0] >= 0 && t.action instanceof Actions.Attaquer) reprend[0] = true;
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(blesse[0] >= 0, "il attaque le husk (" + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(fuite[0] >= 0 && fuite[0] - blesse[0] <= 40, "très grave, il recule aussitôt (" + TestsJeu.etat(t, base) + ")");
+            h.assertFalse(reprend[0], "il ne reprend pas le combat");
+            h.assertTrue(h.getTick() >= fuite[0] + 200, "10 s sans reprendre");
+            husk.discard();
             t.discard();
         });
     }

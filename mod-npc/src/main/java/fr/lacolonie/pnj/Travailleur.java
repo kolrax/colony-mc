@@ -341,8 +341,12 @@ public class Travailleur extends PathfinderMob {
     int faimCompteur, soinCompteur;
     public boolean aTerre, mortDefinitive;
     int aTerreTicks;
-    /** La gravité du coup en cours ({@link #hurt}), lue par {@link #tomberATerre} s'il le met à terre. */
-    Gravite coupRecu = Gravite.AUCUNE;
+    /**
+     * Le coup en cours ({@link #hurt}) : sa vie juste avant (-1 hors d'un coup) et sa source. La gravité se mesure à la vie
+     * vraiment perdue (armure comprise), aussi dans {@link #tomberATerre} s'il le met à terre.
+     */
+    float vieAvantCoup = -1;
+    Gravite.Source sourceCoup = Gravite.Source.SANS;
     public final SimpleContainer inventaire = new SimpleContainer(27) {
         @Override
         public boolean stillValid(Player p) { return isAlive() && p.distanceToSqr(Travailleur.this) < 64; }
@@ -1146,8 +1150,9 @@ public class Travailleur extends PathfinderMob {
 
     void tomberATerre() {
         // Le temps à terre avant la mort dépend de la gravité : 3 min (légère), 5 min (grave), 8 min (très grave).
-        Gravite g = Gravite.aTerre(Blessures.gravite(this), coupRecu);
-        coupRecu = Gravite.AUCUNE;
+        Gravite coup = vieAvantCoup < 0 ? Gravite.AUCUNE : Gravite.du(vieAvantCoup - Math.max(0, getHealth()), getMaxHealth(), sourceCoup);
+        vieAvantCoup = -1;
+        Gravite g = Gravite.aTerre(Blessures.gravite(this), coup);
         Blessures.noter(this, g);
         aTerre = true;
         aTerreTicks = g.ticksATerre();
@@ -1181,7 +1186,7 @@ public class Travailleur extends PathfinderMob {
         setPose(Pose.STANDING);
         setHealth(6);
         majNom();
-        Besoins.dire(this, "soigne", p.getName().getString());
+        Besoins.dire(this, "releve", null);
     }
 
     @Override
@@ -1191,12 +1196,13 @@ public class Travailleur extends PathfinderMob {
             if (!(src.getEntity() instanceof Player) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false;
             mortDefinitive = true;
         }
-        // La gravité du coup (dégâts, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
-        coupRecu = level().isClientSide || aTerre ? Gravite.AUCUNE : Gravite.du(amount, getMaxHealth(), Blessures.source(src));
-        boolean debout = !aTerre;
+        // La gravité du coup (vie vraiment perdue, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
+        boolean debout = !aTerre && !level().isClientSide;
+        if (debout) { vieAvantCoup = getHealth(); sourceCoup = Blessures.source(src); }
+        float avant = vieAvantCoup;
         boolean touche = super.hurt(src, amount);
-        if (touche && debout && !aTerre && !level().isClientSide) Blessures.blesser(this, coupRecu);
-        coupRecu = Gravite.AUCUNE;
+        if (touche && debout && !aTerre) Blessures.blesser(this, Gravite.du(avant - getHealth(), getMaxHealth(), sourceCoup));
+        vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
             changerMoral(Obeissance.COUP_CHEF);
