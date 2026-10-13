@@ -193,7 +193,7 @@ textarea:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:va
   </main>
 
   <div class="foot" id="foot">
-    <p>Une session de travail démarre toutes les 6 heures dans le cloud, à 2 h 59, 8 h 59, 14 h 59 et 20 h 59 (rythme réglé pour que le quota tienne jusqu'au vendredi 16 à 18 h). Chacune dure 2 heures au plus. Les sessions remplissent ce panneau elles-mêmes, au fil de leur travail.</p>
+    <p>Une session de travail démarre toutes les 8 heures dans le cloud, à 2 h 59, 10 h 59 et 18 h 59 (heure de Paris), et travaille environ 2 heures. Le rythme est calculé pour utiliser ton quota de la semaine jusqu'à 97-98 % avant sa remise à zéro du vendredi 18 h.</p>
     <p>Le code et le journal complet sont sur <a href="https://github.com/kolrax/colony-mc" target="_blank" rel="noopener">github.com/kolrax/colony-mc</a>.</p>
   </div>
 </div>
@@ -248,9 +248,9 @@ function duree(a, b) {
   const m = Math.max(0, Math.round((y - x) / 60000));
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
 }
-function prochaine() { // routine : minute 59 des heures UTC multiples de 6
+function prochaine() { // routine : minute 59 des heures UTC multiples de 8
   const d = new Date(); d.setUTCSeconds(0, 0);
-  for (let i = 0; i < 7 * 60; i++) { d.setUTCMinutes(d.getUTCMinutes() + 1); if (d.getUTCMinutes() === 59 && d.getUTCHours() % 6 === 0) return d; }
+  for (let i = 0; i < 9 * 60; i++) { d.setUTCMinutes(d.getUTCMinutes() + 1); if (d.getUTCMinutes() === 59 && d.getUTCHours() % 8 === 0) return d; }
   return null;
 }
 const pill = (cls, txt) => `<span class="pill ${cls}">${esc(txt)}</span>`;

@@ -140,8 +140,10 @@ Bilan du 12/10 : lots 0 à 2 faits en 8 sessions, avec une très bonne qualité,
 - **Les restes mineurs** (cas limites rares, finitions, « non testé » sans danger) vont dans `docs/plus-tard.md`, jamais dans une session dédiée. Exception : ce qui peut tuer un PNJ, perdre des objets, planter le serveur ou le faire ralentir.
 - **Moins de tests garde-fous** : un test par comportement nouveau (qui échoue avant), pas une batterie de variantes.
 - **Un seul serveur de test à la fois**, jamais deux agents qui lancent `runGameTestServer` en même temps.
-- **Cadence** : une session toutes les 6 heures (0 h 59, 6 h 59, 12 h 59, 18 h 59 UTC). La limite hebdomadaire de KOLRAX ne se remet à zéro que le **vendredi 16/10 à 18 h** : il reste environ 16 sessions. Chaque session doit livrer quelque chose de visible en jeu.
-- **Gel jeudi 15/10 à 18 h UTC** : après, plus de nouveautés. Seulement des corrections, la vérification complète et la version finale (serveur + modpack), prête le vendredi 16 à 12 h UTC au plus tard.
+- **Cadence (décidée le 13/10, calculée sur le quota)** : une session toutes les 8 heures (0 h 59, 8 h 59, 16 h 59 UTC). Le quota hebdomadaire de KOLRAX (67 % le 13/10 à 17 h 30 UTC, remise à zéro le vendredi 16/10 à 16 h UTC) doit être utilisé jusqu'à 97-98 %, ni plus ni moins. Une heure de session coûte environ 2 % : il reste environ 14 heures de travail, soit 8 sessions d'environ 1 h 45.
+- **Remplir la session** : après chaque livraison, s'il reste plus de 30 minutes, prends tout de suite la case suivante du plan. Arrête-toi proprement vers 2 h (jamais au-delà de 2 h 15). Une session qui s'arrête à 50 minutes gâche du temps de travail.
+- **Travailler en parallèle** : pendant que le développeur code, lance l'`auteur` (textes) ou l'`artiste` (skins, icônes) sur la case suivante qui en a besoin. Eux n'ont pas besoin du serveur de test. Un seul `runGameTestServer` à la fois reste la règle.
+- **Pas de gel jeudi** : KOLRAX envisage d'ouvrir lundi 19/10, et un sprint suivra la remise à zéro du quota. La session du vendredi 8 h 59 UTC laisse le serveur stable et livré.
 
 ## Quota
 KOLRAX a un abonnement Claude Max 5x, partagé avec ses autres projets. Travaille par lots courts qui se terminent proprement : un commit à chaque étape qui marche. Si le quota coupe une session, la suivante reprend grâce au plan et au journal.
