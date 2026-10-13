@@ -322,6 +322,8 @@ public class Travailleur extends PathfinderMob {
     final Souvenirs souvenirs = new Souvenirs();
     /** Ce qu'il répond tout de suite à ce qui le marque dans la phrase du chef (le temps d'appliquer un ordre). */
     String reaction = "";
+    /** La réaction dit tout (récit, phrase courte) : pas de « je n'ai pas compris » en plus. */
+    boolean reactionSuffit;
     // Corps
     public int faim = 20;
     int faimCompteur, soinCompteur;
@@ -1320,9 +1322,13 @@ public class Travailleur extends PathfinderMob {
         if (player.isShiftKeyDown() && !enMain.isEmpty()) {
             // De quoi travailler ou manger : il remercie. Autre chose (un diamant…) : il s'en souvient et demande quoi en faire.
             boolean utile = enMain.getFoodProperties(this) != null || enMain.isDamageableItem() || enMain.getItem() instanceof net.minecraft.world.item.BlockItem;
-            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), enMain.getCount() + " " + enMain.getHoverName().getString().toLowerCase());
-            ranger(enMain.copy());
-            enMain.setCount(0);
+            ItemStack reste = inventaire.addItem(enMain.copy());
+            int pris = enMain.getCount() - reste.getCount();
+            if (pris == 0) { dire("Mon sac est plein, chef."); return InteractionResult.CONSUME; } // rien de pris : il le garde en main
+            int piece = Reglages.piece(enMain);
+            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), piece >= 0
+                    ? Reglages.texte((long) pris * Reglages.actuel.monnaie.get(piece).valeur) : Souvenirs.nombre(pris, Consignes.nom(enMain)));
+            enMain.setCount(reste.getCount());
             dire(Messages.corps(this, utile ? "dit_merci_objet" : "souv_cadeau"));
             return InteractionResult.CONSUME;
         }
@@ -1403,7 +1409,9 @@ public class Travailleur extends PathfinderMob {
         reponseImposee = false;
         reaction = parRegle ? "" : seSouvenir(l);
         String reponse = obeir(l, enFace);
-        if (!reaction.isEmpty()) reponse = reponse.isEmpty() ? reaction : reponse + " " + reaction;
+        if (!reaction.isEmpty()) reponse = reponse.isEmpty() ? reaction : reaction + " " + reponse;
+        // « Tu te souviens… ? » : c'est sa mémoire qui répond, l'IA n'invente pas de promesse à sa place.
+        if (!parRegle && Souvenirs.question(l.texte)) reponseImposee = true;
         reaction = "";
         // Un ordre qui change ce qu'il fait (pas une question, pas une lettre de nouvelles) : le compte « coincé » repart de zéro.
         if (mode != avant || action != actionAvant) coince.progres(getX(), getY(), getZ());
@@ -1419,14 +1427,20 @@ public class Travailleur extends PathfinderMob {
      * promesse. « Tu te souviens… ? » : il raconte.
      */
     private String seSouvenir(Ordres.Lecture l) {
-        if (chef == null || mode == Mode.CHOMEUR || l.texte.isBlank()) return "";
+        if (chef == null || mode == Mode.CHOMEUR || l.texte.isBlank() && l.regles.isEmpty()) return "";
         long j = jour();
         int h = IA.heure(this);
-        if (Souvenirs.question(l.texte)) return souvenirs.raconter(l.texte, j, h);
-        if (!l.missions.isEmpty() || !l.regles.isEmpty() || l.jours > 0 || l.quotidien) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, l.texte);
+        reactionSuffit = false;
+        if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
+        // Les ordres longs : leur phrase est retirée de l.texte (« s'il pleut, rentre au poste » ne laisse rien) ; chacun est noté.
+        for (OrdresLongs.Regle x : l.regles) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, Souvenirs.CONSIGNE + OrdresLongs.quand(x) + ", " + quoi(x));
+        if (!l.texte.isBlank() && (!l.missions.isEmpty() || l.jours > 0 || l.quotidien)) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, l.texte);
         List<String> r = new ArrayList<>();
+        // Une phrase courte (« Tu es un bon à rien ! », « Bravo, Raoul ! ») est toute comprise ; plus longue, il dit aussi ce qu'il n'a pas compris.
+        reactionSuffit = l.texte.strip().split("\\s+").length <= 8;
         for (Souvenirs.Genre g : Souvenirs.lire(l.texte)) {
-            souvenirs.noter(g, j, h, l.texte);
+            if (g == Souvenirs.Genre.CADEAU && souvenirs.deja(g, j)) { /* l'objet tendu tout à l'heure est déjà noté */ }
+            else souvenirs.noter(g, j, h, g == Souvenirs.Genre.CADEAU ? Souvenirs.PRESENT : l.texte);
             switch (g) {
                 case INSULTE -> { changerMoral(Obeissance.INSULTE); r.add(Messages.corps(this, "souv_insulte")); }
                 case COMPLIMENT -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_compliment")); }
@@ -1630,7 +1644,7 @@ public class Travailleur extends PathfinderMob {
         if (l.intentions.contains(Ordres.Intention.MERCI) && reaction.isEmpty()) r.add(Messages.corps(this, "dit_merci"));
         majNom();
         if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty())
-            return enFace == null || !reaction.isEmpty() ? "" : Messages.corps(this, "dit_pas_compris");
+            return enFace == null || !reaction.isEmpty() && reactionSuffit ? "" : Messages.corps(this, "dit_pas_compris");
         return String.join(" ", r);
     }
 

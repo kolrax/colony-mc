@@ -22,6 +22,17 @@ class SouvenirsTest {
         assertEquals(List.of(), Souvenirs.lire("J'ai une mission pour toi : ramène 10 fers."));
     }
 
+    /** Seule compte l'insulte qui s'adresse à lui : pas un ordre de guerre, ni un mot sur une chose ou sur le chef lui-même. */
+    @Test
+    void insulteAdresseeSeulement() {
+        for (String p : List.of("Tue cette vermine !", "Chassez ces gueux", "Attention à ce misérable zombie", "Je suis incapable de le trouver",
+                "C'est idiot de miner ici"))
+            assertNull(Souvenirs.insulte(p), p);
+        assertEquals("bon à rien", Souvenirs.insulte("Tu es un bon à rien"));
+        assertEquals("idiot", Souvenirs.insulte("Espèce d'idiot !"));
+        assertEquals("imbécile", Souvenirs.insulte("Raoul, imbécile !"));
+    }
+
     @Test
     void quaranteAuPlusEtLesPlusPrecieuxRestent() {
         Souvenirs s = new Souvenirs();

@@ -42,7 +42,17 @@ final class Souvenirs {
     static final String[] PROMESSES = {"je te promets", "je vous promets", "je te le promets", "promis", "c est promis", "je te jure", "parole de chef",
             "je te donnerai", "je te paierai", "je te payerai", "je te ferai", "je t offrirai", "je t apporterai", "je te rendrai", "tu auras",
             "tu recevras", "tu toucheras", "je t augmenterai", "je t augmente"};
-    static final String[] PAS_PROMESSE = {"m as promis", "m avais promis", "t ai promis", "je t ai promis", "t avais promis"};
+    /** Le chef parle d'une promesse passée, ou de celle de l'ouvrier : ce n'est pas la sienne. */
+    static final String[] PAS_PROMESSE = {"m as promis", "m avais promis", "t ai promis", "je t ai promis", "t avais promis", "tu as promis", "tu avais promis",
+            "tu l as promis", "tu l avais promis", "tu me l as promis", "tu me l avais promis", "as tu promis", "avais tu promis", "tu promets", "tu me promets"};
+    /** Ce qui, juste avant le mot, montre que l'insulte s'adresse à lui (« tu es un… », « espèce d'… », « bande de… »). */
+    static final String[] ADRESSES = {"tu es", "t es", "tu n es qu", "toi", "vous etes", "vous n etes que", "espece d", "espece de", "sale", "quel", "quelle",
+            "quels", "quelles", "bande d", "bande de", "es tu", "etes vous"};
+    static final String[] ARTICLES = {"ce", "cet", "cette", "ces", "le", "la", "les", "l", "un", "une", "des", "du", "de", "d"};
+    /** Un cadeau annoncé de vive voix (sans objet tendu) : on retient le geste, pas la phrase. */
+    static final String PRESENT = "un présent";
+    /** Un ordre long, noté à la première personne (« consigne : s'il pleut, je rentre au poste à l'abri »). */
+    static final String CONSIGNE = "consigne : ";
     static final String[] COMPLIMENTS = {"bravo", "bien joue", "merci", "beau travail", "bon travail", "excellent", "parfait", "bien fait",
             "du bon travail", "tu es le meilleur", "t es le meilleur", "felicitations", "je suis fier de toi", "c est du beau travail"};
     static final String[] CADEAUX = {"c est pour toi", "ce sont pour toi", "c est un cadeau", "un cadeau", "je te l offre", "je te les offre", "cadeau",
@@ -54,17 +64,35 @@ final class Souvenirs {
 
     static boolean un(String n, String... formules) { return Ordres.dit(n, formules); }
 
-    /** Le premier mot d'insulte de la phrase (normalisée ou non), ou null. Une négation devant (« tu n'es pas un idiot ») l'annule. */
+    /**
+     * Le premier mot d'insulte qui s'adresse à lui, ou null. Il faut que le mot vienne juste après « tu es (un) »,
+     * « espèce de », « sale », « quel », « bande de »… (trois mots au plus d'écart), ou qu'il soit seul dans la phrase (avec
+     * un prénom tout au plus). « Tue cette vermine », « ce misérable zombie », « je suis incapable », « c'est idiot » : non.
+     * Une négation devant (« tu n'es pas un idiot ») l'annule.
+     */
     static String insulte(String phrase) {
         String n = Ordres.normaliser(phrase);
         for (String m : INSULTES) {
             String x = Ordres.normaliser(m).strip();
-            int i = n.indexOf(" " + x + " ");
-            if (i < 0) i = n.indexOf(" " + x + "s ");
+            int i = n.indexOf(" " + x + " "), longueur = x.length() + 1;
+            if (i < 0) { i = n.indexOf(" " + x + "s "); longueur++; }
             if (i < 0) continue;
-            String avant = n.substring(Math.max(0, i - 20), i);
-            if (avant.contains(" pas ") || avant.contains(" plus ") || avant.contains(" jamais ")) continue;
-            return m;
+            String avant = n.substring(0, i + 1);
+            String[] mots = avant.strip().isEmpty() ? new String[0] : avant.strip().split(" ");
+            String proches = " " + String.join(" ", java.util.Arrays.copyOfRange(mots, Math.max(0, mots.length - 4), mots.length)) + " ";
+            if (un(proches, "je suis", "pas", "plus", "jamais", "point")) continue;
+            String reste = (avant + n.substring(i + longueur + 1)).replace(" ? ", " ").strip();
+            boolean adresse = false;
+            for (String a : ADRESSES) {
+                int k = proches.lastIndexOf(" " + a + " ");
+                // Au plus trois mots entre la formule et l'insulte : « tu es vraiment un bon à rien », « quel triple idiot ».
+                if (k < 0 || proches.substring(k + a.length() + 2).strip().split(" ").length > 3) continue;
+                String[] devant = proches.substring(0, k).strip().split(" ");
+                if (!un(" " + devant[devant.length - 1] + " ", ARTICLES)) { adresse = true; break; } // « tue ce sale gueux » : non
+            }
+            // Seul dans la phrase (« Imbécile ! », « Raoul, idiot ! ») mais pas après un article (« cette vermine », « un gueux »).
+            boolean article = mots.length > 0 && un(" " + mots[mots.length - 1] + " ", ARTICLES);
+            if (adresse || !article && (reste.isEmpty() || !reste.contains(" "))) return m;
         }
         return null;
     }
@@ -89,6 +117,15 @@ final class Souvenirs {
         return r;
     }
 
+    /** « 1 diamant », « 3 diamants », « 2 lingots d'or » (le premier mot prend la marque du pluriel). */
+    static String nombre(int n, String nom) {
+        if (n <= 1 || nom.isEmpty()) return n + " " + nom;
+        int e = nom.indexOf(' ');
+        String premier = e < 0 ? nom : nom.substring(0, e);
+        if (!premier.endsWith("s") && !premier.endsWith("x") && !premier.endsWith("z")) premier += "s";
+        return n + " " + premier + (e < 0 ? "" : nom.substring(e));
+    }
+
     /** La phrase, sans blancs en trop, coupée à 80 caractères. */
     static String resumer(String phrase) {
         String s = phrase.strip().replaceAll("\\s+", " ");
@@ -105,6 +142,9 @@ final class Souvenirs {
         while (liste.size() > MAX)
             liste.remove(liste.stream().min(Comparator.comparingLong(Souvenir::valeur)).orElseThrow()); // à égalité, le plus ancien
     }
+
+    /** A-t-il déjà un souvenir de ce genre ce jour-là ? */
+    boolean deja(Genre g, long jour) { return liste.stream().anyMatch(s -> s.genre == g && s.jour == jour); }
 
     /** Un compliment ou un cadeau remonte le moral une fois par jour au plus : vrai si c'est la première fois aujourd'hui. */
     boolean bonus(long jour) {
@@ -136,9 +176,10 @@ final class Souvenirs {
             case PROMESSE -> jour - s.jour > 2 ? "Tu m'avais promis « " + s.texte + " », " + q + ". J'attends toujours."
                     : majuscule(q) + ", tu m'as promis « " + s.texte + " ». Je m'en souviens.";
             case COUP -> "Tu as levé la main sur moi " + q + ". Ça, je ne l'oublie pas.";
-            case CADEAU -> majuscule(q) + ", tu m'as fait présent de " + s.texte + ".";
+            case CADEAU -> majuscule(q) + (PRESENT.equals(s.texte) ? ", tu m'as fait un présent." : ", tu m'as donné " + s.texte + ".");
             case COMPLIMENT -> majuscule(q) + ", tu m'as félicité : ça m'a fait chaud au cœur.";
-            case ORDRE -> majuscule(q) + ", tu m'as dit : « " + s.texte + " ».";
+            case ORDRE -> s.texte.startsWith(CONSIGNE) ? majuscule(q) + ", tu m'as donné une consigne : " + s.texte.substring(CONSIGNE.length()) + "."
+                    : majuscule(q) + ", tu m'as dit : « " + s.texte + " ».";
             case MARCHE -> majuscule(q) + ", nous avons conclu un marché : " + s.texte + ".";
         };
     }

@@ -46,3 +46,13 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
   - pseudo du chef et prénoms envoyés aux fournisseurs : envisager `provider: {data_collection: "deny"}` (vérifier d'abord qu'il reste des fournisseurs pour le modèle) ;
   - Groq puis OpenRouter tous deux au délai de 25 s : le chef peut attendre ~50 s avant l'interpréteur ;
   - jamais essayé contre le vrai OpenRouter (schéma JSON, `usage.cost`) : à vérifier avec un seul appel réel après livraison.
+- Mémoire longue (lot 3, première passe, relecture du 13/10, non corrigés) :
+  - insultes encore comptées à tort : « Quel idiot, ce zombie ! », « Il y a une espèce de vermine là-bas » ; ignorée sans adresse dans une phrase longue (« Raoul, ramène du fer, imbécile ») ;
+  - fausses promesses : « tu auras fini quand ? », « je te ferai pendre » ;
+  - « cadeau » seul (« ne leur fais pas de cadeau ») : +2 de moral, une fois par jour ;
+  - « pas compris » retiré pour les phrases de 8 mots ou moins avec une réaction (seuil grossier) ;
+  - une question de souvenir sort tôt : insulte ou promesse dans la même phrase non notée ;
+  - l'insulte coûte −5 quel que soit le caractère (14.7 couvert seulement par le texte) ;
+  - 14.14 précision (revendre, faire un outil du cadeau) non faite ; il ne rappelle jamais de lui-même une vieille promesse ;
+  - pluriel naïf des objets ; « avant-hier » dit « il y a 2 jours » ;
+  - non testés en jeu : objet donné en main (dont sac plein), coup du chef, lettres, chemins avec l'IA.
