@@ -65,10 +65,16 @@ public class TestsMineur {
         ChunkPos cp = new ChunkPos(a);
         ChunkAccess chunk = l.getChunk(cp.x, cp.z);
         var startsAvant = new HashMap<>(chunk.getAllStarts());
-        var refsAvant = new HashMap<>(chunk.getAllReferences());
         l.structureManager().setStartForStructure(SectionPos.bottomOf(chunk), s, new StructureStart(s, cp, 0, new PiecesContainer(List.of(piece))), chunk);
-        l.structureManager().addReferenceForStructure(SectionPos.bottomOf(chunk), s, cp.toLong(), chunk);
-        A_DEFAIRE.add(() -> { chunk.setAllStarts(startsAvant); chunk.setAllReferences(refsAvant); });
+        A_DEFAIRE.add(() -> chunk.setAllStarts(startsAvant));
+        // La référence dans chaque chunk que touche la pièce (selon où tombe le test, elle peut en chevaucher deux), comme le fait le monde.
+        for (int x = a.getX() >> 4; x <= b.getX() >> 4; x++)
+            for (int z = a.getZ() >> 4; z <= b.getZ() >> 4; z++) {
+                ChunkAccess c = l.getChunk(x, z);
+                var refsAvant = new HashMap<>(c.getAllReferences());
+                l.structureManager().addReferenceForStructure(SectionPos.bottomOf(c), s, cp.toLong(), c);
+                A_DEFAIRE.add(() -> c.setAllReferences(refsAvant));
+            }
     }
 
     /** Une lettre de ce type est partie vers son chef : gardée pour le poste, en vol, ou arrivée. */
