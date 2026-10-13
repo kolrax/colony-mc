@@ -149,7 +149,8 @@ public class TestsBlessures {
         h.onEachTick(() -> {
             if (etape[0] == 0 && h.getTick() > 40) { t.memoire.putLong("blessure_le", l.getDayTime() - Gravite.JOUR); etape[0] = 1; }
             else if (etape[0] == 1 && Blessures.gravite(t) == Gravite.LEGERE && lenteur(t) == 0) {
-                t.memoire.putLong("blessure_le", l.getDayTime() - Gravite.JOUR); // la légère : un jour encore
+                // Deux jours après la blessure : la mémoire garde la gravité du coup (grave) et sa date, pas la gravité du jour.
+                t.memoire.putLong("blessure_le", l.getDayTime() - 2 * Gravite.JOUR);
                 etape[0] = 2;
             }
         });
