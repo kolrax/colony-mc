@@ -241,6 +241,13 @@ final class Consignes {
                             if (!t.chezLui(lieu.relative(d, k[0] * p.longueur() / 2).relative(d.getClockWise(), k[1] * p.largeur() / 2)))
                                 return "C'est trop loin de mon poste, chef : je travaille près de chez nous.";
                 }
+                if (a.equals("abattre_betes")) {
+                    // L'espèce dite (« abats deux vaches ») et combien (une, sans nombre) ; sans espèce : les bêtes en trop.
+                    Elevage.Espece esp = Elevage.dite(phrase);
+                    texte = esp == null ? "" : esp.id();
+                    int q = Fouille.quantite(phrase);
+                    n = q > 0 ? Math.min(q, 64) : 1;
+                }
                 if (a.equals("planches") || a.equals("charbon")) {
                     // Le bois dit (« des planches de bouleau »), sinon n'importe quelle bûche (qui brûle, pour le charbon) ; la quantité dite.
                     String essence = Fouille.essence(phrase);
@@ -900,6 +907,7 @@ final class Consignes {
             }
             case "planter" -> { if (t.compter(Actions.Filtre.de("#minecraft:saplings")) == 0) return "Je n'ai pas de pousses à planter, chef."; }
             case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
+            case "nourrir", "tondre", "abattre_betes" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
             case "champ", "recolter", "pain" -> {
                 if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
                 if (mode.equals("champ") && vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef.";
@@ -1551,6 +1559,11 @@ final class Consignes {
                 case "champ", "recolter", "pain" -> {
                     // Le fermier : son action dit elle-même ce qu'elle a fait.
                     if (etape++ == 0) { sous = Fermier.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
+                }
+                case "nourrir", "tondre", "abattre_betes" -> {
+                    // L'éleveur : sa tournée des enclos dit elle-même ce qu'elle a fait.
+                    if (etape++ == 0) { sous = Eleveur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
                     return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "planches", "charbon" -> {

@@ -160,6 +160,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
           <tr><td>Paies impayées avant la grève</td><td><input type="number" min="1" id="r-greve"></td></tr>
           <tr><td>PNJ maximum par joueur</td><td><input type="number" min="0" id="r-max"></td></tr>
           <tr><td>Usure des outils des PNJ : … fois plus lente que pour un joueur (1 = pareil)</td><td><input type="number" min="1" id="r-usure"></td></tr>
+          <tr><td>Éleveur : au plus … bêtes de chaque espèce par enclos (il abat l'excédent)</td><td><input type="number" min="2" id="r-betes"></td></tr>
           <tr><td>Chercheurs d'emploi : une chance toutes les … minutes</td><td><input type="number" min="1" id="c-minutes"></td></tr>
           <tr><td>… avec une probabilité de (0 à 1)</td><td><input type="number" min="0" max="1" step="0.05" id="c-chance"></td></tr>
           <tr><td>Ils repartent au bout de … minutes s'ils ne sont pas embauchés</td><td><input type="number" min="1" id="c-duree"></td></tr>
@@ -347,7 +348,7 @@ function lignePiece(p = { objet: "", nom: "", valeur: 1 }) {
 function remplirEconomie(r) {
   $("#pieces").replaceChildren(...r.monnaie.map(lignePiece));
   for (let i = 1; i <= 5; i++) { $("#s" + i).value = r.salaire_par_niveau[i - 1]; $("#p" + i).value = r.prime_par_niveau[i - 1]; }
-  $("#r-paie").value = r.minutes_entre_paies; $("#r-greve").value = r.paies_impayees_avant_greve; $("#r-max").value = r.pnj_max_par_joueur; $("#r-usure").value = r.usure_outils;
+  $("#r-paie").value = r.minutes_entre_paies; $("#r-greve").value = r.paies_impayees_avant_greve; $("#r-max").value = r.pnj_max_par_joueur; $("#r-usure").value = r.usure_outils; $("#r-betes").value = r.betes_par_enclos;
   $("#c-minutes").value = r.chercheurs.minutes_entre_arrivees; $("#c-chance").value = r.chercheurs.chance; $("#c-duree").value = r.chercheurs.duree_minutes; $("#c-max").value = r.chercheurs.max_autour;
 }
 $("#ajout-piece").addEventListener("click", () => $("#pieces").append(lignePiece()));
@@ -358,7 +359,7 @@ $("#eco-enregistrer").addEventListener("click", async () => {
     .filter(p => p.objet && p.valeur > 0);
   r.salaire_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#s" + i).value);
   r.prime_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#p" + i).value);
-  r.minutes_entre_paies = +$("#r-paie").value; r.paies_impayees_avant_greve = +$("#r-greve").value; r.pnj_max_par_joueur = +$("#r-max").value; r.usure_outils = +$("#r-usure").value || 3;
+  r.minutes_entre_paies = +$("#r-paie").value; r.paies_impayees_avant_greve = +$("#r-greve").value; r.pnj_max_par_joueur = +$("#r-max").value; r.usure_outils = +$("#r-usure").value || 3; r.betes_par_enclos = +$("#r-betes").value || 12;
   r.chercheurs = { minutes_entre_arrivees: +$("#c-minutes").value, chance: +$("#c-chance").value, duree_minutes: +$("#c-duree").value, max_autour: +$("#c-max").value };
   try { const x = await api("/api/reglages", r); $("#eco-msg").textContent = x.ok ? "Enregistré." : x.erreur; if (x.ok) { ecoRempli = false; await charger(); } }
   catch (e) { $("#eco-msg").textContent = e.message; }
