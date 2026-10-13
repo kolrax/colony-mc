@@ -16,8 +16,8 @@ But : ouvrir seulement les fichiers utiles. Chaque ligne donne le rôle, la tail
 ## Construire et tester
 ```bash
 cd mod-npc
-./gradlew build                                  # compile + 126 tests JUnit (lot 4, bûcheron : + 4 BucheronTest)
-rm -rf run/world && ./gradlew runGameTestServer  # 174 tests en jeu (lot 4 : + 9 TestsMineur, + 10 TestsBucheron ; détail 0.9.4 : 48 TestsJeu, 22 TestsMorts, 19 TestsIA, 19 TestsRepertoire, 15 TestsOrdres, 13 TestsDeblocage, 12 TestsMessages, 7 TestsCharge)
+./gradlew build                                  # compile + 134 tests JUnit (lot 4, bûcheron : + 4 BucheronTest ; guerrier : + 2 GuerrierTest)
+rm -rf run/world && ./gradlew runGameTestServer  # 184 tests en jeu (lot 4 : + 9 TestsMineur, + 10 TestsBucheron, + 9 TestsGuerrier ; détail 0.9.4 : 48 TestsJeu, 22 TestsMorts, 19 TestsIA, 19 TestsRepertoire, 15 TestsOrdres, 13 TestsDeblocage, 12 TestsMessages, 7 TestsCharge)
 ./gradlew entrainer --args="code"                # réentraîne l'adressage (adressage.json)
 ./gradlew runPhotos                              # banc photo des gestes (client, écran requis)
 ```
