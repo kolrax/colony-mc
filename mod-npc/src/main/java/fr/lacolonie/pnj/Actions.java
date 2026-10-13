@@ -887,7 +887,7 @@ public final class Actions {
         BlockPos four;
         int etape, recu, arret;
         /** Ce qu'il a mis à cuire et à brûler (il ne reprend que ça). */
-        ItemStack mis = ItemStack.EMPTY, brule = ItemStack.EMPTY;
+        ItemStack mis = ItemStack.EMPTY, feuMis = ItemStack.EMPTY;
 
         Charbon(Filtre bois, int voulu) { super("charbon"); this.bois = bois; this.voulu = voulu; }
 
@@ -958,7 +958,7 @@ public final class Actions {
                     }
                     f.setItem(1, feu);
                     mis = dedans.copy();
-                    brule = feu.copy();
+                    feuMis = feu.copy();
                     f.setChanged();
                     t.swing(InteractionHand.MAIN_HAND);
                     etape = 2;
@@ -982,7 +982,7 @@ public final class Actions {
                     if (f.getItem(0).isEmpty() || arret >= 4 || recu >= mis.getCount()) {
                         // Fini, ou le feu s'est éteint : il reprend ses bûches pas cuites et son combustible (rien ne se perd).
                         for (int k = 0; k < 2; k++) {
-                            ItemStack a = f.getItem(k), sien = k == 0 ? mis : brule;
+                            ItemStack a = f.getItem(k), sien = k == 0 ? mis : feuMis;
                             if (!a.isEmpty() && ItemStack.isSameItemSameComponents(a, sien)) { t.ranger(a.split(Math.min(a.getCount(), sien.getCount()))); f.setChanged(); }
                         }
                         etape = 3;
