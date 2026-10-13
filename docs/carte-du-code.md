@@ -47,7 +47,8 @@ rm -rf run/world && ./gradlew runGameTestServer  # 174 tests en jeu (lot 4 : + 9
   - fichiers : `Travailleur` (`survivre`, `enPeril`, `menace`), `Actions` (`Echapper`, `Boucher`, `Casser.boucher`/`seMettreACote`), `Monde` (`tombe`, `eboulement`, `coulee`, `refuge`, `ligneSure`, `chute`, `eauProche`, `mortel`), `Mineur.creuserCase`, `Itineraire.commencerCreusage`/`monter`.
   - tests : `TestsMorts` (lot `morts`).
 - **Rendu, apparence** :
-  - fichiers : `Client` (modèle, rendu, bulles, écrans), `Poses` (angles des gestes), `Photos` (banc photo), `Corbeau`, textures dans `assets/`. Tout changement ici oblige à publier un modpack.
+  - fichiers : `Client` (modèle, rendu, bulles, écrans), `Tenues` (skin du métier), `Poses` (angles des gestes), `Photos` (banc photo), `Corbeau`, textures dans `assets/` (`textures/entity/ouvrier/<metier>_<1-3>.png`). Tout changement ici oblige à publier un modpack.
+  - tests : `TenuesTest` (JUnit), `TestsApparence.tenueSelonEmbauche` (en jeu).
 
 ## Cadence : ce qui tourne, et quand (pour le banc de charge)
 Par PNJ, dans `Travailleur.customServerAiStep()` :
@@ -124,10 +125,11 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Audio** (153) : WAV mono 16 bits, changement de fréquence (48/24/16 kHz), volume, phrases inventées par Whisper sur du silence. Pur Java.
 
 ## Interface client et réseau
-- **Client** (781) : tout ce qui tourne chez le joueur : `ModeleOuvrier` et `Rendu` (corps de joueur et skin), `ModeleCorbeau`, bulles, écrans `EcranFiche` (embauche), `EcranConversation`, `EcranPoste` (ouvriers, missions, horaires, paie, lettres), `EcranBureau`. Piège : jamais de texte avec fond en `DisplayMode.NORMAL`.
+- **Client** (781) : tout ce qui tourne chez le joueur : `ModeleOuvrier` et `Rendu` (corps de joueur et skin : `skin(Travailleur)` prend le skin du pseudo s'il y en a un, sinon la tenue de son métier, `Tenues.chemin(e.tenue(), uuid)`, modèle large, mise en cache dans `TENUES` ; le modèle fin ne sert qu'aux pseudos qui le demandent), `ModeleCorbeau`, bulles, écrans `EcranFiche` (embauche), `EcranConversation`, `EcranPoste` (ouvriers, missions, horaires, paie, lettres), `EcranBureau`. Piège : jamais de texte avec fond en `DisplayMode.NORMAL`.
+- **Tenues** (~40) : la tenue d'un ouvrier sans pseudo de skin, pur Java. `tenue(metier, embauche)` (« chomeur » tant qu'il n'est pas embauché), `variante(uuid)` (1 à 3, stable), `chemin(tenue, uuid)` (métier sans texture → chomeur). Côté jeu : donnée synchronisée `Travailleur.TENUE`, posée par `majNom()` (embauche, renvoi, grève, chargement, `auTravail`).
 - **Poses** (331) : angles de la tête, du corps, des bras et des jambes pour chaque geste ; `viser()` place une main sur un point. Pur Java.
 - **Photos** (98) : banc photo des gestes (`./gradlew runPhotos`, propriété `colonie.photos`). Jamais chez un joueur.
-- **Reseau** (110) : les paquets `Fiche`, `Commande`, `Conversation`, `Parler`, `Parole`, `Poste`, `ActionBureau`. Canal `registrar("6")` : le changer oblige à publier un modpack. Piège : vérifier `connection.hasChannel` avant d'envoyer (faux joueurs de test).
+- **Reseau** (110) : les paquets `Fiche`, `Commande`, `Conversation`, `Parler`, `Parole`, `Poste`, `ActionBureau`. Canal `registrar("7")` (7 : donnée `TENUE`) : le changer oblige à publier un modpack. Piège : vérifier `connection.hasChannel` avant d'envoyer (faux joueurs de test).
 
 ## Démarrage, réglages, admin
 - **ColoniePnj** (326) : point d'entrée du mod : enregistrements (entités `TRAVAILLEUR`, `CORBEAU`, bloc `BUREAU`, menus, `TICKETS` pour forcer les chunks), événements, `tous(server)` (tous les PNJ vivants, parcourt toutes les entités), tick serveur (recale les chunks toutes les 100 ticks, `Courrier.tick`, `Voix.tick`), arrivée des chercheurs d'emploi, **commande `/pnj`** (op niveau 2) : `chercheur <metier> [niveau] [skin]`, `recharger`, `liste`, `diag <prenom>`, `ia [recharger|test]`, `panneau`, `banc <N> [metier]` / `banc fin`, `charge`, `incompris` (les 10 phrases non comprises les plus fréquentes) / `incompris vider`.

@@ -79,6 +79,8 @@ public final class Photos {
         for (int i = 0; i < gestes.size(); i++) {
             Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
             t.tirerAuSort(i % 3 == 0 ? "guerrier" : i % 3 == 1 ? "mineur" : "bucheron", 3);
+            t.mode = Travailleur.Mode.ATTENDRE; // embauché : il porte la tenue de son métier
+            t.majNom();
             float yaw = vue == 0 ? 180 : 90;
             t.moveTo(x0 + (i - (gestes.size() - 1) / 2.0) * 1.9, y, z0, yaw, 0);
             t.setYHeadRot(yaw);
