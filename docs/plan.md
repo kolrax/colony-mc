@@ -36,7 +36,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 4. Métiers actuels plus malins (indispensable)
 - [x] Mineur (noté 3/5, première passe 13/10, 0.9.5-0.9.6) : suivre un filon, branches, carrière, tri, « trouve-moi du diamant », creuser selon un plan ; ne jamais creuser sous la base d'un autre joueur ni casser une structure (il s'arrête et prévient)
 - [x] Bûcheron (première passe 13/10, 0.9.7) : feuilles, forêt en rangs, essence demandée, planches et charbon de bois, défricher
-- [ ] Guerrier : ronde, escorte, défense des chantiers, chasse de nuit, mannequin, s'équiper et se soigner seul, arc et arbalète
+- [x] Guerrier (première passe 13/10, 0.9.9) : ronde, escorte, défense des chantiers, chasse de nuit, mannequin, s'équiper et se soigner seul, arc et arbalète
 - [ ] Outils fournis au dépôt, usure plus lente qu'un joueur
 
 ## 5. Vie, santé, moral (indispensable)
