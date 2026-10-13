@@ -66,7 +66,10 @@ cd mod-npc
 **Sur le serveur** (monde de test `test-andesite`, encore jetable) :
 1. Avant de redémarrer : `python tools/panel.py cmd "list"`, puis lire `python tools/panel.py cat /logs/latest.log 20`.
    - Si quelqu'un est connecté : 5 minutes de préavis en jeu (`tellraw`). Sinon, redémarrage libre, de préférence entre 3 h et 6 h.
-2. `python tools/panel.py upload mod-npc/build/libs/colonie_pnj-X.jar /mods`, puis `python tools/panel.py mv /mods/colonie_pnj-ANCIEN.jar /mods-off/colonie_pnj-ANCIEN.jar`. On ne supprime jamais un mod : on le range dans `/mods-off`.
+2. Envoi sûr, pour qu'une coupure (quota, réseau) ne laisse jamais le serveur cassé :
+   - envoyer le nouveau jar dans `/mods-off` (`panel.py write /mods-off/colonie_pnj-X.jar <jar>` ; `upload` est bloqué depuis le cloud) et vérifier sa taille avec `panel.py ls /mods-off` ;
+   - puis, coup sur coup : `panel.py mv /mods/colonie_pnj-ANCIEN.jar /mods-off/colonie_pnj-ANCIEN.jar` et `panel.py mv /mods-off/colonie_pnj-X.jar /mods/colonie_pnj-X.jar` ;
+   - vérifier qu'il y a **exactement un** `colonie_pnj-*.jar` dans `/mods` avant de redémarrer. Jamais de redémarrage sinon. On ne supprime jamais un mod : on le range dans `/mods-off`.
 3. `python tools/panel.py power restart`, puis lire le journal jusqu'à « Done ».
 - Depuis Git Bash : `export MSYS_NO_PATHCONV=1`.
 
@@ -133,17 +136,24 @@ Quand écrire :
 5. **Décision qui revient à KOLRAX** : `demandes/<mot>` (pour `kolrax`, avec des `options` si possible), puis avance sur autre chose. Si c'est urgent, envoie aussi un message privé.
 6. **Demande à l'Admin** : `docs/demandes-admin.md`, et une copie dans `demandes/<mot>` (pour `admin`) pour que KOLRAX la voie. Recopie la réponse de l'Admin quand elle arrive.
 
-## Rythme jusqu'à vendredi (décidé le 12/10)
-Bilan du 12/10 : lots 0 à 2 faits en 8 sessions, avec une très bonne qualité, mais il reste 12 lots et le quota hebdomadaire ne suffira pas au même rythme. Donc :
-- **Une seule relecture par lot.** Une deuxième relecture, uniquement si la première trouve un bloquant, et seulement sur les corrections.
-- **Première passe d'abord** : chaque lot restant reçoit d'abord sa version simple, complète et testée (le comportement principal du cahier des charges). On approfondit seulement quand tous les lots ont leur première passe.
-- **Les restes mineurs** (cas limites rares, finitions, « non testé » sans danger) vont dans `docs/plus-tard.md`, jamais dans une session dédiée. Exception : ce qui peut tuer un PNJ, perdre des objets, planter le serveur ou le faire ralentir.
-- **Moins de tests garde-fous** : un test par comportement nouveau (qui échoue avant), pas une batterie de variantes.
-- **Un seul serveur de test à la fois**, jamais deux agents qui lancent `runGameTestServer` en même temps.
-- **Cadence (décidée le 13/10, calculée sur le quota)** : une session toutes les 8 heures (0 h 59, 8 h 59, 16 h 59 UTC). Le quota hebdomadaire de KOLRAX (67 % le 13/10 à 17 h 30 UTC, remise à zéro le vendredi 16/10 à 16 h UTC) doit être utilisé jusqu'à 97-98 %, ni plus ni moins. Une heure de session coûte environ 2 % : il reste environ 14 heures de travail, soit 8 sessions d'environ 1 h 45.
-- **Remplir la session** : après chaque livraison, s'il reste plus de 30 minutes, prends tout de suite la case suivante du plan. Arrête-toi proprement vers 2 h (jamais au-delà de 2 h 15). Une session qui s'arrête à 50 minutes gâche du temps de travail.
-- **Travailler en parallèle** : pendant que le développeur code, lance l'`auteur` (textes) ou l'`artiste` (skins, icônes) sur la case suivante qui en a besoin. Eux n'ont pas besoin du serveur de test. Un seul `runGameTestServer` à la fois reste la règle.
-- **Pas de gel jeudi** : KOLRAX envisage d'ouvrir lundi 19/10, et un sprint suivra la remise à zéro du quota. La session du vendredi 8 h 59 UTC laisse le serveur stable et livré.
+## Rythme : travail en continu (décidé le 13/10 au soir)
+KOLRAX veut que le chantier avance **le plus possible**, quitte à épuiser le quota de la semaine avant vendredi. La routine se lance **toutes les heures** ; le verrou empêche deux sessions en même temps. Quand le quota est épuisé, les sessions échouent jusqu'à la remise à zéro (vendredi 16/10, 16 h UTC), puis reprennent seules.
+
+**Travailler**
+- Une session travaille jusqu'à **2 h 45**, en enchaînant les cases : après chaque livraison, case suivante tout de suite. Elle s'arrête proprement vers 2 h 45 (fin de session, voir plus bas), pour que la suivante prenne le relais dans l'heure.
+- Une seule relecture par case (une deuxième seulement sur un bloquant). Première passe de chaque lot avant d'approfondir. Restes mineurs dans `docs/plus-tard.md`. Un test par comportement nouveau.
+- Pendant que le développeur code, l'`auteur` et l'`artiste` avancent les textes et les visuels des cases suivantes. Un seul `runGameTestServer` à la fois.
+
+**Ne rien perdre si la session est coupée net** (quota, panne) — elle peut s'arrêter à n'importe quelle commande :
+- **Le travail pas encore vert** se pousse sur la branche `en-cours` (`git push -f origin HEAD:en-cours`) au moins toutes les 20 minutes et avant chaque long test. `main` ne reçoit que du code vert (build + tests en jeu).
+- **Une case finie et verte** : merge sur `main`, push, puis supprimer la branche `en-cours` (`git push origin --delete en-cours`).
+- **Au début de chaque session**, avant tout le reste :
+  1. si la branche `origin/en-cours` existe, c'est le travail d'une session coupée : reprends-le (`git checkout -B en-cours origin/en-cours`, puis rebase sur `main`) au lieu de recommencer ;
+  2. serveur : `panel.py ls /mods` doit montrer **exactement un** `colonie_pnj-*.jar`, celui de la dernière livraison notée dans le journal. Sinon, remets-le en ordre (déplacements entre `/mods` et `/mods-off`) **avant** tout redémarrage ;
+  3. un `pack/VERROU` de plus de 3 h est une publication de modpack coupée : vérifie ce qui a été fait (build, déploiement Supabase, annonce) et finis-la, ou remets `pack/` comme sur `main` d'avant, puis retire le verrou ;
+  4. panneau : la session d'avant restée `en_cours` passe en `coupee`.
+- **Fichiers du serveur** (`ia.json`, `reglages.json`…) : toujours lire, modifier en mémoire, puis réécrire le fichier entier en une seule commande ; jamais d'écriture en plusieurs morceaux.
+- **Un modpack** ne se publie que si le serveur a déjà la même version du mod ; l'annonce Discord vient en tout dernier.
 
 ## Quota
 KOLRAX a un abonnement Claude Max 5x, partagé avec ses autres projets. Travaille par lots courts qui se terminent proprement : un commit à chaque étape qui marche. Si le quota coupe une session, la suivante reprend grâce au plan et au journal.
