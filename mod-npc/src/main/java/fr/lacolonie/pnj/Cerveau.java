@@ -78,6 +78,8 @@ final class Cerveau {
                 return;
             }
         }
+        // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
+        if ((t.tickCount + t.getId()) % 100 == 0) Besoins.veiller(t);
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
@@ -95,6 +97,14 @@ final class Cerveau {
                 else dire(t, "fuite", 30, "Holà, tout doux ! Je ne lève pas mon arme sur une bête.");
                 lancer(t, new Actions.Fuir(agresseur));
             }
+            return;
+        }
+
+        // Blessé (moins de la moitié de sa vie), hors combat : il mange s'il a de quoi, pour reprendre des forces (le guerrier
+        // a son propre soin, avec les potions et le dépôt : Guerrier.soigner).
+        if (!m.combattant && t.getHealth() < t.getMaxHealth() * 0.5 && t.faim < 17 && t.manger()) {
+            dire(t, "soin", 60, "Je panse mes plaies et je mange un morceau.");
+            attendre(t, 2);
             return;
         }
 
@@ -227,6 +237,9 @@ final class Cerveau {
             return;
         }
         mem.remove("livre");
+
+        // Longtemps au travail, le moral moyen ou bas : une courte pause au poste, puis il reprend (loisirs, lot 5).
+        if (Besoins.pause(t)) return;
 
         m.travailler(t);
     }

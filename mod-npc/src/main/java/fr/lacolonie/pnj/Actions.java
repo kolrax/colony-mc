@@ -1134,6 +1134,8 @@ public final class Actions {
     /** Va se reposer chez lui, dans son lit s'il en a un (sinon à côté du bureau) ; loin de chez lui, en expédition, il campe sur place. */
     static final class Reposer extends Action {
         BlockPos lit, but;
+        /** Chez lui, il a cherché un lit et n'en a trouvé aucun (lot 5 : il le dit, Besoins.veiller). */
+        boolean sansLit;
 
         Reposer() { super("se_reposer"); }
 
@@ -1142,6 +1144,7 @@ public final class Actions {
                 if (t.isSleeping()) return age >= 600 ? Etat.OK : Etat.EN_COURS;
                 boolean camp = t.bureau == null || !t.chezLui(t.blockPosition());
                 lit = camp ? null : t.monLit();
+                sansLit = !camp && lit == null && t.litIntrouvable;
                 but = camp ? t.blockPosition() : lit != null ? lit : t.bureau;
             }
             if (!t.isSleeping() && t.position().distanceToSqr(Vec3.atBottomCenterOf(but)) > 2.5 * 2.5) {
@@ -1149,8 +1152,13 @@ public final class Actions {
                 else { marcher(t, Vec3.atBottomCenterOf(but), 1.0); return Etat.EN_COURS; }
             }
             t.getNavigation().stop();
-            if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock
-                    && !t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
+            if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock) {
+                if (!t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
+                else if (age % 100 == 0) { // un autre dort dans son lit
+                    net.minecraft.world.entity.LivingEntity qui = Besoins.dormeur(t, lit);
+                    if (qui != null) { Besoins.litVole(t, qui); if (qui instanceof Travailleur) lit = null; }
+                }
+            }
             return age >= 600 ? Etat.OK : Etat.EN_COURS; // il refait le point toutes les 30 s
         }
     }

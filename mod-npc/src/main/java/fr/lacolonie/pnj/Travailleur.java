@@ -103,6 +103,8 @@ public class Travailleur extends PathfinderMob {
     public BlockPos lit;
     static final int RAYON_LIT = 16; // un poste commun : les lits de tous ses ouvriers autour
     BlockPos litRefuse;
+    /** La dernière recherche de lit n'a rien trouvé (lot 5 : il dit qu'il n'a pas de lit). */
+    boolean litIntrouvable;
     int prochaineRechercheLit;
     public int joursExpedition = 3;
     /** Moment (temps du jeu, en ticks) où il est sorti de son espace de vie ; -1 s'il y est. */
@@ -311,6 +313,10 @@ public class Travailleur extends PathfinderMob {
     public int profondeurForcee = Integer.MIN_VALUE;
     public int fatigue;
     int fatigueCompteur;
+    /** Ticks de travail depuis sa dernière pause ou son dernier repos (lot 5, loisirs ; non sauvegardé). */
+    int travailSansPause;
+    /** Ses dernières paroles en bulle (20 au plus, non sauvegardées) : lues par les tests. */
+    final java.util.ArrayDeque<String> paroles = new java.util.ArrayDeque<>();
     public long prochainePaie, arrivee;
     public int impayes;
     public String besoin = "";
@@ -571,6 +577,7 @@ public class Travailleur extends PathfinderMob {
             case ATTENDRE -> "Attend";
             case TRAVAIL -> bureau == null ? "Sans poste" : expedition ? "En expédition"
                     : action instanceof Actions.Reposer || !enService() ? "Se repose"
+                    : action instanceof Besoins.Flaner ? "En pause"
                     : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
@@ -579,10 +586,13 @@ public class Travailleur extends PathfinderMob {
     /** Son lit : le lit le plus proche du bureau (8 blocs au plus), qu'il garde pour lui. Null s'il n'en a pas. */
     public BlockPos monLit() {
         if (bureau == null) return lit = null;
+        boolean perdu = false;
         if (lit != null) {
             if (!level().isLoaded(lit)) return lit; // trop loin pour vérifier : on le croit sur parole
             if (estUnLit(lit) && presDuBureau(lit)) return lit;
             lit = null; // cassé, ou le bureau a changé
+            perdu = true;
+            prochaineRechercheLit = 0; // il en cherche un autre tout de suite
         }
         if (tickCount < prochaineRechercheLit || level().getServer() == null || !level().isLoaded(bureau)) return null;
         prochaineRechercheLit = tickCount + 200;
@@ -594,7 +604,10 @@ public class Travailleur extends PathfinderMob {
         for (BlockPos q : BlockPos.betweenClosed(bureau.offset(-RAYON_LIT, -4, -RAYON_LIT), bureau.offset(RAYON_LIT, 4, RAYON_LIT)))
             if (level().isLoaded(q) && estUnLit(q) && !pris.contains(q) && !q.equals(litRefuse)
                     && (meilleur == null || q.distSqr(bureau) < meilleur.distSqr(bureau))) meilleur = q.immutable();
-        return lit = meilleur;
+        lit = meilleur;
+        litIntrouvable = lit == null;
+        if (perdu && lit == null) Besoins.litPerdu(this); // son lit n'est plus là, et pas d'autre : il le dit, et ça lui pèse
+        return lit;
     }
 
     boolean presDuBureau(BlockPos p) {
@@ -1032,6 +1045,11 @@ public class Travailleur extends PathfinderMob {
             if (faim >= 15 && getHealth() < getMaxHealth()) heal(1);
             else if (faim == 0 && getHealth() > 1) hurt(damageSources().starve(), 1);
         }
+        // Le temps de travail depuis sa dernière pause (Besoins.pause) ; le repos le remet à zéro.
+        if (action instanceof Actions.Reposer || isSleeping()) travailSansPause = 0;
+        else if (mode == Mode.TRAVAIL && action != null && !(action instanceof Actions.Attendre) && !(action instanceof Besoins.Flaner)
+                && !(action instanceof Causeries.Bavarder) && !(action instanceof Actions.LireLettres) && !(action instanceof Actions.ToucherPaie)
+                && !(action instanceof Actions.Fuir)) travailSansPause++;
         if (++fatigueCompteur >= 1000) { // une heure du jeu
             fatigueCompteur = 0;
             // Une expédition fatigue : on y travaille plus dur, et on récupère mal en dormant dehors.
@@ -1308,18 +1326,28 @@ public class Travailleur extends PathfinderMob {
         }
     }
 
+    /**
+     * Il mange ce qui va le mieux : l'aliment qui dépasse le moins sa faim (20 − faim), le plus nourrissant à égalité. Jamais un
+     * aliment à effet néfaste (chair putréfiée, œil d'araignée…) ni un objet rare (pomme dorée) : on ne gaspille pas.
+     */
     public boolean manger() {
+        int meilleur = -1, ecart = Integer.MAX_VALUE, nourrit = 0;
         for (int i = 0; i < inventaire.getContainerSize(); i++) {
             ItemStack s = inventaire.getItem(i);
             FoodProperties fp = s.getFoodProperties(this);
-            if (fp == null || fp.nutrition() <= 0) continue;
-            if (faim <= 8) changerMoral(Obeissance.MANGER); // manger enfin, ça remonte le moral
-            faim = Math.min(20, faim + fp.nutrition());
-            eat(level(), s, fp);
-            inventaire.setChanged();
-            return true;
+            if (fp == null || fp.nutrition() <= 0 || s.getRarity() != net.minecraft.world.item.Rarity.COMMON
+                    || fp.effects().stream().anyMatch(e -> e.effect().getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL)) continue;
+            int trop = Math.max(0, fp.nutrition() - (20 - faim));
+            if (trop < ecart || trop == ecart && fp.nutrition() > nourrit) { meilleur = i; ecart = trop; nourrit = fp.nutrition(); }
         }
-        return false;
+        if (meilleur < 0) return false;
+        ItemStack s = inventaire.getItem(meilleur);
+        FoodProperties fp = s.getFoodProperties(this);
+        if (faim <= 8) changerMoral(Obeissance.MANGER); // manger enfin, ça remonte le moral
+        faim = Math.min(20, faim + fp.nutrition());
+        eat(level(), s, fp);
+        inventaire.setChanged();
+        return true;
     }
 
     // --- Paroles ---------------------------------------------------------------------------------
@@ -1327,6 +1355,8 @@ public class Travailleur extends PathfinderMob {
     /** Il parle : une bulle au-dessus de sa tête pour ceux qui sont près de lui (et la fenêtre de conversation). Jamais dans le chat. */
     public void dire(String texte) {
         if (!(level() instanceof ServerLevel) || muet() || texte == null || texte.isBlank()) return;
+        paroles.addLast(texte);
+        if (paroles.size() > 20) paroles.removeFirst();
         for (Player p : level().players())
             if (p.distanceToSqr(this) < 24 * 24 && p instanceof ServerPlayer sp && sp.connection != null && sp.connection.hasChannel(Reseau.Parole.TYPE))
                 PacketDistributor.sendToPlayer(sp, new Reseau.Parole(getId(), texte));

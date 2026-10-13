@@ -224,3 +224,19 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Icônes** (lot 8, prêtes, pas encore affichées) : 12 d'état et 12 de métier, 16 × 16, `mod-npc/outils/icones_tex.py`.
 - Bilan de la session (18 h - 20 h 30 UTC) : 3 versions livrées (0.9.7, 0.9.8, 0.9.9), modpack 0.5.0 obligatoire publié ; **lot 4 : mineur, bûcheron, guerrier faits** (reste « outils au dépôt ») ; lot 7 : conversations faites ; lot 8 : tenues faites.
 - Prochaine étape exacte : lot 4, **outils fournis au dépôt, usure plus lente** ; puis lot 8 « nom, métier et icône au-dessus de la tête » (icônes prêtes, nouveau modpack) ; puis lot 5.
+
+## 2026-10-13 21 h 36 - 21 h 41 UTC : livraison 0.9.10 (outils au dépôt, noms au-dessus des têtes) et modpack 0.5.1
+- **0.9.10**, commit `ff945bf` (sur `main`), livrée sur le serveur à 21 h 37 UTC (personne connecté : `list` = 0 joueur), « Done » à 21 h 38 min 19 s, sans erreur du mod ; `colonie_pnj-0.9.9.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.10, 1 090 891 octets, sha1 `f1005c5c…`).
+  - Ouvriers : pioche et hache prises au dépôt du poste (la meilleure), usées 3 fois moins vite qu'un joueur.
+  - Au-dessus de chaque PNJ : son nom (lisible jusqu'à 32 blocs) ; de près, métier, chef et icône d'état (faim, colère, grève, blessé, attente, sommeil). **Canal réseau 7 → 8.**
+  - Tests sur ce commit : **146/146 JUnit** (rebâti par le livreur dans un dossier à part, même sha1), **199/199 en jeu** (lancés sur `65e6ef1`, qui ne diffère de `ff945bf` que par `mod_version`).
+  - Journal du serveur : seules erreurs, celles des autres mods (282 tables de butin de `railways` pour des bois absents, 1 mixin client de `create_sa`), comme avant. Avant le redémarrage, le serveur avait pris 59 min de retard (« Can't keep up », 70 923 ticks) : machine probablement mise en pause par l'hébergeur.
+- **Modpack 0.5.1, obligatoire** (canal 8) : mêmes 29 mods que 0.5.0 (sodium toujours épinglé en 0.6.13), jar 0.9.10 embarqué ; fonction Supabase redéployée à 21 h 39 ; téléchargement Modrinth vérifié (sha1 du jar dans le .mrpack = `f1005c5cc3775a81d26c3794132c89b193fefcb3`), CurseForge et zip répondent 200 ; annoncé sur Discord à 21 h 40 ; verrou retiré.
+- Jamais vu à l'écran : les noms et icônes en jeu (il faut un écran).
+
+## 2026-10-13 21 h 48 - 21 h 50 UTC : livraison 0.9.11 (besoins des PNJ)
+- **0.9.11 « besoins »** (lot 5, première passe), commit `5217340` (sur `main`), livrée sur le serveur à 21 h 48 UTC (personne connecté : `list` = 0 joueur), « Done » à 21 h 49 min 29 s, sans erreur du mod ; `colonie_pnj-0.9.10.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.11, 1 109 869 octets, sha1 `6a8c1df9…`, copie figée du jar).
+  - Les PNJ disent quand ils ont faim, sommeil, mal ou le moral bas ; chacun son lit ; courtes pauses quand le moral baisse ; un blessé mange pour guérir, jamais un aliment empoisonné.
+  - Tests sur ce code : **152/152 JUnit, 204/204 en jeu** (lancés sur le code d'avant `5217340`, qui ne change que `mod_version`).
+  - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, 1 mixin client de `create_sa`), comme avant.
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé).
