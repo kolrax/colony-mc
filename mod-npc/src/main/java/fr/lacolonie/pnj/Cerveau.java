@@ -62,7 +62,6 @@ final class Cerveau {
             t.coupVu = t.getLastHurtByMobTimestamp();
             t.finirAction("interrompu");
         }
-<<<<<<< HEAD
         // Un creeper tout près d'un ouvrier qui ne se bat pas : il s'en éloigne et appelle la garde (cahier 14.11), que le
         // guerrier entend (Guerrier.veille). Seulement s'il a où aller : sinon il ne lâcherait son travail que pour rien.
         if (!m.combattant && !(t.action instanceof Actions.Fuir) && !(t.action instanceof Actions.Echapper) && !t.isSleeping()) {
@@ -79,10 +78,8 @@ final class Cerveau {
                 return;
             }
         }
-=======
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
->>>>>>> origin/main
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
