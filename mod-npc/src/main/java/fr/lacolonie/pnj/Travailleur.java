@@ -67,6 +67,8 @@ public class Travailleur extends PathfinderMob {
     public static final EntityDataAccessor<String> SKIN = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
     /** Le geste qu'il fait (garde-à-vous, salut, danse…), dessiné chez les joueurs ({@link Poses}) ; vide : aucun. */
     public static final EntityDataAccessor<String> GESTE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
+    /** Sa tenue, dessinée chez les joueurs quand il n'a pas de pseudo de skin ({@link Tenues}) : son métier, ou « chomeur ». */
+    public static final EntityDataAccessor<String> TENUE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
 
     public enum Mode {
         CHOMEUR("chomeur"), SUIVRE("suivre"), ATTENDRE("attendre"), TRAVAIL("travail"), GREVE("greve");
@@ -424,6 +426,7 @@ public class Travailleur extends PathfinderMob {
         super.defineSynchedData(b);
         b.define(SKIN, "");
         b.define(GESTE, "");
+        b.define(TENUE, Tenues.CHOMEUR);
     }
 
     @Override
@@ -626,7 +629,11 @@ public class Travailleur extends PathfinderMob {
     /** On lui a demandé de se taire (plus de bulles ni de voix, jusqu'à l'heure dite). */
     public boolean muet() { return memoire.getLong("muet") > level().getGameTime(); }
 
+    public String tenue() { return entityData.get(TENUE); }
+
+    /** Son nom affiché et sa tenue, à rappeler à chaque changement de mode ou de métier. */
     public void majNom() {
+        entityData.set(TENUE, Tenues.tenue(metier, mode != Mode.CHOMEUR));
         String suffixe = switch (mode) {
             case CHOMEUR -> " · cherche du travail";
             case GREVE -> " · en grève";
@@ -1740,6 +1747,7 @@ public class Travailleur extends PathfinderMob {
         t.prochainePaie = Monnaie.SANS_PAIE;
         t.debut = 0;
         t.fin = 0; // de 0 h à 0 h : en service toute la journée
+        t.majNom();
         if (l.getBlockEntity(bureau) instanceof Bureau.Entite b) b.proprietaire = chef;
         t.bureau = bureau;
         if (!outil.isEmpty()) t.inventaire.addItem(outil);

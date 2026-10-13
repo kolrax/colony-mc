@@ -28,7 +28,6 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -114,10 +113,12 @@ public final class Client {
     /** « Philippa (Mineur) » → « Philippa ». */
     static String prenom(Entity e) { return e.getDisplayName().getString().split(" \\(| ·")[0].trim(); }
 
-    // --- Apparence : un modèle de joueur avec le skin d'un pseudo Minecraft (ou un skin de base) ---------
+    // --- Apparence : un modèle de joueur avec le skin d'un pseudo Minecraft, ou la tenue de son métier ---------
 
     static final Map<String, PlayerSkin> SKINS = new ConcurrentHashMap<>();
     static final Set<String> DEMANDES = ConcurrentHashMap.newKeySet();
+    /** Les tenues des métiers (chemin de texture → skin), modèle large. */
+    static final Map<String, PlayerSkin> TENUES = new ConcurrentHashMap<>();
 
     static PlayerSkin skin(Travailleur e) {
         String pseudo = e.skin();
@@ -129,7 +130,8 @@ public final class Client {
                         .thenCompose(o -> o.map(p -> Minecraft.getInstance().getSkinManager().getOrLoad(p)).orElse(CompletableFuture.completedFuture(null)))
                         .thenAccept(s2 -> { if (s2 != null) SKINS.put(pseudo, s2); });
         }
-        return DefaultPlayerSkin.get(e.getUUID());
+        return TENUES.computeIfAbsent(Tenues.chemin(e.tenue(), e.getUUID()), c -> new PlayerSkin(
+                ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, c), null, null, null, PlayerSkin.Model.WIDE, false));
     }
 
     /**
