@@ -81,12 +81,8 @@ final class Eleveur extends Metier {
     @Override
     void travailler(Travailleur t) {
         // Resté dans un enclos (son travail a été interrompu) : il en sort d'abord, par le portillon.
+        if (sortir(t)) return;
         Ferme f = releve(t, false);
-        Elevage.Enclos ici = enclos(f, t.getBlockX(), t.getBlockY(), t.getBlockZ());
-        if (ici != null && !ici.contient(t.bureau.getX(), t.bureau.getZ())) {
-            Passage p = passage(t, ici);
-            if (p != null) { Cerveau.lancer(t, new Corvee(ici, p, new ArrayList<>(), t)); return; }
-        }
 
         // Ce qu'il a tiré des bêtes va au dépôt (rien ne s'entasse dans son sac).
         if (t.compter(PRODUITS) > 0 || Monde.libres(t) < 3) {
@@ -123,6 +119,24 @@ final class Eleveur extends Metier {
         Cerveau.attendre(t, 2);
     }
 
+    /**
+     * Il est dans un enclos (pas sa cour) sans y travailler : il en sort par le portillon. L'enclos d'une corvée interrompue
+     * est retenu ({@code Ferme.aSortir}) même si le relevé l'a oublié entre-temps.
+     */
+    @Override
+    boolean sortir(Travailleur t) {
+        Ferme f = FERMES.get(t);
+        if (f == null || t.bureau == null) return false;
+        Elevage.Enclos ici = f.aSortir != null && dans(f.aSortir, t) ? f.aSortir : null;
+        for (Elevage.Enclos e : f.enclos) if (ici == null && dans(e, t)) ici = e;
+        if (ici == null) { f.aSortir = null; return false; }
+        if (ici.contient(t.bureau.getX(), t.bureau.getZ())) return false;
+        Passage p = passage(t, ici);
+        if (p == null) return false;
+        Cerveau.lancer(t, new Corvee(ici, p, new ArrayList<>(), t));
+        return true;
+    }
+
     // --- Les bêtes et leurs enclos ------------------------------------------------------------------------------
 
     /** Ce qu'il sait des enclos de son espace de vie (pas sauvegardé : il les relève de nouveau après un redémarrage). */
@@ -133,6 +147,8 @@ final class Eleveur extends Metier {
         long ouvertesJusqua, releve = -RELEVE;
         List<Animal> betes = new ArrayList<>();
         int suivant;
+        /** L'enclos d'une corvée interrompue, d'où il doit encore sortir. */
+        Elevage.Enclos aSortir;
     }
 
     static final Map<Travailleur, Ferme> FERMES = new WeakHashMap<>();
@@ -175,9 +191,21 @@ final class Eleveur extends Metier {
         return null;
     }
 
+    /**
+     * Il est dans l'enclos, ne serait-ce qu'un pied : un coin de son corps au-dessus d'une case de l'enclos (arrêté contre le
+     * portillon, il est dans la colonne du portillon, mais encore du côté de l'enclos).
+     */
+    static boolean dans(Elevage.Enclos e, Travailleur t) {
+        if (Math.abs(t.getBlockY() - e.y()) > 4) return false;
+        AABB b = t.getBoundingBox();
+        for (double x : new double[]{b.minX, b.maxX}) for (double z : new double[]{b.minZ, b.maxZ})
+            if (e.contient(net.minecraft.util.Mth.floor(x), net.minecraft.util.Mth.floor(z))) return true;
+        return false;
+    }
+
     /** Les bêtes de chaque enclos (les bêtes au pré, hors enclos, ne sont pas à lui). */
     static Map<Elevage.Enclos, List<Animal>> parEnclos(Ferme f) {
-        Map<Elevage.Enclos, List<Animal>> r = new LinkedHashMap<>();
+        Map<Elevage.Enclos, List<Animal>> r = new java.util.IdentityHashMap<>();
         for (Animal a : f.betes) {
             if (!a.isAlive()) continue;
             Elevage.Enclos e = enclos(f, a.getBlockX(), a.getBlockY(), a.getBlockZ());
@@ -245,7 +273,9 @@ final class Eleveur extends Metier {
     // --- Ce qu'il y a à faire -----------------------------------------------------------------------------------
 
     /** Une tâche sur une bête : « nourrir », « tondre », « traire » ou « abattre ». */
-    record Tache(String quoi, Animal bete) {}
+    record Tache(String quoi, Animal bete, int garder) {
+        Tache(String quoi, Animal bete) { this(quoi, bete, 0); }
+    }
 
     /** Quelqu'un tient à cette bête : un nom, une selle, une laisse, un maître. Il n'y touche pas (ni pour l'abattre). */
     static boolean intouchable(Animal a) {
@@ -286,7 +316,7 @@ final class Eleveur extends Metier {
             if (tout || mode.equals("abattre")) {
                 boolean ordre = mode.equals("abattre") && seule != null;
                 List<Integer> ids = Elevage.aAbattre(vues, esp.id(), ordre ? Elevage.COUPLE : plafond, ordre ? voulu[0] : Integer.MAX_VALUE);
-                for (int id : ids) if (abattable(t, parId.get(id), e)) { taches.add(new Tache("abattre", parId.get(id))); if (ordre) voulu[0]--; }
+                for (int id : ids) if (abattable(t, parId.get(id), e)) { taches.add(new Tache("abattre", parId.get(id), ordre ? Elevage.COUPLE : plafond)); if (ordre) voulu[0]--; }
             }
             if (tout || mode.equals("nourrir")) {
                 List<Integer> ids = Elevage.aNourrir(vues, esp.id(), plafond);
@@ -343,9 +373,8 @@ final class Eleveur extends Metier {
         Actions.Action sous;
         Tache cible;
         ItemEntity objet;
-        BlockPos ouvert;
         final Set<String> pris = new HashSet<>();
-        int etape, pas, marche, prochain, ramasse;
+        int etape, marche, prochain, ramasse, essais;
         int nourries, tondus, traites, abattues;
         boolean sansFourrage, sansCisailles;
         final Map<String, Integer> abattuesPar = new LinkedHashMap<>();
@@ -365,12 +394,14 @@ final class Eleveur extends Metier {
         @Override
         void fin(Travailleur t) {
             super.fin(t);
-            if (sous != null) sous.fin(t);
+            if (sous != null) sous.fin(t); // un passage en cours referme son portillon
             sous = null;
-            if (ouvert != null) fermer(t, ouvert); // jamais un portillon laissé ouvert
+            // Interrompu dans l'enclos : il en sortira avant toute autre chose (Metier.sortir).
+            Ferme f = FERMES.get(t);
+            if (f != null && !cour && dedans(t)) f.aSortir = enclos;
         }
 
-        boolean dedans(Travailleur t) { return enclos.contient(t.getBlockX(), t.getBlockZ()); }
+        boolean dedans(Travailleur t) { return dans(enclos, t); }
 
         Actions.Etat tick(Travailleur t) {
             if (sous != null) {
@@ -378,28 +409,33 @@ final class Eleveur extends Metier {
                 sous.age++;
                 if (r == Actions.Etat.EN_COURS) return r;
                 sous.fin(t);
-                if (sous instanceof Actions.Attaquer a && !a.cible.isAlive()) {
+                Actions.Action fait = sous;
+                sous = null;
+                if (fait instanceof Actions.Attaquer a && !a.cible.isAlive()) {
                     abattues++;
                     Elevage.Espece esp = a.cible instanceof Animal x ? espece(x) : null;
                     if (esp != null) abattuesPar.merge(esp.id(), 1, Integer::sum);
                 }
-                sous = null;
+                if (fait instanceof Passer p && r == Actions.Etat.ECHEC) {
+                    // Pas réussi à entrer : il renonce (il est dehors). À sortir : il recommence, jamais d'abandon dedans
+                    // (5 essais au plus ; ensuite Metier.sortir le relancera).
+                    if (etape == 1 && !dedans(t)) return echec(p.raison);
+                    if (etape >= 4 && dedans(t) && ++essais >= 5) return echec(p.raison);
+                }
             }
             switch (etape) {
                 case 0 -> { return provisions(t); }
                 case 1 -> {
                     if (cour || dedans(t)) { etape = 2; return Actions.Etat.EN_COURS; }
-                    Actions.Etat r = passer(t, passage.dehors, passage.dedans);
-                    if (r == Actions.Etat.OK) etape = 2;
-                    return r;
+                    sous = new Passer(passage, passage.dehors, passage.dedans);
+                    return Actions.Etat.EN_COURS;
                 }
                 case 2 -> { return soigner(t); }
                 case 3 -> { return ramasser(t); }
                 default -> {
                     if (cour || !dedans(t)) { travail = nourries + tondus + traites + abattues + ramasse > 0; return Actions.Etat.OK; }
-                    Actions.Etat r = passer(t, passage.dedans, passage.dehors);
-                    if (r == Actions.Etat.OK) travail = true;
-                    return r;
+                    sous = new Passer(passage, passage.dedans, passage.dehors);
+                    return Actions.Etat.EN_COURS;
                 }
             }
         }
@@ -443,8 +479,9 @@ final class Eleveur extends Metier {
                 marche = 0;
                 if (cible.quoi.equals("abattre")) {
                     Animal a = cible.bete;
+                    Tache cible0 = cible;
                     cible = null;
-                    if (!abattable(t, a, enclos)) return Actions.Etat.EN_COURS;
+                    if (!abattable(t, a, enclos) || !encoreTrop(t, a, cible0)) return Actions.Etat.EN_COURS;
                     armer(t);
                     sous = new Actions.Attaquer(a).portee(24);
                     return Actions.Etat.EN_COURS;
@@ -469,6 +506,19 @@ final class Eleveur extends Metier {
             }
             cible = null;
             return Actions.Etat.EN_COURS;
+        }
+
+        /**
+         * Juste avant d'abattre : les bêtes de l'espèce recomptées dans l'enclos (un joueur a pu en tuer une entre-temps) ; il
+         * n'abat que s'il en reste plus que ce qu'il garde (le dernier couple au moins).
+         */
+        boolean encoreTrop(Travailleur t, Animal a, Tache k) {
+            Elevage.Espece esp = espece(a);
+            AABB zone = new AABB(enclos.minX(), enclos.y() - 3, enclos.minZ(), enclos.maxX() + 1, enclos.y() + 4, enclos.maxZ() + 1);
+            List<Elevage.Bete> vues = new ArrayList<>();
+            for (Animal x : t.level().getEntitiesOfClass(Animal.class, zone, x -> x.isAlive() && espece(x) == esp && enclos.contient(x.getBlockX(), x.getBlockZ())))
+                vues.add(new Elevage.Bete(x.getId(), esp.id(), !x.isBaby(), intouchable(x), false));
+            return !Elevage.aAbattre(vues, esp.id(), k.garder(), 1).isEmpty();
         }
 
         void nourrir(Travailleur t, Animal a) {
@@ -515,35 +565,62 @@ final class Eleveur extends Metier {
             return Actions.Etat.EN_COURS;
         }
 
-        /**
-         * Passer le portillon de {@code de} à {@code vers} : il va devant, ouvre, traverse tout droit, et referme derrière lui
-         * dès qu'il est passé (s'il n'y a pas une bête dans l'embrasure : il attend 5 s au plus).
-         */
-        Actions.Etat passer(Travailleur t, BlockPos de, BlockPos vers) {
+    }
+
+    /**
+     * Passer le portillon de {@code de} à {@code vers} : il va devant, ouvre, traverse (tout droit s'il est dans l'axe, sinon par
+     * le chemin du jeu, qui passe le portillon ouvert), et referme derrière lui dès qu'il est passé (s'il n'y a pas une bête
+     * dans l'embrasure : 3 s au plus). Il n'y arrive pas : il recule hors de l'embrasure, referme, et échoue. Une action à
+     * part : ses compteurs et son chemin repartent de zéro à chaque passage. Interrompu, il referme.
+     */
+    static final class Passer extends Actions.Action {
+        final Passage passage;
+        final BlockPos de, vers;
+        int pas, marche;
+        boolean ouvert;
+
+        Passer(Passage passage, BlockPos de, BlockPos vers) { super("portillon"); this.passage = passage; this.de = de; this.vers = vers; }
+
+        @Override
+        void fin(Travailleur t) {
+            super.fin(t);
+            if (ouvert) { fermer(t, passage.porte); ouvert = false; } // jamais un portillon laissé ouvert
+        }
+
+        Actions.Etat tick(Travailleur t) {
             Vec3 a = Vec3.atBottomCenterOf(de), b = Vec3.atBottomCenterOf(vers);
             switch (pas) {
                 case 0 -> {
                     if (horizontale(t, a) <= 1.2) { pas = 1; marche = 0; return Actions.Etat.EN_COURS; }
-                    if (coince() || ++marche > 20 * 60) { t.blocInaccessible(passage.porte); return echec("portillon_inaccessible"); }
+                    if (coince() || ++marche > 20 * 60) return echec("portillon_inaccessible");
                     marcher(t, a, 1.0);
                 }
                 case 1 -> {
-                    // Juste devant, dans l'axe du portillon.
+                    // Juste devant, dans l'axe du portillon (2 s au plus : une bête peut lui prendre la place).
                     t.getNavigation().stop();
                     t.getMoveControl().setWantedPosition(a.x, a.y, a.z, 0.8);
-                    if (horizontale(t, a) <= 0.25 || ++marche > 60) { pas = 2; marche = 0; ouvrir(t, passage.porte); }
+                    if (horizontale(t, a) <= 0.25 || ++marche > 40) { pas = 2; marche = 0; ouvrir(t, passage.porte); ouvert = true; }
                 }
-                default -> {
-                    t.getNavigation().stop();
-                    t.getMoveControl().setWantedPosition(b.x, b.y, b.z, 0.8);
+                case 2 -> {
                     t.getLookControl().setLookAt(b.x, b.y + 1.5, b.z);
                     boolean passe = horizontale(t, b) <= 0.45 && !t.getBoundingBox().intersects(new AABB(passage.porte));
                     if (passe) {
+                        t.getNavigation().stop();
                         boolean libre = t.level().getEntities(t, new AABB(passage.porte)).isEmpty();
-                        if (libre || ++marche > 20 * 5) { fermer(t, passage.porte); pas = 0; marche = 0; return Actions.Etat.OK; }
-                    } else if (++marche > 20 * 10) {
+                        if (libre || ++marche > 20 * 3) { fermer(t, passage.porte); ouvert = false; return Actions.Etat.OK; }
+                        return Actions.Etat.EN_COURS;
+                    }
+                    if (++marche > 20 * 6) { pas = 3; marche = 0; return Actions.Etat.EN_COURS; }
+                    if (droit(t, b)) { t.getNavigation().stop(); t.getMoveControl().setWantedPosition(b.x, b.y, b.z, 0.8); }
+                    else if (t.getNavigation().isDone() || marche % 20 == 1) t.getNavigation().moveTo(b.x, b.y, b.z, 0.8);
+                }
+                default -> {
+                    // Il recule hors de l'embrasure, referme, et échoue (le portillon ne reste jamais ouvert).
+                    t.getNavigation().stop();
+                    t.getMoveControl().setWantedPosition(a.x, a.y, a.z, 0.8);
+                    if (!t.getBoundingBox().intersects(new AABB(passage.porte)) || ++marche > 40) {
                         fermer(t, passage.porte);
-                        pas = 0;
+                        ouvert = false;
                         return echec("portillon_bloque");
                     }
                 }
@@ -551,26 +628,38 @@ final class Eleveur extends Metier {
             return Actions.Etat.EN_COURS;
         }
 
-        static double horizontale(Travailleur t, Vec3 p) { return Math.sqrt(Math.pow(t.getX() - p.x, 2) + Math.pow(t.getZ() - p.z, 2)); }
-
-        void ouvrir(Travailleur t, BlockPos g) {
-            BlockState s = t.level().getBlockState(g);
-            ouvert = g;
-            if (!(s.getBlock() instanceof FenceGateBlock) || s.getValue(FenceGateBlock.OPEN)) return;
-            t.level().setBlock(g, s.setValue(FenceGateBlock.OPEN, true), 10);
-            t.level().playSound(null, g, SoundEvents.FENCE_GATE_OPEN, SoundSource.BLOCKS, 1, 1);
-            t.level().gameEvent(t, GameEvent.BLOCK_OPEN, g);
-            t.swing(InteractionHand.OFF_HAND);
+        /**
+         * Le chemin tout droit jusqu'à {@code b} ne bute pas contre la clôture : il est dans l'axe du portillon (à 0,15 bloc
+         * près), ou déjà sorti de l'embrasure, du côté de {@code b}.
+         */
+        boolean droit(Travailleur t, Vec3 b) {
+            BlockState s = t.level().getBlockState(passage.porte);
+            if (!(s.getBlock() instanceof FenceGateBlock)) return true;
+            boolean x = s.getValue(FenceGateBlock.FACING).getAxis() == Direction.Axis.X;
+            double cx = passage.porte.getX() + 0.5, cz = passage.porte.getZ() + 0.5;
+            double travers = x ? Math.abs(t.getZ() - cz) : Math.abs(t.getX() - cx);
+            double ici = x ? t.getX() - cx : t.getZ() - cz, la = x ? b.x - cx : b.z - cz;
+            return travers <= 0.15 || Math.signum(ici) == Math.signum(la) && Math.abs(ici) >= 0.5 + t.getBbWidth() / 2;
         }
+    }
 
-        void fermer(Travailleur t, BlockPos g) {
-            ouvert = null;
-            BlockState s = t.level().getBlockState(g);
-            if (!(s.getBlock() instanceof FenceGateBlock) || !s.getValue(FenceGateBlock.OPEN)) return;
-            t.level().setBlock(g, s.setValue(FenceGateBlock.OPEN, false), 10);
-            t.level().playSound(null, g, SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1, 1);
-            t.level().gameEvent(t, GameEvent.BLOCK_CLOSE, g);
-        }
+    static double horizontale(Travailleur t, Vec3 p) { return Math.sqrt(Math.pow(t.getX() - p.x, 2) + Math.pow(t.getZ() - p.z, 2)); }
+
+    static void ouvrir(Travailleur t, BlockPos g) {
+        BlockState s = t.level().getBlockState(g);
+        if (!(s.getBlock() instanceof FenceGateBlock) || s.getValue(FenceGateBlock.OPEN)) return;
+        t.level().setBlock(g, s.setValue(FenceGateBlock.OPEN, true), 10);
+        t.level().playSound(null, g, SoundEvents.FENCE_GATE_OPEN, SoundSource.BLOCKS, 1, 1);
+        t.level().gameEvent(t, GameEvent.BLOCK_OPEN, g);
+        t.swing(InteractionHand.OFF_HAND);
+    }
+
+    static void fermer(Travailleur t, BlockPos g) {
+        BlockState s = t.level().getBlockState(g);
+        if (!(s.getBlock() instanceof FenceGateBlock) || !s.getValue(FenceGateBlock.OPEN)) return;
+        t.level().setBlock(g, s.setValue(FenceGateBlock.OPEN, false), 10);
+        t.level().playSound(null, g, SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1, 1);
+        t.level().gameEvent(t, GameEvent.BLOCK_CLOSE, g);
     }
 
     /** Pour abattre : son épée ou sa hache en main, s'il en a une ; sinon les mains nues (ses cisailles ne s'usent pas à frapper). */
@@ -585,7 +674,7 @@ final class Eleveur extends Metier {
 
     /** Le butin d'une bête qu'abat un ouvrier va droit dans son sac (rien ne tombe par terre ; s'il est plein, à ses pieds). */
     static void butin(LivingDropsEvent e) {
-        if (!(e.getSource().getEntity() instanceof Travailleur t) || !(e.getEntity() instanceof Animal)) return;
+        if (!(e.getSource().getEntity() instanceof Travailleur t) || !"eleveur".equals(t.metier) || !(e.getEntity() instanceof Animal a) || espece(a) == null) return;
         for (ItemEntity ie : e.getDrops()) t.ranger(ie.getItem().copy());
         e.setCanceled(true);
     }
@@ -609,7 +698,7 @@ final class Eleveur extends Metier {
         final List<Corvee> corvees = new ArrayList<>();
         Actions.Action sous;
         int etape, i, nourries, tondus, abattues;
-        boolean sansFourrage, sansCisailles, enclos, voisin;
+        boolean sansFourrage, sansCisailles, enclos, voisin, sienne;
         final Map<String, Integer> abattuesPar = new LinkedHashMap<>();
 
         Tournee(String mode, Elevage.Espece espece, int voulu) { super("tournee"); this.mode = mode; this.espece = espece; this.voulu = new int[]{voulu}; }
@@ -647,6 +736,7 @@ final class Eleveur extends Metier {
                 for (Elevage.Enclos e : liste) {
                     if (mode.equals("abattre") && espece != null && voulu[0] <= 0) break;
                     if (!aLui(t, e)) { voisin = true; continue; }
+                    sienne = true;
                     Corvee c = plan(t, e, parEnclos.get(e), mode, espece, voulu);
                     if (c != null) corvees.add(c);
                 }
@@ -665,7 +755,7 @@ final class Eleveur extends Metier {
         /** Rien à faire : pourquoi. */
         String rien() {
             if (!enclos) return "Je ne vois aucune bête dans un enclos près du poste, chef.";
-            if (voisin) return "Les seules bêtes que je vois ne sont pas à nous, chef : je n'y touche pas.";
+            if (voisin && !sienne) return "Les seules bêtes que je vois ne sont pas à nous, chef : je n'y touche pas.";
             return switch (mode) {
                 case "tondre" -> "Les moutons n'ont pas de laine à tondre, chef.";
                 case "abattre" -> espece == null ? "Il n'y a pas de bêtes en trop dans les enclos, chef."

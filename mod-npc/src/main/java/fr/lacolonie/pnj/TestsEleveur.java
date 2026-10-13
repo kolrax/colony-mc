@@ -149,7 +149,7 @@ public class TestsEleveur {
             h.assertTrue(TestsBucheron.compte(d, Items.WHITE_WOOL) >= 1, "la laine au dépôt : " + TestsBucheron.compte(d, Items.WHITE_WOOL));
             h.assertTrue(t.compter(Eleveur.CISAILLES) == 1 && TestsBucheron.compte(d, Items.SHEARS) == 0, "il garde les cisailles prises au dépôt");
             h.assertTrue(dedans(List.of(s), centre), "le mouton reste dans l'enclos");
-            h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon");
+            h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(parTerre(l, centre) == 0, "rien par terre : " + parTerre(l, centre));
             t.discard();
         });
@@ -173,11 +173,12 @@ public class TestsEleveur {
         h.succeedWhen(() -> {
             List<Cow> v = vaches(l, centre);
             long adultes = v.stream().filter(c -> !c.isBaby()).count();
+            h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos");
             h.assertTrue(adultes <= 2, "l'excédent doit être abattu : " + adultes + " adultes (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(adultes == 2 && marguerite.isAlive() && veau.isAlive() && veau.isBaby(), "le dernier couple, Marguerite et le veau restent");
             h.assertTrue(TestsBucheron.compte(d, Items.BEEF) >= 2, "la viande au dépôt : " + TestsBucheron.compte(d, Items.BEEF));
             h.assertTrue(parTerre(l, centre) == 0, "rien par terre : " + parTerre(l, centre));
-            h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon");
+            h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             t.discard();
         });
     }
@@ -189,10 +190,13 @@ public class TestsEleveur {
         Travailleur t = seul(h, 144, b);
         ServerLevel l = h.getLevel();
         BlockPos centre = b[0].offset(8, 0, 0);
-        for (int i = 0; i < 4; i++) bete(l, EntityType.COW, centre.offset(i - 2, 0, 1), false, null);
+        List<Cow> pre = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) pre.add(bete(l, EntityType.COW, centre.offset(i - 2, 0, 1), false, null));
+        Bureau.Entite d = TestsBucheron.depot(t);
         h.succeedWhen(() -> {
             h.assertTrue(t.tickCount > 600, "il a eu le temps de faire sa tournée");
-            h.assertTrue(vaches(l, centre).size() == 4, "les vaches au pré sont toutes là : " + vaches(l, centre).size());
+            h.assertTrue(pre.stream().allMatch(Cow::isAlive), "les vaches au pré sont toutes vivantes (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:beef")) + TestsBucheron.compte(d, Items.BEEF) == 0, "pas de viande");
             t.discard();
         });
     }
@@ -220,7 +224,7 @@ public class TestsEleveur {
                     long adultes = v.stream().filter(c -> !c.isBaby()).count();
                     h.assertTrue(adultes == 2 && g.consigne == null, "une vache abattue, pas plus : " + adultes + " adultes (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")");
                     h.assertTrue(marguerite.isAlive() && veau.isAlive(), "Marguerite et le veau restent");
-                    h.assertTrue(ferme(l, porte) && dehors(g, porte), "il ressort et referme le portillon");
+                    h.assertTrue(ferme(l, porte) && dehors(g, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + " (" + TestsJeu.etat(g, g.bureau) + ")");
                 },
                 () -> TestsRepertoire.fin(e));
     }
