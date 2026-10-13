@@ -102,7 +102,7 @@ public class TestsGuerrier {
         var villageois = fige(h, EntityType.VILLAGER, b[0].east(3).above());
         h.succeedWhen(() -> {
             h.assertTrue(villageois.getHealth() == villageois.getMaxHealth(), "le villageois ne doit pas être touché");
-            h.assertFalse(husk.isAlive(), "le monstre doit tomber sous ses flèches (vie " + husk.getHealth() + ", flèches " + t.compter(Guerrier.FLECHES) + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertFalse(husk.isAlive(), "le monstre doit tomber sous ses flèches (vie " + husk.getHealth() + ", flèches " + t.compter(Actions.Filtre.de("minecraft:arrow")) + ", " + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(t.compter(Actions.Filtre.de("minecraft:arrow")) < 32, "de vraies flèches tirées");
             villageois.discard();
             fin(t);
