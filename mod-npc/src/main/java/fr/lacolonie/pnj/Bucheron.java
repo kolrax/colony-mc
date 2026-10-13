@@ -71,15 +71,24 @@ final class Bucheron extends Metier {
             BlockPos p = BlockPos.of(s.getLong("p"));
             Actions.Filtre f = Actions.Filtre.de(s.getString("f"));
             if (s.getBoolean("carre")) {
-                List<BlockPos> carre = t.compter(f) >= 4 ? List.of(p, p.east(), p.south(), p.south().east()) : List.of(p);
-                for (int i = carre.size() - 1; i >= 0; i--) souches.add(0, souche(carre.get(i), f.toString(), false));
-                s = souches.getCompound(0);
-                souches.remove(0);
+                // Moins de 4 pousses de son bois : un chêne noir ne pousserait pas d'une seule, et un autre bois n'est pas le
+                // sien : il garde la souche pour plus tard (20 minutes au plus).
+                if (t.compter(f) < 4 && (t.compter(f) == 0 || SEUL_IMPOSSIBLE.contains(f.toString()))) {
+                    if (!s.contains("garde")) s.putLong("garde", Cerveau.temps(t) + 1200);
+                    if (Cerveau.temps(t) < s.getLong("garde")) souches.add(s);
+                    m.put("plants", souches);
+                    s = null;
+                } else {
+                    List<BlockPos> carre = t.compter(f) >= 4 ? List.of(p, p.east(), p.south(), p.south().east()) : List.of(p);
+                    for (int i = carre.size() - 1; i >= 0; i--) souches.add(0, souche(carre.get(i), f.toString(), false));
+                    s = souches.getCompound(0);
+                    souches.remove(0);
+                }
             }
             m.put("plants", souches);
-            p = BlockPos.of(s.getLong("p"));
-            if (t.compter(f) == 0) f = POUSSES;
-            if (p.distSqr(t.blockPosition()) < 24 * 24 && l.isLoaded(p) && Monde.libre(l, p) && l.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
+            if (s != null) p = BlockPos.of(s.getLong("p"));
+            if (s != null && t.compter(f) == 0) f = POUSSES;
+            if (s != null && p.distSqr(t.blockPosition()) < 24 * 24 && l.isLoaded(p) && Monde.libre(l, p) && l.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
                 Cerveau.lancer(t, new Actions.Poser(p, f));
                 return;
             }
@@ -131,6 +140,8 @@ final class Bucheron extends Metier {
     }
 
     static final Actions.Filtre POUSSES = Actions.Filtre.de("#minecraft:saplings");
+    /** Les pousses qui ne donnent un arbre qu'à 4 en carré. */
+    static final java.util.Set<String> SEUL_IMPOSSIBLE = java.util.Set.of("minecraft:dark_oak_sapling");
 
     static CompoundTag souche(BlockPos p, String pousse, boolean carre) {
         CompoundTag s = new CompoundTag();

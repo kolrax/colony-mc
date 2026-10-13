@@ -582,14 +582,21 @@ public final class Actions {
         Set<BlockPos> vus = new HashSet<>();
         ArrayDeque<BlockPos> file = new ArrayDeque<>(List.of(pied));
         vus.add(pied);
+        Block essence = lvl.getBlockState(pied).getBlock();
         int feuilles = 0;
         while (!file.isEmpty() && bois.size() < BUCHES_MAX) {
             BlockPos p = file.poll();
             bois.add(p);
+            // Une bûche collée à une construction (planches, vitre, porte, escalier…) : ce n'est pas (que) un arbre, il n'y touche pas.
+            for (Direction d : Direction.values()) {
+                BlockPos q = p.relative(d);
+                if (Monde.construit(lvl, q) && !lvl.getBlockState(q).is(net.minecraft.world.level.block.Blocks.BEE_NEST)) return null;
+            }
             for (BlockPos q : BlockPos.betweenClosed(p.offset(-1, 0, -1), p.offset(1, 1, 1))) {
                 if (vus.contains(q) || q.getY() < pied.getY() || Math.abs(q.getX() - pied.getX()) > RAYON_ARBRE || Math.abs(q.getZ() - pied.getZ()) > RAYON_ARBRE) continue;
                 BlockState st = lvl.getBlockState(q);
-                if (st.is(BlockTags.LOGS)) { BlockPos im = q.immutable(); vus.add(im); file.add(im); }
+                // Seulement le bois de la même essence que le pied : un arbre ne mêle pas ses bois (une cabane d'un autre bois reste).
+                if (st.is(essence)) { BlockPos im = q.immutable(); vus.add(im); file.add(im); }
                 else if (st.getBlock() instanceof LeavesBlock && !st.getValue(LeavesBlock.PERSISTENT)) feuilles++;
             }
         }
@@ -879,15 +886,26 @@ public final class Actions {
         final int voulu;
         BlockPos four;
         int etape, recu, arret;
+        /** Ce qu'il a mis à cuire et à brûler (il ne reprend que ça). */
+        ItemStack mis = ItemStack.EMPTY, brule = ItemStack.EMPTY;
 
         Charbon(Filtre bois, int voulu) { super("charbon"); this.bois = bois; this.voulu = voulu; }
 
         /** Un vrai fourneau à 8 blocs du poste au plus (le plus proche), ou null. Une seule recherche, à la demande. */
         static BlockPos fourneau(Level l, BlockPos poste) {
             BlockPos r = null;
+            boolean libre = false;
             for (BlockPos q : BlockPos.betweenClosed(poste.offset(-8, -3, -8), poste.offset(8, 3, 8)))
-                if (l.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity && (r == null || q.distSqr(poste) < r.distSqr(poste))) r = q.immutable();
+                if (l.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity f) {
+                    boolean v = vide(f); // un fourneau vide d'abord ; sinon le plus proche (il dira qu'il est occupé)
+                    if (r == null || v && !libre || v == libre && q.distSqr(poste) < r.distSqr(poste)) { r = q.immutable(); libre = v; }
+                }
             return r;
+        }
+
+        /** Rien dedans : ni à cuire, ni combustible, ni rien de cuit. Il ne se sert jamais d'un fourneau où un autre a mis quelque chose. */
+        static boolean vide(net.minecraft.world.level.block.entity.FurnaceBlockEntity f) {
+            return f.getItem(0).isEmpty() && f.getItem(1).isEmpty() && f.getItem(2).isEmpty();
         }
 
         Etat tick(Travailleur t) {
@@ -918,7 +936,7 @@ public final class Actions {
                     t.getNavigation().stop();
                     t.getLookControl().setLookAt(Vec3.atCenterOf(four));
                     ItemStack dedans = f.getItem(0), feu = f.getItem(1);
-                    if (!dedans.isEmpty() && !bois.objet(dedans) || !f.getItem(2).isEmpty() && !f.getItem(2).is(net.minecraft.world.item.Items.CHARCOAL)) return echec("four_occupe");
+                    if (!vide(f)) return echec("four_occupe");
                     int nb = Math.min(voulu, t.compter(bois));
                     int charbon = t.compter(COMBUSTIBLE);
                     int cuire = charbon > 0 ? nb : nb * 3 / 5; // sans charbon : 3 bûches cuites pour 2 brûlées
@@ -939,6 +957,8 @@ public final class Actions {
                         if (feu.isEmpty()) feu = s; else feu.grow(1);
                     }
                     f.setItem(1, feu);
+                    mis = dedans.copy();
+                    brule = feu.copy();
                     f.setChanged();
                     t.swing(InteractionHand.MAIN_HAND);
                     etape = 2;
@@ -948,13 +968,23 @@ public final class Actions {
                     t.getNavigation().stop();
                     t.getLookControl().setLookAt(Vec3.atCenterOf(four));
                     if (age % 20 != 0) return Etat.EN_COURS;
+                    // Il ne reprend que ce qui vient de lui : le charbon de bois, ses bûches pas cuites, son combustible pas brûlé.
                     ItemStack fait = f.getItem(2);
-                    if (!fait.isEmpty()) { recu += fait.getCount(); t.ranger(fait.copy()); f.setItem(2, ItemStack.EMPTY); t.swing(InteractionHand.MAIN_HAND); }
+                    if (fait.is(net.minecraft.world.item.Items.CHARCOAL) && recu < mis.getCount()) {
+                        ItemStack pris = fait.split(Math.min(fait.getCount(), mis.getCount() - recu));
+                        recu += pris.getCount();
+                        t.ranger(pris);
+                        f.setChanged();
+                        t.swing(InteractionHand.MAIN_HAND);
+                    }
                     boolean allume = f.getBlockState().getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT);
                     arret = allume ? 0 : arret + 1;
-                    if (f.getItem(0).isEmpty() || arret >= 4) {
-                        // Fini, ou le feu s'est éteint : il reprend ses bûches pas cuites (rien ne se perd).
-                        if (!f.getItem(0).isEmpty() && bois.objet(f.getItem(0))) { t.ranger(f.getItem(0).copy()); f.setItem(0, ItemStack.EMPTY); }
+                    if (f.getItem(0).isEmpty() || arret >= 4 || recu >= mis.getCount()) {
+                        // Fini, ou le feu s'est éteint : il reprend ses bûches pas cuites et son combustible (rien ne se perd).
+                        for (int k = 0; k < 2; k++) {
+                            ItemStack a = f.getItem(k), sien = k == 0 ? mis : brule;
+                            if (!a.isEmpty() && ItemStack.isSameItemSameComponents(a, sien)) { t.ranger(a.split(Math.min(a.getCount(), sien.getCount()))); f.setChanged(); }
+                        }
                         etape = 3;
                     }
                 }
@@ -1078,14 +1108,22 @@ public final class Actions {
     static final class Ramasser extends Action {
         final double rayon;
         final Filtre filtre;
+        /** Où ramasser (null : autour de lui, dans le rayon). */
+        final net.minecraft.world.phys.AABB zone;
+        ItemEntity proche;
 
-        Ramasser(double rayon, Filtre filtre) { super("ramasser"); this.rayon = rayon; this.filtre = filtre; }
+        Ramasser(double rayon, Filtre filtre) { this(rayon, filtre, null); }
+
+        Ramasser(double rayon, Filtre filtre, net.minecraft.world.phys.AABB zone) { super("ramasser"); this.rayon = rayon; this.filtre = filtre; this.zone = zone; }
 
         Etat tick(Travailleur t) {
             if (age > 20 * 40) return Etat.OK;
-            ItemEntity proche = null;
-            for (ItemEntity ie : t.level().getEntitiesOfClass(ItemEntity.class, t.getBoundingBox().inflate(rayon)))
-                if (filtre.objet(ie.getItem()) && t.inventaire.canAddItem(ie.getItem()) && (proche == null || t.distanceToSqr(ie) < t.distanceToSqr(proche))) proche = ie;
+            // L'objet le plus proche : cherché quand le précédent est ramassé, et une fois par seconde (pas à chaque tick).
+            if (proche == null || !proche.isAlive() || age % 20 == 0) {
+                proche = null;
+                for (ItemEntity ie : t.level().getEntitiesOfClass(ItemEntity.class, zone != null ? zone : t.getBoundingBox().inflate(rayon)))
+                    if (filtre.objet(ie.getItem()) && t.inventaire.canAddItem(ie.getItem()) && (proche == null || t.distanceToSqr(ie) < t.distanceToSqr(proche))) proche = ie;
+            }
             if (proche == null) return Etat.OK;
             if (coince()) return echec("inaccessible");
             marcher(t, proche.position(), 1.0);

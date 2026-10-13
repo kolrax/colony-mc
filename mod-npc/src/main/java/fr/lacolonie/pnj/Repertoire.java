@@ -314,8 +314,9 @@ final class Repertoire {
                 int debut;
                 int k = d.contains("@") ? personne(n, m, d) : n.indexOf(" " + d + " ");
                 // « fais 32 planches » se dit comme « fais des planches » (le nombre est lu à part).
-                if (k < 0 && !d.contains("@") && !sansNombres.equals(n) && (k = sansNombres.indexOf(" " + d + " ")) >= 0)
-                    k = Math.min(k, n.length() - 1);
+                // (k est alors une place dans sansNombres : chaque nombre y est remplacé par un seul mot, le rang des mots est le même.)
+                String ou = n;
+                if (k < 0 && !d.contains("@") && !sansNombres.equals(n) && (k = sansNombres.indexOf(" " + d + " ")) >= 0) ou = sansNombres;
                 List<String> rd = RACINES.get(d);
                 if (d.contains("@") && k < 0) {
                     // Sans quelqu'un à sa place, la formule ne compte que comme piste pour l'IA.
@@ -324,7 +325,7 @@ final class Repertoire {
                     debut = rac.indexOf(rd.get(0));
                 } else if (k >= 0) {
                     score = 100 + 3 * mots(d).size();
-                    debut = mots(n.substring(0, k)).size();
+                    debut = mots(ou.substring(0, k)).size();
                 } else if (!rd.isEmpty() && presentes.containsAll(rd) && (mots(d).size() == 1 || rd.size() >= 2)) {
                     // Un seul mot qui compte dans une formule plus longue (« il fait noir ici ») : il faut la formule entière.
                     // Chaque autre mot qui compte ailleurs dans le répertoire éloigne la phrase de cette action (« va chercher

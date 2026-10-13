@@ -223,6 +223,10 @@ public class TestsBucheron {
         l.setBlockAndUpdate(posee, Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
         List<BlockPos> poteau = List.of(centre.offset(0, 1, -3), centre.offset(0, 2, -3)); // des rondins sans feuilles : une construction
         for (BlockPos q : poteau) l.setBlockAndUpdate(q, Blocks.OAK_LOG.defaultBlockState());
+        // Hors du terrain (à 14 blocs du centre) : il ne va pas le ramasser.
+        net.minecraft.world.entity.item.ItemEntity pain = new net.minecraft.world.entity.item.ItemEntity(l, centre.getX() + 0.5, centre.getY() + 1, centre.getZ() - 13.5, new ItemStack(Items.BREAD));
+        pain.setUnlimitedLifetime();
+        l.addFreshEntity(pain);
         TestsIA.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
@@ -244,6 +248,82 @@ public class TestsBucheron {
                     h.assertTrue(l.getBlockState(posee).is(Blocks.OAK_LEAVES), "la feuille posée reste");
                     h.assertTrue(l.getBlockState(pied.below()).is(Blocks.GRASS_BLOCK) || l.getBlockState(pied.below()).is(Blocks.DIRT), "le sol n'est pas creusé");
                     h.assertTrue(l.getBlockState(pied).isAir(), "rien n'est replanté");
+                    h.assertTrue(pain.isAlive(), "le pain hors du terrain reste par terre");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Relecture : une cabane de rondins (murs de chêne, planches) collée à un chêne : il n'y touche pas, ni à l'arbre. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void cabaneCollee(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, 77, b, new ItemStack(Items.IRON_AXE));
+        ServerLevel l = h.getLevel();
+        BlockPos pied = b[0].east(5);
+        arbre(l, pied, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        List<BlockPos> mur = new ArrayList<>(), planches = new ArrayList<>();
+        for (int y = 0; y < 3; y++) { mur.add(pied.offset(1, y, 0)); planches.add(pied.offset(2, y, 0)); }
+        for (BlockPos q : mur) l.setBlockAndUpdate(q, Blocks.OAK_LOG.defaultBlockState());
+        for (BlockPos q : planches) l.setBlockAndUpdate(q, Blocks.OAK_PLANKS.defaultBlockState());
+        h.runAtTickTime(h.getTick() + 400, () -> {
+            h.assertTrue(mur.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "le mur de rondins de la cabane doit rester (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(planches.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_PLANKS)), "les planches restent");
+            t.discard();
+            h.succeed();
+        });
+    }
+
+    /** Relecture : des bûches d'un joueur dans le fourneau : il ne s'en sert pas et n'y prend rien ; il le dit. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void fourneauDUnAutre(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 78);
+        Travailleur odon = e[2];
+        ServerLevel l = h.getLevel();
+        BlockPos four = chef.blockPosition().offset(3, 0, -3);
+        l.setBlockAndUpdate(four, Blocks.FURNACE.defaultBlockState());
+        var f = (net.minecraft.world.level.block.entity.FurnaceBlockEntity) l.getBlockEntity(four);
+        f.setItem(0, new ItemStack(Items.BIRCH_LOG, 3));
+        Bureau.Entite d = depot(odon);
+        d.depot.setItem(0, new ItemStack(Items.OAK_LOG, 4));
+        d.depot.setItem(1, new ItemStack(Items.COAL, 1));
+        String[] dit = {null};
+        TestsIA.etapes(h, chef, e,
+                () -> dit[0] = Consignes.ordonner(odon, new Ordres.Faire("charbon_bois", "", 0, 0, false), chef, "Fais du charbon de bois", 0, 1),
+                TestsIA.attendre(h, 300),
+                () -> {
+                    h.assertTrue(f.getItem(0).is(Items.BIRCH_LOG) && f.getItem(0).getCount() == 3 && f.getItem(1).isEmpty(), "le fourneau du joueur est intact : " + f.getItem(0) + " / " + f.getItem(1));
+                    h.assertTrue(compte(d, Items.OAK_LOG) == 4 && compte(d, Items.COAL) == 1 && odon.compter(Actions.Filtre.de("#minecraft:logs")) == 0, "rien n'est pris");
+                    h.assertTrue(dit[0] != null && dit[0].contains("occupé"), "il doit dire que le fourneau est occupé : " + dit[0]);
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Relecture : sans poste et le sac plein, il ne défriche pas en laissant le bois par terre : il s'arrête et le dit. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void defricheSacPleinSansPoste(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 79);
+        Travailleur odon = e[2];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        odon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+        for (int i = 0; i < odon.inventaire.getContainerSize(); i++) odon.inventaire.setItem(i, new ItemStack(Items.DIRT, 64));
+        odon.bureau = null;
+        BlockPos centre = o.offset(7, -1, 0);
+        List<BlockPos> tronc = arbre(l, centre.offset(1, 1, 1), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    odon.parler(chef, "Défriche ici 5 sur 5");
+                },
+                TestsIA.attendre(h, 400),
+                () -> {
+                    var par = l.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(centre).inflate(16),
+                            x -> x.getItem().is(net.minecraft.tags.ItemTags.LOGS));
+                    h.assertTrue(par.isEmpty(), "pas de bûches par terre : " + par.size() + " (" + TestsRepertoire.c(odon) + ")");
+                    h.assertTrue(tronc.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre reste debout");
+                    h.assertTrue(odon.consigne == null, "il s'arrête (" + TestsRepertoire.c(odon) + ")");
                 },
                 () -> TestsRepertoire.fin(e));
     }

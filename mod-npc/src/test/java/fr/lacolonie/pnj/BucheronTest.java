@@ -62,6 +62,12 @@ class BucheronTest {
         RepertoireTest.demande("Fais du charbon de bois", "bucheron", "charbon_bois");
         RepertoireTest.demande("Plante des arbres", "bucheron", "planter");
         RepertoireTest.demande("Abats les arbres autour", "bucheron", "abattre_autour");
+        // Relecture : un nom seul ne suffit pas, il faut le verbe (donner, vendre, ranger des planches, ce n'est pas en faire).
+        for (String x : List.of("Donne-moi des planches", "Donne-moi 10 planches", "Vends-moi 32 planches", "Va chercher du charbon de bois au coffre",
+                "Range le charbon de bois")) {
+            String a = RepertoireTest.action(x, "bucheron");
+            assertFalse(a.equals("planches") || a.equals("charbon_bois"), x + " → " + a);
+        }
         // Ce ne sont pas des commandes de bois.
         for (String s : List.of("Plante des bouleaux en rangs", "Fais des planches de chêne", "Fais du charbon de bois", "Défriche cette zone"))
             assertTrue(Ordres.lire(s, "bucheron").missions.isEmpty(), s + " → " + Ordres.lire(s, "bucheron").missions);

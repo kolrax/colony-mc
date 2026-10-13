@@ -888,8 +888,12 @@ final class Consignes {
             case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
             case "planches", "charbon" -> {
                 if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
-                if (mode.equals("charbon") && l.isLoaded(t.bureau) && Actions.Charbon.fourneau(l, t.bureau) == null)
-                    return "Il me faut un fourneau près du poste pour faire du charbon de bois, chef.";
+                if (mode.equals("charbon") && l.isLoaded(t.bureau)) {
+                    BlockPos f = Actions.Charbon.fourneau(l, t.bureau);
+                    if (f == null) return "Il me faut un fourneau près du poste pour faire du charbon de bois, chef.";
+                    if (l.getBlockEntity(f) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity fb && !Actions.Charbon.vide(fb))
+                        return "Le fourneau est occupé, chef.";
+                }
             }
             case "torches" -> {
                 if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0 && Bureau.entite(t) == null) return "Je n'ai pas de torches, chef.";
@@ -1052,6 +1056,11 @@ final class Consignes {
         int bouchons, laisses;
         /** Forêt : pousses prévues et plantées ; planches et charbon : le travail au poste. */
         int voulu, plantees;
+        /** Défrichage : rangs déjà relevés, plantes trouvées (après les arbres), le terrain (élargi) où ramasser à la fin. */
+        int releves;
+        final List<BlockPos> plantesZone = new ArrayList<>();
+        AABB zone;
+        boolean releve;
         Actions.Action atelier;
         boolean vide, repasse, descend, minerai;
         String instrument;
@@ -1472,6 +1481,7 @@ final class Consignes {
                     return rate(t, "Je n'arrive pas à l'atteindre, chef.");
             }
             switch (m) {
+                case "defricher_zone" -> { if (!releve && !(releve = relever(t, 4))) return Actions.Etat.EN_COURS; }
                 case "ramasser" -> {
                     if (etape++ > 0) return ok(t);
                     sous = new Actions.Ramasser(Math.max(4, c.nombre), Actions.Filtre.de("tout"));
@@ -1524,7 +1534,7 @@ final class Consignes {
                     return rate(t, switch (raisonSous) {
                         case "pas_de_fourneau" -> "Il me faut un fourneau près du poste pour faire du charbon de bois, chef.";
                         case "pas_de_bois" -> "Je n'ai pas de bûches à cuire, chef, ni au dépôt.";
-                        case "four_occupe" -> "Le fourneau est déjà pris par autre chose, chef.";
+                        case "four_occupe" -> "Le fourneau est occupé, chef.";
                         case "pas_de_combustible" -> "Il me faut de quoi chauffer le fourneau, chef : du charbon, ou plus de bûches.";
                         default -> "Le feu n'a rien donné, chef.";
                     });
@@ -1569,22 +1579,29 @@ final class Consignes {
                     }
                     case "defricher_zone" -> {
                         BlockState s = l.getBlockState(p);
-                        if (s.is(BlockTags.LOGS)) {
-                            // Sac presque plein : au dépôt d'abord (le bois d'un arbre ne tiendrait pas), puis il reprend.
-                            if (Monde.libres(t) < 2 && t.bureau != null && !vide) {
-                                vide = true;
-                                chantier.add(0, p);
-                                Metier mt = Metier.de(t.metier);
-                                sous = new Actions.Deposer(mt == null ? List.of() : mt.garder);
-                            } else { vide = false; sous = new Actions.Abattre(p); }
-                        } else if (plante(l, p, s)) sous = new Actions.Casser(p);
+                        List<BlockPos> bois = s.is(BlockTags.LOGS) ? Actions.arbre((ServerLevel) l, p) : null;
+                        if (bois == null && !plante(l, p, s)) continue;
+                        // La place qu'il faut au sac (le bois de l'arbre, plus pousses et bâtons) : sinon au dépôt d'abord ;
+                        // sans poste, ou le dépôt plein, il s'arrête et le dit (rien ne tombe par terre).
+                        int place = bois != null ? (bois.size() + 63) / 64 + 2 : 1;
+                        if (Monde.libres(t) < place) {
+                            if (t.bureau == null) { Voix.dire(t, "Mon sac est plein, chef : je m'arrête là.", "inquiet"); return ok(t); }
+                            if (vide) { Voix.dire(t, "Mon sac est plein, et le dépôt aussi, chef : je m'arrête là.", "inquiet"); return ok(t); }
+                            vide = true;
+                            chantier.add(0, p);
+                            Metier mt = Metier.de(t.metier);
+                            sous = new Actions.Deposer(mt == null ? List.of() : mt.garder);
+                        } else {
+                            vide = false;
+                            sous = bois != null ? new Actions.Abattre(p) : new Actions.Casser(p);
+                        }
                     }
                     default -> {}
                 }
                 if (sous != null) return Actions.Etat.EN_COURS;
             }
             if (m.equals("torches") && etape < 2) return Actions.Etat.EN_COURS;
-            if (m.equals("defricher_zone") && etape == 0) { etape = 1; sous = new Actions.Ramasser(Fouille.TERRAIN_MAX, Actions.Filtre.de("tout")); return Actions.Etat.EN_COURS; }
+            if (m.equals("defricher_zone") && etape == 0) { etape = 1; sous = new Actions.Ramasser(Fouille.TERRAIN_MAX, Actions.Filtre.de("tout"), zone); return Actions.Etat.EN_COURS; }
             if (m.equals("defricher_zone")) Voix.dire(t, "Le terrain est dégagé, chef : on peut y bâtir.", "calme");
             if (m.equals("foret")) Voix.dire(t, "La forêt est plantée, chef." + (plantees < voulu ? " Il me manquait des pousses : j'en ai mis " + plantees + " sur " + voulu + "." : ""), "calme");
             // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
@@ -1721,29 +1738,6 @@ final class Consignes {
                     for (List<BlockPos> g : groupes.values())
                         if (g.stream().allMatch(q -> q != null && q.getY() == g.get(0).getY())) r.addAll(g);
                 }
-                case "defricher_zone" -> {
-                    Fouille.Plan p = Fouille.Plan.de(c.texte);
-                    if (p == null) break;
-                    Direction d = Direction.byName(p.direction());
-                    if (d == null || d.getAxis().isVertical()) d = Direction.NORTH;
-                    // Les arbres naturels d'abord, puis herbes, fleurs et buissons, rang par rang en serpentin.
-                    List<BlockPos> plantes = new ArrayList<>();
-                    int f0 = -(p.longueur() - 1) / 2, c0 = -(p.largeur() - 1) / 2;
-                    for (int i = 0; i < p.longueur(); i++)
-                        for (int j = 0; j < p.largeur(); j++) {
-                            BlockPos col = v.relative(d, f0 + i).relative(d.getClockWise(), c0 + (i % 2 == 0 ? j : p.largeur() - 1 - j));
-                            if (!l.isLoaded(col)) continue;
-                            for (int y = v.getY() - 3; y <= v.getY() + 4; y++) {
-                                BlockPos q = col.atY(y);
-                                BlockState s = l.getBlockState(q);
-                                if (s.is(BlockTags.LOGS)) {
-                                    BlockState sous = l.getBlockState(q.below());
-                                    if (sous.is(BlockTags.DIRT) && Actions.arbre((ServerLevel) l, q) != null && !Mineur.interdit(t, q, true)) r.add(q);
-                                } else if (plante(l, q, s)) plantes.add(q);
-                            }
-                        }
-                    r.addAll(plantes);
-                }
                 case "defricher" -> {
                     int ray = Math.max(2, c.nombre);
                     for (BlockPos q : BlockPos.betweenClosed(t.blockPosition().offset(-ray, -2, -ray), t.blockPosition().offset(ray, 2, ray))) {
@@ -1756,6 +1750,42 @@ final class Consignes {
                 default -> {}
             }
             return r;
+        }
+
+        /**
+         * Défrichage : relève quelques rangs du terrain (un relevé de 32 x 32 d'un coup ferait un pic) ; les arbres naturels
+         * vont dans {@code chantier}, herbes, fleurs et buissons dans {@code plantesZone}. Vrai quand tout est relevé.
+         */
+        boolean relever(Travailleur t, int rangs) {
+            var l = t.level();
+            BlockPos v = c.lieu;
+            Fouille.Plan p = Fouille.Plan.de(c.texte);
+            if (p == null) return true;
+            Direction d = Direction.byName(p.direction());
+            if (d == null || d.getAxis().isVertical()) d = Direction.NORTH;
+            int f0 = -(p.longueur() - 1) / 2, c0 = -(p.largeur() - 1) / 2;
+            if (zone == null) {
+                BlockPos a = v.relative(d, f0).relative(d.getClockWise(), c0), b = v.relative(d, f0 + p.longueur() - 1).relative(d.getClockWise(), c0 + p.largeur() - 1);
+                zone = new AABB(Math.min(a.getX(), b.getX()) - 3, v.getY() - 3, Math.min(a.getZ(), b.getZ()) - 3, Math.max(a.getX(), b.getX()) + 4, v.getY() + 12, Math.max(a.getZ(), b.getZ()) + 4);
+            }
+            // Rang par rang en serpentin : les arbres naturels d'abord, puis herbes, fleurs et buissons.
+            for (int fin = Math.min(p.longueur(), releves + rangs); releves < fin; releves++)
+                for (int j = 0; j < p.largeur(); j++) {
+                    int i = releves;
+                    BlockPos col = v.relative(d, f0 + i).relative(d.getClockWise(), c0 + (i % 2 == 0 ? j : p.largeur() - 1 - j));
+                    if (!l.isLoaded(col)) continue;
+                    for (int y = v.getY() - 3; y <= v.getY() + 4; y++) {
+                        BlockPos q = col.atY(y);
+                        BlockState s = l.getBlockState(q);
+                        if (s.is(BlockTags.LOGS)) {
+                            if (l.getBlockState(q.below()).is(BlockTags.DIRT) && Actions.arbre((ServerLevel) l, q) != null && !Mineur.interdit(t, q, true)) chantier.add(q);
+                        } else if (plante(l, q, s)) plantesZone.add(q);
+                    }
+                }
+            if (releves < p.longueur()) return false;
+            chantier.addAll(plantesZone);
+            plantesZone.clear();
+            return true;
         }
 
         /**
