@@ -367,6 +367,8 @@ public class Travailleur extends PathfinderMob {
     String lieuAffaires = "";
     int pauseCerveau;
     ChunkPos chunkForce;
+    /** Conversations entre ouvriers ({@link Causeries}) : prochain essai, et fin du dernier combat, fuite ou péril (temps du jeu). */
+    long prochaineCauserie, finDanger;
 
     public Travailleur(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -909,6 +911,7 @@ public class Travailleur extends PathfinderMob {
             coince.progres(getX(), getY(), getZ());
         if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser
                 || action instanceof Actions.Attaquer || action != null && action.travail)) coince.travail();
+        if (action instanceof Actions.Attaquer || action instanceof Actions.Fuir || action instanceof Actions.Echapper) finDanger = level().getGameTime();
         if (action != null) action.fin(this);
         action = null;
         resultat = r;
@@ -1067,6 +1070,7 @@ public class Travailleur extends PathfinderMob {
     /** Appelé quand il a touché tout ce qu'on lui devait. */
     public void paye(long montant, boolean paieDuJour) {
         impayes = 0;
+        memoire.putLong("paie_le", jour()); // « paie_recue » des conversations
         changerMoral(Obeissance.PAIE);
         if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; }
         if (mode == Mode.GREVE) {
@@ -1411,6 +1415,7 @@ public class Travailleur extends PathfinderMob {
      * Une lettre ne peut pas le faire suivre, attendre sur place, montrer son sac ni le renvoyer : il faut être là.
      */
     String appliquer(Ordres.Lecture l, ServerPlayer enFace) {
+        if (action instanceof Causeries.Bavarder) finirAction("ordre"); // son chef lui parle : il laisse la conversation
         Mode avant = mode;
         Actions.Action actionAvant = action;
         reponseImposee = false;
