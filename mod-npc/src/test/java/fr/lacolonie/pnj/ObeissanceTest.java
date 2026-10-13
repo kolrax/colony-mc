@@ -85,7 +85,7 @@ class ObeissanceTest {
 
     @Test
     void accepterEtInsister() {
-        for (String s : new String[]{"D'accord", "Oui", "Marché conclu !", "ça marche", "Tope là"}) assertTrue(Obeissance.accepte(s), s);
+        for (String s : new String[]{"D'accord", "Oui", "Marché conclu !", "ça marche", "Tope là", "Topons là", "Oui, pas de souci", "D'accord, pas de problème", "D'accord, mais ne traîne pas"}) assertTrue(Obeissance.accepte(s), s);
         for (String s : new String[]{"Non", "Pas question", "Rentre au poste", "Pas d'accord", "Je ne suis pas d'accord", "Je n'accepte pas",
                 "Ça va bien ?", "D'accord, laisse tomber", "C'est entendu, oublie ça"}) assertFalse(Obeissance.accepte(s), s);
         assertTrue(Obeissance.abandonne("Non, laisse tomber") && Obeissance.abandonne("Annule") && !Obeissance.abandonne("Non"));

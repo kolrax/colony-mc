@@ -94,12 +94,12 @@ final class Obeissance {
         String n = Ordres.normaliser(texte);
         if (n.contains("?") || refuse(n) || abandonne(texte)) return false;
         return Ordres.dit(n, "oui", "ouais", "d accord", "daccord", "marche conclu", "affaire conclue", "ca marche", "entendu", "j accepte", "accepte",
-                "va pour", "tope la", "ok", "okay", "ca me va", "c est d accord", "conclu", "bien sur");
+                "va pour", "tope la", "topons la", "ok", "okay", "ca me va", "c est d accord", "conclu", "bien sur");
     }
 
     /** Une négation dans la phrase (« pas d'accord », « je n'accepte pas », « jamais »). */
     static boolean refuse(String n) {
-        return Ordres.dit(n, "non", "nan", "pas", "ne", "n", "jamais", "hors de question");
+        return Ordres.dit(n, "non", "nan", "pas d accord", "pas question", "n accepte", "ne veux pas", "refuse", "jamais", "hors de question");
     }
 
     /** Le chef abandonne l'ordre (« laisse tomber », « annule », « oublie »). */

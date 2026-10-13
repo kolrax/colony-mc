@@ -36,3 +36,4 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
   - « mine à la verticale » compté comme mortel (discutable) ;
   - un ordre visé accepté plus tard vise ce que le chef regarde au moment de l'acceptation ;
   - chemins par l'IA (réponse imposée) non testés en jeu ; effets du moral dans la durée testés seulement en calcul pur.
+  - 2e relecture : « J'ai dit non » face à un marché est pris pour une insistance (fait l'ordre sans prime) ; « va dans le feu de camp » pris pour mortel ; ordres mortels tournés autrement (« saute vite dans la lave », « va nager dans la lave », « je veux que tu sautes dans la lave ») non refusés en parole (le réflexe de survie et `Monde.mortel` protègent) ; correction « l'IA reprend l'ordre en suspens » (accord et insistance lus sur les mots du chef) sans test en jeu (les tests tournent sans IA).

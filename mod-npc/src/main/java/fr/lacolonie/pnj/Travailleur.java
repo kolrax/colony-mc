@@ -1419,7 +1419,8 @@ public class Travailleur extends PathfinderMob {
         enAttente = null;
         if (avant != null) {
             // Une phrase qui porte son propre ordre (« oui, mais d'abord rentre au poste », « fais le guet ») est un nouvel ordre.
-            boolean seule = Obeissance.sansOrdre(l);
+            // Sur les mots du chef : avec l'IA, l est sa lecture, qui reprend souvent l'ordre en suspens.
+            boolean seule = Obeissance.sansOrdre(Ordres.lire(l.texte, metier));
             boolean accepte = attenteMarche && seule && Obeissance.accepte(l.texte);
             boolean insiste = !accepte && (seule && Obeissance.insiste(l.texte) || Ordres.normaliser(l.texte).equals(Ordres.normaliser(avant.texte)));
             if (accepte) {
@@ -1448,7 +1449,7 @@ public class Travailleur extends PathfinderMob {
             }
         }
         Obeissance.Ordre ordre = Obeissance.peine(l, metier, !enService());
-        if (avant != null && Obeissance.question(l)) enAttente = avant; // une simple question entre-temps : l'ordre reste en suspens
+        if (avant != null && Obeissance.question(Ordres.lire(l.texte, metier))) enAttente = avant; // une simple question entre-temps : l'ordre reste en suspens
         if (mode == Mode.GREVE) return appliquerOrdre(l, enFace);
         Obeissance.Verdict v = Obeissance.decider(moral, temperament, ordre, false);
         switch (v) {
