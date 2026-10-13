@@ -205,6 +205,7 @@ final class Messages {
         t("marche", "fourbe", "Tope là, chef ! Tu ne le regretteras pas.");
         m("pas_de_marche", null, "Alors ce sera sans moi, chef.", "Tant pis, chef : sans rien de plus, je ne le ferai pas.");
         t("pas_de_marche", "fourbe", "Dommage… Trouve-toi un autre benêt, alors.");
+        m("abandon", null, "Bien, chef : n'en parlons plus.", "Comme tu voudras, chef.");
         m("sans_marche", null, "Bon… Je le ferai quand même, mais le cœur n'y est pas.", "Soit. Pour rien, alors… J'y vais.");
         m("refus_paie", null, "Non, chef : ma paie est en retard. Paie-moi ce que tu me dois, et on en reparlera.",
                 "Travailler, oui, mais pas pour rien : ma paie n'est pas venue, chef.");

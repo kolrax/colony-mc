@@ -1418,31 +1418,37 @@ public class Travailleur extends PathfinderMob {
         Ordres.Lecture avant = enAttente != null && maintenant <= attenteFin ? enAttente : null;
         enAttente = null;
         if (avant != null) {
-            boolean accepte = attenteMarche && Obeissance.accepte(l.texte);
-            boolean insiste = !accepte && (Obeissance.insiste(l.texte) || Ordres.normaliser(l.texte).equals(Ordres.normaliser(avant.texte)));
+            // Une phrase qui porte son propre ordre (« oui, mais d'abord rentre au poste », « fais le guet ») est un nouvel ordre.
+            boolean seule = Obeissance.sansOrdre(l);
+            boolean accepte = attenteMarche && seule && Obeissance.accepte(l.texte);
+            boolean insiste = !accepte && (seule && Obeissance.insiste(l.texte) || Ordres.normaliser(l.texte).equals(Ordres.normaliser(avant.texte)));
             if (accepte) {
                 reponseImposee = true;
                 changerMoral(Obeissance.MARCHE);
                 prime += Obeissance.prime(salaireVerse());
                 return Messages.corps(this, "marche") + " " + appliquerOrdre(avant, enFace);
             }
-            if (attenteMarche && !insiste && l.intentions.contains(Ordres.Intention.NON) && l.missions.isEmpty() && l.faire.isEmpty()) {
+            if (seule && Obeissance.abandonne(l.texte)) { reponseImposee = true; return Messages.corps(this, "abandon"); }
+            if (attenteMarche && seule && !insiste && l.intentions.contains(Ordres.Intention.NON)) {
                 reponseImposee = true;
                 if (temperament.equals("colerique") || temperament.equals("fourbe")) return Messages.corps(this, "pas_de_marche");
                 changerMoral(Obeissance.FORCE);
                 return Messages.corps(this, "sans_marche") + " " + appliquerOrdre(avant, enFace);
             }
             if (insiste && mode != Mode.GREVE) {
+                Obeissance.Ordre o = Obeissance.peine(avant, metier, !enService());
+                Obeissance.Verdict premier = Obeissance.premier(moral, temperament, o);
+                if (premier == Obeissance.Verdict.OBEIT) return appliquerOrdre(avant, enFace); // son moral est remonté entre-temps
+                if (premier == Obeissance.Verdict.RALE) return Messages.corps(this, "rale") + " " + appliquerOrdre(avant, enFace);
                 reponseImposee = true;
-                Obeissance.Verdict v = Obeissance.decider(moral, temperament, Obeissance.peine(avant, metier, !enService()), true);
-                if (v == Obeissance.Verdict.REFUSE)
+                if (Obeissance.decider(moral, temperament, o, true) == Obeissance.Verdict.REFUSE)
                     return Messages.corps(this, "refus_ferme", Messages.remede(raisonDuRefus(maintenant)));
                 changerMoral(Obeissance.FORCE);
                 return Messages.corps(this, "force") + " " + appliquerOrdre(avant, enFace);
             }
         }
         Obeissance.Ordre ordre = Obeissance.peine(l, metier, !enService());
-        if (avant != null && ordre.peine() == Obeissance.Peine.LEGER) enAttente = avant; // une question entre-temps : l'ordre reste en suspens
+        if (avant != null && Obeissance.question(l)) enAttente = avant; // une simple question entre-temps : l'ordre reste en suspens
         if (mode == Mode.GREVE) return appliquerOrdre(l, enFace);
         Obeissance.Verdict v = Obeissance.decider(moral, temperament, ordre, false);
         switch (v) {
@@ -1646,6 +1652,8 @@ public class Travailleur extends PathfinderMob {
         chef = null;
         chefNom = "";
         mode = Mode.CHOMEUR;
+        prime = 0;
+        enAttente = null;
         lit = null;
         bureau = null;
         missions.clear();
@@ -1702,6 +1710,8 @@ public class Travailleur extends PathfinderMob {
         mode = Mode.SUIVRE;
         coince.progres(getX(), getY(), getZ());
         impayes = 0;
+        prime = 0;
+        enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);

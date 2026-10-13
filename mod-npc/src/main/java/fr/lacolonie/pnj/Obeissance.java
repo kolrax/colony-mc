@@ -1,7 +1,6 @@
 package fr.lacolonie.pnj;
 
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -90,47 +89,71 @@ final class Obeissance {
 
     // --- Les phrases ------------------------------------------------------------------------------------------------
 
-    /** Le chef accepte le marché. */
+    /** Le chef accepte le marché (« d'accord », « marché conclu »), sans négation ni « laisse tomber ». */
     static boolean accepte(String texte) {
         String n = Ordres.normaliser(texte);
-        if (Ordres.dit(n, "non", "pas question", "jamais", "certainement pas", "hors de question")) return false;
+        if (n.contains("?") || refuse(n) || abandonne(texte)) return false;
         return Ordres.dit(n, "oui", "ouais", "d accord", "daccord", "marche conclu", "affaire conclue", "ca marche", "entendu", "j accepte", "accepte",
-                "va pour", "tope la", "ok", "okay", "ca me va", "c est d accord", "conclu", "soit", "bien sur", "pourquoi pas", "va bien");
+                "va pour", "tope la", "ok", "okay", "ca me va", "c est d accord", "conclu", "bien sur");
+    }
+
+    /** Une négation dans la phrase (« pas d'accord », « je n'accepte pas », « jamais »). */
+    static boolean refuse(String n) {
+        return Ordres.dit(n, "non", "nan", "pas", "ne", "n", "jamais", "hors de question");
+    }
+
+    /** Le chef abandonne l'ordre (« laisse tomber », « annule », « oublie »). */
+    static boolean abandonne(String texte) {
+        return Ordres.dit(Ordres.normaliser(texte), "laisse tomber", "laissez tomber", "annule", "oublie", "oublie ca", "n en parlons plus", "tant pis", "pas grave");
     }
 
     /** Le chef insiste. */
     static boolean insiste(String texte) {
-        return Ordres.dit(Ordres.normaliser(texte), "c est un ordre", "obeis", "obeissez", "obeis moi", "j insiste", "fais le", "fais ce que je dis",
+        String n = Ordres.normaliser(texte);
+        // « Fais-le ! », mais pas « fais le guet » ni « fais le tour » (un autre ordre).
+        if (n.matches(".* fais le (?:(?:vite|maintenant|tout de suite|donc|chef|je te dis|j ai dit) )*")) return true;
+        return Ordres.dit(n, "c est un ordre", "obeis", "obeissez", "obeis moi", "j insiste", "fais ce que je dis",
                 "fais ce que je te dis", "fais ce qu on te dit", "execution", "pas de discussion", "ne discute pas", "discute pas",
                 "je ne te demande pas ton avis", "tu n as pas le choix", "j ai dit");
     }
 
-    /** Ne s'y trouve pas de négation (« ne… pas », « jamais ») entre le verbe et le danger. */
-    static final String MOTS = "(?:(?!pas |jamais |plus )[a-z0-9]+ ){0,3}?";
+    /** La phrase ne porte aucun ordre à elle (mission, action, déplacement, expédition, horaires, règle) : elle répond à l'ordre en suspens. */
+    static boolean sansOrdre(Ordres.Lecture l) {
+        // « Marché conclu », « tope là » : la poignée de main scelle le marché, ce n'est pas un nouvel ordre.
+        return l.missions.isEmpty() && l.faire.stream().allMatch(f -> f.id().equals("serrer_main")) && l.jours < 0 && l.debut < 0 && l.fin < 0 && l.regles.isEmpty() && !l.annulerRegles
+                && l.intentions.stream().noneMatch(i -> java.util.EnumSet.of(Ordres.Intention.SUIVRE, Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE,
+                        Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER, Ordres.Intention.RENVOYER, Ordres.Intention.SAC).contains(i));
+    }
 
-    /** Les ordres mortels : le danger (« lave », « vide », « feu », « noyade », « creuser ») et ses tournures. */
+    /** Une simple question ou politesse (« pourquoi ? », « ça va ? », « merci ») : l'ordre en suspens reste en suspens. */
+    static boolean question(Ordres.Lecture l) {
+        return sansOrdre(l) && l.faire.isEmpty() && !l.intentions.isEmpty() && l.intentions.stream().allMatch(i -> java.util.EnumSet.of(Ordres.Intention.ETAT,
+                Ordres.Intention.AVANCEMENT, Ordres.Intention.POURQUOI, Ordres.Intention.AIDE, Ordres.Intention.SALUT, Ordres.Intention.MERCI).contains(i));
+    }
+
+    /** Se jeter (« saute », « jette-toi »…) : vers une falaise ou un ravin, seul ce verbe est mortel. */
+    static final String SAUT = "(?:saute|sautez|jette toi|jetez vous|plonge|plongez|tombe|lance toi|lancez vous)";
+    /** Y aller, y entrer : mortel seulement suivi tout de suite du danger (« va dans la lave », pas « va construire un pont sur la lave »). */
+    static final String ALLER = "(?:" + SAUT.substring(3, SAUT.length() - 1) + "|va|allez|marche|marchez|entre|entrez|nage|baigne toi|cours|avance|avancez|mets toi|couche toi|roule toi)";
+
+    /** Les ordres mortels : le danger et sa tournure (le verbe, puis aussitôt le danger). */
     static final List<Object[]> MORTELS = List.of(
-            new Object[]{"lave", Pattern.compile(" (?:saute|sautez|sauter|jette toi|jetez vous|plonge|plongez|va|vas|allez|marche|entre|nage|baigne toi|cours|tombe|avance|roule toi|lance toi|mets toi) "
-                    + MOTS + "(?:dans|en|sur) (?:la |de la )?lave ")},
-            new Object[]{"vide", Pattern.compile(" (?:saute|sautez|sauter|jette toi|jetez vous|plonge|plongez|tombe|lance toi|va|vas|marche|avance) "
-                    + MOTS + "(?:dans le |du haut d[eu] |de la |du |d un |d une |dans un |dans une )?(?:vide|falaise|precipice|ravin|gouffre|abime) ")},
-            new Object[]{"feu", Pattern.compile(" (?:saute|sautez|jette toi|jetez vous|plonge|va|vas|allez|marche|entre|cours|roule toi|lance toi|mets toi|couche toi) "
-                    + MOTS + "(?:dans|sur) (?:le feu|les flammes|le brasier) |(?:^| )(?:brule toi|immole toi) ")},
-            new Object[]{"noyade", Pattern.compile(" (?:noie toi|noyez vous|va te noyer|allez vous noyer|te noyer|reste sous l eau|reste au fond de l eau) ")},
-            new Object[]{"creuser", Pattern.compile(" (?:creuse|creusez|mine|pioche|descends en creusant) (?:tout |juste |bien )?(?:droit )?(?:sous toi|sous tes pieds|a tes pieds|droit vers le bas|droit en bas|a la verticale) ")});
+            new Object[]{"lave", Pattern.compile(" " + ALLER + " (?:dans|en|sur) (?:la )?lave ")},
+            new Object[]{"vide", Pattern.compile(" " + ALLER + " dans le vide | " + SAUT + " (?:du haut )?(?:de la |du |d un |d une |dans le |dans la |dans un |dans une |par dessus la |par dessus le |de cette |de ce )(?:falaise|precipice|ravin|gouffre|abime) ")},
+            new Object[]{"feu", Pattern.compile(" " + ALLER + " (?:dans|sur) (?:le feu|les flammes|le brasier) | (?:brule toi|immole toi) ")},
+            new Object[]{"noyade", Pattern.compile(" (?:noie toi|noyez vous|va te noyer|allez vous noyer|reste sous l eau|reste au fond de l eau) ")},
+            new Object[]{"creuser", Pattern.compile(" (?:creuse|creusez|mine|pioche) (?:tout |juste |bien )?(?:droit )?(?:sous toi|sous tes pieds|a tes pieds|droit vers le bas|droit en bas|a la verticale) ")});
 
-    /** Le danger mortel que l'ordre demande d'affronter (« lave », « vide »…), ou null. */
+    /** Une mise en garde (« ne va pas te noyer », « évite de sauter… », « jamais ») ou un constat (« tu vas te noyer ») : pas un ordre. */
+    static final Pattern GARDE = Pattern.compile(" (?:ne|n|pas|jamais|evite|evitez|eviter|attention|gare) |^ (?:tu|il|elle|on|je|nous|vous|ils|elles) ");
+
+    /** Le danger mortel que l'ordre demande d'affronter (« lave », « vide »…), ou null. Chaque proposition est lue à part. */
     static String mortel(String texte) {
         if (texte == null || texte.isBlank()) return null;
-        String n = Ordres.normaliser(texte);
-        for (Object[] m : MORTELS) {
-            Matcher x = ((Pattern) m[1]).matcher(n);
-            while (x.find()) {
-                int d = x.start();
-                // « ne saute pas dans la lave » : une mise en garde, pas un ordre.
-                if (n.substring(Math.max(0, d - 4), d + 1).endsWith(" ne ") || n.substring(Math.max(0, d - 3), d + 1).endsWith(" n ")) continue;
-                return (String) m[0];
-            }
+        for (String morceau : texte.split("(?i)[,.;:!?\\n]+|\\s(?:et|puis|mais|ensuite)\\s")) {
+            String n = Ordres.normaliser(morceau);
+            if (GARDE.matcher(n).find()) continue;
+            for (Object[] m : MORTELS) if (((Pattern) m[1]).matcher(n).find()) return (String) m[0];
         }
         return null;
     }
