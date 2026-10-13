@@ -233,3 +233,10 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Journal du serveur : seules erreurs, celles des autres mods (282 tables de butin de `railways` pour des bois absents, 1 mixin client de `create_sa`), comme avant. Avant le redémarrage, le serveur avait pris 59 min de retard (« Can't keep up », 70 923 ticks) : machine probablement mise en pause par l'hébergeur.
 - **Modpack 0.5.1, obligatoire** (canal 8) : mêmes 29 mods que 0.5.0 (sodium toujours épinglé en 0.6.13), jar 0.9.10 embarqué ; fonction Supabase redéployée à 21 h 39 ; téléchargement Modrinth vérifié (sha1 du jar dans le .mrpack = `f1005c5cc3775a81d26c3794132c89b193fefcb3`), CurseForge et zip répondent 200 ; annoncé sur Discord à 21 h 40 ; verrou retiré.
 - Jamais vu à l'écran : les noms et icônes en jeu (il faut un écran).
+
+## 2026-10-13 21 h 48 - 21 h 50 UTC : livraison 0.9.11 (besoins des PNJ)
+- **0.9.11 « besoins »** (lot 5, première passe), commit `5217340` (sur `main`), livrée sur le serveur à 21 h 48 UTC (personne connecté : `list` = 0 joueur), « Done » à 21 h 49 min 29 s, sans erreur du mod ; `colonie_pnj-0.9.10.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.11, 1 109 869 octets, sha1 `6a8c1df9…`, copie figée du jar).
+  - Les PNJ disent quand ils ont faim, sommeil, mal ou le moral bas ; chacun son lit ; courtes pauses quand le moral baisse ; un blessé mange pour guérir, jamais un aliment empoisonné.
+  - Tests sur ce code : **152/152 JUnit, 204/204 en jeu** (lancés sur le code d'avant `5217340`, qui ne change que `mod_version`).
+  - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, 1 mixin client de `create_sa`), comme avant.
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé).
