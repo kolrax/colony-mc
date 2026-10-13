@@ -1,6 +1,7 @@
 package fr.lacolonie.pnj;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -23,6 +24,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
@@ -38,6 +40,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -178,6 +182,15 @@ public final class Client {
         return Poses.connu(base) ? base : "";
     }
 
+    /** Les icônes au-dessus des têtes (chemin → texture), et la distance au-delà de laquelle on ne les voit plus. */
+    static final Map<String, ResourceLocation> ICONES_ETAT = icones("etat", Insignes.ETATS), ICONES_METIER = icones("metier", Tenues.METIERS);
+
+    static Map<String, ResourceLocation> icones(String dossier, List<String> noms) {
+        Map<String, ResourceLocation> m = new HashMap<>();
+        for (String n : noms) m.put(n, ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, Insignes.icone(dossier, n)));
+        return Map.copyOf(m);
+    }
+
     static class Rendu extends HumanoidMobRenderer<Travailleur, PlayerModel<Travailleur>> {
         final PlayerModel<Travailleur> large, fin;
         final Poses.Corps racine = new Poses.Corps();
@@ -220,6 +233,91 @@ public final class Client {
             }
         }
 
+        /**
+         * Au-dessus de sa tête, à la place du nom du jeu (lot 8) : l'icône de son métier et son prénom, dessous en petit
+         * son rôle (« Mineur · KOLRAX_MC »), au-dessus son icône d'état s'il en a une. Le prénom se lit jusqu'à
+         * {@link Insignes#PORTEE_NOM} blocs, le reste jusqu'à {@link Insignes#PORTEE_DETAILS} ; rien à travers un mur
+         * (une vitre ou des feuilles n'arrêtent pas la vue). Comme les noms du jeu : fond et texte pâle vus à
+         * travers, puis le texte seul ; jamais de fond en mode NORMAL.
+         */
+        @Override
+        protected void renderNameTag(Travailleur e, Component nom, PoseStack ps, MultiBufferSource buf, int lumiere, float pt) {
+            double d2 = entityRenderDispatcher.distanceToSqr(e);
+            if (e.isInvisible() || d2 > Insignes.PORTEE_NOM * Insignes.PORTEE_NOM || !enVue(e)) return;
+            Vec3 v = e.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, e.getViewYRot(pt));
+            if (v == null) return;
+            Font font = getFont();
+            Component nomJeu = e.getCustomName(); // le même objet tant que le serveur ne le change pas
+            if (nomJeu != e.nomLu) {
+                e.nomLu = nomJeu;
+                e.prenomLu = nomJeu == null ? "" : Insignes.prenom(nomJeu.getString());
+                e.largeurPrenom = font.width(e.prenomLu);
+            }
+            boolean details = d2 <= Insignes.PORTEE_DETAILS * Insignes.PORTEE_DETAILS;
+            ps.pushPose();
+            ps.translate(v.x, v.y + 0.5, v.z);
+            ps.mulPose(entityRenderDispatcher.cameraOrientation());
+            ps.scale(0.025f, -0.025f, 0.025f);
+            int fond = (int) (Minecraft.getInstance().options.getBackgroundOpacity(0.25f) * 255) << 24;
+            Matrix4f m = ps.last().pose();
+            ResourceLocation metier = details ? ICONES_METIER.getOrDefault(e.tenue(), ICONES_METIER.get(Tenues.CHOMEUR)) : null;
+            float x = -(e.largeurPrenom + (metier == null ? 0 : 10)) / 2f;
+            if (metier != null) { icone(m, buf, metier, x, -0.5f, 9); x += 10; }
+            ecrire(font, e.prenomLu, x, 0, 0xFFFFFFFF, m, buf, fond);
+            if (details) {
+                ResourceLocation etat = ICONES_ETAT.get(e.etat());
+                if (etat != null) icone(m, buf, etat, -5, -12, 10);
+                String role = e.role();
+                if (!role.isEmpty()) {
+                    if (!role.equals(e.roleLu)) { e.roleLu = role; e.largeurRole = font.width(role); }
+                    ps.pushPose();
+                    ps.translate(0, 10, 0);
+                    ps.scale(0.75f, 0.75f, 1);
+                    ecrire(font, role, -e.largeurRole / 2f, 0, 0xFFAAAAAA, ps.last().pose(), buf, fond);
+                    ps.popPose();
+                }
+            }
+            ps.popPose();
+        }
+
+        /** Rien d'opaque entre les yeux du joueur et les siens : revu toutes les {@link Insignes#REVUE} ticks (50 ouvriers, 60 images par seconde). */
+        static boolean enVue(Travailleur e) {
+            var joueur = Minecraft.getInstance().player;
+            if (joueur == null) return false;
+            long t = e.level().getGameTime();
+            if (Insignes.arevoir(t, e.vueLe)) { e.vueLe = t; e.vue = rienDOpaque(e.level(), joueur.getEyePosition(), e.getEyePosition()); }
+            return e.vue;
+        }
+
+        /**
+         * Aucun bloc qui cache la vue entre deux points. Seuls les blocs qui masquent (`canOcclude`) comptent, et
+         * seulement là où leur forme coupe la ligne : la vitre, la vitre fine, les feuilles, l'herbe laissent voir.
+         */
+        static boolean rienDOpaque(net.minecraft.world.level.Level l, Vec3 de, Vec3 a) {
+            if (de.distanceToSqr(a) > 64 * 64) return false;
+            Boolean cache = net.minecraft.world.level.BlockGetter.traverseBlocks(de, a, l, (niveau, pos) -> {
+                var b = niveau.getBlockState(pos);
+                return b.canOcclude() && b.getOcclusionShape(niveau, pos).clip(de, a, pos) != null ? Boolean.TRUE : null;
+            }, niveau -> Boolean.FALSE);
+            return !cache;
+        }
+
+        static void ecrire(Font font, String s, float x, float y, int couleur, Matrix4f m, MultiBufferSource buf, int fond) {
+            int lumiere = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
+            font.drawInBatch(s, x, y, 0x20FFFFFF, false, m, buf, Font.DisplayMode.SEE_THROUGH, fond, lumiere);
+            font.drawInBatch(s, x, y, couleur, false, m, buf, Font.DisplayMode.NORMAL, 0, lumiere);
+        }
+
+        /** Une icône 16 x 16 de {@code textures/gui}, en carré de {@code taille} face à la caméra, en pleine lumière. */
+        static void icone(Matrix4f m, MultiBufferSource buf, ResourceLocation tex, float x, float y, float taille) {
+            VertexConsumer vc = buf.getBuffer(RenderType.text(tex));
+            int l = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
+            vc.addVertex(m, x, y, 0).setColor(255, 255, 255, 255).setUv(0, 0).setLight(l);
+            vc.addVertex(m, x, y + taille, 0).setColor(255, 255, 255, 255).setUv(0, 1).setLight(l);
+            vc.addVertex(m, x + taille, y + taille, 0).setColor(255, 255, 255, 255).setUv(1, 1).setLight(l);
+            vc.addVertex(m, x + taille, y, 0).setColor(255, 255, 255, 255).setUv(1, 0).setLight(l);
+        }
+
         /** Ce qu'il vient de dire, en bulle au-dessus de son nom. */
         void bulle(Travailleur e, PoseStack ps, MultiBufferSource buf, int lumiere) {
             Bulle b = BULLES.get(e.getId());
@@ -240,7 +338,7 @@ public final class Client {
             // En pleine lumière : la bulle se lit aussi la nuit.
             for (int i = 0; i < lignes.size(); i++) {
                 FormattedCharSequence l = lignes.get(i);
-                float x = -font.width(l) / 2f, y = -12 - (lignes.size() - i) * 10;
+                float x = -font.width(l) / 2f, y = -14 - (lignes.size() - i) * 10; // au-dessus de l'icône d'état (de -12 à -2)
                 font.drawInBatch(l, x, y, 0x20FFFFFF, false, m, buf, Font.DisplayMode.SEE_THROUGH, fond, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
                 font.drawInBatch(l, x, y, 0xFFFFFFFF, false, m, buf, Font.DisplayMode.NORMAL, 0, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
             }
