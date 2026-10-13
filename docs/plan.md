@@ -52,7 +52,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [ ] « Va me chercher du fer », dit à un bûcheron : il propose d'aller prévenir le mineur
 
 ## 7. Conversations et relations (indispensable)
-- [ ] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler (banque de 237 conversations écrite le 13/10 : `conversations.txt`, pas encore jouée)
+- [x] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler (première passe 13/10, 0.9.8 : 237 conversations en bulles, `Conversations`/`Causeries`)
 - [ ] Remarques spontanées de temps en temps ; humour en réponse à l'impossible
 - [ ] Amitiés et inimitiés, couples
 
