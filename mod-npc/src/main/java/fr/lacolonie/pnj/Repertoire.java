@@ -66,7 +66,7 @@ final class Repertoire {
             "monstres", "animaux", "joueurs", "lumiere", "eau", "sac", "sante", "outil", "armure", "salaire", "anciennete", "caractere", "niveau",
             "distance", "ouvriers", "minerai", "arbre");
     static final Set<String> TRAVAUX = Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torches", "torche_la", "ramasser", "abattre_la", "abattre_autour",
-            "planter", "planter_la", "defricher", "foret", "defricher_zone", "planches", "charbon", "champ", "recolter", "pain");
+            "planter", "planter_la", "defricher", "foret", "defricher_zone", "planches", "charbon", "champ", "recolter", "pain", "oublier_champ");
     static final Set<String> COMBATS = Set.of("cible", "nettoyer", "garder_ici", "proteger", "patrouiller", "charge", "repli", "proteger_chef", "ronde_point", "ronde_effacer");
     static final Set<String> BLOCS = Set.of("porte", "cloche", "levier", "bouton", "trappe", "portillon", "note");
     static final Set<String> REGARDS = Set.of("chef", "devant", "ciel", "sol", "la", "cible", "autour", "dos", "aucun");

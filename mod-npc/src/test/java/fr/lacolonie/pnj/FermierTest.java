@@ -48,6 +48,7 @@ class FermierTest {
     void lesZonesDuTour() {
         List<int[]> z = Cultures.zones(Travailleur.ESPACE_DE_VIE);
         assertEquals(49, z.size(), "7 zones de 16 sur 7 couvrent les 101 blocs de l'espace de vie");
+        assertEquals(25, Cultures.zones(32).size(), "seul, à 32 blocs du poste : 5 zones sur 5");
         assertTrue(z.get(0)[0] <= 0 && z.get(0)[0] + Cultures.ZONE > 0 && z.get(0)[1] <= 0 && z.get(0)[1] + Cultures.ZONE > 0, "la première zone est celle du poste");
         assertTrue(z.stream().anyMatch(k -> k[0] <= -50 && k[1] <= -50), "le coin de l'espace de vie est couvert");
         assertTrue(z.stream().anyMatch(k -> k[0] + Cultures.ZONE > 50 && k[1] + Cultures.ZONE > 50), "l'autre coin aussi");
@@ -66,6 +67,9 @@ class FermierTest {
         RepertoireTest.demande("Récolte !", "fermier", "recolter");
         RepertoireTest.demande("Fais la moisson", "fermier", "recolter");
         RepertoireTest.demande("Fais du pain", "fermier", "pain");
+        RepertoireTest.demande("Oublie ce champ", "fermier", "oublier_champ");
+        RepertoireTest.demande("Arrête de cultiver ici", "fermier", "oublier_champ");
+        RepertoireTest.demande("Laisse ce champ en friche", "fermier", "oublier_champ");
         assertEquals(java.util.Set.of("fermier"), Repertoire.metiersConcernes("Fais du pain"));
     }
 }

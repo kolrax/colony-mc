@@ -64,6 +64,15 @@ final class Messages {
         m("graines", "Plus de semences",
                 "Je n'ai plus de {0} pour semer nos champs. Laisse-m'en au dépôt.",
                 "Les champs attendent leurs semences : il n'y a plus de {0}, ni sur moi ni au dépôt.");
+        m("sans_champ", "Où dois-je cultiver ?",
+                "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
+                "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");
+        m("plant_inaccessible", "Un plant hors d'atteinte",
+                "Je n'arrive pas à atteindre un plant mûr, vers {0} : le champ est clos, ou le chemin barré. Je le laisse pour l'instant.",
+                "Un plant mûr, vers {0}, est hors de ma portée : une clôture, un mur ? Je n'y retourne pas avant un moment.");
+        m("culture_absente", "Rien de cette culture",
+                "Tu me demandes une récolte de {0}, mais il n'en pousse dans aucun de nos champs. Marque-moi un champ de {0} et laisse des semences au dépôt.",
+                "Pas un seul plant de {0} dans nos champs : il faudra d'abord en semer.");
         m("torches", "Plus de torches",
                 "Je n'ai plus de torches : mes galeries vont rester sombres.",
                 "Mes torches sont toutes posées. Sans elles, les monstres vont s'installer dans mes galeries.");

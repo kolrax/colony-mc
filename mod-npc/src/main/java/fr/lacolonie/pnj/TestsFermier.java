@@ -22,9 +22,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Le fermier (lot 6) : il récolte et ressème le blé mûr sans piétiner la terre, laisse le blé vert, laboure et sème un
+ * Le fermier (lot 6) : dans ses champs marqués, il récolte et ressème le blé mûr sans piétiner la terre, laisse le blé vert, laboure et sème un
  * champ de 5 sur 5 avec les graines du dépôt (l'eau au milieu, de son seau), fait du pain au poste, et ne touche pas aux
- * cultures d'un voisin. Chaque test dans son coin du monde plat (coins 120 à 124), au ciel ouvert.
+ * cultures d'un voisin ni d'un champ lointain, ne verse pas l'eau au bord d'un trou, oublie un champ. Chaque test dans
+ * son coin du monde plat (coins 120 à 127), au ciel ouvert.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -60,6 +61,18 @@ public class TestsFermier {
         return new Travailleur[]{f};
     }
 
+    /** Un champ marqué (comme après « plante un champ ici ») : centre = le sol ; pas d'entretien pendant le test. */
+    static void marquer(Travailleur t, BlockPos centre, int longueur, int largeur, String culture) {
+        net.minecraft.nbt.ListTag champs = t.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.CompoundTag c = new net.minecraft.nbt.CompoundTag();
+        c.putLong("c", centre.asLong());
+        c.putString("p", new Fouille.Plan(longueur, largeur, 1, "north", false).texte());
+        c.putString("g", culture);
+        champs.add(c);
+        t.memoire.put("champs", champs);
+        Fermier.TOURS.computeIfAbsent(t, k -> new Fermier.Tour()).champsVus = Long.MAX_VALUE;
+    }
+
     static int ble(Travailleur t) { return t.compter(Fermier.BLE) + TestsBucheron.compte(TestsBucheron.depot(t), Items.WHEAT); }
 
     static int parTerre(ServerLevel l, BlockPos centre) { return l.getEntitiesOfClass(ItemEntity.class, new AABB(centre).inflate(12)).size(); }
@@ -72,6 +85,7 @@ public class TestsFermier {
         ServerLevel l = h.getLevel();
         List<BlockPos> murs = List.of(b[0].offset(4, 0, -1), b[0].offset(4, 0, 0), b[0].offset(4, 0, 1));
         for (BlockPos p : murs) culture(l, p, Blocks.WHEAT, 7);
+        marquer(t, b[0].offset(4, -1, 0), 5, 5, "ble");
         h.succeedWhen(() -> {
             for (BlockPos p : murs) h.assertTrue(age(l, p) >= 0 && age(l, p) < 7, "blé récolté et ressemé en " + p.subtract(b[0]).toShortString()
                     + " : âge " + age(l, p) + " (" + TestsJeu.etat(t, t.bureau) + ")");
@@ -92,6 +106,7 @@ public class TestsFermier {
         List<BlockPos> verts = List.of(b[0].offset(4, 0, 0), b[0].offset(4, 0, 1), b[0].offset(5, 0, 0));
         culture(l, mur, Blocks.WHEAT, 7);
         for (BlockPos p : verts) culture(l, p, Blocks.WHEAT, 2);
+        marquer(t, b[0].offset(4, -1, 0), 5, 5, "ble");
         h.succeedWhen(() -> {
             h.assertTrue(age(l, mur) >= 0 && age(l, mur) < 7 && t.tickCount > 300, "le blé mûr doit être récolté et ressemé (" + TestsJeu.etat(t, t.bureau) + ")");
             for (BlockPos p : verts) h.assertTrue(age(l, p) >= 2, "le blé vert reste : âge " + age(l, p) + " en " + p.subtract(b[0]).toShortString());
@@ -154,8 +169,8 @@ public class TestsFermier {
     }
 
     /**
-     * Les cultures d'un voisin (à 30 blocs de son poste à lui) restent mûres ; les siennes, dans la même zone, sont récoltées.
-     * Lot « voisins » : la règle des bases n'y vaut que là ({@link Mineur#voisinsEnEssai}).
+     * Relecture : son champ marqué et celui d'un voisin se touchent ; le poste du voisin est plus près des carottes que le sien :
+     * il n'y touche pas ; son blé, plus près de chez lui, est récolté. Lot « voisins » ({@link Mineur#voisinsEnEssai}).
      */
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "voisins")
     public static void culturesDuVoisinIntactes(GameTestHelper h) {
@@ -164,16 +179,97 @@ public class TestsFermier {
         ServerLevel l = h.getLevel();
         UUID voisin = UUID.randomUUID();
         Courrier c = Courrier.de(l.getServer());
-        c.definirPoste(voisin, l, b[0].offset(36, 0, 0));
+        c.definirPoste(voisin, l, b[0].offset(10, 0, 0));
         TestsMineur.A_DEFAIRE.add(() -> c.postes.remove(voisin));
         BlockPos mien = b[0].offset(-6, 0, 0);
-        List<BlockPos> siens = List.of(b[0].offset(6, 0, 0), b[0].offset(6, 0, 1));
+        List<BlockPos> siens = List.of(b[0].offset(7, 0, 0), b[0].offset(7, 0, 1));
         culture(l, mien, Blocks.WHEAT, 7);
         for (BlockPos p : siens) culture(l, p, Blocks.CARROTS, 7);
+        marquer(t, b[0].below(), 15, 15, "ble");
         h.succeedWhen(() -> {
             h.assertTrue(age(l, mien) >= 0 && age(l, mien) < 7 && t.tickCount > 300, "son blé doit être récolté (" + TestsJeu.etat(t, t.bureau) + ")");
             for (BlockPos p : siens) h.assertTrue(age(l, p) == 7, "les carottes du voisin restent mûres : âge " + age(l, p));
             t.discard();
         });
+    }
+
+    /**
+     * Relecture : du blé mûr à 40 blocs de son poste, hors de ses champs (celui d'un autre) : il n'y touche pas, même après
+     * plusieurs tours ; son champ marqué, lui, est récolté.
+     */
+    @GameTest(template = "vide", timeoutTicks = 2400)
+    public static void champLointainIntact(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, 125, b);
+        ServerLevel l = h.getLevel();
+        BlockPos mien = b[0].offset(4, 0, 0);
+        culture(l, mien, Blocks.WHEAT, 7);
+        marquer(t, mien.below(), 5, 5, "ble");
+        List<BlockPos> loin = List.of(b[0].offset(40, 0, -1), b[0].offset(40, 0, 0), b[0].offset(40, 0, 1));
+        net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(loin.get(1));
+        l.setChunkForced(cp.x, cp.z, true); // chargé : il pourrait le voir
+        for (BlockPos p : loin) culture(l, p, Blocks.WHEAT, 7);
+        h.succeedWhen(() -> {
+            for (BlockPos p : loin) h.assertTrue(age(l, p) == 7, "le blé à 40 blocs, hors de ses champs, doit rester : âge " + age(l, p) + " (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(age(l, mien) >= 0 && age(l, mien) < 7, "son blé doit être récolté (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.tickCount > 1500, "plusieurs tours");
+            l.setChunkForced(cp.x, cp.z, false);
+            t.discard();
+        });
+    }
+
+    /**
+     * Relecture : « plante un champ ici, 3 sur 3 » au bord d'un trou : l'eau du centre coulerait. Il ne la met pas (le seau
+     * reste plein), le dit, et sème le centre comme les autres cases.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1500)
+    public static void pasDEauSurUnePente(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 126);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 20));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        g.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
+        BlockPos centre = o.offset(7, -1, 0);
+        l.setBlockAndUpdate(centre.east(), Blocks.AIR.defaultBlockState()); // un trou à côté du centre
+        l.setBlockAndUpdate(centre.east().below(), Blocks.AIR.defaultBlockState());
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 3 sur 3");
+                },
+                () -> h.assertTrue(g.consigne == null && l.getBlockState(centre.above()).is(Blocks.WHEAT),
+                        "le centre est semé, comme les autres (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    int eau = 0;
+                    for (BlockPos q : BlockPos.betweenClosed(centre.offset(-3, -3, -3), centre.offset(3, 1, 3))) if (!l.getFluidState(q).isEmpty()) eau++;
+                    h.assertTrue(eau == 0, "pas d'eau versée : " + eau + " blocs d'eau");
+                    h.assertTrue(g.compter(Fermier.SEAU) == 1, "le seau reste plein");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Relecture : « Oublie ce champ », en le regardant : il le retire de ses champs, sans rien arracher. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void oublieLeChamp(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 127);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos centre = chef.blockPosition().offset(7, -1, 0);
+        culture(l, centre.offset(1, 1, 1), Blocks.WHEAT, 3);
+        marquer(g, centre, 5, 5, "ble");
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Oublie ce champ");
+                },
+                () -> h.assertTrue(g.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND).isEmpty() && g.consigne == null,
+                        "le champ est oublié (" + TestsRepertoire.c(g) + ", " + g.memoire.get("champs") + ")"),
+                () -> h.assertTrue(age(l, centre.offset(1, 1, 1)) >= 3, "rien n'est arraché"),
+                () -> TestsRepertoire.fin(e));
     }
 }
