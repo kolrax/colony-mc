@@ -264,7 +264,9 @@ final class Guerrier extends Metier {
         int k = -1;
         double d = degats(t.getMainHandItem());
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (degats(t.inventaire.getItem(i)) > d) { d = degats(t.inventaire.getItem(i)); k = i; }
-        ItemStack arme = auDepot(b, Guerrier::degats, d, faire);
+        // Il a déjà une arme : seules les épées du dépôt comptent (les haches y sont pour le bûcheron).
+        boolean dejaArme = d > 0;
+        ItemStack arme = auDepot(b, s -> !dejaArme || s.is(net.minecraft.tags.ItemTags.SWORDS) ? degats(s) : 0, d, faire);
         if (!arme.isEmpty()) {
             mieux = true;
             if (faire) {

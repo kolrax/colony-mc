@@ -53,7 +53,7 @@ final class Bucheron extends Metier {
 
         // Sa hache : prise au dépôt s'il y en a une (ou une meilleure) ; sinon, il le dit et travaille sans.
         if (outilAuDepot(t, HACHES, HACHES, "hache")) return;
-        if (!equiperMeilleur(t, HACHES)) Cerveau.ecrire(t, "hache", 1800, "hache");
+        if (!equiperMeilleur(t, HACHES::objet)) Cerveau.ecrire(t, "hache", 1800, "hache");
 
         // 1. Ramasser ce qui traîne (bois, pousses, pommes tombées des feuilles), pas plus d'une fois par 45 s
         //    (un objet coincé dans les feuilles ne doit pas l'occuper indéfiniment) ; tout de suite après un abattage.

@@ -257,7 +257,7 @@ final class Mineur extends Metier {
 
         // La bonne pioche : prise au dépôt s'il y en a une (ou une meilleure), sinon demandée au chef.
         if (outilAuDepot(t, PIOCHES, c.outil, "pioche")) return;
-        if (!equiperMeilleur(t, c.outil)) {
+        if (!equiperMeilleur(t, s -> convient(s, PIOCHES, c.outil))) {
             if (t.compter(Actions.Filtre.de(PIOCHE)) > 0)
                 Cerveau.lancer(t, new Actions.Demander("meilleure_pioche", c.outil, 1, c.nom.toLowerCase()));
             else Cerveau.lancer(t, new Actions.Demander("pioche", c.outil, 1));

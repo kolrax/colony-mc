@@ -6,6 +6,7 @@ import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.Tiers;
 
 import java.util.ArrayList;
+import java.util.function.Predicate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,20 +63,35 @@ public abstract class Metier {
         return Outils.note(rang, s.getDamageValue(), s.getMaxDamage());
     }
 
-    /** La note de son meilleur outil de ce filtre (en main ou au sac), 0 s'il n'en a pas. */
-    static double meilleure(Travailleur t, Actions.Filtre f) {
-        double n = f.objet(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
-        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (f.objet(t.inventaire.getItem(i))) n = Math.max(n, note(t.inventaire.getItem(i)));
+    /**
+     * L'outil convient : un de la liste ({@code bon}), ou un outil de la bonne sorte venu d'un autre mod (pas listé : on lui
+     * fait confiance, il ne manque pas).
+     */
+    static boolean convient(ItemStack s, Actions.Filtre sorte, Actions.Filtre bon) {
+        return bon.objet(s) || sorte.objet(s) && !"minecraft".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getNamespace());
+    }
+
+    /** La note de son meilleur outil qui répond à f (en main ou au sac), 0 s'il n'en a pas. */
+    static double meilleure(Travailleur t, Predicate<ItemStack> f) {
+        double n = f.test(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (f.test(t.inventaire.getItem(i))) n = Math.max(n, note(t.inventaire.getItem(i)));
         return n;
     }
 
-    /** Prend en main son meilleur outil de ce filtre (l'objet tenu retourne au sac). Faux s'il n'en a pas. */
-    static boolean equiperMeilleur(Travailleur t, Actions.Filtre f) {
-        double n = f.objet(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
+    /** A-t-il (en main ou au sac) un outil enchanté qui répond à f ? */
+    static boolean enchante(Travailleur t, Predicate<ItemStack> f) {
+        if (f.test(t.getMainHandItem()) && t.getMainHandItem().isEnchanted()) return true;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (f.test(t.inventaire.getItem(i)) && t.inventaire.getItem(i).isEnchanted()) return true;
+        return false;
+    }
+
+    /** Prend en main son meilleur outil qui répond à f (l'objet tenu retourne au sac). Faux s'il n'en a pas. */
+    static boolean equiperMeilleur(Travailleur t, Predicate<ItemStack> f) {
+        double n = f.test(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
         int k = -1;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (f.objet(s) && note(s) > n) { n = note(s); k = i; }
+            if (f.test(s) && note(s) > n) { n = note(s); k = i; }
         }
         if (k >= 0) {
             ItemStack tenu = t.getMainHandItem();
@@ -89,56 +105,80 @@ public abstract class Metier {
      * L'outil de son métier est fourni au dépôt (cahier 3.12). Il lui manque un outil {@code bon} (aucun, cassé, ou pas assez
      * bon pour ce minerai) : il regarde au dépôt de son poste (coffres collés compris), au plus toutes les 10 s s'il n'y en
      * a pas (30 s après être parti en prendre un). Il en a un : passé près du poste, au plus une fois par minute, il regarde s'il y en a
-     * un d'un meilleur matériau. Vrai s'il part le prendre ({@link PrendreOutil}) ; sinon, il fait comme avant (il le demande,
+     * un d'un meilleur matériau (enchanté, si le sien l'est : celui que le chef lui a donné n'est jamais échangé contre un outil
+     * ordinaire). Vrai s'il part le prendre ({@link PrendreOutil}) ; sinon, il fait comme avant (il le demande,
      * ou travaille sans). Sans poste, ou loin de chez lui, rien.
      */
     static boolean outilAuDepot(Travailleur t, Actions.Filtre sorte, Actions.Filtre bon, String nom) {
         if (!t.chezLui(t.blockPosition())) return false;
+        // Les minuteries d'abord : rien à lire (ni sac ni dépôt) tant qu'aucune n'est échue.
         long maintenant = Cerveau.temps(t);
-        double mien = meilleure(t, bon);
+        boolean voir = t.memoire.getLong("outil_vu") <= maintenant;
+        boolean revoir = t.memoire.getLong("revue_outil") <= maintenant && t.distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(t.bureau)) <= 16 * 16;
+        if (!voir && !revoir) return false;
+        double mien = meilleure(t, s -> convient(s, sorte, bon));
         boolean manque = mien == 0;
-        if (manque ? t.memoire.getLong("outil_vu") > maintenant
-                : t.memoire.getLong("revue_outil") > maintenant || t.distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(t.bureau)) > 16 * 16) return false;
+        if (manque ? !voir : !revoir) return false;
         Bureau.Entite b = Bureau.entite(t);
         if (b == null) return false;
         double seuil = manque ? 0 : Outils.seuilMieux(mien);
-        boolean vu = !Guerrier.auDepot(b, s -> bon.objet(s) ? note(s) : 0, seuil, false).isEmpty();
+        boolean enchante = !manque && enchante(t, sorte::objet);
+        boolean vu = !Guerrier.auDepot(b, depot(bon, enchante), seuil, false).isEmpty();
         if (manque) t.memoire.putLong("outil_vu", maintenant + (vu ? 30 : 10)); // trouvé : s'il n'arrive pas au poste, pas d'essai sans fin
         else t.memoire.putLong("revue_outil", maintenant + 60);
         if (!vu) return false;
-        Cerveau.lancer(t, new PrendreOutil(sorte, bon, seuil, nom, manque));
+        Cerveau.lancer(t, new PrendreOutil(sorte, bon, seuil, nom, manque, enchante));
         return true;
+    }
+
+    /** La note d'un outil du dépôt : seulement un outil {@code bon}, et enchanté si le sien l'est. */
+    static java.util.function.ToDoubleFunction<ItemStack> depot(Actions.Filtre bon, boolean enchante) {
+        return s -> bon.objet(s) && (!enchante || s.isEnchanted()) ? note(s) : 0;
     }
 
     /**
      * Au poste, il prend au dépôt le meilleur outil {@code bon} (au-dessus de {@code seuil}) et le met en main ; le sien de la
-     * même sorte (le meilleur qu'il avait) retourne au dépôt. Rien ne se perd, rien ne se crée, rien ne tombe par terre.
+     * même sorte (le meilleur qu'il avait) retourne au dépôt s'il vaut moins que le nouveau, sinon il le garde au sac. Rien ne
+     * se perd, rien ne se crée, rien ne tombe par terre. Échec (poste inaccessible, outil déjà pris) : plus d'essai avant 5 min.
      */
     static final class PrendreOutil extends Actions.AuBureau {
         final Actions.Filtre sorte, bon;
         final double seuil;
         final String nom;
-        final boolean manque;
+        final boolean manque, enchante;
 
-        PrendreOutil(Actions.Filtre sorte, Actions.Filtre bon, double seuil, String nom, boolean manque) {
+        PrendreOutil(Actions.Filtre sorte, Actions.Filtre bon, double seuil, String nom, boolean manque, boolean enchante) {
             super("prendre_outil");
             this.sorte = sorte;
             this.bon = bon;
             this.seuil = seuil;
             this.nom = nom;
             this.manque = manque;
+            this.enchante = enchante;
         }
 
         Actions.Etat tick(Travailleur t) {
+            Actions.Etat e = prendre(t);
+            if (e == Actions.Etat.ECHEC) {
+                long plusTard = Cerveau.temps(t) + 300;
+                t.memoire.putLong("outil_vu", plusTard);
+                t.memoire.putLong("revue_outil", plusTard);
+            }
+            return e;
+        }
+
+        Actions.Etat prendre(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Actions.Etat.EN_COURS : Actions.Etat.ECHEC;
-            ItemStack neuf = Guerrier.auDepot(b, s -> bon.objet(s) ? note(s) : 0, seuil, true);
+            ItemStack neuf = Guerrier.auDepot(b, depot(bon, enchante), seuil, true);
             if (neuf.isEmpty()) return echec("rien_au_depot"); // quelqu'un l'a pris entre-temps
-            equiperMeilleur(t, sorte);
+            equiperMeilleur(t, sorte::objet);
             ItemStack vieux = t.getMainHandItem();
             t.setItemSlot(EquipmentSlot.MAINHAND, neuf);
-            if (sorte.objet(vieux)) Guerrier.rendre(t, b, vieux);      // la sienne, à la place de la neuve
-            else if (!vieux.isEmpty()) Guerrier.garder(t, b, vieux);    // ce qu'il tenait d'autre : au sac (sinon au dépôt)
+            // La sienne retourne au dépôt si elle vaut moins que la neuve ; sinon (une meilleure qui ne suffit pas pour ce
+            // minerai…), et pour ce qu'il tenait d'autre : au sac (s'il est plein, au dépôt).
+            if (sorte.objet(vieux) && note(vieux) < note(neuf)) Guerrier.rendre(t, b, vieux);
+            else if (!vieux.isEmpty()) Guerrier.garder(t, b, vieux);
             t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             Cerveau.dire(t, "outil_depot", 60, manque ? "Je prends une " + nom + " au dépôt, et au travail."
                     : "Une meilleure " + nom + " au dépôt : je la prends, et je laisse la mienne.");
