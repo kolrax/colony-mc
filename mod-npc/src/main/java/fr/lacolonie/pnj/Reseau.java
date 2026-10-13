@@ -92,7 +92,8 @@ public final class Reseau {
         // 2 : écran du bureau (0.2.0) ; 3 : sorties (0.3.0) ; 4 : statut au bureau (0.4.0) ; 5 : poste commun, lettres, conversation (0.5.0) ;
         // 6 : les gestes des ouvriers (0.8.0, une donnée de plus sur l'entité : un ancien client ne pourrait pas la lire)
         // 7 : la tenue des ouvriers (lot 8, après la 0.9.6 : encore une donnée sur l'entité)
-        var r = e.registrar("7");
+        // 8 : rôle et état au-dessus des têtes (lot 8 : deux données de plus sur l'entité)
+        var r = e.registrar("8");
         r.playToClient(Fiche.TYPE, Fiche.CODEC, (p, ctx) -> Client.ouvrirFiche(p));
         r.playToClient(Conversation.TYPE, Conversation.CODEC, (p, ctx) -> Client.ouvrirConversation(p));
         r.playToClient(Parole.TYPE, Parole.CODEC, (p, ctx) -> Client.parole(p));

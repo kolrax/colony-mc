@@ -69,6 +69,10 @@ public class Travailleur extends PathfinderMob {
     public static final EntityDataAccessor<String> GESTE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
     /** Sa tenue, dessinée chez les joueurs quand il n'a pas de pseudo de skin ({@link Tenues}) : son métier, ou « chomeur ». */
     public static final EntityDataAccessor<String> TENUE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
+    /** Sous son nom, au-dessus de sa tête : « Mineur · KOLRAX_MC », ou « Cherche du travail » ({@link Insignes#role}). */
+    public static final EntityDataAccessor<String> ROLE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
+    /** Son icône d'état au-dessus de la tête (faim, attente, grève… {@link Insignes#etat}) ; vide : aucune. */
+    public static final EntityDataAccessor<String> ETAT = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
 
     public enum Mode {
         CHOMEUR("chomeur"), SUIVRE("suivre"), ATTENDRE("attendre"), TRAVAIL("travail"), GREVE("greve");
@@ -429,6 +433,8 @@ public class Travailleur extends PathfinderMob {
         b.define(SKIN, "");
         b.define(GESTE, "");
         b.define(TENUE, Tenues.CHOMEUR);
+        b.define(ROLE, "");
+        b.define(ETAT, "");
     }
 
     @Override
@@ -633,6 +639,26 @@ public class Travailleur extends PathfinderMob {
 
     public String tenue() { return entityData.get(TENUE); }
 
+    public String role() { return entityData.get(ROLE); }
+
+    public String etat() { return entityData.get(ETAT); }
+
+    /** Côté client : vu par le joueur (rien de plein entre leurs yeux), revu toutes les 10 ticks ({@code Client.Rendu}). */
+    long vueLe = Long.MIN_VALUE;
+    boolean vue;
+
+    /**
+     * Ce qu'on lit au-dessus de sa tête ({@link Insignes}) : son rôle et son état. Toutes les secondes et à chaque
+     * changement de nom ; le jeu n'envoie aux joueurs que ce qui a changé.
+     */
+    void majTete() {
+        entityData.set(ROLE, Insignes.role(Metier.nom(metier), chefNom, mode != Mode.CHOMEUR));
+        boolean peur = action instanceof Actions.Fuir || action instanceof Actions.Echapper; // en péril, survivre() lance Echapper
+        boolean repos = isSleeping() || memoire.getBoolean("epuise") || fatigue >= 90;
+        entityData.set(ETAT, Insignes.etat(new Insignes.Corps(aTerre, getHealth(), peur, mode == Mode.GREVE, faim,
+                !besoin.isEmpty(), impayes, moral, repos)));
+    }
+
     /** Son nom affiché et sa tenue, à rappeler à chaque changement de mode ou de métier. */
     public void majNom() {
         entityData.set(TENUE, Tenues.tenue(metier, mode != Mode.CHOMEUR));
@@ -643,6 +669,7 @@ public class Travailleur extends PathfinderMob {
         };
         if (aTerre) suffixe = " · à terre";
         setCustomName(Component.literal(prenom + suffixe));
+        majTete();
     }
 
     // --- Tick serveur ---------------------------------------------------------------------------
@@ -711,6 +738,7 @@ public class Travailleur extends PathfinderMob {
         Charge mesure = Charge.ICI;
         long h = System.nanoTime();
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
+        if ((tickCount + getId()) % 20 == 3) majTete();
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
