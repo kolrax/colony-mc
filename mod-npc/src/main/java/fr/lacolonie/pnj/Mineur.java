@@ -65,23 +65,26 @@ final class Mineur extends Metier {
     static final int BASE_VOISINE = 32;
     /** Serveur de tests : la règle des bases ne vaut que dans le lot « voisins » (ailleurs, des tests posent côte à côte les postes de faux chefs). */
     static boolean voisinsEnEssai;
+    /** Délai entre deux lettres pour la même structure ou le même voisin (6 h). */
+    static final int AVIS = 6 * 3600;
 
     /**
      * Il ne doit pas creuser en q (cahier 3.3 et 14.2) : une pièce de structure (puits de mine, village, ruines…), ou la base
-     * d'un autre joueur que son chef. S'il {@code avertit}, il prévient son chef, au plus une fois par demi-heure pour chaque cas.
+     * d'un autre joueur que son chef. S'il {@code avertit}, il prévient son chef, au plus une fois toutes les 6 h pour chaque
+     * structure (zone de 128 blocs) et chaque voisin : sinon les mêmes galeries le redisaient chaque demi-heure.
      */
     static boolean interdit(Travailleur t, BlockPos q, boolean avertit) {
         String s = Monde.structure(t.level(), q);
         if (s != null) {
-            if (avertit) Cerveau.ecrire(t, "structure", 1800, "structure", s, q.toShortString());
+            if (avertit) Cerveau.ecrire(t, "structure:" + (q.getX() >> 7) + "," + (q.getZ() >> 7), AVIS, "structure", s, q.toShortString());
             return true;
         }
         String b = baseVoisine(t, q);
-        if (b != null && avertit) Cerveau.ecrire(t, "base_voisine", 1800, "base_voisine", b);
+        if (b != null && avertit) Cerveau.ecrire(t, "base_voisine:" + b, AVIS, "base_voisine", b);
         return b != null;
     }
 
-    /** « la base de Robert » si q est à moins de {@link #BASE_VOISINE} blocs du poste d'un autre joueur que son chef ; sinon null. */
+    /** « de Robert » (pour « les terres de Robert ») si q est à moins de {@link #BASE_VOISINE} blocs du poste d'un autre joueur que son chef ; sinon null. */
     static String baseVoisine(Travailleur t, BlockPos q) {
         if (!(t.level() instanceof net.minecraft.server.level.ServerLevel sl)) return null;
         var serveur = sl.getServer();
@@ -94,8 +97,8 @@ final class Mineur extends Metier {
             var joueur = serveur.getPlayerList().getPlayer(e.getKey());
             String nom = joueur != null ? joueur.getName().getString() : serveur.getProfileCache() == null ? null
                     : serveur.getProfileCache().get(e.getKey()).map(com.mojang.authlib.GameProfile::getName).orElse(null);
-            if (nom == null) return "la base d'un voisin";
-            return "la base " + ("aeiouyhAEIOUYH".indexOf(nom.charAt(0)) >= 0 ? "d'" : "de ") + nom;
+            if (nom == null) return "d'un voisin";
+            return ("aeiouyhAEIOUYH".indexOf(nom.charAt(0)) >= 0 ? "d'" : "de ") + nom;
         }
         return null;
     }
@@ -148,7 +151,8 @@ final class Mineur extends Metier {
         for (int h = 0; h < haut; h++) {
             BlockPos q = p.above(h);
             if (!Monde.libre(l, q)) {
-                if (echecSur(t, q)) return Case.BLOQUE;
+                // Le tunnel d'un joueur (briques, planches…) : il ne casse que le naturel.
+                if (echecSur(t, q) || Monde.construit(l, q)) return Case.BLOQUE;
                 casser(t, q);
                 return Case.ACTION;
             }
