@@ -296,8 +296,9 @@ public class TestsGuerrier {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void rienParTerreSacPlein(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
-        Travailleur t = guerrier(h, 87, b, new ItemStack(Items.IRON_SWORD));
-        for (int i = 0; i < 26; i++) t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 64)); // 26 piles : une case libre une fois l'épée en main
+        Travailleur t = guerrier(h, 87, b, ItemStack.EMPTY);
+        t.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 26; i++) t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 64)); // 26 piles : une seule case libre
         Bureau.Entite d = TestsBucheron.depot(t);
         d.depot.addItem(new ItemStack(Items.BOW));
         d.depot.addItem(new ItemStack(Items.ARROW, 20));
