@@ -40,7 +40,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Outils fournis au dépôt, usure plus lente qu'un joueur (première passe 13/10, 0.9.10 : pioche et hache prises au dépôt, la meilleure, usure 3 fois plus lente)
 
 ## 5. Vie, santé, moral (indispensable)
-- [ ] Besoins : faim, fatigue, moral, lit à soi, santé, loisirs
+- [x] Besoins : faim, fatigue, moral, lit à soi, santé, loisirs (première passe 13/10, 0.9.11 : ils disent quand ils ont faim, sommeil, mal ou le moral bas ; chacun son lit ; courtes pauses ; un blessé mange pour guérir)
 - [ ] Blessures à plusieurs gravités ; à terre plus longtemps selon la gravité ; les autres se rassemblent autour du blessé
 - [ ] Guérisseur (nouveau métier)
 - [ ] Moral : causes (paie, nourriture variée, lit, dangers, ton du chef, deuil, météo, amitiés, réussite de la colonie) ; effets (lenteur, plaintes, grève, démission, fuite, vol, sabotage, révolte armée après avertissements)
