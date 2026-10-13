@@ -226,9 +226,9 @@ final class Monde {
 
     /**
      * Un endroit où creuser sans abîmer de construction, le plus près possible du centre : sol naturel (terre,
-     * sable, pierre…) à ciel ouvert, et aucun bloc « de joueur » à 5 blocs autour.
+     * sable, pierre…) à ciel ouvert, aucun bloc « de joueur » à 5 blocs autour, et rien que {@code refus} écarte.
      */
-    static BlockPos solNaturel(Travailleur t, BlockPos c, int rayon) {
+    static BlockPos solNaturel(Travailleur t, BlockPos c, int rayon, java.util.function.Predicate<BlockPos> refus) {
         Level l = t.level();
         var r = t.getRandom();
         for (int essai = 0; essai < 200; essai++) {
@@ -244,7 +244,7 @@ final class Monde {
                 st = l.getBlockState(sol);
             }
             boolean naturel = st.is(BlockTags.DIRT) || st.is(BlockTags.SAND) || st.is(BlockTags.BASE_STONE_OVERWORLD) || st.is(Blocks.GRAVEL);
-            if (!naturel || !st.getFluidState().isEmpty() || construitAutour(l, sol)) continue;
+            if (!naturel || !st.getFluidState().isEmpty() || refus.test(sol) || construitAutour(l, sol)) continue;
             return sol.above();
         }
         return null;
@@ -257,6 +257,30 @@ final class Monde {
         return st.is(BlockTags.PLANKS) || st.is(BlockTags.WOOL) || st.is(BlockTags.DOORS) || st.is(BlockTags.SLABS) || st.is(BlockTags.STAIRS)
                 || st.is(BlockTags.FENCES) || st.is(BlockTags.WALLS) || st.is(BlockTags.BEDS) || st.is(net.neoforged.neoforge.common.Tags.Blocks.GLASS_BLOCKS)
                 || st.is(BlockTags.TRAPDOORS) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(BlockTags.STONE_BRICKS) || st.is(Blocks.BRICKS);
+    }
+
+    /**
+     * La structure générée (puits de mine, village, ruines, fort, cité antique…) dont une pièce contient p : son nom en
+     * français simple, ou null. Seulement dans un coin chargé. Bon marché sans structure : le chunk n'a alors aucune référence.
+     */
+    static String structure(Level l, BlockPos p) {
+        if (!(l instanceof net.minecraft.server.level.ServerLevel sl) || !l.isLoaded(p)) return null;
+        if (sl.getChunk(p).getAllReferences().isEmpty()) return null;
+        var s = sl.structureManager().getStructureWithPieceAt(p, h -> true);
+        if (!s.isValid()) return null;
+        var id = sl.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE).getKey(s.getStructure());
+        return nomStructure(id == null ? "" : id.getPath());
+    }
+
+    /** « mineshaft_mesa » → « un vieux puits de mine » ; inconnue : « une construction ancienne ». */
+    static String nomStructure(String id) {
+        String[][] noms = {{"mineshaft", "un vieux puits de mine"}, {"village", "un village"}, {"ancient_city", "une cité antique"},
+                {"stronghold", "un fort"}, {"fortress", "une forteresse"}, {"bastion", "une forteresse"}, {"ruin", "des ruines"},
+                {"pyramid", "un temple"}, {"temple", "un temple"}, {"monument", "un temple englouti"}, {"outpost", "un avant-poste de pillards"},
+                {"mansion", "un manoir"}, {"swamp_hut", "une cabane de sorcière"}, {"igloo", "une hutte de neige"}, {"shipwreck", "une épave"},
+                {"trial_chambers", "des salles souterraines"}, {"end_city", "une cité ancienne"}};
+        for (String[] n : noms) if (id.contains(n[0])) return n[1];
+        return "une construction ancienne";
     }
 
     static boolean construitAutour(Level l, BlockPos sol) {

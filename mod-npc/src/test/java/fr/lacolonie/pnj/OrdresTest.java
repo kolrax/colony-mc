@@ -42,6 +42,14 @@ class OrdresTest {
         missions("fer 20 diamant 5", "mineur", new Mission("fer", "quantite", 20), new Mission("diamant", "quantite", 5));
     }
 
+    /** Cahier 3.2 : « trouve-moi du diamant » est une commande de minerai, pas seulement « où vois-tu du minerai ? ». */
+    @Test
+    void chercherUnMineraiPrecis() {
+        missions("Trouve-moi du diamant", "mineur", new Mission("diamant", "quantite", 32));
+        missions("cherche du diamant", "mineur", new Mission("diamant", "quantite", 32));
+        missions("va chercher du fer", "mineur", new Mission("fer", "quantite", 32));
+    }
+
     @Test
     void stockOuQuantite() {
         missions("Garde toujours 32 bûches de bouleau en stock", "bucheron", new Mission("bouleau", "stock", 32));

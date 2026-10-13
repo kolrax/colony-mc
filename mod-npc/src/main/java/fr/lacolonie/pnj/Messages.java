@@ -156,6 +156,12 @@ final class Messages {
         m("puits_fini", "Nouveau puits",
                 "J'ai fini mes galeries à cet endroit : je creuse un nouveau puits un peu plus loin.",
                 "Mes galeries sont épuisées ici. Je recommence un peu plus loin.");
+        m("structure", "Une construction ancienne",
+                "Je suis tombé sur {0} en creusant, en {1}. Je n'y touche pas : je creuse ailleurs.",
+                "En creusant, j'ai trouvé {0}, en {1}. Je n'y touche pas et je vais creuser ailleurs.");
+        m("base_voisine", "Je creuse ailleurs",
+                "Juste au-dessus, c'est {0} : je n'y creuse pas, je vais ailleurs.",
+                "Mes galeries arrivaient sous {0}. Je n'ai pas le droit d'y creuser : je vais ailleurs.");
         m("a_terre", "À L'AIDE",
                 "Je suis à terre en {0} ! Il me reste deux minutes : viens avec à manger ou une potion de soin.",
                 "Blessé, à terre, en {0}… Vite, à manger ou une potion de soin, je n'en ai plus pour longtemps.");

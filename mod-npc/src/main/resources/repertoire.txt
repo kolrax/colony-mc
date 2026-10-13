@@ -264,7 +264,7 @@ trou | mineur | creuser un trou là où regarde le chef | travail trou n=3 | cre
 torches | mineur | poser des torches autour pour éclairer | travail torches n=4 | pose des torches ; éclaire le coin ; mets des torches ; installe des torches ; il fait noir ici ; on n'y voit rien ; plante des torches ; éclaire la mine | J'éclaire tout ça.
 torche_la | mineur | poser une torche là où regarde le chef | travail torche_la | pose une torche ici ; pose une torche là ; mets une torche là ; une torche ici | Une torche, voilà.
 ramasser_pierres | mineur | ramasser ce qui traîne par terre | travail ramasser n=12 | ramasse les pierres ; ramasse ce qui traîne ; ramasse les cailloux ; nettoie le sol
-chercher_minerai | mineur | dire où il voit du minerai et le montrer du doigt | info minerai | tu vois du minerai ; il y a du minerai ? ; où y a t il du fer ; où est le minerai ; cherche du minerai ; repère du minerai ; trouve moi du fer ; trouve moi du diamant ; il y a du charbon par ici ? ; où trouver du fer | Je regarde…
+chercher_minerai | mineur | dire où il voit du minerai et le montrer du doigt | info minerai | tu vois du minerai ; il y a du minerai ? ; où y a t il du fer ; où est le minerai ; cherche du minerai ; repère du minerai ; il y a du charbon par ici ? ; où trouver du fer | Je regarde…
 sonder | mineur | tapoter la paroi pour la sonder | geste piocher duree=4s son=frappe rythme=10 | sonde la paroi ; tâte la roche ; tapote le mur ; écoute la roche
 
 ## Travail du bûcheron

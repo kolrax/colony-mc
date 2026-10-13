@@ -61,6 +61,45 @@ final class Mineur extends Metier {
 
     static String cle(BlockPos p) { return p.getX() + "," + p.getY() + "," + p.getZ(); }
 
+    /** Jamais creuser à moins de tant de blocs (à l'horizontale, à toute hauteur) du poste d'un autre joueur (cahier 3.3). */
+    static final int BASE_VOISINE = 32;
+    /** Serveur de tests : la règle des bases ne vaut que dans le lot « voisins » (ailleurs, des tests posent côte à côte les postes de faux chefs). */
+    static boolean voisinsEnEssai;
+
+    /**
+     * Il ne doit pas creuser en q (cahier 3.3 et 14.2) : une pièce de structure (puits de mine, village, ruines…), ou la base
+     * d'un autre joueur que son chef. S'il {@code avertit}, il prévient son chef, au plus une fois par demi-heure pour chaque cas.
+     */
+    static boolean interdit(Travailleur t, BlockPos q, boolean avertit) {
+        String s = Monde.structure(t.level(), q);
+        if (s != null) {
+            if (avertit) Cerveau.ecrire(t, "structure", 1800, "structure", s, q.toShortString());
+            return true;
+        }
+        String b = baseVoisine(t, q);
+        if (b != null && avertit) Cerveau.ecrire(t, "base_voisine", 1800, "base_voisine", b);
+        return b != null;
+    }
+
+    /** « la base de Robert » si q est à moins de {@link #BASE_VOISINE} blocs du poste d'un autre joueur que son chef ; sinon null. */
+    static String baseVoisine(Travailleur t, BlockPos q) {
+        if (!(t.level() instanceof net.minecraft.server.level.ServerLevel sl)) return null;
+        var serveur = sl.getServer();
+        if (serveur instanceof net.minecraft.gametest.framework.GameTestServer && !voisinsEnEssai) return null;
+        for (var e : Courrier.de(serveur).postes.entrySet()) {
+            Courrier.Poste p = e.getValue();
+            if (e.getKey().equals(t.chef) || p.monde() != sl.dimension()) continue;
+            double dx = p.pos().getX() - q.getX(), dz = p.pos().getZ() - q.getZ();
+            if (dx * dx + dz * dz >= BASE_VOISINE * BASE_VOISINE) continue;
+            var joueur = serveur.getPlayerList().getPlayer(e.getKey());
+            String nom = joueur != null ? joueur.getName().getString() : serveur.getProfileCache() == null ? null
+                    : serveur.getProfileCache().get(e.getKey()).map(com.mojang.authlib.GameProfile::getName).orElse(null);
+            if (nom == null) return "la base d'un voisin";
+            return "la base " + ("aeiouyhAEIOUYH".indexOf(nom.charAt(0)) >= 0 ? "d'" : "de ") + nom;
+        }
+        return null;
+    }
+
     static void casser(Travailleur t, BlockPos p) {
         t.memoire.putString("cible", cle(p));
         Cerveau.lancer(t, new Actions.Casser(p));
@@ -84,10 +123,12 @@ final class Mineur extends Metier {
      * sous terre loin de toute construction (jamais un canal ou un puits de joueur) : il la bouche avec un bloc banal de son
      * sac ({@link Actions.Boucher}) ; tout autre liquide autour, ou sans bloc : il abandonne la case (l'escalier tourne).
      * Du gravier ou du sable au-dessus : il le creuse depuis la case d'à côté, où il se tient, et n'entre qu'une fois la
-     * colonne tombée (jamais dessous).
+     * colonne tombée (jamais dessous). Dans une structure ou sous la base d'un autre joueur ({@link #interdit}) : BLOQUE.
      */
     static Case creuserCase(Travailleur t, BlockPos p, int haut) {
         Level l = t.level();
+        // Une structure (même son air : un couloir de puits de mine) ou la base d'un autre : il n'y touche pas.
+        for (int h = 0; h < haut; h++) if (interdit(t, p.above(h), true)) return Case.BLOQUE;
         for (int h = -1; h <= haut; h++)
             for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
                 BlockPos q = p.offset(d[0], h, d[1]);
@@ -160,8 +201,10 @@ final class Mineur extends Metier {
     void nouveauPuits(Travailleur t) {
         CompoundTag m = t.memoire;
         // Le plus près possible du bureau : il aura moins de marche pour rapporter le minerai.
-        BlockPos s = Monde.solNaturel(t, t.bureau, 64);
-        if (s == null && !t.chezLui(t.blockPosition())) s = Monde.solNaturel(t, t.blockPosition(), 24);
+        // Jamais sur une structure ni près de la base d'un autre joueur.
+        java.util.function.Predicate<BlockPos> refus = q -> interdit(t, q, false);
+        BlockPos s = Monde.solNaturel(t, t.bureau, 64, refus);
+        if (s == null && !t.chezLui(t.blockPosition())) s = Monde.solNaturel(t, t.blockPosition(), 24, refus);
         if (s == null) {
             // Tout est construit autour du bureau : il explore plus loin pour trouver un sol naturel.
             BlockPos e = Cerveau.pointAExplorer(t, "puits", t.bureau, t.porteeMax());
@@ -219,7 +262,7 @@ final class Mineur extends Metier {
         for (Object[] f : new Object[][]{{c.blocs, 3}, {Actions.Filtre.de("#c:ores"), 2}}) {
             BlockPos q = Monde.chercherBloc(t, (Actions.Filtre) f[0], (int) f[1], t.blockPosition(), true, true);
             if (q != null && !ignores.contains(cle(q))) {
-                if (echecSur(t, q)) { ignores.putBoolean(cle(q), true); m.put("ignores", ignores); }
+                if (echecSur(t, q) || interdit(t, q, true)) { ignores.putBoolean(cle(q), true); m.put("ignores", ignores); }
                 else { casser(t, q); return; }
             }
         }
