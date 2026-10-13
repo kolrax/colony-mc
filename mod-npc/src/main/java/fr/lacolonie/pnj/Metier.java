@@ -191,7 +191,7 @@ public abstract class Metier {
     static final Map<String, Metier> TOUS = new LinkedHashMap<>();
 
     static {
-        for (Metier m : List.of(new Mineur(), new Bucheron(), new Guerrier())) TOUS.put(m.id, m);
+        for (Metier m : List.of(new Mineur(), new Bucheron(), new Guerrier(), new Fermier())) TOUS.put(m.id, m);
     }
 
     static Metier de(String id) { return TOUS.get(id); }

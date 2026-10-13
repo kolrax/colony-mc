@@ -127,6 +127,7 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
+        NeoForge.EVENT_BUS.addListener(Fermier::pietiner); // un ouvrier ne piétine jamais une terre labourée
         // Filet de sécurité : un PNJ arrivé dans un chunk inactif (poussé, ou figé avant la 0.3.0) ne peut plus
         // déplacer ses chunks lui-même ; le serveur les recale toutes les 5 secondes.
         // Chaque partie est mesurée pour le banc de charge, et le tick se clôt ici (après celui des PNJ).
@@ -422,6 +423,7 @@ public class ColoniePnj {
                 case "mineur" -> net.minecraft.world.item.Items.IRON_PICKAXE;
                 case "bucheron" -> net.minecraft.world.item.Items.IRON_AXE;
                 case "guerrier" -> net.minecraft.world.item.Items.IRON_SWORD;
+                case "fermier" -> net.minecraft.world.item.Items.IRON_HOE;
                 default -> net.minecraft.world.item.Items.AIR;
             });
             Travailleur t = Travailleur.auTravail(l, m, bureau, net.minecraft.world.phys.Vec3.atBottomCenterOf(p), CHEF_BANC, outil);

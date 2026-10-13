@@ -354,7 +354,8 @@ final class Adressage {
     static final Map<String, String> CAPACITES = Map.of(
             "mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre ; creuse, perce des tunnels, pose des torches",
             "bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle ; abat les arbres, replante",
-            "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge");
+            "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge",
+            "fermier", "cultive et rapporte blé, carottes, pommes de terre, betteraves ; récolte, laboure et sème un champ, fait du pain");
 
     /** Une étiquette par ouvrier : son prénom (avec son métier si deux ouvriers ont le même). */
     static List<String> etiquettes(Situation s) {

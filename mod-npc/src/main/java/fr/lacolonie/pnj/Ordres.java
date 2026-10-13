@@ -92,6 +92,13 @@ final class Ordres {
         bucheron.put("tout", List.of("n importe quel bois", "bois", "buche", "buches", "rondin", "rondins", "tronc", "troncs"));
         NOMS.put("bucheron", bucheron);
 
+        Map<String, List<String>> fermier = new LinkedHashMap<>();
+        fermier.put("ble", List.of("ble", "bles", "froment", "epi de ble", "epis de ble", "gerbe de ble", "gerbes de ble"));
+        fermier.put("carotte", List.of("carotte", "carottes"));
+        fermier.put("pomme_de_terre", List.of("pomme de terre", "pommes de terre", "patate", "patates"));
+        fermier.put("betterave", List.of("betterave", "betteraves"));
+        NOMS.put("fermier", fermier);
+
         Map<String, List<String>> guerrier = new LinkedHashMap<>();
         guerrier.put("escorter", List.of("escorte moi", "escorte", "escorter", "protege moi", "garde du corps"));
         guerrier.put("ronde", List.of("fais la ronde", "la ronde", "ronde", "patrouille", "patrouiller", "patrouilles"));
@@ -445,6 +452,7 @@ final class Ordres {
     static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
             "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
             "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),
+            "fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"}),
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");

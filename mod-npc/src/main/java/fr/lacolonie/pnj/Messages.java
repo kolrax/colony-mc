@@ -58,6 +58,12 @@ final class Messages {
         m("hache", "Je n'ai pas de hache",
                 "Je n'ai pas de hache : je coupe à la main, c'est bien plus lent.",
                 "Sans hache, j'abats les arbres à mains nues. Ça avance, mais doucement.");
+        m("houe", "Il me faut une houe",
+                "Je n'ai pas de houe : la terre de nos champs reste dure. Laisse-m'en une au dépôt.",
+                "Sans houe, je ne peux pas labourer les champs que tu m'as marqués. Il m'en faudrait une au dépôt.");
+        m("graines", "Plus de semences",
+                "Je n'ai plus de {0} pour semer nos champs. Laisse-m'en au dépôt.",
+                "Les champs attendent leurs semences : il n'y a plus de {0}, ni sur moi ni au dépôt.");
         m("torches", "Plus de torches",
                 "Je n'ai plus de torches : mes galeries vont rester sombres.",
                 "Mes torches sont toutes posées. Sans elles, les monstres vont s'installer dans mes galeries.");

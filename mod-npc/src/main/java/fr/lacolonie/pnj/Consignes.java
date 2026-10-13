@@ -178,7 +178,7 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
             if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
@@ -225,15 +225,15 @@ final class Consignes {
                     if (!a.equals("tunnel") && t.bureau != null && !(t.chezLui(lieu) && t.chezLui(lieu.relative(d, p.longueur() - 1))))
                         return "C'est trop loin de mon poste, chef : je creuse près de chez nous.";
                 }
-                if (TERRAINS.contains(a)) {
+                if (TERRAINS.contains(a) || a.equals("champ")) {
                     // Le sol sous l'endroit regardé (le chef peut viser un tronc, des feuilles, l'herbe).
                     for (int i = 0; i < 40 && (t.level().getBlockState(lieu).is(BlockTags.LOGS) || t.level().getBlockState(lieu).is(BlockTags.LEAVES)
                             || t.level().getBlockState(lieu).canBeReplaced()); i++) lieu = lieu.below();
-                    Fouille.Plan p = Fouille.lire(a.equals("foret") ? "foret" : "defriche", phrase, 0).vers(chef.getDirection().getName(), false);
+                    Fouille.Plan p = Fouille.lire(a.equals("defricher_zone") ? "defriche" : a, phrase, 0).vers(chef.getDirection().getName(), false);
                     String essence = Fouille.essence(phrase);
                     // Un chêne noir ne pousse que d'un carré de 4 pousses : la forêt se plante alors par carrés.
                     boolean carre = Fouille.geants(phrase) || essence.equals("chene_noir");
-                    texte = a.equals("foret") ? p.texte() + "|" + Bucheron.pousseDe(essence.isEmpty() && carre ? "chene_noir" : essence) + "|" + (carre ? "carre" : "un") : p.texte();
+                    texte = a.equals("foret") ? p.texte() + "|" + Bucheron.pousseDe(essence.isEmpty() && carre ? "chene_noir" : essence) + "|" + (carre ? "carre" : "un") : a.equals("champ") ? p.texte() + "|" + Cultures.dite(phrase).id() : p.texte();
                     Direction d = chef.getDirection();
                     // Tout le terrain près de son poste.
                     if (t.bureau != null)
@@ -900,6 +900,10 @@ final class Consignes {
             }
             case "planter" -> { if (t.compter(Actions.Filtre.de("#minecraft:saplings")) == 0) return "Je n'ai pas de pousses à planter, chef."; }
             case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
+            case "champ", "recolter", "pain" -> {
+                if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
+                if (mode.equals("champ") && vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef.";
+            }
             case "planches", "charbon" -> {
                 if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
                 if (mode.equals("charbon") && l.isLoaded(t.bureau)) {
@@ -1543,6 +1547,11 @@ final class Consignes {
                                 : "Je n'ai pas de pousses de ce bois, chef, ni sur moi ni au dépôt.");
                         while (chantier.size() > garde) chantier.remove(chantier.size() - 1);
                     }
+                }
+                case "champ", "recolter", "pain" -> {
+                    // Le fermier : son action dit elle-même ce qu'elle a fait.
+                    if (etape++ == 0) { sous = Fermier.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "planches", "charbon" -> {
                     if (etape++ == 0) {

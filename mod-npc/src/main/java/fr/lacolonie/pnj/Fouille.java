@@ -48,14 +48,15 @@ final class Fouille {
      * Le plan d'un chantier {@code genre} (« salle », « carriere » ou « tunnel ») d'après la phrase du chef. Ce qui n'est pas
      * dit prend la valeur par défaut : salle 5 x 5 x 3, carrière 8 x 8 sur 4 couches, tunnel de {@code longueur} x 1 x 2
      * (« de train » : 16 x 3 x 4). Les mesures sont bornées (une salle de 16 sur 16 au plus, un tunnel de 64 blocs).
-     * Le bûcheron (« foret » : 10 x 10, « defriche » : 16 x 16) : une surface, longueur sur largeur, de 32 sur 32 au plus.
+     * Le bûcheron (« foret » : 10 x 10, « defriche » : 16 x 16) et le fermier (« champ » : 9 x 9) : une surface, longueur sur
+     * largeur, de 32 sur 32 au plus.
      */
     static Plan lire(String genre, String phrase, int longueur) {
         String n = chiffres(Ordres.normaliser(phrase == null ? "" : phrase).replaceAll("(\\d)x(\\d)", "$1 x $2"))
                 .replace(" en train de ", " ").replace(" en train d ", " "); // « tu es en train de creuser » n'est pas un train
-        boolean tunnel = genre.equals("tunnel"), carriere = genre.equals("carriere"), terrain = genre.equals("foret") || genre.equals("defriche");
+        boolean tunnel = genre.equals("tunnel"), carriere = genre.equals("carriere"), terrain = genre.equals("foret") || genre.equals("defriche") || genre.equals("champ");
         boolean train = tunnel && Ordres.dit(n, "train", "trains", "rail", "rails", "chemin de fer", "wagonnet", "wagonnets");
-        int lo = tunnel ? (train ? 16 : Math.max(1, longueur)) : carriere ? 8 : genre.equals("foret") ? 10 : genre.equals("defriche") ? 16 : 5, la = tunnel ? (train ? 3 : 1) : lo, ha = tunnel ? (train ? 4 : 2) : carriere ? 4 : 3;
+        int lo = tunnel ? (train ? 16 : Math.max(1, longueur)) : carriere ? 8 : genre.equals("foret") ? 10 : genre.equals("defriche") ? 16 : genre.equals("champ") ? 9 : 5, la = tunnel ? (train ? 3 : 1) : lo, ha = tunnel ? (train ? 4 : 2) : carriere ? 4 : 3;
         int[] v;
         if ((v = prendre(HAUT, n)) != null) { ha = v[0]; n = enlever(HAUT, n); }
         if ((v = prendre(PROFOND, n)) != null) { ha = v[0]; n = enlever(PROFOND, n); }
