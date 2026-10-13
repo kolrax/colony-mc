@@ -299,6 +299,7 @@ final class Repertoire {
     /** Les actions que la phrase pourrait demander, de la plus sûre à la moins sûre (une par action). */
     static List<Trouve> chercher(String texte) {
         String n = Ordres.normaliser(texte);
+        String sansNombres = n.replaceAll(" \\d{1,6}(?= )", " des");
         List<String> m = mots(n);
         List<String> rac = new ArrayList<>();
         for (String w : m) rac.add(VIDES.contains(w) ? "" : racine(w));
@@ -312,6 +313,9 @@ final class Repertoire {
                 double score;
                 int debut;
                 int k = d.contains("@") ? personne(n, m, d) : n.indexOf(" " + d + " ");
+                // « fais 32 planches » se dit comme « fais des planches » (le nombre est lu à part).
+                if (k < 0 && !d.contains("@") && !sansNombres.equals(n) && (k = sansNombres.indexOf(" " + d + " ")) >= 0)
+                    k = Math.min(k, n.length() - 1);
                 List<String> rd = RACINES.get(d);
                 if (d.contains("@") && k < 0) {
                     // Sans quelqu'un à sa place, la formule ne compte que comme piste pour l'IA.
