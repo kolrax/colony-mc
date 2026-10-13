@@ -358,7 +358,7 @@ $("#eco-enregistrer").addEventListener("click", async () => {
     .filter(p => p.objet && p.valeur > 0);
   r.salaire_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#s" + i).value);
   r.prime_par_niveau = [1, 2, 3, 4, 5].map(i => +$("#p" + i).value);
-  r.minutes_entre_paies = +$("#r-paie").value; r.paies_impayees_avant_greve = +$("#r-greve").value; r.pnj_max_par_joueur = +$("#r-max").value; r.usure_outils = +$("#r-usure").value;
+  r.minutes_entre_paies = +$("#r-paie").value; r.paies_impayees_avant_greve = +$("#r-greve").value; r.pnj_max_par_joueur = +$("#r-max").value; r.usure_outils = +$("#r-usure").value || 3;
   r.chercheurs = { minutes_entre_arrivees: +$("#c-minutes").value, chance: +$("#c-chance").value, duree_minutes: +$("#c-duree").value, max_autour: +$("#c-max").value };
   try { const x = await api("/api/reglages", r); $("#eco-msg").textContent = x.ok ? "Enregistré." : x.erreur; if (x.ok) { ecoRempli = false; await charger(); } }
   catch (e) { $("#eco-msg").textContent = e.message; }

@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * Les outils (cahier 3.12 et 3.13) : fournis au dépôt, le mineur et le bûcheron vont y prendre celui qu'il leur faut (ou un
  * meilleur, en y laissant le leur), et ils les usent trois fois moins vite qu'un joueur. Chaque test dans son coin du monde
- * plat (coins 80 à 84), au ciel ouvert.
+ * plat (coins 80 à 86), au ciel ouvert.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -138,6 +138,42 @@ public class TestsOutils {
             int perdu = t.getMainHandItem().getDamageValue();
             h.assertTrue(perdu >= 2 && perdu <= 18, "la pioche perd environ 9 points pour 27 blocs : " + perdu);
             t.discard();
+        });
+    }
+
+    /** Relecture : un guerrier armé d'une épée laisse au dépôt la hache de fer (elle est pour le bûcheron), même plus forte. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void guerrierLaisseLaHacheDuBucheron(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = ouvrier(h, "guerrier", 85, b, new ItemStack(Items.IRON_SWORD));
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.addItem(new ItemStack(Items.IRON_AXE));
+        h.runAtTickTime(h.getTick() + 200, () -> {
+            h.assertTrue(t.memoire.contains("revue"), "il a passé le dépôt en revue (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(TestsBucheron.compte(d, Items.IRON_AXE) == 1, "la hache reste au dépôt");
+            h.assertTrue(t.getMainHandItem().is(Items.IRON_SWORD), "il garde son épée (" + t.getMainHandItem() + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
+
+    /** Relecture : une pioche de pierre enchantée (donnée par le chef) n'est pas échangée contre une pioche de fer ordinaire. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void gardeSaPiocheEnchantee(GameTestHelper h) {
+        ItemStack enchantee = new ItemStack(Items.STONE_PICKAXE);
+        enchantee.enchant(h.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY), 3);
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = ouvrier(h, "mineur", 86, b, enchantee);
+        t.mission("charbon", "stock", 64);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.addItem(new ItemStack(Items.IRON_PICKAXE));
+        h.runAtTickTime(h.getTick() + 200, () -> {
+            h.assertTrue(t.memoire.contains("revue_outil"), "il a regardé le dépôt (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(TestsBucheron.compte(d, Items.IRON_PICKAXE) == 1 && TestsBucheron.compte(d, Items.STONE_PICKAXE) == 0, "la pioche de fer reste au dépôt");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:stone_pickaxe")) == 1, "il garde sa pioche enchantée");
+            t.discard();
+            h.succeed();
         });
     }
 }
