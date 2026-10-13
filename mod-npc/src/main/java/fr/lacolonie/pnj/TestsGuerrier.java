@@ -138,12 +138,12 @@ public class TestsGuerrier {
     @AfterBatch(batch = "guerrier_nuit")
     public static void apresNuit(ServerLevel l) { l.setDayTime(heureAvant); }
 
-    /** La nuit, il chasse le monstre qui rôde dans l'espace de vie, loin de sa garde. */
+    /** La nuit, il chasse le monstre qui rôde dans l'espace de vie, loin de sa garde (à 44 blocs, presque au bout). */
     @GameTest(template = "vide", batch = "guerrier_nuit", timeoutTicks = 1200)
     public static void chasseDeNuit(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = guerrier(h, 94, b, new ItemStack(Items.IRON_SWORD));
-        var husk = fige(h, EntityType.HUSK, b[0].north(30));
+        var husk = fige(h, EntityType.HUSK, b[0].north(44)); // loin : au-delà des 32 blocs d'une attaque ordinaire
         h.succeedWhen(() -> {
             h.assertFalse(husk.isAlive(), "le rôdeur doit être tué (" + TestsJeu.etat(t, t.bureau) + ", jour " + h.getLevel().isDay() + ")");
             fin(t);
@@ -231,6 +231,89 @@ public class TestsGuerrier {
             h.assertTrue(m.memoire.contains("alerte"), "il appelle la garde");
             creeper.discard();
             fin(m);
+        });
+    }
+
+    /**
+     * Ses flèches ne blessent personne d'autre que leur cible : un villageois juste derrière le monstre, et le monstre qui
+     * disparaît pendant que la flèche vole (trois fois) : le villageois n'est jamais touché.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void flecheNeBlessePasCeluiQuiEstDerriere(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = guerrier(h, 99, b, new ItemStack(Items.BOW));
+        t.inventaire.addItem(new ItemStack(Items.ARROW, 32));
+        BlockPos ici = b[0].east(8);
+        var villageois = fige(h, EntityType.VILLAGER, b[0].east(10));
+        Mob[] husk = {fige(h, EntityType.HUSK, ici)};
+        int[] disparus = {0};
+        long[] depuis = {-1};
+        h.succeedWhen(() -> {
+            h.assertTrue(villageois.getHealth() == villageois.getMaxHealth(), "le villageois derrière ne doit jamais être touché (" + disparus[0] + " flèches sans cible)");
+            var fleches = h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, new net.minecraft.world.phys.AABB(b[0]).inflate(24),
+                    a -> a.getOwner() == t && a.tickCount < 4);
+            if (husk[0] != null && !fleches.isEmpty()) { husk[0].discard(); husk[0] = null; disparus[0]++; depuis[0] = h.getTick(); }
+            if (husk[0] == null && disparus[0] < 3 && h.getTick() - depuis[0] > 60) husk[0] = fige(h, EntityType.HUSK, ici);
+            h.assertTrue(disparus[0] >= 3 && h.getTick() - depuis[0] > 60, "trois flèches tirées, puis leur cible disparue (" + disparus[0] + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            villageois.discard();
+            fin(t);
+        });
+    }
+
+    /** « Tiens ce pont », sans arc : un tireur (un squelette casqué, à 10 blocs) ne le laisse pas planté là, il va le tuer. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void tientLePontContreUnTireur(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = guerrier(h, 89, b, new ItemStack(Items.IRON_SWORD));
+        BlockPos pont = b[0].south(6);
+        t.consigne = new Consignes.Consigne("garder_ici", "", "", 0, 0, 0, -1, pont, null);
+        t.finirAction("ordre");
+        var squelette = fige(h, EntityType.SKELETON, pont.east(10));
+        squelette.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.DIAMOND_HELMET)); // pas de brûlure au soleil
+        h.succeedWhen(() -> {
+            h.assertFalse(squelette.isAlive(), "le tireur doit être tué (" + TestsJeu.etat(t, pont) + ")");
+            h.assertTrue(t.position().distanceToSqr(Vec3.atBottomCenterOf(pont)) < 2.5 * 2.5, "puis il revient à sa place (" + TestsJeu.etat(t, pont) + ")");
+            fin(t);
+        });
+    }
+
+    /** Déjà sous régénération, il ne boit pas sa potion de soin (pas deux potions coup sur coup). */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void neBoitPasSousRegeneration(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = guerrier(h, 88, b, new ItemStack(Items.IRON_SWORD));
+        t.inventaire.addItem(PotionContents.createItemStack(Items.POTION, Potions.HEALING));
+        t.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 2000, 0));
+        t.setHealth(6);
+        h.runAtTickTime(h.getTick() + 120, () -> {
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:potion")) == 1, "la potion doit rester (" + TestsJeu.etat(t, t.bureau) + ")");
+            fin(t);
+            h.succeed();
+        });
+    }
+
+    /** Le sac presque plein : il prend l'arc au dépôt, mais pas les flèches ni les potions qui n'entrent plus ; rien ne tombe par terre. */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void rienParTerreSacPlein(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = guerrier(h, 87, b, new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 26; i++) t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 64)); // 26 piles : une case libre une fois l'épée en main
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.addItem(new ItemStack(Items.BOW));
+        d.depot.addItem(new ItemStack(Items.ARROW, 20));
+        d.depot.addItem(PotionContents.createItemStack(Items.POTION, Potions.HEALING));
+        d.depot.addItem(PotionContents.createItemStack(Items.POTION, Potions.HEALING));
+        String[] faute = {null};
+        long[] pris = {-1};
+        h.succeedWhen(() -> {
+            if (!h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(b[0]).inflate(8),
+                    e -> e.getItem().is(Items.ARROW) || e.getItem().is(Items.POTION) || e.getItem().is(Items.BOW)).isEmpty()) faute[0] = "des flèches ou des potions par terre";
+            h.assertTrue(faute[0] == null, faute[0]);
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:bow")) == 1, "il prend l'arc (" + TestsJeu.etat(t, t.bureau) + ")");
+            if (pris[0] < 0) pris[0] = h.getTick();
+            h.assertTrue(h.getTick() - pris[0] > 40, "on regarde encore un peu");
+            h.assertTrue(TestsBucheron.compte(d, Items.ARROW) + t.compter(Actions.Filtre.de("minecraft:arrow")) == 20, "aucune flèche perdue");
+            fin(t);
         });
     }
 }

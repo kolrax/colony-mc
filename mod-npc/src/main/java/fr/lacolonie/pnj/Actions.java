@@ -53,7 +53,7 @@ public final class Actions {
         final List<TagKey<Block>> tagsBloc = new ArrayList<>();
         final List<TagKey<Item>> tagsObjet = new ArrayList<>();
         final Set<ResourceLocation> ids = new HashSet<>();
-        boolean nourriture, tout;
+        boolean nourriture, tout, soin;
         static final Map<String, Filtre> CACHE = new ConcurrentHashMap<>();
 
         public static Filtre de(String s) { return CACHE.computeIfAbsent(s == null ? "" : s.trim(), Filtre::new); }
@@ -63,6 +63,7 @@ public final class Actions {
             for (String p : s.split("\\|")) {
                 p = p.trim();
                 if (p.equals("nourriture")) nourriture = true;
+                else if (p.equals("soin")) soin = true; // une potion de soin ou de régénération (pas une fiole d'eau)
                 else if (p.equals("tout") || p.equals("*")) tout = true;
                 else if (p.startsWith("#")) {
                     ResourceLocation id = ResourceLocation.tryParse(p.substring(1));
@@ -88,6 +89,7 @@ public final class Actions {
             if (s.isEmpty()) return false;
             if (tout) return true;
             if (nourriture && s.getFoodProperties(null) != null) return true;
+            if (soin && Guerrier.soignante(s)) return true;
             for (TagKey<Item> t : tagsObjet) if (s.is(t)) return true;
             return !ids.isEmpty() && ids.contains(BuiltInRegistries.ITEM.getKey(s.getItem()));
         }
@@ -694,8 +696,14 @@ public final class Actions {
         /** Il a un arc ou une arbalète et des flèches (revu toutes les secondes) ; le recul devant un creeper. */
         boolean arc;
         Vec3 recul;
+        /** La ligne de tir, revue seulement au moment de tirer. */
+        boolean libre;
+        /** Au-delà, il laisse la cible (lancé par la veille ou la chasse de nuit : jusqu'au bout de l'espace de vie). */
+        double portee = 32;
 
         Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; mobile = true; }
+
+        Attaquer portee(double p) { portee = p; return this; }
 
         Attaquer tenir(Vec3 poste, double laisse) { this.poste = poste; this.laisse = laisse; return this; }
 
@@ -706,7 +714,7 @@ public final class Actions {
         }
 
         Etat tick(Travailleur t) {
-            if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > 32 * 32) return Etat.OK;
+            if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > portee * portee) return Etat.OK;
             if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;
@@ -720,7 +728,7 @@ public final class Actions {
                 if (d2 < pres * pres) {
                     if (recul == null || age % 20 == 0 || t.position().distanceToSqr(recul) < 2) recul = DefaultRandomPos.getPosAway(t, 10, 4, cible.position());
                     if (recul != null && (poste == null || recul.distanceToSqr(poste) <= (laisse + 4) * (laisse + 4))) { t.setGeste(""); marcher(t, recul, 1.3); return Etat.EN_COURS; }
-                } else if (vue && Monde.ligneDeTir(t, cible)) {
+                } else if (vue && (recharge > 0 ? libre : (libre = Monde.ligneDeTir(t, cible)))) {
                     t.getNavigation().stop();
                     Guerrier.prendreArc(t);
                     t.setGeste("tirer_arc");

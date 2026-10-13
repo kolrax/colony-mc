@@ -44,7 +44,7 @@ final class Guerrier extends Metier {
 
     Guerrier() {
         super("guerrier", "Guerrier", "Garde le bureau, fait la ronde autour ou escorte son chef, et tue les monstres. Il ne lève son arme sur un homme que sur l'ordre de son chef ; si quelqu'un le frappe, il recule sans rendre le coup. Il ne touche jamais aux villageois ni aux bêtes.",
-                true, "nourriture", "#minecraft:swords", "#minecraft:axes", "minecraft:bow|minecraft:crossbow", "#minecraft:arrows", "minecraft:potion");
+                true, "nourriture", "#minecraft:swords", "#minecraft:axes", "minecraft:bow|minecraft:crossbow", "#minecraft:arrows", "soin", "soin");
         commandes.add(new Commande("garder", "Garder le bureau", null));
         commandes.add(new Commande("ronde", "Faire la ronde (50 blocs)", null));
         commandes.add(new Commande("escorter", "Escorter son chef", null));
@@ -108,6 +108,10 @@ final class Guerrier extends Metier {
         AbstractArrow f = ProjectileUtil.getMobArrow(t, fleche, 1.6f, arme);
         if (arme.getItem() instanceof ProjectileWeaponItem p) f = p.customArrow(f, fleche, arme);
         f.pickup = AbstractArrow.Pickup.ALLOWED; // sa flèche, prise dans son sac : rien ne se perd
+        f.clearFire();
+        // Marquée : elle ne blesse que des monstres ou la cible voulue (voir impact), jamais un passant.
+        f.getPersistentData().putUUID(TIREUR, t.getUUID());
+        f.getPersistentData().putUUID(VISEE, cible.getUUID());
         if (arbalete) f.setBaseDamage(f.getBaseDamage() + 1);
         double dx = cible.getX() - t.getX(), dy = cible.getY(1 / 3.0) - f.getY(), dz = cible.getZ() - t.getZ();
         f.shoot(dx, dy + Math.sqrt(dx * dx + dz * dz) * 0.2, dz, 1.6f, 2);
@@ -115,6 +119,21 @@ final class Guerrier extends Metier {
         t.playSound(arbalete ? SoundEvents.CROSSBOW_SHOOT : SoundEvents.ARROW_SHOOT, 1, 1 / (t.getRandom().nextFloat() * 0.4f + 0.8f));
         arme.hurtAndBreak(1, t, EquipmentSlot.MAINHAND);
         return (int) ((arbalete ? 40 : 25) / Math.min(1.2, t.facteurTravail()));
+    }
+
+    static final String TIREUR = "colonie_tireur", VISEE = "colonie_visee";
+
+    /**
+     * Une flèche d'un guerrier touche quelqu'un : seulement un monstre ou la cible qu'il visait (sur ordre de son chef, ce
+     * peut être un homme). Tout autre (joueur, ouvrier, villageois, bête, golem), elle le traverse sans le blesser : une
+     * flèche ratée, qui retombe ou qui file derrière la cible ne frappe jamais un innocent (règle du serveur).
+     */
+    static void impact(net.neoforged.neoforge.event.entity.ProjectileImpactEvent e) {
+        if (!(e.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult r)) return;
+        var d = e.getProjectile().getPersistentData();
+        if (!d.hasUUID(TIREUR)) return;
+        if (r.getEntity() instanceof LivingEntity l && Monde.hostile(l) || d.hasUUID(VISEE) && r.getEntity().getUUID().equals(d.getUUID(VISEE))) return;
+        e.setCanceled(true);
     }
 
     static void attaquer(Travailleur t, LivingEntity cible) {
@@ -126,6 +145,8 @@ final class Guerrier extends Metier {
 
     /** Boit une potion de soin ou de régénération de son sac ; la fiole vide lui reste. */
     static boolean boire(Travailleur t) {
+        // Pas coup sur coup : déjà sous régénération, ou une potion bue il y a moins de 5 s.
+        if (t.hasEffect(MobEffects.REGENERATION) || t.level().getGameTime() - t.memoire.getLong("bu") < 100 && t.memoire.contains("bu")) return false;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
             if (!soignante(s)) continue;
@@ -137,6 +158,7 @@ final class Guerrier extends Metier {
             t.inventaire.setChanged();
             t.ranger(new ItemStack(Items.GLASS_BOTTLE));
             t.playSound(SoundEvents.GENERIC_DRINK, 1, 1);
+            t.memoire.putLong("bu", t.level().getGameTime());
             return true;
         }
         return false;
@@ -216,6 +238,14 @@ final class Guerrier extends Metier {
         return s;
     }
 
+    /** Met dans son sac ce qu'il prend au dépôt ; ce qui n'y entre pas retourne au dépôt (rien ne tombe par terre). Vrai si tout est entré. */
+    static boolean garder(Travailleur t, Bureau.Entite b, ItemStack s) {
+        ItemStack reste = t.inventaire.addItem(s);
+        if (reste.isEmpty()) return true;
+        rendre(t, b, reste);
+        return false;
+    }
+
     /** Range au dépôt ce qu'il remplace ; ce qui n'y tient pas reste dans son sac. */
     static void rendre(Travailleur t, Bureau.Entite b, ItemStack s) {
         if (s.isEmpty()) return;
@@ -241,7 +271,7 @@ final class Guerrier extends Metier {
                 ItemStack vieille = ItemStack.EMPTY;
                 if (k >= 0) { vieille = t.inventaire.getItem(k); t.inventaire.setItem(k, arme); }
                 else if (MELEE.objet(t.getMainHandItem())) { vieille = t.getMainHandItem(); t.setItemSlot(EquipmentSlot.MAINHAND, arme); }
-                else t.ranger(arme);
+                else garder(t, b, arme);
                 rendre(t, b, vieille);
                 armer(t);
             }
@@ -256,24 +286,24 @@ final class Guerrier extends Metier {
         }
         // De quoi tirer de loin.
         boolean arc = t.compter(TIR) > 0;
-        if (!arc) {
+        if (!arc && Monde.libres(t) > 0) {
             ItemStack a = auDepot(b, s -> s.is(Items.CROSSBOW) ? 2 : s.is(Items.BOW) ? 1 : 0, 0, faire);
-            if (!a.isEmpty()) { mieux = arc = true; if (faire) t.ranger(a); }
+            if (!a.isEmpty()) { mieux = arc = true; if (faire) garder(t, b, a); }
         }
         int fleches = t.compter(FLECHES);
-        if (arc && fleches < 16 && b.compter(FLECHES) > 0) {
+        if (arc && fleches < 16 && b.compter(FLECHES) > 0 && t.inventaire.canAddItem(new ItemStack(Items.ARROW))) {
             mieux = true;
-            if (faire) b.prendre(FLECHES, 32 - fleches).forEach(t::ranger);
+            if (faire) b.prendre(FLECHES, 32 - fleches).forEach(s -> garder(t, b, s));
         }
         // Deux potions de soin d'avance.
         int potions = 0;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (soignante(t.inventaire.getItem(i))) potions += t.inventaire.getItem(i).getCount();
-        for (; potions < 2; potions++) {
+        for (; potions < 2 && Monde.libres(t) > 0; potions++) {
             ItemStack p = auDepot(b, s -> soignante(s) ? 1 : 0, 0, faire);
             if (p.isEmpty()) break;
             mieux = true;
             if (!faire) break;
-            t.ranger(p);
+            garder(t, b, p);
         }
         if (faire) t.swing(InteractionHand.MAIN_HAND);
         return mieux;
@@ -371,7 +401,7 @@ final class Guerrier extends Metier {
         if (soigner(t)) return;
         // Un ouvrier de la colonie en danger ; la nuit, les rôdeurs autour de la colonie. Il revient ensuite à son poste.
         LivingEntity m = veille(t, !t.level().isDay());
-        if (m != null) { attaquer(t, m); return; }
+        if (m != null) { armer(t); Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE)); return; }
         if (t.distanceToSqr(Vec3.atBottomCenterOf(b)) > r * r) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(b), 3)); return; }
 
         // Près du poste, de temps en temps : ce que le dépôt a de mieux pour lui.

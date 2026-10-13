@@ -115,6 +115,8 @@ final class Consignes {
 
     /** Tenir un endroit (une porte, un pont) : il ne s'en écarte pas de plus de tant de blocs pour frapper. */
     static final double TENIR = 6;
+    /** …sauf pour un tireur ou un monstre qui l'a blessé : jusqu'à 16 blocs. */
+    static final double TENIR_TIREUR = 16;
 
     static final String[] ACQUIS = {"À tes ordres, chef.", "Bien, chef.", "Tout de suite, chef.", "D'accord, chef.", "C'est parti !", "Compte sur moi."};
 
@@ -1420,14 +1422,19 @@ final class Consignes {
                     if (sous instanceof Actions.Attaquer) { if (deleguer(t, sous) != null) sous = null; return Actions.Etat.EN_COURS; }
                     LivingEntity m = menace(t, centre, protege);
                     // Il tient une porte ou un pont : il n'en bouge que pour un monstre tout proche ; plus loin, il le tire à l'arc s'il peut.
+                    // Un tireur (squelette…) ou un monstre qui vient de le blesser : il ne reste pas planté sous ses coups, il va
+                    // le chercher, sans s'écarter de plus de 16 blocs.
                     boolean tenir = e.arg().equals("garder_ici");
-                    if (m != null && tenir && m.distanceToSqr(centre) > TENIR * TENIR && !(Guerrier.peutTirer(t) && t.getSensing().hasLineOfSight(m))) {
+                    LivingEntity agresseur = t.getLastHurtByMob();
+                    if (tenir && agresseur != null && Monde.hostile(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) m = agresseur;
+                    boolean dangereux = m != null && (m == agresseur || m instanceof net.minecraft.world.entity.monster.RangedAttackMob);
+                    if (m != null && tenir && !dangereux && m.distanceToSqr(centre) > TENIR * TENIR && !(Guerrier.peutTirer(t) && t.getSensing().hasLineOfSight(m))) {
                         t.getLookControl().setLookAt(m);
                         m = null;
                     }
                     if (m != null) {
                         if (sous != null) sous.fin(t);
-                        sous = tenir ? new Actions.Attaquer(m).tenir(centre, TENIR) : new Actions.Attaquer(m);
+                        sous = tenir ? new Actions.Attaquer(m).tenir(centre, dangereux ? TENIR_TIREUR : TENIR) : new Actions.Attaquer(m);
                         return Actions.Etat.EN_COURS;
                     }
                     Vec3 place = centre;

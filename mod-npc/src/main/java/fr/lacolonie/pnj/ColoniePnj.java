@@ -125,6 +125,7 @@ public class ColoniePnj {
             Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
+        NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
         // Filet de sécurité : un PNJ arrivé dans un chunk inactif (poussé, ou figé avant la 0.3.0) ne peut plus
         // déplacer ses chunks lui-même ; le serveur les recale toutes les 5 secondes.
