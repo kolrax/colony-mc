@@ -37,7 +37,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Mineur (noté 3/5, première passe 13/10, 0.9.5-0.9.6) : suivre un filon, branches, carrière, tri, « trouve-moi du diamant », creuser selon un plan ; ne jamais creuser sous la base d'un autre joueur ni casser une structure (il s'arrête et prévient)
 - [x] Bûcheron (première passe 13/10, 0.9.7) : feuilles, forêt en rangs, essence demandée, planches et charbon de bois, défricher
 - [x] Guerrier (première passe 13/10, 0.9.9) : ronde, escorte, défense des chantiers, chasse de nuit, mannequin, s'équiper et se soigner seul, arc et arbalète
-- [ ] Outils fournis au dépôt, usure plus lente qu'un joueur
+- [x] Outils fournis au dépôt, usure plus lente qu'un joueur (première passe 13/10, 0.9.10 : pioche et hache prises au dépôt, la meilleure, usure 3 fois plus lente)
 
 ## 5. Vie, santé, moral (indispensable)
 - [ ] Besoins : faim, fatigue, moral, lit à soi, santé, loisirs
@@ -58,7 +58,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 8. Apparence (indispensable)
 - [x] Skins médiévaux selon le métier, tenues visibles (13/10, 0.9.7, modpack 0.5.0 ; jamais vus à l'écran)
-- [ ] Nom, métier et icône d'état (faim, colère, attente) au-dessus de la tête
+- [x] Nom, métier et icône d'état (faim, colère, attente) au-dessus de la tête (13/10, 0.9.10, modpack 0.5.1 obligatoire, canal 8 ; jamais vu à l'écran)
 - [ ] Plus de sons (pas, travail, réactions)
 
 ## 9. Défense et guerre (indispensable)
