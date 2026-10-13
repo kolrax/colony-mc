@@ -256,7 +256,7 @@ final class Monde {
         if (l.getBlockEntity(q) != null) return true;
         BlockState st = l.getBlockState(q);
         return st.is(BlockTags.PLANKS) || st.is(BlockTags.WOOL) || st.is(BlockTags.DOORS) || st.is(BlockTags.SLABS) || st.is(BlockTags.STAIRS)
-                || st.is(BlockTags.FENCES) || st.is(BlockTags.WALLS) || st.is(BlockTags.BEDS) || st.is(net.neoforged.neoforge.common.Tags.Blocks.GLASS_BLOCKS)
+                || st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES) || st.is(BlockTags.WALLS) || st.is(BlockTags.BEDS) || st.is(net.neoforged.neoforge.common.Tags.Blocks.GLASS_BLOCKS)
                 || st.is(BlockTags.TRAPDOORS) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(BlockTags.STONE_BRICKS) || st.is(Blocks.BRICKS);
     }
 

@@ -64,6 +64,15 @@ final class Messages {
         m("graines", "Plus de semences",
                 "Je n'ai plus de {0} pour semer nos champs. Laisse-m'en au dépôt.",
                 "Les champs attendent leurs semences : il n'y a plus de {0}, ni sur moi ni au dépôt.");
+        m("sans_enclos", "Pas de bêtes à soigner",
+                "Je ne trouve aucune bête dans un enclos autour du poste. Il me faut des vaches, des moutons, des cochons ou des poules, derrière une barrière avec un portillon.",
+                "Mes enclos sont vides, ou il n'y en a pas : sans bêtes à garder, je tourne en rond.");
+        m("fourrage", "Plus de fourrage",
+                "Je n'ai plus de {0} pour nourrir nos bêtes. Laisse-m'en au dépôt.",
+                "Les bêtes attendent leur pâture : il n'y a plus de {0}, ni sur moi ni au dépôt.");
+        m("cisailles", "Il me faut des cisailles",
+                "Nos moutons portent toute leur laine, et je n'ai pas de cisailles pour les tondre. Laisse-m'en une paire au dépôt.",
+                "Sans cisailles, la laine reste sur le dos des moutons. Il m'en faudrait une paire au dépôt.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");
