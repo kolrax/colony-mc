@@ -117,6 +117,15 @@ public final class Actions {
 
         abstract Etat tick(Travailleur t);
 
+        /** Un nouveau but dans la même action (après le dépôt, le blessé) : la marche d'avant ne compte plus (chemin, progrès, immobilité). */
+        void nouveauBut() {
+            route = null;
+            dernier = null;
+            meilleure = Double.MAX_VALUE;
+            sansProgres = 0;
+            immobile = 0;
+        }
+
         void fin(Travailleur t) {
             t.getNavigation().stop();
             t.setSprinting(false);

@@ -141,4 +141,41 @@ public class TestsGuerisseur {
                 () -> h.assertTrue(g.consigne == null, "l'ordre est fini (" + TestsRepertoire.c(g) + ")"),
                 () -> TestsRepertoire.fin(e));
     }
+
+    /**
+     * Isabeau est hors service, au repos au poste. Jean tombe à 6 blocs du poste, un monstre (immobile) à 4 blocs de lui : elle
+     * ne vient pas. Le monstre parti, sa revue de repos la fait lever, et elle le relève. Avant : jamais (la revue n'avait lieu
+     * qu'au travail, et l'alerte de la chute était passée).
+     */
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void releveAuReposQuandLeMonstreEstParti(GameTestHelper h) {
+        Travailleur[] e = colonie(h, 154, UUID.randomUUID(), new BlockPos(-6, 0, 0));
+        Travailleur g = e[0], b = e[1];
+        int heure = TestsJeu.heure(h);
+        g.debut = (heure + 2) % 24; // hors service maintenant
+        g.fin = (heure + 3) % 24;
+        net.minecraft.world.entity.monster.Husk monstre = net.minecraft.world.entity.EntityType.HUSK.create(h.getLevel());
+        Vec3 m = Vec3.atBottomCenterOf(b.blockPosition().west(4));
+        monstre.moveTo(m.x, m.y, m.z);
+        monstre.setNoAi(true);
+        monstre.setPersistenceRequired();
+        h.getLevel().addFreshEntity(monstre);
+        long[] tombe = {-1}, parti = {-1};
+        boolean[] venue = {false};
+        h.onEachTick(() -> {
+            if (tombe[0] < 0 && h.getTick() > 20) { b.hurt(b.damageSources().generic(), 100); tombe[0] = h.getTick(); }
+            if (tombe[0] >= 0 && parti[0] < 0) {
+                if (g.action instanceof Guerisseur.Soin) venue[0] = true;
+                if (h.getTick() - tombe[0] >= 300) { monstre.discard(); parti[0] = h.getTick(); }
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(parti[0] >= 0, "le monstre est parti");
+            h.assertFalse(g.enService(), "hors service");
+            h.assertFalse(venue[0], "elle n'est pas venue tant que le monstre était là");
+            h.assertFalse(b.aTerre, "le monstre parti, elle le relève (" + TestsJeu.etat(g, g.bureau) + ")");
+            g.discard();
+            b.discard();
+        });
+    }
 }

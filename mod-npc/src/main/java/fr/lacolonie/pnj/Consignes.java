@@ -212,6 +212,7 @@ final class Consignes {
             }
             case "travail" -> {
                 String refus = verifierTravail(t, a, lieu);
+                if (refus == null && a.equals("soigner")) refus = Guerisseur.refus(t, entite); // « soigne Jean » : un ouvrier de la colonie, blessé
                 if (refus != null) return refus;
                 if (FOUILLES.contains(a)) {
                     // Le plan dit (mesures, direction) ; de face, il creuse vers l'intérieur de la paroi, au niveau des pieds du chef.

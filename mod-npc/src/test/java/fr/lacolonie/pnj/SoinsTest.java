@@ -72,8 +72,9 @@ class SoinsTest {
         List<Vie.Replique> r = banque.get("guerisseur_soigne");
         assertNotNull(r);
         assertTrue(r.size() >= 6, "6 répliques : " + r.size());
-        for (double x = 0; x < 1; x += 0.1) {
-            String dit = Vie.tirer(banque, "guerisseur_soigne", "calme", Map.of("nom", "Jean", "chef", "KOLRAX"), () -> 0.5);
+        for (int i = 0; i < 10; i++) {
+            double x = i / 10.0;
+            String dit = Vie.tirer(banque, "guerisseur_soigne", "calme", Map.of("nom", "Jean", "chef", "KOLRAX"), () -> x);
             assertTrue(dit != null && dit.contains("Jean"), dit);
         }
     }

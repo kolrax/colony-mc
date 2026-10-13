@@ -67,7 +67,11 @@ final class Blessures {
         var a = t.getAttribute(Attributes.MOVEMENT_SPEED);
         if (a == null) return;
         // L'heure remise en arrière (« /time set day ») : la blessure repart de maintenant, sinon elle ne guérirait plus.
-        if (t.memoire.contains("blessure") && t.level().getDayTime() < t.memoire.getLong("blessure_le")) t.memoire.putLong("blessure_le", t.level().getDayTime());
+        if (t.memoire.contains("blessure") && t.level().getDayTime() < t.memoire.getLong("blessure_le")) {
+            // Déjà pansée par le guérisseur : elle le reste (soigne_le suit la date de la blessure).
+            if (Guerisseur.soigne(t)) t.memoire.putLong("soigne_le", t.level().getDayTime());
+            t.memoire.putLong("blessure_le", t.level().getDayTime());
+        }
         Gravite g = gravite(t);
         if (g == Gravite.AUCUNE && t.memoire.contains("blessure")) { t.memoire.remove("blessure"); t.memoire.remove("blessure_le"); }
         AttributeModifier m = a.getModifier(LENTEUR);
