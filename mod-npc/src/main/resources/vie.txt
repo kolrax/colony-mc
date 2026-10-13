@@ -21,7 +21,8 @@
 #
 # VARIABLES (remplacées par le code ; seulement dans les sections indiquées)
 #   {chef}   nom du chef de la colonie (partout)
-#   {nom}    prénom de l'autre PNJ en jeu : celui qui soigne (soigne), qui a pris le lit (lit_vole)
+#   {nom}    prénom de l'autre PNJ en jeu : celui qui soigne (soigne), qui a pris le lit (lit_vole),
+#            le blessé à terre (blesse_vu)
 #   {objet}  l'objet en jeu, tel qu'on le dit (« du pain », « une pioche ») : vol, sabotage_avoue, cadeau
 #   {mort}   prénom du PNJ mort : ami_mort, deuil_annonce, deuil_tristesse, enterrement_discours,
 #            enterrement_apaisement
@@ -34,7 +35,7 @@
 #
 # SECTIONS
 #   Corps :      faim_legere, faim_forte, fatigue, sans_lit, lit_vole
-#   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne
+#   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne, blesse_vu
 #   Loisirs :    envie_pause
 #   Moral bas :  plainte_douce, plainte_forte, menace_greve, greve, menace_demission, demission, fuite_nuit,
 #                vol, sabotage_avoue, avertissement_1, avertissement_2, avertissement_3, revolte
@@ -175,6 +176,19 @@ calme: Merci, {nom}. Je te revaudrai ça.
 peureux: Ça va guérir, {nom} ? Tu me le promets ?
 fourbe: {nom}, tu ne diras pas au chef que c'était si peu grave, hein ?
 colerique: Doucement, {nom} ! Bon… merci quand même.
+
+# Dit par un ouvrier accouru auprès d'un compagnon à terre ({nom} : le blessé).
+[blesse_vu]
+Tiens bon, {nom}. On est là.
+Ne bouge pas, {nom}. On reste près de toi.
+Respire, {nom}. L'aide va venir.
+Qu'on apporte à manger ou une potion de soin ! Vite !
+Courage, {nom}. Ce n'est pas encore ton heure.
+Garde les yeux ouverts, {nom}. Reste avec nous.
+calme: Doucement, {nom}. Garde ton souffle, on s'occupe de toi.
+peureux: Tant de sang… {nom}, réponds-moi !
+fourbe: Tiens bon, {nom}. Tu me dois encore une chope, souviens-toi.
+colerique: Qui t'a fait ça, {nom} ? Il me le paiera !
 
 # ============================================================
 # LOISIRS

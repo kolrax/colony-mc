@@ -37,7 +37,11 @@ final class Besoins {
 
     /** Il dit la réplique {@code cle} de vie.txt, si elle est permise ({@link #permis}). {@code nom} : l'autre en jeu (ou null : « quelqu'un »). */
     static boolean parler(Travailleur t, String cle, String nom) {
-        if (t.muet() || !permis(t, cle)) return false;
+        return !t.muet() && permis(t, cle) && dire(t, cle, nom);
+    }
+
+    /** Il dit la réplique {@code cle} tout de suite, sans délai : ce qui n'arrive qu'une fois (à terre, relevé, soigné). */
+    static boolean dire(Travailleur t, String cle, String nom) {
         Map<String, String> v = new HashMap<>();
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
@@ -55,7 +59,7 @@ final class Besoins {
         boolean repos = !t.enService() || t.memoire.getBoolean("epuise");
         if (repos && t.lit != null && t.bureau != null && t.chezLui(t.blockPosition())) t.monLit();
         // Une seule réplique par passage : la première qui a quelque chose à dire.
-        String faim = Vie.faim(t.faim), blessure = Vie.blessure(t.getHealth(), t.getMaxHealth()), humeur = Vie.humeur(t.moral, avant);
+        String faim = Vie.faim(t.faim), blessure = Blessures.cle(t), humeur = Vie.humeur(t.moral, avant);
         if (faim != null && parler(t, faim, null)) return;
         if (blessure != null && parler(t, blessure, null)) return;
         if (t.fatigue >= Vie.FATIGUE && !repos && parler(t, "fatigue", null)) return;
