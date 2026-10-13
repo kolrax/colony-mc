@@ -35,7 +35,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 4. Métiers actuels plus malins (indispensable)
 - [x] Mineur (noté 3/5, première passe 13/10, 0.9.5-0.9.6) : suivre un filon, branches, carrière, tri, « trouve-moi du diamant », creuser selon un plan ; ne jamais creuser sous la base d'un autre joueur ni casser une structure (il s'arrête et prévient)
-- [ ] Bûcheron : feuilles, forêt en rangs, essence demandée, planches et charbon de bois, défricher
+- [x] Bûcheron (première passe 13/10, 0.9.7) : feuilles, forêt en rangs, essence demandée, planches et charbon de bois, défricher
 - [ ] Guerrier : ronde, escorte, défense des chantiers, chasse de nuit, mannequin, s'équiper et se soigner seul, arc et arbalète
 - [ ] Outils fournis au dépôt, usure plus lente qu'un joueur
 
@@ -52,12 +52,12 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [ ] « Va me chercher du fer », dit à un bûcheron : il propose d'aller prévenir le mineur
 
 ## 7. Conversations et relations (indispensable)
-- [ ] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler
+- [ ] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler (banque de 237 conversations écrite le 13/10 : `conversations.txt`, pas encore jouée)
 - [ ] Remarques spontanées de temps en temps ; humour en réponse à l'impossible
 - [ ] Amitiés et inimitiés, couples
 
 ## 8. Apparence (indispensable)
-- [ ] Skins médiévaux selon le métier, tenues visibles
+- [x] Skins médiévaux selon le métier, tenues visibles (13/10, 0.9.7, modpack 0.5.0 ; jamais vus à l'écran)
 - [ ] Nom, métier et icône d'état (faim, colère, attente) au-dessus de la tête
 - [ ] Plus de sons (pas, travail, réactions)
 
