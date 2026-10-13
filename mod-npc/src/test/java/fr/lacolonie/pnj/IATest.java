@@ -289,4 +289,34 @@ class IATest {
         assertFalse(Audio.recopieIndice("Raoul, suis-moi.", indice));
         assertFalse(Audio.recopieIndice("Les gars, au travail !", indice));
     }
+
+    /** OpenRouter : plus d'appel au-delà de 95 % du budget du mois ou du plafond du jour ; un nouveau jour, un nouveau mois remettent à zéro. */
+    @Test
+    void budgetOpenRouter() {
+        DepensesIA d = new DepensesIA();
+        java.time.LocalDate j = java.time.LocalDate.of(2026, 10, 13);
+        assertTrue(d.permis(5, j));
+        assertFalse(d.permis(0, j), "budget 0 : jamais");
+        d.ajouter(0.34, j); // plafond du jour : 5 / 30 × 2 = 0,333 $
+        assertFalse(d.permis(5, j), "plafond du jour atteint");
+        assertTrue(d.permis(5, j.plusDays(1)), "le lendemain, ça repart");
+        for (int i = 2; i <= 14; i++) d.ajouter(0.33, j.plusDays(i)); // 0,34 + 13 × 0,33 = 4,63 $
+        assertTrue(d.permis(5, j.plusDays(15)));
+        d.ajouter(0.2, j.plusDays(15)); // 4,83 $ : plus de 95 % de 5 $
+        assertFalse(d.permis(5, j.plusDays(16)), "budget du mois atteint");
+        assertEquals(4.83, d.mois(j.plusDays(16)), 1e-9);
+        assertTrue(d.permis(5, java.time.LocalDate.of(2026, 11, 1)), "un nouveau mois remet à zéro");
+        assertEquals(0, d.mois(java.time.LocalDate.of(2026, 11, 1)));
+    }
+
+    /** La requête OpenRouter demande le coût ; la réponse le donne, sinon on l'estime par les jetons (prudemment). */
+    @Test
+    void coutOpenRouter() {
+        JsonObject r = JsonParser.parseString(ReponsesIA.pourOpenRouter("{\"model\":\"a\",\"messages\":[]}", "openai/gpt-oss-120b")).getAsJsonObject();
+        assertEquals("openai/gpt-oss-120b", r.get("model").getAsString());
+        assertTrue(r.getAsJsonObject("usage").get("include").getAsBoolean());
+        assertEquals(0.00042, ReponsesIA.cout("{\"usage\":{\"total_tokens\":321,\"cost\":0.00042}}"), 1e-12);
+        assertEquals(1000 * ReponsesIA.PRIX_JETON, ReponsesIA.cout("{\"usage\":{\"total_tokens\":1000}}"), 1e-12);
+        assertEquals(ReponsesIA.PRIX_APPEL, ReponsesIA.cout("{}"), 1e-12);
+    }
 }

@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
  * <li>{@link #transcrire} : Groq (Whisper) met en texte ce qu'un joueur dit au micro ;</li>
  * <li>{@link #voix} : Gemini prête sa voix au PNJ.</li>
  * </ul>
+ * La conversation passe d'abord par Groq (gratuit) ; quand il n'est pas disponible ou qu'il échoue, une seule fois
+ * OpenRouter (payant, dans le budget du mois : {@link #secours}).
  * Chaque service a son quota du jour (sous les quotas gratuits) et se met en pause quand le fournisseur refuse
  * (trop de demandes, clé refusée). Tout échec renvoie un futur en erreur : l'appelant retombe alors sur le
  * fonctionnement sans IA (l'interpréteur, les bulles).
@@ -98,10 +100,22 @@ final class IA {
     static final Service CONVERSATION = new Service("conversation", 25), TRANSCRIPTION = new Service("transcription", 18), VOIX = new Service("voix", 8);
     /** L'avis d'écoute (à qui le chef parle) : un autre modèle, avec son propre quota chez Groq. */
     static final Service ECOUTE = new Service("écoute", 25);
+    /** La conversation payante, quand Groq n'est pas disponible ; sa dépense est dans {@link #DEPENSES}. */
+    static final Service OPENROUTER = new Service("openrouter", 20);
+    static volatile DepensesIA DEPENSES = new DepensesIA();
+
+    static LocalDate aujourdhui() { return LocalDate.now(ZoneOffset.UTC); }
 
     static ReglagesIA r() { return ReglagesIA.actuel; }
 
-    static boolean conversationDisponible() { return r().conversationPossible() && CONVERSATION.disponible(r().max_conversations_jour); }
+    /** La conversation est possible : par Groq (gratuit), sinon par OpenRouter (payant, s'il reste du budget). */
+    static boolean conversationDisponible() { return groqDisponible() || openrouterDisponible(); }
+
+    static boolean groqDisponible() { return r().conversationPossible() && CONVERSATION.disponible(r().max_conversations_jour); }
+
+    static boolean openrouterDisponible() {
+        return r().openrouterPossible() && DEPENSES.permis(r().budget_openrouter_mois, aujourdhui()) && OPENROUTER.disponible(r().max_openrouter_jour);
+    }
 
     /** L'avis d'écoute est possible (clé Groq, quota du jour et de la minute). */
     static boolean ecouteIADisponible() { return r().conversationPossible() && ECOUTE.disponible(r().max_ecoutes_jour); }
@@ -126,6 +140,7 @@ final class IA {
             long attente = rep.headers().firstValue("retry-after").map(v -> { try { return (long) (Double.parseDouble(v) * 1000); } catch (NumberFormatException e) { return 60_000L; } }).orElse(-1L);
             if (code == 429) s.echec("trop de demandes (quota du fournisseur) — " + msg, attente > 0 ? Math.min(attente, 3_600_000) : 120_000);
             else if (code == 401 || code == 403) s.echec("clé refusée — vérifie-la dans ia.json (" + msg + ")", 600_000);
+            else if (code == 402) s.echec("plus de crédit chez le fournisseur — " + msg, 3_600_000);
             else if (code >= 500) s.echec("le service a un problème — " + msg, 30_000);
             else s.echec(msg, 0);
             throw new CompletionException(new IllegalStateException(msg));
@@ -142,20 +157,46 @@ final class IA {
      * arrive plus tard, sur un autre fil. {@code enFace} : de vive voix (sinon c'est une lettre).
      */
     static CompletableFuture<ReponsesIA.Decision> converser(Travailleur t, String parole, boolean enFace) {
-        if (!r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour))
-            return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
+        if (!conversationDisponible()) return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
         Metier m = Metier.de(t.metier);
         List<String> ids = m == null ? List.of() : m.commandes.stream().map(c -> c.id).toList();
         Set<String> idsSet = Set.copyOf(ids);
         String corps = ReponsesIA.requeteConversation(r().modele_conversation, systeme(t, enFace), (enFace ? "Ton chef te dit : « " : "Lettre de ton chef : « ") + parole + " »",
                 ReponsesIA.schema(ids, enFace));
-        HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
+        java.util.function.Function<String, ReponsesIA.Decision> lire = rep -> ReponsesIA.decision(ReponsesIA.contenu(rep), idsSet, enFace);
+        CompletableFuture<ReponsesIA.Decision> groq = !r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour)
+                ? CompletableFuture.failedFuture(new IllegalStateException("Groq indisponible"))
+                : envoyer(CONVERSATION, requeteGroq(corps)).thenApply(rep -> {
+                    ReponsesIA.Decision d = lire.apply(rep);
+                    CONVERSATION.reussite(ReponsesIA.jetons(rep));
+                    return d;
+                });
+        return groq.exceptionallyCompose(e -> secours(corps, lire, e));
+    }
+
+    static HttpRequest requeteGroq(String corps) {
+        return HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
                 .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(corps)).build();
-        return envoyer(CONVERSATION, req).thenApply(rep -> {
-            ReponsesIA.Decision d = ReponsesIA.decision(ReponsesIA.contenu(rep), idsSet, enFace);
-            CONVERSATION.reussite(ReponsesIA.jetons(rep));
-            return d;
+    }
+
+    /**
+     * Groq n'a pas pu répondre (pas de clé, quota, pause, échec) : une seule demande à OpenRouter, s'il a une clé et
+     * qu'il reste du budget (mois et jour) ; son coût réel est ajouté aux dépenses, même si la réponse est inutilisable.
+     * Sinon l'échec de Groq passe tel quel : l'appelant retombe sur l'interpréteur.
+     */
+    static <T> CompletableFuture<T> secours(String corps, java.util.function.Function<String, T> lire, Throwable cause) {
+        if (!r().openrouterPossible() || !DEPENSES.permis(r().budget_openrouter_mois, aujourdhui()) || !OPENROUTER.prendre(r().max_openrouter_jour))
+            return CompletableFuture.failedFuture(cause);
+        HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_openrouter)).timeout(Duration.ofSeconds(25))
+                .header("Authorization", "Bearer " + r().openrouter_cle).header("Content-Type", "application/json")
+                .header("X-Title", "La Colonie")
+                .POST(HttpRequest.BodyPublishers.ofString(ReponsesIA.pourOpenRouter(corps, r().modele_openrouter))).build();
+        return envoyer(OPENROUTER, req).thenApply(rep -> {
+            DEPENSES.ajouter(ReponsesIA.cout(rep), aujourdhui());
+            T x = lire.apply(rep);
+            OPENROUTER.reussite(ReponsesIA.jetons(rep));
+            return x;
         });
     }
 
@@ -314,8 +355,7 @@ final class IA {
 
     /** Ce que répondent ces ouvriers à ce que le chef vient de dire devant eux (et à qui il parlait). À appeler sur le fil du serveur. */
     static CompletableFuture<ReponsesIA.Groupe> converserGroupe(List<Travailleur> ouvriers, Travailleur vise, boolean ecrit, String parole) {
-        if (!r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour))
-            return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
+        if (!conversationDisponible()) return CompletableFuture.failedFuture(new IllegalStateException("conversation indisponible"));
         List<String> etiquettes = etiquettes(ouvriers), tous = new java.util.ArrayList<>();
         Map<String, Set<String>> ids = new LinkedHashMap<>();
         for (int i = 0; i < ouvriers.size(); i++) {
@@ -328,20 +368,25 @@ final class IA {
         List<Repertoire.Entree> repertoire = Repertoire.candidats(parole, metiers, 14), hors = Repertoire.horsMetiers(parole, metiers);
         String corps = ReponsesIA.requeteConversation(r().modele_conversation, systemeGroupe(ouvriers, etiquettes, vise, ecrit, parole, repertoire, hors),
                 "Le chef dit : « " + parole + " »", ReponsesIA.schemaGroupe(etiquettes, tous, repertoire.stream().map(Repertoire.Entree::id).toList()));
-        HttpRequest req = HttpRequest.newBuilder(URI.create(r().url_conversation)).timeout(Duration.ofSeconds(25))
-                .header("Authorization", "Bearer " + r().groq_cle).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(corps)).build();
+        HttpRequest req = requeteGroq(corps);
         java.util.function.Function<String, ReponsesIA.Groupe> lire = rep -> {
             ReponsesIA.Groupe g = ReponsesIA.decisionGroupe(ReponsesIA.contenu(rep), ids);
             // Un refus rattrapé sans rien d'utilisable compte comme un JSON raté : seconde chance.
             if (ReponsesIA.generationRatee(rep) != null && g.reponses().values().stream().allMatch(d -> d.reponse().isEmpty() && d.actions().isEmpty()))
                 throw new CompletionException(new IllegalStateException("rattrapage vide (Failed to generate JSON)"));
+            return g;
+        };
+        java.util.function.Function<String, ReponsesIA.Groupe> lireGroq = rep -> {
+            ReponsesIA.Groupe g = lire.apply(rep);
             CONVERSATION.reussite(ReponsesIA.jetons(rep));
             return g;
         };
-        // Groq rate parfois son JSON (« Failed to generate JSON ») : une seconde chance, puis l'interpréteur.
-        return envoyer(CONVERSATION, req).thenApply(lire).exceptionallyCompose(e -> String.valueOf(racine(e)).contains("generate JSON")
-                && CONVERSATION.prendre(r().max_conversations_jour) ? envoyer(CONVERSATION, req).thenApply(lire) : CompletableFuture.failedFuture(e));
+        // Groq rate parfois son JSON (« Failed to generate JSON ») : une seconde chance, puis OpenRouter s'il le peut, puis l'interpréteur.
+        CompletableFuture<ReponsesIA.Groupe> groq = !r().conversationPossible() || !CONVERSATION.prendre(r().max_conversations_jour)
+                ? CompletableFuture.failedFuture(new IllegalStateException("Groq indisponible"))
+                : envoyer(CONVERSATION, req).thenApply(lireGroq).exceptionallyCompose(e -> String.valueOf(racine(e)).contains("generate JSON")
+                && CONVERSATION.prendre(r().max_conversations_jour) ? envoyer(CONVERSATION, req).thenApply(lireGroq) : CompletableFuture.failedFuture(e));
+        return groq.exceptionallyCompose(e -> secours(corps, lire, e));
     }
 
     /** Les derniers échanges avec son chef (gardés dans sa mémoire), pour qu'il suive la conversation. */
@@ -502,6 +547,11 @@ final class IA {
         m.put("ecoute", ECOUTE.etat(r().max_ecoutes_jour));
         m.put("transcription", TRANSCRIPTION.etat(r().max_transcriptions_jour));
         m.put("voix", VOIX.etat(r().max_voix_jour));
+        Map<String, Object> o = OPENROUTER.etat(r().max_openrouter_jour);
+        o.put("depense_mois", DEPENSES.mois(aujourdhui()));
+        o.put("depense_jour", DEPENSES.jour(aujourdhui()));
+        o.put("budget_mois", r().budget_openrouter_mois);
+        m.put("openrouter", o);
         m.put("simpleVoiceChat", Voix.pret);
         return m;
     }
@@ -527,7 +577,17 @@ final class IA {
                             + (epuises.isEmpty() ? "" : " ; quota du jour atteint pour " + String.join(", ", epuises)) + ")";
                 })
                 .exceptionally(e -> "Gemini : ÉCHEC — " + racine(e));
-        return groq.thenCombine(gemini, (a, b) -> List.of(a, b, "Simple Voice Chat : " + (Voix.pret ? "prêt" : "absent ou pas encore démarré")));
+        return groq.thenCombine(gemini, (a, b) -> List.of(a, b, openrouter(), "Simple Voice Chat : " + (Voix.pret ? "prêt" : "absent ou pas encore démarré")));
+    }
+
+    /** OpenRouter sans l'appeler (il est payant) : la clé, et ce qui reste du budget du mois. */
+    static String openrouter() {
+        ReglagesIA r = r();
+        if (r.openrouter_cle.isEmpty()) return "OpenRouter : pas de clé dans ia.json (pas de conversation payante)";
+        double d = DEPENSES.mois(aujourdhui());
+        return String.format(java.util.Locale.ROOT, "OpenRouter : clé présente, non essayée (payant) ; %.3f $ dépensés ce mois sur %.2f $ (reste %.3f $) ; %d appel(s) aujourd'hui sur %d%s",
+                d, r.budget_openrouter_mois, Math.max(0, r.budget_openrouter_mois * 0.95 - d), (int) OPENROUTER.etat(r.max_openrouter_jour).get("demandes"),
+                r.max_openrouter_jour, openrouterDisponible() ? "" : " — indisponible pour l'instant (budget, quota ou pause)");
     }
 
     static String racine(Throwable e) {

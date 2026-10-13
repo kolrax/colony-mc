@@ -31,9 +31,10 @@ import java.util.concurrent.CompletableFuture;
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsIA {
-    static final String CLE_GROQ = "gsk_test_0000000000001234", CLE_GEMINI = "AIza_test_00000005678";
+    static final String CLE_GROQ = "gsk_test_0000000000001234", CLE_GEMINI = "AIza_test_00000005678", CLE_OPENROUTER = "sk-or-test-0000000009999";
     static HttpServer faux;
     static ReglagesIA avant;
+    static DepensesIA depensesAvant;
 
     @BeforeBatch(batch = "ia")
     public static void avant(ServerLevel l) {
@@ -42,7 +43,8 @@ public class TestsIA {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        faux.createContext("/chat", x -> repondre(x, chat(x)));
+        faux.createContext("/chat", x -> repondre(x, chat(x, false)));
+        faux.createContext("/openrouter", x -> repondre(x, chat(x, true)));
         faux.createContext("/whisper", x -> repondre(x, whisper(x)));
         faux.createContext("/voix", x -> repondre(x, voix(x)));
         faux.createContext("/models/", x -> repondre(x, voixAncienne(x)));
@@ -54,6 +56,12 @@ public class TestsIA {
         r.url_conversation = base + "/chat";
         r.url_transcription = base + "/whisper";
         r.url_voix = base + "/voix";
+        r.openrouter_cle = CLE_OPENROUTER;
+        r.url_openrouter = base + "/openrouter";
+        // Les dépenses du lot, dans un fichier temporaire (effacé après) : jamais celles du vrai serveur.
+        depensesAvant = IA.DEPENSES;
+        try { IA.DEPENSES = DepensesIA.charger(java.nio.file.Files.createTempFile("depenses-ia", ".json")); }
+        catch (IOException e) { throw new IllegalStateException(e); }
         avant = ReglagesIA.actuel;
         ReglagesIA.actuel = r; // en mémoire seulement : rien n'est écrit dans ia.json
     }
@@ -61,6 +69,8 @@ public class TestsIA {
     @AfterBatch(batch = "ia")
     public static void apres(ServerLevel l) {
         ReglagesIA.actuel = avant;
+        try { java.nio.file.Files.deleteIfExists(IA.DEPENSES.fichier); } catch (IOException ignore) {}
+        IA.DEPENSES = depensesAvant;
         faux.stop(0);
     }
 
@@ -76,10 +86,15 @@ public class TestsIA {
 
     static Reponse erreur(int code, String message) { return new Reponse(code, "{\"error\":{\"message\":\"" + message + "\"}}"); }
 
-    /** Le faux Groq : vérifie la requête comme le vrai, puis décide selon ce que dit le chef. */
-    static Reponse chat(HttpExchange x) throws IOException {
-        if (!("Bearer " + CLE_GROQ).equals(x.getRequestHeaders().getFirst("Authorization"))) return erreur(401, "Invalid API Key");
+    /**
+     * Le faux Groq : vérifie la requête comme le vrai, puis décide selon ce que dit le chef. {@code openrouter} : le faux
+     * OpenRouter, qui répond pareil mais exige sa clé et la demande du coût, et le donne (usage.cost).
+     */
+    static Reponse chat(HttpExchange x, boolean openrouter) throws IOException {
+        if (!("Bearer " + (openrouter ? CLE_OPENROUTER : CLE_GROQ)).equals(x.getRequestHeaders().getFirst("Authorization"))) return erreur(401, "Invalid API Key");
         JsonObject req = JsonParser.parseString(new String(x.getRequestBody().readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
+        if (openrouter && (!req.has("usage") || !req.getAsJsonObject("usage").get("include").getAsBoolean() || !"La Colonie".equals(x.getRequestHeaders().getFirst("X-Title"))))
+            return erreur(400, "coût non demandé");
         if (!req.getAsJsonObject("response_format").get("type").getAsString().equals("json_schema")) return erreur(400, "schéma attendu");
         String systeme = req.getAsJsonArray("messages").get(0).getAsJsonObject().get("content").getAsString();
         String parole = req.getAsJsonArray("messages").get(1).getAsJsonObject().get("content").getAsString();
@@ -87,6 +102,10 @@ public class TestsIA {
         boolean ecoute = schema.getAsJsonObject("properties").has("ouvriers");
         if (!ecoute && !systeme.contains("Missions possibles")) return erreur(400, "pas de catalogue");
         if (parole.contains("PANNE") || systeme.contains("PANNE")) return erreur(400, "The model does not exist");
+        if (!openrouter && !ecoute && parole.contains("QUOTA")) { // le quota gratuit du jour est atteint
+            x.getResponseHeaders().add("retry-after", "0.01"); // une pause de 10 ms : les autres tests du lot, joués en même temps, gardent Groq
+            return erreur(429, "Rate limit reached for model openai/gpt-oss-120b");
+        }
         String decision;
         if (ecoute) decision = ecoute(schema, systeme);
         else if (schema.getAsJsonObject("properties").has("destinataires")) decision = groupe(schema, systeme, parole);
@@ -108,6 +127,7 @@ public class TestsIA {
         choices.add(choix);
         rep.add("choices", choices);
         usage.addProperty("total_tokens", 321);
+        if (openrouter) usage.addProperty("cost", 0.00042);
         rep.add("usage", usage);
         return new Reponse(200, rep.toString());
     }
@@ -150,6 +170,9 @@ public class TestsIA {
         } else if (parole.contains("Suis-moi")) {
             dest.add(qui.get(0));
             reps.add(rep(qui.get(0), "J'arrive, chef, je te suis !", "joyeux", "{\"type\":\"suivre\",\"missions\":[],\"ajouter\":false,\"debut\":0,\"fin\":0,\"jours\":0}"));
+        } else if (parole.contains("QUOTA")) {
+            dest.add(qui.get(0));
+            reps.add(rep(qui.get(0), "Par ma foi, chef, c'est entendu.", "calme", ""));
         } else if (!parole.contains("chanson")) {
             dest.add(qui.get(0));
             reps.add(rep(qui.get(0), "Oui chef.", "calme", ""));
@@ -429,7 +452,28 @@ public class TestsIA {
             h.assertTrue(rep.isDone(), "réponse en attente");
             String b = rep.join().body();
             h.assertTrue(rep.join().statusCode() == 200 && b.contains("\"conversation\"") && b.contains("…1234") && b.contains("…5678"), "état attendu : " + b);
-            h.assertFalse(b.contains(CLE_GROQ) || b.contains(CLE_GEMINI), "les clés ne doivent jamais sortir");
+            h.assertFalse(b.contains(CLE_GROQ) || b.contains(CLE_GEMINI) || b.contains(CLE_OPENROUTER), "les clés ne doivent jamais sortir");
+        });
+    }
+
+    /** Lot 3 : le quota gratuit de Groq est atteint (429) : OpenRouter, payant, répond à sa place, et sa dépense est comptée. */
+    @GameTest(template = "vide", batch = "ia", timeoutTicks = 400)
+    public static void iaOpenRouterPrendLeRelais(GameTestHelper h) {
+        sol(h);
+        var chef = h.makeMockServerPlayerInLevel();
+        Vec3 p = h.absoluteVec(new Vec3(4.5, 2, 4.5));
+        chef.moveTo(p.x, p.y, p.z);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        double avantDepense = IA.DEPENSES.mois(IA.aujourdhui());
+        t.parler(chef, "Que penses-tu du QUOTA, l'ami ?");
+        h.succeedWhen(() -> {
+            h.assertTrue(IA.echange(t).contains("Par ma foi, chef"), "la réplique doit venir d'OpenRouter : " + IA.echange(t) + " (" + diag(chef, t) + ")");
+            h.assertTrue(IA.DEPENSES.mois(IA.aujourdhui()) > avantDepense, "la dépense du mois doit augmenter");
+            String f;
+            try { f = java.nio.file.Files.readString(IA.DEPENSES.fichier); } catch (IOException e) { f = ""; }
+            h.assertTrue(f.contains("usd_mois"), "la dépense doit être écrite : " + f);
+            t.discard();
         });
     }
 

@@ -421,10 +421,10 @@ async function chargerIA() {
       el("span", { text: o.code + " % / " + (o.ia === null ? "–" : o.ia + " %") + " / " + o.final + " %" }),
       o.lien ? el("div", { class: "sub", text: o.lien }) : null))),
     el("td", { class: "sub", text: x.decision }))));
-  const NOMS = { conversation: "Conversation (Groq)", ecoute: "À qui tu parles (Groq)", transcription: "Micro (Whisper, Groq)", voix: "Voix (Gemini)" };
-  $("#ia-conso").replaceChildren(...["conversation", "ecoute", "transcription", "voix"].map(k => { const s = e[k];
+  const NOMS = { conversation: "Conversation (Groq)", ecoute: "À qui tu parles (Groq)", transcription: "Micro (Whisper, Groq)", voix: "Voix (Gemini)", openrouter: "Conversation payante (OpenRouter, clé " + (r.openrouter_cle ? "présente" : "absente") + ")" };
+  $("#ia-conso").replaceChildren(...["conversation", "ecoute", "transcription", "voix", "openrouter"].filter(k => e[k]).map(k => { const s = e[k];
     return el("tr", {}, el("td", { text: NOMS[k] }), el("td", { class: "num", text: s.demandes + " / " + s.max }), el("td", { class: "num", text: s.reussites }),
-      el("td", { class: "num", text: s.jetons || "" }),
+      el("td", { class: "num", text: (s.jetons || "") + (k === "openrouter" ? " · " + s.depense_mois.toFixed(3) + " $ / " + s.budget_mois + " $ ce mois" : "") }),
       el("td", {}, s.pause > 0 ? el("span", { class: "pill ko", text: "pause " + s.pause + " s" }) : null, el("div", { class: "sub", text: s.erreur || "" }))); }));
 }
 document.querySelector('[data-tab="ia"]').addEventListener("click", () => chargerIA().catch(e => flash(e.message)));

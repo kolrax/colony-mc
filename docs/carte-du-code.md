@@ -34,8 +34,8 @@ rm -rf run/world && ./gradlew runGameTestServer  # 65 tests en jeu (36 TestsJeu,
   - tests : `OrdresTest`, `RepertoireTest`, `TestsRepertoire`.
   - ordres longs (règles, « tous les jours », groupes) : `OrdresLongs`, `Travailleur.tickRegles`/`declencher`/`reprendre` ; tests `OrdresLongsTest`, `TestsOrdres` (lot « ordres »).
 - **IA** :
-  - fichiers : `IA` (appels), `ReponsesIA` (requêtes, schéma JSON, lecture des réponses), `ReglagesIA` (`ia.json`), `Adressage`, `Dialogue`, `Voix`.
-  - tests : `IATest`, `AdressageTest`, `TestsIA` (faux Groq/Gemini).
+  - fichiers : `IA` (appels), `ReponsesIA` (requêtes, schéma JSON, lecture des réponses), `ReglagesIA` (`ia.json`), `DepensesIA` (budget OpenRouter), `Adressage`, `Dialogue`, `Voix`.
+  - tests : `IATest`, `AdressageTest`, `TestsIA` (faux Groq/Gemini/OpenRouter).
 - **Messages du poste (lot 2)** :
   - fichiers : `Courrier` (lettres, avis, corbeaux), `Boite` (regroupement, tri, purge, tout lu / archiver / tout effacer ; pur Java), `Messages` (textes, `IMPORTANTES`, `SEULES`), `Bureau` (le poste, données envoyées à l'écran, `Entite.action`), `Client.EcranPoste` (l'écran), `Reseau` (paquets `Poste`, `ActionBureau`).
   - tests : `BoiteTest` (JUnit), `TestsMessages` (lot `messages`).
@@ -109,9 +109,10 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Dialogue** (245) : le chef parle (fenêtre ou micro) : `parler()` trouve les destinataires (`Adressage`, puis l'IA si doute), applique et fait répondre. `autour()` : ouvriers visibles. `noterIncompris()` (appelé par `repondre`) : phrase que l'interpréteur ne comprend pour aucun destinataire → `Incompris`.
 - **Incompris** (~200) : journal des phrases non comprises (lot 3, cahier 8.1/8.2), pour enrichir le répertoire. Motifs `rien` (personne, IA absente ou en échec), `ia_seule` (l'IA y a vu une action : à apprendre), `ia_parole` (l'IA a seulement répondu). Regroupe par phrase normalisée (`Ordres.normaliser`, sans accents) + motif (compteur, métiers, première/dernière date) ; `anonymiser` remplace par « @ » les joueurs connectés et les prénoms des ouvriers du chef ; `ia_seule` ne compte pas les gestes spontanés (`ReponsesIA.Decision.lectureDemandee`), 500 entrées au plus (part d'abord la plus ancienne vue une fois), phrases coupées à 200 caractères, **aucun nom de joueur**. Fichier `config/colonie_pnj/incompris.json` : relu au démarrage (illisible : renommé `.abime`, on repart de zéro), écrit en arrière-plan toutes les 30 s s'il a changé (`ColoniePnj`, tick serveur ; écriture ratée : refaite) et à l'arrêt (Stopping et Stopped). Pur Java (Gson). Lu par `/pnj incompris`, `/api/incompris`, `tools/incompris.py`.
 - **Adressage** (475) : probabilité que chaque ouvrier soit visé : formule apprise (`adressage.json`) croisée avec l'avis de l'IA. Pur Java.
-- **IA** (527) : appels en arrière-plan : `converser` et `converserGroupe` (Groq), `ecouter`, `transcrire` (Whisper), `voix` (Gemini) ; quotas du jour et pauses ; `tester()` pour `/pnj ia test`. Tout échec retombe sur l'interpréteur sans IA.
-- **ReponsesIA** (417) : le contenu des requêtes et la lecture des réponses : schéma JSON strict (`schema`, `schemaGroupe`, `action`, `response_format` type `json_schema`), Whisper, Gemini, erreurs et délais. Pur Java. Piège : c'est ici que se joue l'erreur HTTP 400 de Groq (schéma refusé).
-- **ReglagesIA** (156) : `config/colonie_pnj/ia.json` (clés, modèles, quotas). Ne jamais afficher ce fichier.
+- **IA** (~580) : appels en arrière-plan : `converser` et `converserGroupe` (Groq gratuit d'abord ; s'il n'est pas disponible ou échoue, une seule demande payante à OpenRouter par `secours`, service `OPENROUTER` 20/min, dépense dans `DEPENSES`), `ecouter` (Groq seul), `transcrire` (Whisper), `voix` (Gemini) ; quotas du jour et pauses (402 « plus de crédit » : 1 h) ; `tester()` pour `/pnj ia test` (n'appelle jamais OpenRouter : clé et budget restant seulement) ; `etat()` (panneau `/api/ia`, avec `openrouter.depense_mois`). Tout échec retombe sur l'interpréteur sans IA.
+- **ReponsesIA** (~440) : le contenu des requêtes et la lecture des réponses (`pourOpenRouter` : modèle et `usage.include` ; `cout` : `usage.cost`, sinon estimation prudente par les jetons) : schéma JSON strict (`schema`, `schemaGroupe`, `action`, `response_format` type `json_schema`), Whisper, Gemini, erreurs et délais. Pur Java. Piège : c'est ici que se joue l'erreur HTTP 400 de Groq (schéma refusé).
+- **ReglagesIA** (~175) : `config/colonie_pnj/ia.json` (clés, modèles, quotas ; `openrouter_cle`, `url_openrouter`, `modele_openrouter`, `budget_openrouter_mois` en $ (0 = jamais), `max_openrouter_jour`). Ne jamais afficher ce fichier. Le panneau ne change jamais les clés ni le budget OpenRouter.
+- **DepensesIA** (~75) : la dépense OpenRouter du mois (UTC) et du jour, en $, dans `config/colonie_pnj/depenses-ia.json` (relu au démarrage par `ColoniePnj`, écrit à chaque appel payé, hors du fil serveur). `permis` : sous 95 % du budget du mois et sous budget / 30 × 2 dans la journée. Pur Java.
 - **Voix** (358) : parler (Gemini, timbre propre à chaque PNJ, répliques à tour de rôle) et écouter le micro jusqu'au silence. `tick()` à chaque tick serveur. Liés : `VoixSvc`, `Audio`, `Dialogue`.
 - **VoixSvc** (125) : branchement à Simple Voice Chat, chargé seulement si le mod est là. Catégorie de volume « PNJ ».
 - **Audio** (153) : WAV mono 16 bits, changement de fréquence (48/24/16 kHz), volume, phrases inventées par Whisper sur du silence. Pur Java.
@@ -131,7 +132,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 ## Tests JUnit (`src/test`, pur Java, 63 tests ; `ChargeTest` : la fenêtre de mesure ; `MonnaieTest.paieEnRetardSansDebordement`)
 - **OrdresTest** (227, 17 tests) : lecture des ordres et missions.
 - **OrdresLongsTest** (9 tests) : les phrases du cahier 8.3 (règles, emploi du temps, groupe, « tous les jours », « oublie tes ordres », 8 règles au plus).
-- **IATest** (223, 14) : son et lecture des réponses d'IA, sans réseau.
+- **IATest** (~320, 19) : son et lecture des réponses d'IA, budget et coût d'OpenRouter, sans réseau.
 - **RepertoireTest** (212, 11) : trouver les actions dans une phrase.
 - **AdressageTest** (89, 5) : formule apprise sur des cas nets, consigne de l'IA.
 - **MonnaieTest** (48, 5) : paiements en pièces.

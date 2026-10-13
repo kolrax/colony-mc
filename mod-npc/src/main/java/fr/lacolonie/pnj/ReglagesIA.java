@@ -16,6 +16,7 @@ import java.util.Map;
  * <ul>
  * <li>Groq : la conversation (un modèle de langage qui répond et choisit l'action) et la transcription de la voix (Whisper).</li>
  * <li>Gemini : la voix des PNJ (synthèse vocale).</li>
+ * <li>OpenRouter (payant, facultatif) : la conversation seulement, quand Groq n'est pas disponible, dans un budget du mois.</li>
  * </ul>
  * Sans clé, ou quand un quota du jour est atteint, les PNJ retombent sur l'interpréteur sans IA et les bulles.
  */
@@ -31,12 +32,20 @@ public class ReglagesIA {
 
     public String groq_cle = "";
     public String gemini_cle = "";
+    /** Clé OpenRouter, propre à chaque serveur (vide : jamais de conversation payante). */
+    public String openrouter_cle = "";
 
     /** Adresse compatible OpenAI : on peut changer de fournisseur sans toucher au mod (Groq par défaut). */
     public String url_conversation = "https://api.groq.com/openai/v1/chat/completions";
     public String modele_conversation = "openai/gpt-oss-120b";
     /** Le modèle qui juge à qui le chef parle (une consigne courte : un modèle rapide suffit, et son quota est à part). */
     public String modele_ecoute = "openai/gpt-oss-20b";
+    /** OpenRouter : seulement pour la conversation, quand Groq gratuit n'est pas disponible. */
+    public String url_openrouter = "https://openrouter.ai/api/v1/chat/completions";
+    public String modele_openrouter = "openai/gpt-oss-120b";
+    /** Budget du mois en dollars US (0 : jamais d'OpenRouter) ; plus d'appel au-delà de 95 %, ni au-delà de budget / 30 × 2 dans la journée. */
+    public double budget_openrouter_mois = 5.0;
+    public int max_openrouter_jour = 300;
     public String url_transcription = "https://api.groq.com/openai/v1/audio/transcriptions";
     public String modele_transcription = "whisper-large-v3-turbo";
     public String url_voix = "https://generativelanguage.googleapis.com/v1beta/interactions";
@@ -72,6 +81,7 @@ public class ReglagesIA {
             IA.CONVERSATION.reprendre();
             IA.TRANSCRIPTION.reprendre();
             IA.VOIX.reprendre();
+            IA.OPENROUTER.reprendre();
         } catch (Exception e) {
             ColoniePnj.LOG.error("Réglages de l'IA illisibles (config/colonie_pnj/ia.json) : IA désactivée jusqu'à correction", e);
             ReglagesIA r = new ReglagesIA();
@@ -87,6 +97,11 @@ public class ReglagesIA {
     void valider() {
         groq_cle = groq_cle == null ? "" : groq_cle.strip();
         gemini_cle = gemini_cle == null ? "" : gemini_cle.strip();
+        openrouter_cle = openrouter_cle == null ? "" : openrouter_cle.strip();
+        if (url_openrouter == null || url_openrouter.isBlank()) url_openrouter = new ReglagesIA().url_openrouter;
+        if (modele_openrouter == null || modele_openrouter.isBlank()) modele_openrouter = new ReglagesIA().modele_openrouter;
+        budget_openrouter_mois = Double.isFinite(budget_openrouter_mois) ? Math.max(0, budget_openrouter_mois) : 0;
+        max_openrouter_jour = Math.max(0, max_openrouter_jour);
         if (url_conversation == null || url_conversation.isBlank()) url_conversation = new ReglagesIA().url_conversation;
         if (modele_conversation == null || modele_conversation.isBlank()) modele_conversation = new ReglagesIA().modele_conversation;
         if (modele_ecoute == null || modele_ecoute.isBlank()) modele_ecoute = new ReglagesIA().modele_ecoute;
@@ -104,6 +119,8 @@ public class ReglagesIA {
 
     boolean conversationPossible() { return active && conversation && !groq_cle.isEmpty(); }
 
+    boolean openrouterPossible() { return active && conversation && !openrouter_cle.isEmpty() && budget_openrouter_mois > 0; }
+
     boolean voixPossible() { return active && voix && !gemini_cle.isEmpty(); }
 
     boolean ecoutePossible() { return active && ecoute && !groq_cle.isEmpty(); }
@@ -117,6 +134,10 @@ public class ReglagesIA {
         m.put("ecoute", ecoute);
         m.put("groq_cle", masque(groq_cle));
         m.put("gemini_cle", masque(gemini_cle));
+        m.put("openrouter_cle", masque(openrouter_cle));
+        m.put("modele_openrouter", modele_openrouter);
+        m.put("budget_openrouter_mois", budget_openrouter_mois);
+        m.put("max_openrouter_jour", max_openrouter_jour);
         m.put("modele_conversation", modele_conversation);
         m.put("modele_ecoute", modele_ecoute);
         m.put("modele_transcription", modele_transcription);

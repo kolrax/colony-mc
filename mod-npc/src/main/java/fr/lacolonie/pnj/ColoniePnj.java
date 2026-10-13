@@ -110,6 +110,7 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
             ReglagesIA.charger();
+            IA.DEPENSES = DepensesIA.charger(Reglages.dossier().resolve("depenses-ia.json"));
             chargerIncompris();
             PanneauWeb.demarrer(e.getServer());
         });
@@ -490,12 +491,14 @@ public class ColoniePnj {
         List<String> l = new ArrayList<>();
         l.add("IA " + (r.active ? "active" : "désactivée") + " · clé Groq " + (r.groq_cle.isEmpty() ? "absente" : "présente") + " · clé Gemini "
                 + (r.gemini_cle.isEmpty() ? "absente" : "présente") + " · Simple Voice Chat " + (Voix.pret ? "prêt" : "absent"));
-        for (var s : List.of(IA.CONVERSATION, IA.ECOUTE, IA.TRANSCRIPTION, IA.VOIX)) {
-            int max = s == IA.CONVERSATION ? r.max_conversations_jour : s == IA.ECOUTE ? r.max_ecoutes_jour : s == IA.TRANSCRIPTION ? r.max_transcriptions_jour : r.max_voix_jour;
+        for (var s : List.of(IA.CONVERSATION, IA.ECOUTE, IA.TRANSCRIPTION, IA.VOIX, IA.OPENROUTER)) {
+            int max = s == IA.CONVERSATION ? r.max_conversations_jour : s == IA.ECOUTE ? r.max_ecoutes_jour : s == IA.TRANSCRIPTION ? r.max_transcriptions_jour
+                    : s == IA.OPENROUTER ? r.max_openrouter_jour : r.max_voix_jour;
             var e = s.etat(max);
             l.add(" - " + s.nom + " : " + e.get("demandes") + "/" + max + " aujourd'hui" + ((long) e.get("pause") > 0 ? ", en pause " + e.get("pause") + " s" : "")
                     + (((String) e.get("erreur")).isEmpty() ? "" : " · dernière erreur : " + e.get("erreur")));
         }
+        l.add(" - " + IA.openrouter());
         return l;
     }
 

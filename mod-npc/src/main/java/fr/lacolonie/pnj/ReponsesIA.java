@@ -217,6 +217,29 @@ final class ReponsesIA {
         } catch (RuntimeException e) { return 0; }
     }
 
+    /** La même requête pour OpenRouter : son modèle, et le coût réel demandé dans la réponse (usage.cost). */
+    static String pourOpenRouter(String corps, String modele) {
+        JsonObject r = JsonParser.parseString(corps).getAsJsonObject();
+        r.addProperty("model", modele);
+        JsonObject usage = new JsonObject();
+        usage.addProperty("include", true);
+        r.add("usage", usage);
+        return r.toString();
+    }
+
+    /** Prix pessimiste d'un jeton (2 $ le million), quand OpenRouter ne donne pas le coût ; sans rien, 0,002 $ l'appel. */
+    static final double PRIX_JETON = 2e-6, PRIX_APPEL = 0.002;
+
+    /** Ce qu'a coûté l'appel, en dollars : usage.cost, sinon une estimation prudente par les jetons. */
+    static double cout(String corps) {
+        try {
+            JsonObject u = JsonParser.parseString(corps).getAsJsonObject().getAsJsonObject("usage");
+            if (u != null && u.has("cost") && u.get("cost").isJsonPrimitive()) return Math.max(0, u.get("cost").getAsDouble());
+        } catch (RuntimeException e) { return PRIX_APPEL; }
+        int n = jetons(corps);
+        return n > 0 ? n * PRIX_JETON : PRIX_APPEL;
+    }
+
     /**
      * Lit et revérifie la décision : missions de son catalogue seulement, nombres bornés, actions connues, phrase
      * pas trop longue. Ce qui ne va pas est simplement ignoré.

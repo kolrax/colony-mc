@@ -4,6 +4,7 @@
 ia.json
 reglages.json
 incompris*.json
+depenses-ia*.json
 
 # Données privées ou lourdes, gardées seulement sur le PC
 sauvegardes/
