@@ -1149,8 +1149,10 @@ public final class Actions {
                 else { marcher(t, Vec3.atBottomCenterOf(but), 1.0); return Etat.EN_COURS; }
             }
             t.getNavigation().stop();
-            if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock
-                    && !t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
+            if (lit != null && !t.isSleeping() && t.level().getBlockState(lit).getBlock() instanceof BedBlock) {
+                if (!t.level().getBlockState(lit).getValue(BedBlock.OCCUPIED)) t.startSleeping(lit);
+                else if (age % 100 == 0) { String qui = Besoins.dormeur(t, lit); if (qui != null) Besoins.litVole(t, qui); } // un autre dort dans son lit
+            }
             return age >= 600 ? Etat.OK : Etat.EN_COURS; // il refait le point toutes les 30 s
         }
     }
