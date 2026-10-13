@@ -23,7 +23,7 @@ class RepertoireTest {
         List<String> erreurs = new ArrayList<>();
         for (Repertoire.Entree e : Repertoire.TOUTES) {
             String c = e.comportement(), a = e.arg();
-            for (String m : e.metiers()) if (!Set.of("mineur", "bucheron", "guerrier", "fermier").contains(m)) erreurs.add(e.id() + " : métier " + m);
+            for (String m : e.metiers()) if (!Set.of("mineur", "bucheron", "guerrier", "fermier", "guerisseur").contains(m)) erreurs.add(e.id() + " : métier " + m);
             if (e.dits().isEmpty()) erreurs.add(e.id() + " : aucune formule");
             switch (c) {
                 case "geste" -> { if (!Repertoire.GESTES.contains(a)) erreurs.add(e.id() + " : geste " + a); }
@@ -34,7 +34,7 @@ class RepertoireTest {
                 case "donner", "jeter", "prendre", "tenir" -> { if (!Repertoire.OBJETS.contains(a)) erreurs.add(e.id() + " : objet " + a); }
                 case "utiliser" -> { if (!Repertoire.BLOCS.contains(a)) erreurs.add(e.id() + " : bloc " + a); }
                 case "combat" -> { if (!Repertoire.COMBATS.contains(a)) erreurs.add(e.id() + " : combat " + a); }
-                case "travail" -> { if (!Repertoire.TRAVAUX.contains(a)) erreurs.add(e.id() + " : travail " + a); }
+                case "travail" -> { if (!Repertoire.TRAVAUX.contains(a) && !Soins.TRAVAUX.contains(a)) erreurs.add(e.id() + " : travail " + a); }
                 case "info" -> { if (!Repertoire.INFOS.contains(a)) erreurs.add(e.id() + " : info " + a); }
                 case "parler" -> { if (!Repertoire.PAROLES.containsKey(a) && !Repertoire.GENRES_CALCULES.contains(a)) erreurs.add(e.id() + " : genre " + a); }
                 case "vitesse" -> { if (!Repertoire.VITESSES.contains(a)) erreurs.add(e.id() + " : vitesse " + a); }

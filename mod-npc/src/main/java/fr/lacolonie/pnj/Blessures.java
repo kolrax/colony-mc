@@ -101,6 +101,7 @@ final class Blessures {
      */
     static void accourir(Travailleur blesse) {
         if (blesse.chef == null) return;
+        Guerisseur.alerter(blesse); // le guérisseur vient le relever
         List<Travailleur> proches = blesse.level().getEntitiesOfClass(Travailleur.class, blesse.getBoundingBox().inflate(RAYON, 8, RAYON),
                         o -> o != blesse && blesse.chef.equals(o.chef) && o.isAlive() && !o.aTerre
                                 && o.distanceToSqr(blesse) <= RAYON * RAYON && peutAccourir(o))
@@ -110,7 +111,7 @@ final class Blessures {
 
     static boolean peutAccourir(Travailleur o) {
         if ((o.mode != Travailleur.Mode.TRAVAIL && o.mode != Travailleur.Mode.GREVE) || o.consigne != null || o.isSleeping() || o.memoire.getBoolean("rappel")
-                || o.action instanceof Accourir || o.lettreEnMain != null || o.enDanger()) return false;
+                || o.action instanceof Accourir || o.lettreEnMain != null || o.enDanger() || "guerisseur".equals(o.metier)) return false;
         if (Metier.de(o.metier) instanceof Guerrier) {
             Metier.Commande c = Metier.commande(o);
             return c != null && c.id.equals("ronde");

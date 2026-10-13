@@ -22,7 +22,7 @@
 # VARIABLES (remplacées par le code ; seulement dans les sections indiquées)
 #   {chef}   nom du chef de la colonie (partout)
 #   {nom}    prénom de l'autre PNJ en jeu : celui qui soigne (soigne), qui a pris le lit (lit_vole),
-#            le blessé à terre (blesse_vu)
+#            le blessé à terre (blesse_vu), celui que le guérisseur a relevé ou pansé (guerisseur_soigne)
 #   {objet}  l'objet en jeu, tel qu'on le dit (« du pain », « une pioche ») : vol, sabotage_avoue, cadeau
 #   {mort}   prénom du PNJ mort : ami_mort, deuil_annonce, deuil_tristesse, enterrement_discours,
 #            enterrement_apaisement
@@ -35,7 +35,7 @@
 #
 # SECTIONS
 #   Corps :      faim_legere, faim_forte, fatigue, sans_lit, lit_vole
-#   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne, blesse_vu
+#   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne, blesse_vu, guerisseur_soigne
 #   Loisirs :    envie_pause
 #   Moral bas :  plainte_douce, plainte_forte, menace_greve, greve, menace_demission, demission, fuite_nuit,
 #                vol, sabotage_avoue, avertissement_1, avertissement_2, avertissement_3, revolte
@@ -189,6 +189,15 @@ calme: Doucement, {nom}. Garde ton souffle, on s'occupe de toi.
 peureux: Tant de sang… {nom}, réponds-moi !
 fourbe: Tiens bon, {nom}. Tu me dois encore une chope, souviens-toi.
 colerique: Qui t'a fait ça, {nom} ? Il me le paiera !
+
+# Dit par le guérisseur quand il vient de relever ou de panser un compagnon ({nom} : le blessé).
+[guerisseur_soigne]
+Voilà, {nom}. Doucement, maintenant.
+Ça ira, {nom}. Ménage-toi quelques jours.
+Tiens bon, {nom}. Le pire est passé.
+Reprends ton souffle, {nom}. Rien ne presse.
+Ne force pas, {nom}. La plaie doit se refermer.
+Te voilà d'aplomb, {nom}. Va doucement.
 
 # ============================================================
 # LOISIRS

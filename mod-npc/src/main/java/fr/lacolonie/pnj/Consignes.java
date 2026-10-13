@@ -913,6 +913,7 @@ final class Consignes {
                         return "Le fourneau est occupé, chef.";
                 }
             }
+            case "soigner", "soigner_blesses" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
             case "torches" -> {
                 if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0 && Bureau.entite(t) == null) return "Je n'ai pas de torches, chef.";
             }
@@ -1547,6 +1548,11 @@ final class Consignes {
                                 : "Je n'ai pas de pousses de ce bois, chef, ni sur moi ni au dépôt.");
                         while (chantier.size() > garde) chantier.remove(chantier.size() - 1);
                     }
+                }
+                case "soigner", "soigner_blesses" -> {
+                    // Le guérisseur : son action dit elle-même ce qu'elle a fait.
+                    if (etape++ == 0) { sous = Guerisseur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "champ", "recolter", "pain", "oublier_champ" -> {
                     // Le fermier : son action dit elle-même ce qu'elle a fait.

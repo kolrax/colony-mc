@@ -585,8 +585,9 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Actions.Reposer || !enService() ? "Se repose"
                     : action instanceof Besoins.Flaner ? "En pause"
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
+                    : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
-                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") ? "Sans mission"
+                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
     }

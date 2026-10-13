@@ -451,6 +451,8 @@ final class Ordres {
     /** Les métiers par leur nom : singulier, pluriel ; les mots marqués d'une étoile ne comptent qu'avec un article (« garde » est aussi un verbe). */
     static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
             "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
+            "guerisseur", List.of(new String[]{"guerisseur", "guerisseurs"}, new String[]{"guerisseuse", "guerisseuses"}, new String[]{"medecin", "medecins"},
+                    new String[]{"soigneur", "soigneurs"}, new String[]{"soigneuse", "soigneuses"}),
             "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),
             "fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"}),
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},

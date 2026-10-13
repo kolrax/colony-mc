@@ -198,6 +198,8 @@ public abstract class Metier {
 
     static boolean existe(String id) { return TOUS.containsKey(id); }
 
+    static { TOUS.put("guerisseur", new Guerisseur()); } // lot 5 (à part : l'éleveur s'inscrit sur la ligne du haut)
+
     static List<String> actifs() {
         return TOUS.keySet().stream().filter(m -> !Reglages.actuel.metiers_inactifs.contains(m)).toList();
     }
