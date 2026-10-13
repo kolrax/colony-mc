@@ -48,13 +48,14 @@ final class Fouille {
      * Le plan d'un chantier {@code genre} (« salle », « carriere » ou « tunnel ») d'après la phrase du chef. Ce qui n'est pas
      * dit prend la valeur par défaut : salle 5 x 5 x 3, carrière 8 x 8 sur 4 couches, tunnel de {@code longueur} x 1 x 2
      * (« de train » : 16 x 3 x 4). Les mesures sont bornées (une salle de 16 sur 16 au plus, un tunnel de 64 blocs).
+     * Le bûcheron (« foret » : 10 x 10, « defriche » : 16 x 16) : une surface, longueur sur largeur, de 32 sur 32 au plus.
      */
     static Plan lire(String genre, String phrase, int longueur) {
         String n = chiffres(Ordres.normaliser(phrase == null ? "" : phrase).replaceAll("(\\d)x(\\d)", "$1 x $2"))
                 .replace(" en train de ", " ").replace(" en train d ", " "); // « tu es en train de creuser » n'est pas un train
-        boolean tunnel = genre.equals("tunnel"), carriere = genre.equals("carriere");
+        boolean tunnel = genre.equals("tunnel"), carriere = genre.equals("carriere"), terrain = genre.equals("foret") || genre.equals("defriche");
         boolean train = tunnel && Ordres.dit(n, "train", "trains", "rail", "rails", "chemin de fer", "wagonnet", "wagonnets");
-        int lo = tunnel ? (train ? 16 : Math.max(1, longueur)) : carriere ? 8 : 5, la = tunnel ? (train ? 3 : 1) : lo, ha = tunnel ? (train ? 4 : 2) : carriere ? 4 : 3;
+        int lo = tunnel ? (train ? 16 : Math.max(1, longueur)) : carriere ? 8 : genre.equals("foret") ? 10 : genre.equals("defriche") ? 16 : 5, la = tunnel ? (train ? 3 : 1) : lo, ha = tunnel ? (train ? 4 : 2) : carriere ? 4 : 3;
         int[] v;
         if ((v = prendre(HAUT, n)) != null) { ha = v[0]; n = enlever(HAUT, n); }
         if ((v = prendre(PROFOND, n)) != null) { ha = v[0]; n = enlever(PROFOND, n); }
@@ -73,6 +74,7 @@ final class Fouille {
         // « de 20 blocs », « sur 20 blocs », « 20 blocs de tunnel », « une vingtaine de blocs » ; sinon « de 20 ».
         if ((v = prendre(BLOCS, n)) != null || (v = prendre(SEULE, n)) != null) { lo = v[0]; if (!tunnel) la = v[0]; }
         if (tunnel) return new Plan(borne(lo, 1, 64), borne(la, 1, 5), borne(ha, 2, 5), direction(n), false);
+        if (terrain) return new Plan(borne(lo, 1, TERRAIN_MAX), borne(la, 1, TERRAIN_MAX), 1, "", false);
         return new Plan(borne(lo, 1, 16), borne(la, 1, 16), carriere ? borne(ha, 1, 8) : borne(ha, 2, 6), direction(n), carriere);
     }
 
@@ -109,6 +111,57 @@ final class Fouille {
                     r.add(new int[]{f, c, -k, 0});
                 }
         return r;
+    }
+
+    // --- Le bûcheron : forêt en rangs, terrain à défricher, essence et quantité dites ------------------------
+
+    /** Une forêt ou un terrain à défricher : 32 sur 32 au plus. */
+    static final int TERRAIN_MAX = 32;
+    /** Écart entre deux pousses d'un rang : 3 blocs ; entre deux carrés de 4 pousses (arbres géants) : 5. */
+    static final int PAS = 3, PAS_CARRE = 5;
+
+    /**
+     * Les pousses d'une forêt en rangs, centrée sur l'endroit visé : {avant, côté, groupe}. Un arbre géant (chêne noir,
+     * grand sapin, grand arbre de la jungle) pousse d'un carré de 4 pousses : les 4 ont le même groupe.
+     */
+    static List<int[]> rangs(Plan p, boolean carre) {
+        List<int[]> r = new ArrayList<>();
+        int pas = carre ? PAS_CARRE : PAS, t = carre ? 2 : 1, g = 0;
+        int f0 = -(p.longueur() - 1) / 2, c0 = -(p.largeur() - 1) / 2;
+        for (int f = f0; f + t - 1 <= f0 + p.longueur() - 1; f += pas)
+            for (int c = c0; c + t - 1 <= c0 + p.largeur() - 1; c += pas, g++)
+                for (int df = 0; df < t; df++) for (int dc = 0; dc < t; dc++) r.add(new int[]{f + df, c + dc, g});
+        return r;
+    }
+
+    /** Une forêt d'arbres géants demandée (« des sapins géants », « en carrés »). */
+    static boolean geants(String phrase) {
+        return Ordres.dit(Ordres.normaliser(phrase == null ? "" : phrase), "geant", "geants", "geante", "geantes", "grands arbres", "gros arbres",
+                "en carre", "en carres", "par carres", "par quatre", "2 sur 2", "deux sur deux");
+    }
+
+    /** L'essence de bois dite (« des bouleaux », « du chêne noir ») : l'identifiant du catalogue du bûcheron, ou vide. */
+    static String essence(String phrase) {
+        String[] mots = Ordres.normaliser(phrase == null ? "" : phrase).strip().split(" ");
+        for (int i = 0; i < mots.length; i++) {
+            String[] o = Ordres.objet(mots, i, "bucheron");
+            if (o != null && o[0].equals("bucheron") && !o[1].equals("tout")) return o[1];
+        }
+        return "";
+    }
+
+    /** La quantité dite (« 32 planches », « deux piles », « une douzaine ») : le premier nombre de la phrase, sinon 0. */
+    static int quantite(String phrase) {
+        String[] mots = Ordres.normaliser(phrase == null ? "" : phrase).strip().split(" ");
+        for (int i = 0; i < mots.length; i++) {
+            if (mots[i].equals("un") || mots[i].equals("une")) {
+                if (i + 1 < mots.length && Ordres.PAQUETS.containsKey(mots[i + 1])) return Ordres.PAQUETS.get(mots[i + 1]);
+                continue;
+            }
+            int[] nb = Ordres.nombre(mots, i);
+            if (nb != null && nb[0] > 0) return Math.min(nb[0], 100_000);
+        }
+        return 0;
     }
 
     // --- Petits outils ----------------------------------------------------------------------------------------

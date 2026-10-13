@@ -470,15 +470,24 @@ public final class Actions {
     }
 
     /** Abat un arbre entier depuis son pied : tout le bois tombe d'un coup quand le pied cède. */
+    /**
+     * Abat l'arbre entier (même un géant 2 x 2), puis fait tomber ses feuilles naturelles restées en l'air : celles qui ne
+     * tiennent plus à aucun bois (le jeu les fait pourrir d'elles-mêmes, lentement). Pousses, pommes et bâtons tombent au
+     * sol ; il les ramasse ensuite. Les feuilles posées par un joueur (persistantes) et celles d'un arbre voisin restent.
+     */
     static final class Abattre extends Action {
         final BlockPos pied;
         List<BlockPos> bois;
         float progres, total;
+        /** Les feuilles à faire tomber, une fois le bois coupé (null avant) ; le tick où les chercher. */
+        List<BlockPos> feuilles;
+        int abattu = -1;
 
         Abattre(BlockPos pied) { super("abattre"); this.pied = pied; }
 
         Etat tick(Travailleur t) {
             ServerLevel lvl = (ServerLevel) t.level();
+            if (abattu >= 0) return feuilles(t, lvl);
             if (bois == null) {
                 bois = arbre(lvl, pied);
                 if (bois == null) return echec("pas_un_arbre");
@@ -498,7 +507,37 @@ public final class Actions {
             for (int i = bois.size() - 1; i >= 0; i--)
                 if (lvl.getBlockState(bois.get(i)).is(BlockTags.LOGS)) recolter(t, bois.get(i));
             userOutil(t, bois.size());
-            return Etat.OK;
+            lvl.destroyBlockProgress(t.getId(), pied, -1);
+            abattu = age;
+            return Etat.EN_COURS;
+        }
+
+        /**
+         * Le bois tombé, les feuilles de l'arbre sentent en quelques ticks qu'elles ne tiennent plus (distance 7, comme dans
+         * le jeu) : une seule recherche autour de l'arbre, puis 8 feuilles par tick, du haut vers le bas.
+         */
+        Etat feuilles(Travailleur t, ServerLevel lvl) {
+            if (age - abattu < ATTENTE_FEUILLES) return Etat.EN_COURS;
+            if (feuilles == null) {
+                feuilles = new ArrayList<>();
+                int x0 = pied.getX(), x1 = x0, z0 = pied.getZ(), z1 = z0, y1 = pied.getY();
+                for (BlockPos p : bois) { x0 = Math.min(x0, p.getX()); x1 = Math.max(x1, p.getX()); z0 = Math.min(z0, p.getZ()); z1 = Math.max(z1, p.getZ()); y1 = Math.max(y1, p.getY()); }
+                for (int x = x0 - 5; x <= x1 + 5; x++)
+                    for (int z = z0 - 5; z <= z1 + 5; z++) {
+                        if (!lvl.hasChunkAt(new BlockPos(x, pied.getY(), z))) continue;
+                        for (int y = pied.getY(); y <= y1 + 5 && feuilles.size() < 800; y++) {
+                            BlockPos q = new BlockPos(x, y, z);
+                            if (detachee(lvl.getBlockState(q))) feuilles.add(q);
+                        }
+                    }
+                feuilles.sort(java.util.Comparator.comparingInt(BlockPos::getY)); // la fin de la liste (le haut) d'abord
+            }
+            for (int k = 0; k < 8 && !feuilles.isEmpty(); k++) {
+                BlockPos q = feuilles.remove(feuilles.size() - 1);
+                if (detachee(lvl.getBlockState(q))) lvl.destroyBlock(q, true, t);
+            }
+            if (age % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
+            return feuilles.isEmpty() ? Etat.OK : Etat.EN_COURS;
         }
 
         @Override
@@ -508,6 +547,17 @@ public final class Actions {
         }
     }
 
+    /** Ticks laissés aux feuilles pour sentir que leur arbre est tombé (le jeu les recalcule d'un rang par tick). */
+    static final int ATTENTE_FEUILLES = 20;
+
+    /** Une feuille naturelle qui ne tient plus à aucun bois (elle pourrirait d'elle-même). */
+    static boolean detachee(BlockState st) {
+        return st.getBlock() instanceof LeavesBlock && !st.getValue(LeavesBlock.PERSISTENT) && st.getValue(LeavesBlock.DISTANCE) >= LeavesBlock.DECAY_DISTANCE;
+    }
+
+    /** Un arbre a au plus tant de bûches (un grand sapin ou un grand arbre de la jungle 2 x 2 en a moins de 200), dans ce rayon autour de son pied. */
+    static final int BUCHES_MAX = 256, RAYON_ARBRE = 10;
+
     /** Le bois d'un arbre naturel à partir de son pied (null si ce n'est pas un arbre : maison en rondins…). */
     static List<BlockPos> arbre(ServerLevel lvl, BlockPos pied) {
         if (!lvl.getBlockState(pied).is(BlockTags.LOGS)) return null;
@@ -516,11 +566,11 @@ public final class Actions {
         ArrayDeque<BlockPos> file = new ArrayDeque<>(List.of(pied));
         vus.add(pied);
         int feuilles = 0;
-        while (!file.isEmpty() && bois.size() < 160) {
+        while (!file.isEmpty() && bois.size() < BUCHES_MAX) {
             BlockPos p = file.poll();
             bois.add(p);
             for (BlockPos q : BlockPos.betweenClosed(p.offset(-1, 0, -1), p.offset(1, 1, 1))) {
-                if (vus.contains(q) || q.getY() < pied.getY() || Math.abs(q.getX() - pied.getX()) > 8 || Math.abs(q.getZ() - pied.getZ()) > 8) continue;
+                if (vus.contains(q) || q.getY() < pied.getY() || Math.abs(q.getX() - pied.getX()) > RAYON_ARBRE || Math.abs(q.getZ() - pied.getZ()) > RAYON_ARBRE) continue;
                 BlockState st = lvl.getBlockState(q);
                 if (st.is(BlockTags.LOGS)) { BlockPos im = q.immutable(); vus.add(im); file.add(im); }
                 else if (st.getBlock() instanceof LeavesBlock && !st.getValue(LeavesBlock.PERSISTENT)) feuilles++;
@@ -549,7 +599,9 @@ public final class Actions {
                 for (int y = haut; y > haut - 24; y--) {
                     BlockPos p = new BlockPos(x, y, z);
                     if (!lvl.getBlockState(p).is(BlockTags.LOGS)) continue;
-                    if (!lvl.getBlockState(p.below()).is(BlockTags.DIRT)) continue;
+                    // Le tronc jusqu'en bas, si haut soit-il (un grand sapin dépasse 24 blocs).
+                    while (p.getY() > lvl.getMinBuildHeight() && lvl.getBlockState(p.below()).is(BlockTags.LOGS)) p = p.below();
+                    if (!lvl.getBlockState(p.below()).is(BlockTags.DIRT)) break;
                     if (bois != null && !bois.bloc(lvl.getBlockState(p))) break;
                     if (pour != null && pour.blocInaccessible(p.asLong())) break;
                     if (arbre(lvl, p) != null) { meilleur = p; dMin = d; }
@@ -750,6 +802,163 @@ public final class Actions {
             var pris = b.prendre(filtre, nombre);
             pris.forEach(t::ranger);
             return pris.isEmpty() ? echec("rien_au_depot") : Etat.OK;
+        }
+    }
+
+    /** Sort de son sac un objet de ce filtre (un seul), ou rien. */
+    static ItemStack sortir(Travailleur t, Filtre f) {
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++)
+            if (f.objet(t.inventaire.getItem(i))) { t.inventaire.setChanged(); return t.inventaire.getItem(i).split(1); }
+        return ItemStack.EMPTY;
+    }
+
+    /** Ce que donne la recette d'artisanat d'un seul objet (une bûche : 4 planches de son bois), ou rien. */
+    static ItemStack recette(ServerLevel lvl, ItemStack s) {
+        var entree = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, List.of(s));
+        return lvl.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, entree, lvl)
+                .map(r -> r.value().assemble(entree, lvl.registryAccess())).orElse(ItemStack.EMPTY);
+    }
+
+    /**
+     * Fait des planches au poste, comme à l'établi : une bûche (de son sac, sinon du dépôt) toutes les demi-secondes, et les
+     * planches vont au dépôt. Rien ne se crée ni ne se perd : c'est la recette du jeu (1 bûche, 4 planches du même bois).
+     */
+    static final class Planches extends AuBureau {
+        final Filtre bois;
+        final int voulu;
+        int faites;
+
+        Planches(Filtre bois, int voulu) { super("planches"); this.bois = bois; this.voulu = voulu; }
+
+        Etat tick(Travailleur t) {
+            Bureau.Entite b = arriver(t);
+            if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
+            if (age % 10 != 0) return Etat.EN_COURS;
+            if (faites >= voulu) return Etat.OK;
+            ItemStack buche = sortir(t, bois);
+            if (buche.isEmpty()) {
+                List<ItemStack> pris = b.prendre(bois, 1);
+                if (pris.isEmpty()) return Etat.OK; // plus de bûches : il a fait ce qu'il a pu
+                buche = pris.get(0);
+            }
+            ItemStack planches = recette((ServerLevel) t.level(), buche);
+            if (planches.isEmpty()) { t.ranger(b.ranger(buche)); return echec("pas_de_recette"); }
+            faites += planches.getCount();
+            ItemStack reste = b.ranger(planches);
+            if (!reste.isEmpty()) t.ranger(reste);
+            t.swing(InteractionHand.MAIN_HAND);
+            t.level().playSound(null, t.blockPosition(), net.minecraft.sounds.SoundEvents.WOOD_BREAK, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6f, 1.2f);
+            return reste.isEmpty() ? Etat.EN_COURS : echec("depot_plein");
+        }
+    }
+
+    /**
+     * Du charbon de bois au fourneau près du poste : il prend au dépôt les bûches et le combustible (charbon, sinon des bûches
+     * en plus), charge le fourneau, attend près de lui en reprenant le charbon à mesure, puis range tout au dépôt.
+     */
+    static final class Charbon extends AuBureau {
+        static final Filtre COMBUSTIBLE = Filtre.de("minecraft:coal|minecraft:charcoal");
+        final Filtre bois;
+        final int voulu;
+        BlockPos four;
+        int etape, recu, arret;
+
+        Charbon(Filtre bois, int voulu) { super("charbon"); this.bois = bois; this.voulu = voulu; }
+
+        /** Un vrai fourneau à 8 blocs du poste au plus (le plus proche), ou null. Une seule recherche, à la demande. */
+        static BlockPos fourneau(Level l, BlockPos poste) {
+            BlockPos r = null;
+            for (BlockPos q : BlockPos.betweenClosed(poste.offset(-8, -3, -8), poste.offset(8, 3, 8)))
+                if (l.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity && (r == null || q.distSqr(poste) < r.distSqr(poste))) r = q.immutable();
+            return r;
+        }
+
+        Etat tick(Travailleur t) {
+            Level l = t.level();
+            switch (etape) {
+                case 0 -> { // au poste : trouver le fourneau, prendre les bûches et le combustible
+                    Bureau.Entite b = arriver(t);
+                    if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
+                    four = fourneau(l, bureau);
+                    if (four == null) return echec("pas_de_fourneau");
+                    int manque = voulu - t.compter(bois);
+                    if (manque > 0) b.prendre(bois, manque).forEach(t::ranger);
+                    int a = Math.min(voulu, t.compter(bois));
+                    if (a == 0) return echec("pas_de_bois");
+                    // Le charbon fait cuire 8 bûches ; sans charbon, il brûle des bûches (une et demie chacune).
+                    int charbon = (a + 7) / 8 - t.compter(COMBUSTIBLE);
+                    if (charbon > 0) b.prendre(COMBUSTIBLE, charbon).forEach(t::ranger);
+                    t.swing(InteractionHand.MAIN_HAND);
+                    etape = 1;
+                }
+                case 1 -> { // charger le fourneau
+                    if (!(l.getBlockEntity(four) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity f)) return echec("pas_de_fourneau");
+                    if (!aPortee(t, four)) {
+                        if (coince() || age > 20 * 60) return echec("inaccessible");
+                        marcher(t, Vec3.atCenterOf(four), 1.0);
+                        return Etat.EN_COURS;
+                    }
+                    t.getNavigation().stop();
+                    t.getLookControl().setLookAt(Vec3.atCenterOf(four));
+                    ItemStack dedans = f.getItem(0), feu = f.getItem(1);
+                    if (!dedans.isEmpty() && !bois.objet(dedans) || !f.getItem(2).isEmpty() && !f.getItem(2).is(net.minecraft.world.item.Items.CHARCOAL)) return echec("four_occupe");
+                    int nb = Math.min(voulu, t.compter(bois));
+                    int charbon = t.compter(COMBUSTIBLE);
+                    int cuire = charbon > 0 ? nb : nb * 3 / 5; // sans charbon : 3 bûches cuites pour 2 brûlées
+                    if (cuire == 0) return echec("pas_de_combustible");
+                    ItemStack type = ItemStack.EMPTY;
+                    for (int i = 0; i < cuire; i++) {
+                        ItemStack s = dedans.isEmpty() ? sortir(t, bois) : sortirPareil(t, dedans);
+                        if (s.isEmpty()) break;
+                        if (dedans.isEmpty()) dedans = s; else dedans.grow(1);
+                        if (dedans.getCount() >= dedans.getMaxStackSize()) break;
+                    }
+                    f.setItem(0, dedans);
+                    Filtre brule = charbon > 0 ? COMBUSTIBLE : bois;
+                    int aBruler = charbon > 0 ? (dedans.getCount() + 7) / 8 : (dedans.getCount() * 2 + 2) / 3;
+                    for (int i = 0; i < aBruler && (feu.isEmpty() || feu.getCount() < feu.getMaxStackSize()); i++) {
+                        ItemStack s = feu.isEmpty() ? sortir(t, brule) : sortirPareil(t, feu);
+                        if (s.isEmpty()) break;
+                        if (feu.isEmpty()) feu = s; else feu.grow(1);
+                    }
+                    f.setItem(1, feu);
+                    f.setChanged();
+                    t.swing(InteractionHand.MAIN_HAND);
+                    etape = 2;
+                }
+                case 2 -> { // il attend près du fourneau et reprend le charbon à mesure
+                    if (!(l.getBlockEntity(four) instanceof net.minecraft.world.level.block.entity.FurnaceBlockEntity f)) return echec("pas_de_fourneau");
+                    t.getNavigation().stop();
+                    t.getLookControl().setLookAt(Vec3.atCenterOf(four));
+                    if (age % 20 != 0) return Etat.EN_COURS;
+                    ItemStack fait = f.getItem(2);
+                    if (!fait.isEmpty()) { recu += fait.getCount(); t.ranger(fait.copy()); f.setItem(2, ItemStack.EMPTY); t.swing(InteractionHand.MAIN_HAND); }
+                    boolean allume = f.getBlockState().getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT);
+                    arret = allume ? 0 : arret + 1;
+                    if (f.getItem(0).isEmpty() || arret >= 4) {
+                        // Fini, ou le feu s'est éteint : il reprend ses bûches pas cuites (rien ne se perd).
+                        if (!f.getItem(0).isEmpty() && bois.objet(f.getItem(0))) { t.ranger(f.getItem(0).copy()); f.setItem(0, ItemStack.EMPTY); }
+                        etape = 3;
+                    }
+                }
+                default -> { // tout au dépôt
+                    Bureau.Entite b = arriver(t);
+                    if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
+                    for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+                        ItemStack s = t.inventaire.getItem(i);
+                        if (s.is(net.minecraft.world.item.Items.CHARCOAL)) t.inventaire.setItem(i, b.ranger(s));
+                    }
+                    return Etat.OK;
+                }
+            }
+            return Etat.EN_COURS;
+        }
+
+        /** Sort de son sac un objet identique à celui-ci (même bois), ou rien. */
+        static ItemStack sortirPareil(Travailleur t, ItemStack modele) {
+            for (int i = 0; i < t.inventaire.getContainerSize(); i++)
+                if (ItemStack.isSameItemSameComponents(t.inventaire.getItem(i), modele)) { t.inventaire.setChanged(); return t.inventaire.getItem(i).split(1); }
+            return ItemStack.EMPTY;
         }
     }
 

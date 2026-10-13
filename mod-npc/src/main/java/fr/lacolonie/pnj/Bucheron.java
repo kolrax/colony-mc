@@ -1,11 +1,14 @@
 package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -51,30 +54,47 @@ final class Bucheron extends Metier {
         if (!t.equiper(Actions.Filtre.de("#minecraft:axes")))
             Cerveau.ecrire(t, "hache", 1800, "hache");
 
-        // 1. Replanter les souches vides proches s'il a des pousses.
-        List<Long> souches = new ArrayList<>(Arrays.stream(m.getLongArray("souches")).boxed().toList());
-        if (!souches.isEmpty() && t.compter(Actions.Filtre.de("#minecraft:saplings")) > 0) {
-            BlockPos s = BlockPos.of(souches.remove(0));
-            m.putLongArray("souches", souches);
-            if (s.distSqr(t.blockPosition()) < 24 * 24 && l.isLoaded(s) && Monde.libre(l, s) && l.getBlockState(s.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
-                Cerveau.lancer(t, new Actions.Poser(s, Actions.Filtre.de("#minecraft:saplings")));
-                return;
-            }
-        }
-
-        // 2. Ramasser ce qui traîne (bois, pousses, pommes), pas plus d'une fois par 45 s
-        //    (un objet coincé dans les feuilles ne doit pas l'occuper indéfiniment).
+        // 1. Ramasser ce qui traîne (bois, pousses, pommes tombées des feuilles), pas plus d'une fois par 45 s
+        //    (un objet coincé dans les feuilles ne doit pas l'occuper indéfiniment) ; tout de suite après un abattage.
         if (Cerveau.temps(t) >= m.getLong("ramassage") && !l.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, t.getBoundingBox().inflate(10)).isEmpty()) {
             m.putLong("ramassage", Cerveau.temps(t) + 45);
             Cerveau.lancer(t, new Actions.Ramasser(10, Actions.Filtre.de("tout")));
             return;
         }
 
+        // 2. Replanter les souches proches, avec la pousse de leur bois (une autre s'il n'en a pas) ; un géant 2 x 2 :
+        //    4 pousses en carré s'il en a 4 de son bois (un chêne noir ne repousse pas autrement), sinon une seule.
+        ListTag souches = m.getList("plants", Tag.TAG_COMPOUND);
+        if (!souches.isEmpty() && t.compter(POUSSES) > 0) {
+            CompoundTag s = souches.getCompound(0);
+            souches.remove(0);
+            BlockPos p = BlockPos.of(s.getLong("p"));
+            Actions.Filtre f = Actions.Filtre.de(s.getString("f"));
+            if (s.getBoolean("carre")) {
+                List<BlockPos> carre = t.compter(f) >= 4 ? List.of(p, p.east(), p.south(), p.south().east()) : List.of(p);
+                for (int i = carre.size() - 1; i >= 0; i--) souches.add(0, souche(carre.get(i), f.toString(), false));
+                s = souches.getCompound(0);
+                souches.remove(0);
+            }
+            m.put("plants", souches);
+            p = BlockPos.of(s.getLong("p"));
+            if (t.compter(f) == 0) f = POUSSES;
+            if (p.distSqr(t.blockPosition()) < 24 * 24 && l.isLoaded(p) && Monde.libre(l, p) && l.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) {
+                Cerveau.lancer(t, new Actions.Poser(p, f));
+                return;
+            }
+        }
+
         // 3. L'arbre du bon bois le plus proche de lui.
         BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t);
         if (arbre != null && t.peutAller(arbre)) {
-            if (souches.size() < 16) { souches.add(arbre.asLong()); m.putLongArray("souches", souches); }
+            if (souches.size() < 16) {
+                BlockPos coin = carre(l, arbre);
+                souches.add(souche(coin != null ? coin : arbre, pousse(l.getBlockState(arbre)), coin != null));
+                m.put("plants", souches);
+            }
             if (!t.chezLui(arbre)) m.putLong("coin_" + c.id, arbre.asLong()); // un bon coin loin de chez lui : il y reviendra
+            m.putLong("ramassage", 0); // ce qui tombera des feuilles : ramassé juste après
             Cerveau.lancer(t, new Actions.Abattre(arbre));
             return;
         }
@@ -108,6 +128,49 @@ final class Bucheron extends Metier {
             return;
         }
         if (!aller(t, e, c)) Cerveau.oublierExploration(t, c.id);
+    }
+
+    static final Actions.Filtre POUSSES = Actions.Filtre.de("#minecraft:saplings");
+
+    static CompoundTag souche(BlockPos p, String pousse, boolean carre) {
+        CompoundTag s = new CompoundTag();
+        s.putLong("p", p.asLong());
+        s.putString("f", pousse);
+        if (carre) s.putBoolean("carre", true);
+        return s;
+    }
+
+    /** Le coin nord-ouest du tronc 2 x 2 (chêne noir, grand sapin…) dont fait partie ce pied, ou null pour un arbre ordinaire. */
+    static BlockPos carre(ServerLevel l, BlockPos pied) {
+        for (int dx = -1; dx <= 0; dx++)
+            for (int dz = -1; dz <= 0; dz++) {
+                BlockPos c = pied.offset(dx, 0, dz);
+                boolean ok = true;
+                for (BlockPos q : List.of(c, c.east(), c.south(), c.south().east()))
+                    ok &= l.getBlockState(q).is(net.minecraft.tags.BlockTags.LOGS) && l.getBlockState(q.below()).is(net.minecraft.tags.BlockTags.DIRT);
+                if (ok) return c;
+            }
+        return null;
+    }
+
+    /** La pousse de ce bois (« minecraft:birch_log » → « minecraft:birch_sapling », palétuvier : sa propagule), sinon n'importe laquelle. */
+    static String pousse(String bois) {
+        ResourceLocation id = ResourceLocation.tryParse(bois);
+        if (id == null || !id.getPath().endsWith("_log")) return POUSSES.toString();
+        String base = id.getPath().substring(0, id.getPath().length() - 4);
+        for (String p : List.of(base + "_sapling", base + "_propagule")) {
+            ResourceLocation r = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), p);
+            if (BuiltInRegistries.ITEM.containsKey(r)) return r.toString();
+        }
+        return POUSSES.toString();
+    }
+
+    static String pousse(BlockState bois) { return pousse(BuiltInRegistries.BLOCK.getKey(bois.getBlock()).toString()); }
+
+    /** La pousse d'une essence du catalogue (« bouleau »), sinon n'importe laquelle. */
+    static String pousseDe(String essence) {
+        Metier.Commande c = Metier.catalogue("bucheron", essence);
+        return c instanceof Bois b ? pousse(b.bois.toString()) : POUSSES.toString();
     }
 
     /** Part vers ce point (en sortie ou en expédition). Faux si c'est trop loin : il le dit à son chef. */

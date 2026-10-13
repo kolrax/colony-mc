@@ -108,6 +108,8 @@ final class Consignes {
 
     /** Les chantiers creusés selon un plan ({@link Fouille}) : salle ou cave, carrière, tunnel. */
     static final Set<String> FOUILLES = Set.of("tunnel", "salle", "carriere");
+    /** Les chantiers du bûcheron sur une surface dite (cahier 3.6) : forêt en rangs, terrain à défricher. */
+    static final Set<String> TERRAINS = Set.of("foret", "defricher_zone");
     /** Au plus tant de liquides bouchés pour un chantier ; au-delà, il s'arrête (un lac, une rivière). */
     static final int BOUCHONS = 24;
 
@@ -166,7 +168,7 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
             if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
@@ -177,6 +179,7 @@ final class Consignes {
             if (p == null) return "Qui ça, chef ?";
             entite = p.getUUID();
         }
+        int n = f.nombre() > 0 ? f.nombre() : nombre(e);
         switch (e.comportement()) {
             case "combat" -> {
                 switch (a) {
@@ -207,6 +210,29 @@ final class Consignes {
                     // Une salle ou une carrière : tout le chantier près de son poste.
                     if (!a.equals("tunnel") && t.bureau != null && !(t.chezLui(lieu) && t.chezLui(lieu.relative(d, p.longueur() - 1))))
                         return "C'est trop loin de mon poste, chef : je creuse près de chez nous.";
+                }
+                if (TERRAINS.contains(a)) {
+                    // Le sol sous l'endroit regardé (le chef peut viser un tronc, des feuilles, l'herbe).
+                    for (int i = 0; i < 40 && (t.level().getBlockState(lieu).is(BlockTags.LOGS) || t.level().getBlockState(lieu).is(BlockTags.LEAVES)
+                            || t.level().getBlockState(lieu).canBeReplaced()); i++) lieu = lieu.below();
+                    Fouille.Plan p = Fouille.lire(a.equals("foret") ? "foret" : "defriche", phrase, 0).vers(chef.getDirection().getName(), false);
+                    String essence = Fouille.essence(phrase);
+                    // Un chêne noir ne pousse que d'un carré de 4 pousses : la forêt se plante alors par carrés.
+                    boolean carre = Fouille.geants(phrase) || essence.equals("chene_noir");
+                    texte = a.equals("foret") ? p.texte() + "|" + Bucheron.pousseDe(essence.isEmpty() && carre ? "chene_noir" : essence) + "|" + (carre ? "carre" : "un") : p.texte();
+                    Direction d = chef.getDirection();
+                    // Tout le terrain près de son poste.
+                    if (t.bureau != null)
+                        for (int[] k : new int[][]{{-1, -1}, {-1, 1}, {1, -1}, {1, 1}})
+                            if (!t.chezLui(lieu.relative(d, k[0] * p.longueur() / 2).relative(d.getClockWise(), k[1] * p.largeur() / 2)))
+                                return "C'est trop loin de mon poste, chef : je travaille près de chez nous.";
+                }
+                if (a.equals("planches") || a.equals("charbon")) {
+                    // Le bois dit (« des planches de bouleau »), sinon n'importe quelle bûche (qui brûle, pour le charbon) ; la quantité dite.
+                    String essence = Fouille.essence(phrase);
+                    texte = Metier.catalogue("bucheron", essence) instanceof Bucheron.Bois b ? b.bois.toString() : a.equals("charbon") ? "#minecraft:logs_that_burn" : "#minecraft:logs";
+                    int q = Fouille.quantite(phrase);
+                    if (q > 0) n = Math.min(q, a.equals("planches") ? 640 : 64);
                 }
             }
             case "aller" -> {
@@ -247,7 +273,7 @@ final class Consignes {
         if (e.comportement().equals("parler")) fin = maintenant + Math.clamp(40 + texte.length() * 2L, 60, 240);
         if (e.comportement().equals("info")) fin = maintenant + 60;
         if (e.comportement().equals("manger")) fin = maintenant + 50;
-        Consigne c = new Consigne(e.id(), f.cible(), texte, f.nombre() > 0 ? f.nombre() : nombre(e), rang, total, fin, lieu, entite);
+        Consigne c = new Consigne(e.id(), f.cible(), texte, n, rang, total, fin, lieu, entite);
         // Un petit geste pendant une posture (« salue », au garde-à-vous) : il y revient ensuite.
         boolean court = !c.tenue() && Set.of("geste", "son", "parler", "info", "regarder", "musique", "manger").contains(e.comportement());
         Consigne avant = t.consigne;
@@ -859,6 +885,12 @@ final class Consignes {
                 if (t.compter(Actions.Filtre.de(f)) == 0) return mode.equals("torche_la") ? "Je n'ai pas de torche sur moi, chef." : "Je n'ai pas de pousse sur moi, chef.";
             }
             case "planter" -> { if (t.compter(Actions.Filtre.de("#minecraft:saplings")) == 0) return "Je n'ai pas de pousses à planter, chef."; }
+            case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
+            case "planches", "charbon" -> {
+                if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
+                if (mode.equals("charbon") && l.isLoaded(t.bureau) && Actions.Charbon.fourneau(l, t.bureau) == null)
+                    return "Il me faut un fourneau près du poste pour faire du charbon de bois, chef.";
+            }
             case "torches" -> {
                 if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0 && Bureau.entite(t) == null) return "Je n'ai pas de torches, chef.";
             }
@@ -1018,6 +1050,9 @@ final class Consignes {
         final Map<BlockPos, BlockPos> debout = new java.util.HashMap<>();
         BlockPos approche, aCote;
         int bouchons, laisses;
+        /** Forêt : pousses prévues et plantées ; planches et charbon : le travail au poste. */
+        int voulu, plantees;
+        Actions.Action atelier;
         boolean vide, repasse, descend, minerai;
         String instrument;
         int[] air;
@@ -1424,7 +1459,7 @@ final class Consignes {
             if (age == 0) {
                 switch (m) {
                     case "miner_la", "tunnel", "trou", "salle", "carriere" -> { if (!t.equiper(Actions.Filtre.de("#minecraft:pickaxes"))) t.equiper(Actions.Filtre.de("#minecraft:shovels")); }
-                    case "abattre_la", "abattre_autour" -> t.equiper(Actions.Filtre.de("#minecraft:axes"));
+                    case "abattre_la", "abattre_autour", "defricher_zone" -> t.equiper(Actions.Filtre.de("#minecraft:axes"));
                     default -> {}
                 }
                 chantier.addAll(chantier(t));
@@ -1432,6 +1467,7 @@ final class Consignes {
             if (sous != null) {
                 Actions.Etat r = deleguer(t, sous);
                 if (r == null) return Actions.Etat.EN_COURS;
+                if (r == Actions.Etat.ECHEC && m.equals("foret") && etape == 2) plantees--; // une pousse pas posée
                 if (r == Actions.Etat.ECHEC && Set.of("inaccessible", "pas_un_arbre").contains(raisonSous) && chantier.isEmpty())
                     return rate(t, "Je n'arrive pas à l'atteindre, chef.");
             }
@@ -1448,6 +1484,50 @@ final class Consignes {
                     etape++;
                     sous = new Actions.Abattre(a);
                     return Actions.Etat.EN_COURS;
+                }
+                case "foret" -> {
+                    String[] x = c.texte.split("\\|");
+                    Actions.Filtre pousse = Actions.Filtre.de(x.length > 1 ? x[1] : "#minecraft:saplings");
+                    boolean carre = x.length > 2 && x[2].equals("carre");
+                    if (etape == 0) {
+                        etape = 1;
+                        voulu = chantier.size();
+                        if (voulu == 0) return rate(t, "Il n'y a pas de terre libre pour planter là, chef.");
+                        // Il prend au dépôt les pousses qui lui manquent.
+                        int manque = voulu - t.compter(pousse);
+                        if (manque > 0 && Bureau.entite(t) != null) { sous = new Actions.Prendre(pousse, manque); return Actions.Etat.EN_COURS; }
+                    }
+                    if (etape == 1) {
+                        etape = 2;
+                        int a = t.compter(pousse), garde = carre ? a / 4 * 4 : a;
+                        if (garde == 0) return rate(t, carre ? "Il me faut 4 pousses de ce bois par arbre, chef, et je n'en ai pas assez, ni au dépôt."
+                                : "Je n'ai pas de pousses de ce bois, chef, ni sur moi ni au dépôt.");
+                        while (chantier.size() > garde) chantier.remove(chantier.size() - 1);
+                    }
+                }
+                case "planches", "charbon" -> {
+                    if (etape++ == 0) {
+                        atelier = m.equals("planches") ? new Actions.Planches(Actions.Filtre.de(c.texte), Math.max(1, c.nombre))
+                                : new Actions.Charbon(Actions.Filtre.de(c.texte), Math.max(1, c.nombre));
+                        sous = atelier;
+                        return Actions.Etat.EN_COURS;
+                    }
+                    if (atelier instanceof Actions.Planches p) {
+                        if (p.faites == 0) return rate(t, "Je n'ai plus de bûches, chef, ni sur moi ni au dépôt.");
+                        Voix.dire(t, p.faites + " planches au dépôt, chef." + ("depot_plein".equals(raisonSous) ? " Le dépôt est plein : j'ai gardé le reste sur moi." : ""), "calme");
+                        return ok(t);
+                    }
+                    if (atelier instanceof Actions.Charbon ch && ch.recu > 0) {
+                        Voix.dire(t, ch.recu + " charbon" + (ch.recu > 1 ? "s" : "") + " de bois au dépôt, chef.", "calme");
+                        return ok(t);
+                    }
+                    return rate(t, switch (raisonSous) {
+                        case "pas_de_fourneau" -> "Il me faut un fourneau près du poste pour faire du charbon de bois, chef.";
+                        case "pas_de_bois" -> "Je n'ai pas de bûches à cuire, chef, ni au dépôt.";
+                        case "four_occupe" -> "Le fourneau est déjà pris par autre chose, chef.";
+                        case "pas_de_combustible" -> "Il me faut de quoi chauffer le fourneau, chef : du charbon, ou plus de bûches.";
+                        default -> "Le feu n'a rien donné, chef.";
+                    });
                 }
                 case "torches" -> {
                     if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0) {
@@ -1481,15 +1561,32 @@ final class Consignes {
                         if (!l.getBlockState(p).canBeReplaced()) continue;
                         sous = new Actions.Poser(p, Actions.Filtre.de("minecraft:torch"));
                     }
-                    case "planter", "planter_la" -> {
+                    case "planter", "planter_la", "foret" -> {
                         if (!l.getBlockState(p).canBeReplaced() || !l.getBlockState(p.below()).is(BlockTags.DIRT)) continue;
-                        sous = new Actions.Poser(p, Actions.Filtre.de("#minecraft:saplings"));
+                        String[] x = c.texte.split("\\|");
+                        sous = new Actions.Poser(p, Actions.Filtre.de(m.equals("foret") && x.length > 1 ? x[1] : "#minecraft:saplings"));
+                        plantees++;
+                    }
+                    case "defricher_zone" -> {
+                        BlockState s = l.getBlockState(p);
+                        if (s.is(BlockTags.LOGS)) {
+                            // Sac presque plein : au dépôt d'abord (le bois d'un arbre ne tiendrait pas), puis il reprend.
+                            if (Monde.libres(t) < 2 && t.bureau != null && !vide) {
+                                vide = true;
+                                chantier.add(0, p);
+                                Metier mt = Metier.de(t.metier);
+                                sous = new Actions.Deposer(mt == null ? List.of() : mt.garder);
+                            } else { vide = false; sous = new Actions.Abattre(p); }
+                        } else if (plante(l, p, s)) sous = new Actions.Casser(p);
                     }
                     default -> {}
                 }
                 if (sous != null) return Actions.Etat.EN_COURS;
             }
             if (m.equals("torches") && etape < 2) return Actions.Etat.EN_COURS;
+            if (m.equals("defricher_zone") && etape == 0) { etape = 1; sous = new Actions.Ramasser(Fouille.TERRAIN_MAX, Actions.Filtre.de("tout")); return Actions.Etat.EN_COURS; }
+            if (m.equals("defricher_zone")) Voix.dire(t, "Le terrain est dégagé, chef : on peut y bâtir.", "calme");
+            if (m.equals("foret")) Voix.dire(t, "La forêt est plantée, chef." + (plantees < voulu ? " Il me manquait des pousses : j'en ai mis " + plantees + " sur " + voulu + "." : ""), "calme");
             // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
             if (FOUILLES.contains(m) && !repasse) { repasse = true; laisses = 0; chantier.addAll(chantier(t)); return Actions.Etat.EN_COURS; }
             if (FOUILLES.contains(m)) Voix.dire(t, (m.equals("tunnel") ? "Le tunnel est percé, chef." : m.equals("salle") ? "C'est creusé, chef." : "La carrière est vidée, chef.")
@@ -1611,6 +1708,42 @@ final class Consignes {
                         r.add(q.immutable());
                     }
                 }
+                case "foret" -> {
+                    String[] x = c.texte.split("\\|");
+                    Fouille.Plan p = Fouille.Plan.de(x[0]);
+                    if (p == null) break;
+                    Direction d = Direction.byName(p.direction());
+                    if (d == null || d.getAxis().isVertical()) d = Direction.NORTH;
+                    // Un carré de 4 pousses n'est gardé que si les 4 places sont bonnes, au même niveau.
+                    Map<Integer, List<BlockPos>> groupes = new LinkedHashMap<>();
+                    for (int[] b : Fouille.rangs(p, x.length > 2 && x[2].equals("carre")))
+                        groupes.computeIfAbsent(b[2], k -> new ArrayList<>()).add(terre(t, v.relative(d, b[0]).relative(d.getClockWise(), b[1]), v.getY()));
+                    for (List<BlockPos> g : groupes.values())
+                        if (g.stream().allMatch(q -> q != null && q.getY() == g.get(0).getY())) r.addAll(g);
+                }
+                case "defricher_zone" -> {
+                    Fouille.Plan p = Fouille.Plan.de(c.texte);
+                    if (p == null) break;
+                    Direction d = Direction.byName(p.direction());
+                    if (d == null || d.getAxis().isVertical()) d = Direction.NORTH;
+                    // Les arbres naturels d'abord, puis herbes, fleurs et buissons, rang par rang en serpentin.
+                    List<BlockPos> plantes = new ArrayList<>();
+                    int f0 = -(p.longueur() - 1) / 2, c0 = -(p.largeur() - 1) / 2;
+                    for (int i = 0; i < p.longueur(); i++)
+                        for (int j = 0; j < p.largeur(); j++) {
+                            BlockPos col = v.relative(d, f0 + i).relative(d.getClockWise(), c0 + (i % 2 == 0 ? j : p.largeur() - 1 - j));
+                            if (!l.isLoaded(col)) continue;
+                            for (int y = v.getY() - 3; y <= v.getY() + 4; y++) {
+                                BlockPos q = col.atY(y);
+                                BlockState s = l.getBlockState(q);
+                                if (s.is(BlockTags.LOGS)) {
+                                    BlockState sous = l.getBlockState(q.below());
+                                    if (sous.is(BlockTags.DIRT) && Actions.arbre((ServerLevel) l, q) != null && !Mineur.interdit(t, q, true)) r.add(q);
+                                } else if (plante(l, q, s)) plantes.add(q);
+                            }
+                        }
+                    r.addAll(plantes);
+                }
                 case "defricher" -> {
                     int ray = Math.max(2, c.nombre);
                     for (BlockPos q : BlockPos.betweenClosed(t.blockPosition().offset(-ray, -2, -ray), t.blockPosition().offset(ray, 2, ray))) {
@@ -1623,6 +1756,29 @@ final class Consignes {
                 default -> {}
             }
             return r;
+        }
+
+        /**
+         * Où planter une pousse dans cette colonne, près de la hauteur y0 : la place libre (air, herbe) sur de la terre ou de
+         * l'herbe, au ciel ouvert, près de son poste, jamais sur un bloc construit ; null s'il n'y en a pas.
+         */
+        static BlockPos terre(Travailleur t, BlockPos col, int y0) {
+            var l = t.level();
+            if (!l.isLoaded(col)) return null;
+            for (int y = y0 + 4; y >= y0 - 3; y--) {
+                BlockPos q = col.atY(y);
+                BlockState s = l.getBlockState(q), sous = l.getBlockState(q.below());
+                if (!s.canBeReplaced() || !s.getFluidState().isEmpty() || sous.canBeReplaced()) continue;
+                return sous.is(BlockTags.DIRT) && !Monde.construit(l, q.below()) && (t.bureau == null || t.chezLui(q)) && l.canSeeSky(q) ? q : null;
+            }
+            return null;
+        }
+
+        /** Herbe, fleur, fougère, buisson : ce qu'on arrache pour défricher (jamais une feuille posée, une pousse plantée, un contenant). */
+        static boolean plante(net.minecraft.world.level.Level l, BlockPos q, BlockState s) {
+            if (s.isAir() || s.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock || s.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock
+                    || !s.getFluidState().isEmpty() || l.getBlockEntity(q) != null || Monde.construit(l, q)) return false;
+            return s.is(BlockTags.FLOWERS) || s.is(BlockTags.REPLACEABLE_BY_TREES) || s.is(Blocks.SWEET_BERRY_BUSH) || s.is(Blocks.AZALEA) || s.is(Blocks.DEAD_BUSH);
         }
 
         /** Des endroits sombres à éclairer autour de lui (un sol solide, de la place, aucune lumière), espacés de 5 blocs. */
