@@ -52,6 +52,12 @@ public abstract class Metier {
     /** Appelé même quand il est occupé : réagir à une urgence. */
     void vigilance(Travailleur t) {}
 
+    /**
+     * Sans action, avant tout le reste (faim, paie, ordres) : vrai s'il lance de quoi se tirer d'un endroit d'où le chemin
+     * ordinaire ne sait pas sortir (l'éleveur, resté dans un enclos fermé par un portillon).
+     */
+    boolean sortir(Travailleur t) { return false; }
+
     /** En mode « Suivre » : vrai s'il a trouvé mieux à faire que suivre (le guerrier combat). */
     boolean escorter(Travailleur t) { return false; }
 
@@ -191,7 +197,7 @@ public abstract class Metier {
     static final Map<String, Metier> TOUS = new LinkedHashMap<>();
 
     static {
-        for (Metier m : List.of(new Mineur(), new Bucheron(), new Guerrier(), new Fermier())) TOUS.put(m.id, m);
+        for (Metier m : List.of(new Mineur(), new Bucheron(), new Guerrier(), new Fermier(), new Eleveur())) TOUS.put(m.id, m);
     }
 
     static Metier de(String id) { return TOUS.get(id); }

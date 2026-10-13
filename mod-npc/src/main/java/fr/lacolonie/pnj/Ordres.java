@@ -99,6 +99,15 @@ final class Ordres {
         fermier.put("betterave", List.of("betterave", "betteraves"));
         NOMS.put("fermier", fermier);
 
+        Map<String, List<String>> eleveur = new LinkedHashMap<>();
+        eleveur.put("cuir", List.of("cuir", "cuirs", "peau", "peaux", "peau de vache", "peaux de vache"));
+        eleveur.put("laine", List.of("laine", "laines", "toison", "toisons", "pelote de laine", "pelotes de laine"));
+        eleveur.put("viande", List.of("viande", "viandes", "viande crue", "viandes crues", "boeuf", "porc", "poulet cru", "cotelette", "cotelettes",
+                "cotelette de porc", "cotelettes de porc", "gigot", "gigots", "lard"));
+        eleveur.put("oeufs", List.of("oeuf", "oeufs"));
+        eleveur.put("lait", List.of("lait", "seau de lait", "seaux de lait"));
+        NOMS.put("eleveur", eleveur);
+
         Map<String, List<String>> guerrier = new LinkedHashMap<>();
         guerrier.put("escorter", List.of("escorte moi", "escorte", "escorter", "protege moi", "garde du corps"));
         guerrier.put("ronde", List.of("fais la ronde", "la ronde", "ronde", "patrouille", "patrouiller", "patrouilles"));
@@ -140,7 +149,7 @@ final class Ordres {
     /** Minuscules, sans accents ni ponctuation, les mots séparés par une espace (« Rentre au poste ! » → « rentre au poste »). */
     static String normaliser(String s) {
         String n = Normalizer.normalize(s.toLowerCase(java.util.Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        n = n.replace('œ', 'o').replace('æ', 'a');
+        n = n.replace("œ", "oe").replace("æ", "ae"); // « œufs », « vœu » : écrits « oeufs », « voeu » dans le vocabulaire
         n = n.replaceAll("(\\d)\\s*h\\s*(\\d)", "$1h$2");
         n = n.replaceAll("[^a-z0-9?]+", " ").replace("?", " ? ");
         return " " + n.trim().replaceAll("\\s+", " ") + " ";
@@ -455,6 +464,8 @@ final class Ordres {
                     new String[]{"soigneur", "soigneurs"}, new String[]{"soigneuse", "soigneuses"}),
             "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),
             "fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"}),
+            "eleveur", List.of(new String[]{"eleveur", "eleveurs"}, new String[]{"eleveuse", "eleveuses"}, new String[]{"berger", "bergers"}, new String[]{"bergere", "bergeres"},
+                    new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"}),
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");

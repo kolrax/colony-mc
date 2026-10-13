@@ -92,6 +92,8 @@ final class Cerveau {
             }
             return;
         }
+        // Resté quelque part d'où le chemin ordinaire ne sort pas (un enclos et son portillon) : il en sort d'abord.
+        if (m.sortir(t)) return;
         CompoundTag mem = t.memoire;
 
         // Attaqué (même en grève) : un combattant riposte contre un monstre ou un autre PNJ, sinon il recule ; les autres

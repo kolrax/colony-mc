@@ -240,3 +240,11 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Tests sur ce code : **152/152 JUnit, 204/204 en jeu** (lancés sur le code d'avant `5217340`, qui ne change que `mod_version`).
   - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, 1 mixin client de `create_sa`), comme avant.
 - **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé).
+
+## 2026-10-13 22 h 27 - 22 h 29 UTC : livraison 0.9.12 (fermier, blessures)
+- **0.9.12**, commit `25c01ad` (sur `main`), livrée sur le serveur à 22 h 27 UTC (personne connecté : `list` = 0 joueur), « Done » à 22 h 28 min 05 s, sans erreur du mod ; `colonie_pnj-0.9.11.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.12, 1 172 856 octets, sha1 `fc4b2f1d…`, copie figée du jar).
+  - **Fermier** (lot 6, première passe) : récolte et ressème ses champs, laboure et plante un champ sur ordre (« plante un champ de blé ici, 9 sur 9 »), eau au centre seulement si le terrain est de niveau, jamais les cultures d'un voisin, « oublie ce champ », pain au poste.
+  - **Blessures** (lot 5, première passe) : légères, graves ou très graves selon la vie vraiment perdue ; plus lent quand c'est grave, au repos quand c'est très grave ; guérison d'un cran par jour ; à terre 3, 5 ou 8 minutes selon la gravité avant la mort ; les 3 compagnons les plus proches viennent autour du blessé.
+  - Tests sur ce commit : **160/160 JUnit, 217/217 en jeu** au 2e passage ; au 1er, seul `TestsMineur.mineurNeCassePasUneStructure` a échoué (test déjà connu instable, sans rapport).
+  - Journal du serveur : seules erreurs, celles des autres mods (tables de butin de `railways` et `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 20 min de retard (« Can't keep up », 24 023 ticks) : machine sans doute mise en pause par l'hébergeur.
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé ; tenue et icône du fermier déjà dans 0.5.1).
