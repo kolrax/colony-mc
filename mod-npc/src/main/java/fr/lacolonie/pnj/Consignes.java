@@ -198,7 +198,7 @@ final class Consignes {
                 if (refus != null) return refus;
                 if (FOUILLES.contains(a)) {
                     // Le plan dit (mesures, direction) ; de face, il creuse vers l'intérieur de la paroi, au niveau des pieds du chef.
-                    Fouille.Plan p = Fouille.lire(a, phrase, nombre(e));
+                    Fouille.Plan p = Fouille.lire(a, phrase, f.nombre() > 0 ? f.nombre() : nombre(e));
                     Direction face = chef.pick(48, 1.0f, false) instanceof BlockHitResult b ? b.getDirection() : Direction.UP;
                     boolean bas = p.descend() || a.equals("salle") && face == Direction.UP;
                     Direction d = !p.direction().isEmpty() ? Direction.byName(p.direction()) : face.getAxis().isHorizontal() ? face.getOpposite() : chef.getDirection();
@@ -1011,14 +1011,14 @@ final class Consignes {
         /** Ticks pendant lesquels le messager a hélé l'ouvrier visé (il ne le fige pas plus de {@link #HELER_MAX}). */
         int hele;
         boolean arrive;
-        final List<BlockPos> chantier = new ArrayList<>();
+        final List<BlockPos> chantier = new java.util.LinkedList<>();
         /** Chantier selon un plan : où poser une torche, liquides bouchés, blocs laissés (pas à nous), sac vidé, deuxième passe. */
         final java.util.Set<BlockPos> torches = new java.util.HashSet<>();
         /** D'où creuser chaque bloc du plan (le sol de la tranche d'avant, la couche au-dessus) : un bloc dans la paroi ne s'atteint pas en marchant vers lui. */
         final Map<BlockPos, BlockPos> debout = new java.util.HashMap<>();
-        BlockPos approche;
+        BlockPos approche, aCote;
         int bouchons, laisses;
-        boolean vide, repasse;
+        boolean vide, repasse, descend, minerai;
         String instrument;
         int[] air;
 
@@ -1467,8 +1467,6 @@ final class Consignes {
                     String arret = fouiller(t, p);
                     if (arret != null) { Voix.dire(t, arret, "inquiet"); return ok(t); }
                     if (sous != null) return Actions.Etat.EN_COURS;
-                    // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
-                    if (chantier.isEmpty() && !repasse) { repasse = true; chantier.addAll(chantier(t)); }
                     continue;
                 }
                 switch (m) {
@@ -1492,8 +1490,10 @@ final class Consignes {
                 if (sous != null) return Actions.Etat.EN_COURS;
             }
             if (m.equals("torches") && etape < 2) return Actions.Etat.EN_COURS;
+            // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
+            if (FOUILLES.contains(m) && !repasse) { repasse = true; laisses = 0; chantier.addAll(chantier(t)); return Actions.Etat.EN_COURS; }
             if (FOUILLES.contains(m)) Voix.dire(t, (m.equals("tunnel") ? "Le tunnel est percé, chef." : m.equals("salle") ? "C'est creusé, chef." : "La carrière est vidée, chef.")
-                    + (laisses > 0 ? " Je n'ai pas touché à ce qui n'est pas à nous." : ""), "calme");
+                    + (laisses > 0 ? " J'ai laissé quelques blocs : pas à nous, ou trop risqués." : ""), "calme");
             return ok(t);
         }
 
@@ -1506,22 +1506,42 @@ final class Consignes {
          */
         String fouiller(Travailleur t, BlockPos p) {
             var l = t.level();
-            if (l.getBlockState(p).isAir()) {
+            BlockState st = l.getBlockState(p);
+            if (st.isAir()) {
                 if (torches.remove(p) && l.getMaxLocalRawBrightness(p) < 8 && t.compter(Actions.Filtre.de("minecraft:torch")) > 0)
                     sous = new Actions.Poser(p, Actions.Filtre.de("minecraft:torch"));
                 return null;
             }
             if (!cassable(l, p)) return null;
             if (Mineur.interdit(t, p, true)) { laisses++; return null; }
+            // Un liquide contre le bloc : comme le mineur (Mineur.creuserCase), il bouche la lave, et l'eau sous terre loin de
+            // toute construction (jamais un canal ni un puits) ; sinon, ou sans de quoi boucher, il laisse ce bloc.
             for (Direction d : Direction.values()) {
                 BlockPos n = p.relative(d);
-                if (Monde.liquide(l, n) == null) continue;
-                if (Itineraire.caseDeChantier(t, true) < 0 || ++bouchons > BOUCHONS) return "De l'eau ou de la lave, chef, et plus de quoi la boucher : je m'arrête là.";
+                String quoi = Monde.liquide(l, n);
+                if (quoi == null) continue;
+                boolean bouchable = l.getBlockState(n).getBlock() instanceof net.minecraft.world.level.block.LiquidBlock
+                        && ("lave".equals(quoi) || "eau".equals(quoi) && !l.canSeeSky(n.above()) && !Monde.construitAutour(l, n));
+                if (!bouchable || Itineraire.caseDeChantier(t, true) < 0 || ++bouchons > BOUCHONS) { laisses++; return null; }
                 chantier.add(0, p);
                 sous = Actions.aPortee(t, n) ? new Actions.Boucher(n) : new Actions.Aller(Vec3.atCenterOf(p), 2);
                 return null;
             }
-            if (Monde.libres(t) == 0 && Bureau.entite(t) != null) {
+            // Le bon outil : un minerai qu'il ne peut pas récolter (diamant à la pioche de pierre) serait perdu ; il le laisse.
+            if (st.requiresCorrectToolForDrops() && !t.getMainHandItem().isCorrectToolForDrops(st)) {
+                for (int i = 0; i < t.inventaire.getContainerSize(); i++)
+                    if (t.inventaire.getItem(i).isCorrectToolForDrops(st)) { t.equiper(Actions.Filtre.de(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(t.inventaire.getItem(i).getItem()).toString())); break; }
+                if (!t.getMainHandItem().isCorrectToolForDrops(st)) {
+                    if (t.compter(Actions.Filtre.de(Mineur.PIOCHE)) == 0 && !t.getMainHandItem().is(net.minecraft.tags.ItemTags.PICKAXES))
+                        return "Il me faut une pioche pour creuser ça, chef.";
+                    if (!minerai) { minerai = true; Voix.dire(t, "Ce minerai demande une meilleure pioche, chef : je le laisse en place.", "calme"); }
+                    laisses++;
+                    return null;
+                }
+            }
+            // Sac plein : au dépôt, même loin (Deposer y va), puis il reprend ; sans poste, ou dépôt plein, il s'arrête.
+            if (Monde.libres(t) == 0) {
+                if (t.bureau == null) return "Mon sac est plein, chef : je m'arrête là.";
                 if (vide) return "Mon sac est plein, et le dépôt aussi, chef.";
                 vide = true;
                 Metier mt = Metier.de(t.metier);
@@ -1530,6 +1550,25 @@ final class Consignes {
                 return null;
             }
             vide = false;
+            // En descendant : il ne casse jamais le bloc où il se tient si le dessous est vide (une grotte) ; il le casse depuis
+            // une place à côté, sur un appui solide qui n'est pas ce bloc (pas depuis le dessus) ; s'il n'y en a pas, il le laisse.
+            if (descend && Monde.chute(l, p) > 0) {
+                boolean dessus = t.getBoundingBox().inflate(0.05, 0, 0.05).intersects(p.getX(), p.getY() + 0.5, p.getZ(), p.getX() + 1, p.getY() + 3, p.getZ() + 1);
+                if (dessus || !Actions.aPortee(t, p)) {
+                    if (p.equals(aCote)) { laisses++; return null; }
+                    aCote = p;
+                    BlockPos place = null;
+                    // À deux blocs : arrivé « à peu près » (Aller s'arrête à 0,8 bloc), son corps n'est plus au-dessus.
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        BlockPos q = p.above().relative(d, 2);
+                        if (Monde.debout(l, q) && Monde.solide(l, q.below()) && !Monde.mortel(l, q)) { place = q; break; }
+                    }
+                    if (place == null) { laisses++; return null; }
+                    chantier.add(0, p);
+                    sous = new Actions.Aller(Vec3.atBottomCenterOf(place), 0.8);
+                    return null;
+                }
+            }
             if (!Actions.aPortee(t, p) && !p.equals(approche) && debout.containsKey(p)) {
                 approche = p;
                 chantier.add(0, p);
@@ -1554,6 +1593,7 @@ final class Consignes {
                     if (p == null) p = new Fouille.Plan(Math.max(1, c.nombre), 1, 2, c.texte, false);
                     Direction d = Direction.byName(p.direction());
                     if (d == null || d.getAxis().isVertical()) d = Direction.fromYRot(t.getYRot());
+                    descend = p.descend();
                     for (int[] b : Fouille.blocs(p)) {
                         BlockPos q = v.relative(d, b[0]).relative(d.getClockWise(), b[1]).above(b[2]);
                         r.add(q);

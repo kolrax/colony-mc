@@ -35,12 +35,14 @@ final class Fouille {
 
     static final int TORCHES = Mineur.TORCHES;
 
-    static final Pattern HAUT = Pattern.compile(" (\\d+) (?:blocs? )?de (?:haut|hauteur) | (?:haute?|hauteur) de (\\d+) ");
-    static final Pattern PROFOND = Pattern.compile(" (\\d+) (?:blocs? )?de (?:profondeur|profond|creux) | (?:profonde?|profondeur) de (\\d+) | (?:sur )?(\\d+) (?:couches|niveaux|etages) ");
-    static final Pattern LARGE = Pattern.compile(" (\\d+) (?:blocs? )?de (?:large|largeur) | (?:large|largeur) de (\\d+) ");
-    static final Pattern LONG = Pattern.compile(" (\\d+) (?:blocs? )?de (?:long|longueur) | (?:longue?|longueur) de (\\d+) ");
-    static final Pattern MESURES = Pattern.compile(" (\\d+) (?:blocs? )?(?:sur|x|par) (\\d+)(?: (?:blocs? )?(?:sur|x|par) (\\d+))? ");
-    static final Pattern SEULE = Pattern.compile(" de (\\d+) ");
+    // Les nombres : 4 chiffres au plus (un nombre plus long n'est pas lu, jamais d'erreur).
+    static final Pattern HAUT = Pattern.compile(" (\\d{1,4}) (?:blocs? )?de (?:haut|hauteur) | (?:haute?|hauteur) de (\\d{1,4}) ");
+    static final Pattern PROFOND = Pattern.compile(" (\\d{1,4}) (?:blocs? )?de (?:profondeur|profond|creux) | (?:profonde?|profondeur) de (\\d{1,4}) | (?:sur )?(\\d{1,4}) (?:couches|niveaux|etages) ");
+    static final Pattern LARGE = Pattern.compile(" (\\d{1,4}) (?:blocs? )?de (?:large|largeur) | (?:large|largeur) de (\\d{1,4}) ");
+    static final Pattern LONG = Pattern.compile(" (\\d{1,4}) (?:blocs? )?de (?:long|longueur) | (?:longue?|longueur) de (\\d{1,4}) ");
+    static final Pattern MESURES = Pattern.compile(" (\\d{1,4}) (?:blocs? )?(?:sur|x|par) (\\d{1,4})(?: (?:blocs? )?(?:sur|x|par) (\\d{1,4}))? ");
+    static final Pattern BLOCS = Pattern.compile(" (?:sur |de )?(\\d{1,4}) (?:blocs?|cases?|pas) ");
+    static final Pattern SEULE = Pattern.compile(" de (\\d{1,4}) ");
 
     /**
      * Le plan d'un chantier {@code genre} (« salle », « carriere » ou « tunnel ») d'après la phrase du chef. Ce qui n'est pas
@@ -48,7 +50,8 @@ final class Fouille {
      * (« de train » : 16 x 3 x 4). Les mesures sont bornées (une salle de 16 sur 16 au plus, un tunnel de 64 blocs).
      */
     static Plan lire(String genre, String phrase, int longueur) {
-        String n = chiffres(Ordres.normaliser(phrase == null ? "" : phrase).replaceAll("(\\d)x(\\d)", "$1 x $2"));
+        String n = chiffres(Ordres.normaliser(phrase == null ? "" : phrase).replaceAll("(\\d)x(\\d)", "$1 x $2"))
+                .replace(" en train de ", " ").replace(" en train d ", " "); // « tu es en train de creuser » n'est pas un train
         boolean tunnel = genre.equals("tunnel"), carriere = genre.equals("carriere");
         boolean train = tunnel && Ordres.dit(n, "train", "trains", "rail", "rails", "chemin de fer", "wagonnet", "wagonnets");
         int lo = tunnel ? (train ? 16 : Math.max(1, longueur)) : carriere ? 8 : 5, la = tunnel ? (train ? 3 : 1) : lo, ha = tunnel ? (train ? 4 : 2) : carriere ? 4 : 3;
@@ -57,14 +60,18 @@ final class Fouille {
         if ((v = prendre(PROFOND, n)) != null) { ha = v[0]; n = enlever(PROFOND, n); }
         if ((v = prendre(LARGE, n)) != null) { la = v[0]; n = enlever(LARGE, n); }
         if ((v = prendre(LONG, n)) != null) { lo = v[0]; n = enlever(LONG, n); }
+        // Un tunnel « de 3 sur 4 sur 20 blocs » : la longueur d'abord, le reste est la section.
+        if (tunnel && (v = prendre(BLOCS, n)) != null) { lo = v[0]; n = enlever(BLOCS, n); }
         Matcher m = MESURES.matcher(n);
         if (m.find()) {
-            lo = Integer.parseInt(m.group(1));
-            la = Integer.parseInt(m.group(2));
-            if (m.group(3) != null) ha = Integer.parseInt(m.group(3));
+            int a = Integer.parseInt(m.group(1)), b = Integer.parseInt(m.group(2));
+            if (m.group(3) != null) { lo = a; la = b; ha = Integer.parseInt(m.group(3)); }
+            else if (tunnel) { la = a; ha = b; } // un tunnel « de 3 sur 4 » : sa section, largeur sur hauteur
+            else { lo = a; la = b; }
             n = n.substring(0, m.start()) + " " + n.substring(m.end());
         }
-        if ((v = prendre(SEULE, n)) != null) { lo = v[0]; if (!tunnel) la = v[0]; }
+        // « de 20 blocs », « sur 20 blocs », « 20 blocs de tunnel », « une vingtaine de blocs » ; sinon « de 20 ».
+        if ((v = prendre(BLOCS, n)) != null || (v = prendre(SEULE, n)) != null) { lo = v[0]; if (!tunnel) la = v[0]; }
         if (tunnel) return new Plan(borne(lo, 1, 64), borne(la, 1, 5), borne(ha, 2, 5), direction(n), false);
         return new Plan(borne(lo, 1, 16), borne(la, 1, 16), carriere ? borne(ha, 1, 8) : borne(ha, 2, 6), direction(n), carriere);
     }
@@ -90,7 +97,7 @@ final class Fouille {
         if (!p.descend()) {
             for (int f = 0; f < p.longueur(); f++) {
                 for (int y = p.hauteur() - 1; y >= 0; y--) for (int c = cMin; c <= cMax; c++) r.add(new int[]{f, c, y, 0});
-                if ((f + 1) % TORCHES == 0) r.add(new int[]{f, cMin, Math.min(1, p.hauteur() - 1), 1});
+                if ((f + 1) % TORCHES == 0) r.add(new int[]{f, cMin, 0, 1}); // au sol : accrochée à la tranche suivante, elle tomberait en la creusant
             }
             return r;
         }
@@ -117,11 +124,20 @@ final class Fouille {
 
     static String enlever(Pattern p, String n) { return p.matcher(n).replaceFirst(" "); }
 
-    /** Les nombres en lettres en chiffres (« trente » → « 30 »), sauf « un », « une » (des articles). */
+    /** « une vingtaine (de) » : environ 20. */
+    static final java.util.Map<String, Integer> ENVIRON = java.util.Map.of("dizaine", 10, "douzaine", 12, "quinzaine", 15, "vingtaine", 20,
+            "trentaine", 30, "quarantaine", 40, "cinquantaine", 50, "soixantaine", 60, "centaine", 100);
+
+    /** Les nombres en lettres en chiffres (« trente » → « 30 », « une vingtaine de » → « 20 »), sauf « un », « une » (des articles). */
     static String chiffres(String n) {
         String[] mots = n.strip().split(" ");
         StringBuilder b = new StringBuilder(" ");
         for (int i = 0; i < mots.length; i++) {
+            if (ENVIRON.containsKey(mots[i])) {
+                b.append(ENVIRON.get(mots[i])).append(' ');
+                if (i + 1 < mots.length && (mots[i + 1].equals("de") || mots[i + 1].equals("d"))) i++;
+                continue;
+            }
             int[] nb = !mots[i].equals("un") && !mots[i].equals("une") && Ordres.NOMBRES.containsKey(mots[i]) ? Ordres.nombre(mots, i) : null;
             if (nb != null && nb[1] > 0) { b.append(nb[0]).append(' '); i += nb[1] - 1; }
             else b.append(mots[i]).append(' ');

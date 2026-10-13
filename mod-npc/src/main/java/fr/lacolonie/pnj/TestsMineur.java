@@ -191,6 +191,89 @@ public class TestsMineur {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /** Relecture : il se tient sur le bloc à creuser, un vide dessous (une grotte) : il se met à côté pour le casser, il ne tombe pas. */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void carriereAuDessusDUnVide(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 63);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(-3, -1, 1), o.offset(3, -1, 6));
+        // Une bande de 3 blocs (z 3 à 5) au-dessus d'un vide ; il se tient au milieu, sur le deuxième à creuser.
+        BlockPos bloc = o.offset(0, -1, 4);
+        for (int z = 3; z <= 5; z++) for (int y = 2; y <= 3; y++) l.setBlockAndUpdate(o.offset(0, -y, z), Blocks.AIR.defaultBlockState());
+        int[] plusBas = {Integer.MAX_VALUE};
+        h.onEachTick(() -> { if (bertrand.isAlive()) plusBas[0] = Math.min(plusBas[0], bertrand.getBlockY()); });
+        TestsIA.etapes(h, chef, e,
+                () -> bertrand.moveTo(bloc.getX() + 0.5, bloc.getY() + 1, bloc.getZ() + 0.5),
+                TestsIA.attendre(h, 10), // déplacé, il n'est visible du chef qu'au tick suivant
+                () -> {
+                    if (bertrand.position().distanceToSqr(Vec3.atBottomCenterOf(bloc.above())) > 0.05) {
+                        bertrand.moveTo(bloc.getX() + 0.5, bloc.getY() + 1, bloc.getZ() + 0.5);
+                        throw new net.minecraft.gametest.framework.GameTestAssertException("il doit se tenir sur le bloc : " + bertrand.position().subtract(Vec3.atBottomCenterOf(o)));
+                    }
+                },
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 0.5, o.getY() - 0.02, o.getZ() + 3.5));
+                    bertrand.parler(chef, "Fais une carrière de 3 sur 1, 1 de profondeur");
+                },
+                () -> h.assertTrue(l.getBlockState(bloc).isAir() && l.getBlockState(bloc.north()).isAir() && l.getBlockState(bloc.south()).isAir() && bertrand.consigne == null, "il doit creuser la bande (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")"),
+                TestsIA.attendre(h, 40),
+                () -> h.assertTrue(plusBas[0] >= o.getY(), "il ne doit pas tomber dans le vide (descendu à " + (plusBas[0] - o.getY()) + ")"),
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Relecture : sac plein, poste pas chargé (ou loin) : il va au poste au lieu de jeter ce qu'il creuse par terre. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void sacPleinRienParTerre(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 64);
+        Travailleur bertrand = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(3, 0, -2), o.offset(14, 3, 2));
+        bertrand.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_PICKAXE));
+        for (int i = 0; i < bertrand.inventaire.getContainerSize(); i++) bertrand.inventaire.setItem(i, new ItemStack(Items.DIRT, 64));
+        bertrand.bureau = o.offset(-40, 0, 0); // pas de poste chargé là : avant, il cassait quand même et jetait la pierre
+        long[] debut = {-1};
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
+                    bertrand.parler(chef, "Creuse un tunnel");
+                    debut[0] = h.getTick();
+                },
+                () -> {
+                    var par = l.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(o).inflate(24));
+                    h.assertTrue(par.isEmpty(), "rien par terre : " + par.stream().map(x -> x.getItem().toString()).toList());
+                    h.assertTrue(h.getTick() - debut[0] > 300, "attente");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Relecture : un minerai de diamant dans le tunnel et seulement une pioche de pierre : il le laisse (cassé, il serait perdu). */
+    @GameTest(template = "vide", timeoutTicks = 2400)
+    public static void laisseLeDiamantSansBonnePioche(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 65);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.STONE_PICKAXE));
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(3, 0, -2), o.offset(14, 3, 2));
+        BlockPos diamant = o.offset(10, 0, 0); // au bout : laissé en place, il ne barre pas le passage
+        l.setBlockAndUpdate(diamant, Blocks.DIAMOND_ORE.defaultBlockState());
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
+                    bertrand.parler(chef, "Creuse un tunnel");
+                },
+                () -> h.assertTrue(bertrand.consigne == null && l.getBlockState(o.offset(10, 1, 0)).isAir(), "il doit finir le tunnel (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")"),
+                () -> h.assertTrue(l.getBlockState(diamant).is(Blocks.DIAMOND_ORE), "le diamant doit rester en place"),
+                () -> TestsRepertoire.fin(e));
+    }
+
     /** « Creuse un tunnel de 12 blocs vers l'est » : 12 blocs de long (pas les 8 d'avant), 2 de haut, et pas un de plus. */
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void tunnelDeDouzeBlocs(GameTestHelper h) {

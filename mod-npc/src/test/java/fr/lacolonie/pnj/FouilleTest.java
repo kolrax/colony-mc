@@ -34,6 +34,19 @@ class FouilleTest {
         assertEquals("", Fouille.direction(Ordres.normaliser("Le tunnel est trop court")));
     }
 
+    /** Relecture : la section d'un tunnel, la longueur dite autrement, les nombres trop longs, « en train de ». */
+    @Test
+    void leTunnelDitAutrement() {
+        assertEquals("8 3 4 - face", plan("tunnel", "Creuse un tunnel de 3 sur 4"));
+        assertEquals("20 3 4 - face", plan("tunnel", "Creuse un tunnel de 3 sur 4 sur 20 blocs"));
+        assertEquals("20 1 2 - face", plan("tunnel", "Creuse un tunnel sur 20 blocs"));
+        assertEquals("20 1 2 - face", plan("tunnel", "Creuse 20 blocs de tunnel"));
+        assertEquals("20 1 2 - face", plan("tunnel", "Creuse un tunnel d'une vingtaine de blocs"));
+        assertEquals("8 1 2 - face", plan("tunnel", "Creuse un tunnel de 99999999999 blocs sur 12345678901 de large"));
+        assertEquals("8 1 2 - face", plan("tunnel", "Tu es en train de creuser un tunnel"));
+        assertEquals("30 1 2 - face", Fouille.lire("tunnel", "Creuse un tunnel", 30).texte()); // le nombre donné par l'IA
+    }
+
     @Test
     void relireLePlanDeLaConsigne() {
         Fouille.Plan p = Fouille.lire("tunnel", "tunnel de 20 blocs au sud", 8);

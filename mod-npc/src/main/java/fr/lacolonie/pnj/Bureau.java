@@ -208,23 +208,33 @@ public final class Bureau {
          */
         public ItemStack ranger(ItemStack s) {
             ItemStack reste = s;
-            for (Actions.Filtre sorte : SORTES) {
-                if (!sorte.objet(reste)) continue;
-                for (IItemHandler h : voisins()) {
-                    if (reste.isEmpty()) break;
-                    boolean deja = false;
-                    for (int i = 0; i < h.getSlots() && !deja; i++) deja = sorte.objet(h.getStackInSlot(i));
-                    if (deja) reste = ItemHandlerHelper.insertItemStacked(h, reste, false);
-                }
-                break;
+            List<IItemHandler> v = voisins();
+            int sorte = -1;
+            for (int k = 0; k < SORTES.size() && sorte < 0; k++) if (SORTES.get(k).objet(s)) sorte = k;
+            if (sorte >= 0) {
+                // Le coffre de sa sorte ; s'il n'y en a pas encore, un coffre vide (il deviendra le sien).
+                boolean trouve = false;
+                for (IItemHandler h : v) if (contient(h, SORTES.get(sorte))) { trouve = true; reste = ItemHandlerHelper.insertItemStacked(h, reste, false); }
+                for (IItemHandler h : v) if (!trouve && !reste.isEmpty() && vide(h)) { trouve = true; reste = ItemHandlerHelper.insertItemStacked(h, reste, false); }
             }
             if (reste.isEmpty()) return reste;
             reste = depot.addItem(reste);
-            for (IItemHandler h : voisins()) {
+            for (IItemHandler h : v) {
                 if (reste.isEmpty()) break;
+                if (sorte >= 0 && contient(h, SORTES.get(1 - sorte))) continue; // pas de minerai dans le coffre de pierre, ni l'inverse
                 reste = ItemHandlerHelper.insertItemStacked(h, reste, false);
             }
             return reste;
+        }
+
+        static boolean contient(IItemHandler h, Actions.Filtre f) {
+            for (int i = 0; i < h.getSlots(); i++) if (f.objet(h.getStackInSlot(i))) return true;
+            return false;
+        }
+
+        static boolean vide(IItemHandler h) {
+            for (int i = 0; i < h.getSlots(); i++) if (!h.getStackInSlot(i).isEmpty()) return false;
+            return true;
         }
 
         public int compter(Actions.Filtre f) {
