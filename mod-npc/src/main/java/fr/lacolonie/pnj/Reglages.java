@@ -51,6 +51,8 @@ public class Reglages {
     public int pnj_max_par_joueur = 5;
     public Chercheurs chercheurs = new Chercheurs();
     public List<String> metiers_inactifs = new ArrayList<>();
+    /** Une conversation entre deux ouvriers d'un même chef au plus toutes les N secondes, par colonie (0 = jamais). */
+    public int secondes_entre_conversations = 180;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -103,6 +105,7 @@ public class Reglages {
         minutes_entre_paies = Math.max(1, minutes_entre_paies);
         paies_impayees_avant_greve = Math.max(1, paies_impayees_avant_greve);
         pnj_max_par_joueur = Math.max(0, pnj_max_par_joueur);
+        secondes_entre_conversations = Math.max(0, secondes_entre_conversations);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
         chercheurs.duree_minutes = Math.max(1, chercheurs.duree_minutes);
     }

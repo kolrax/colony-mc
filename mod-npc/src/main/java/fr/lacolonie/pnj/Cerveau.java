@@ -62,6 +62,8 @@ final class Cerveau {
             t.coupVu = t.getLastHurtByMobTimestamp();
             t.finirAction("interrompu");
         }
+        // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
+        if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         if (t.action != null) { m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
