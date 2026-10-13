@@ -30,7 +30,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Journal des phrases non comprises (côté serveur), relu pour enrichir le répertoire (0.9.0, 12/10 ; à relire quand des joueurs auront parlé)
 - [x] Ordres longs : chaque jour, garder un stock, « quand tu as fini », « si tu vois… », emploi du temps, conditions, ordres de groupe — 0.9.1 (12/10), première passe : règles gardées par ouvrier (pluie, orage, nuit, jour, matin, après-midi, soir, « quand tu as fini », « si tu vois… »), mission « tous les jours », « les mineurs, tous à la mine », « oublie tes ordres » ; pas de changement de métier dans la journée
 - [x] Obéissance selon le moral et le caractère (refuser, négocier) ; refus d'un ordre mortel — 0.9.2 (13/10), première passe : moral de 0 à 100 (paie, faim, coups du chef, marchés), ouvrier qui râle, marchande une prime ou refuse un ordre pénible selon son moral et son caractère ; le chef peut insister ; ordres mortels toujours refusés
-- [ ] OpenRouter : conversation payante (5 € par mois, limite posée par KOLRAX sur sa clé), clé propre à chaque serveur ; Groq et Gemini gratuits restent en premier
+- [x] OpenRouter : conversation payante (5 € par mois, limite posée par KOLRAX sur sa clé), clé propre à chaque serveur ; Groq et Gemini gratuits restent en premier — 0.9.3 (13/10), première passe : secours de Groq pour la conversation seulement, budget du mois et du jour comptés au coût réel, clé posée sur le serveur, un appel réel vérifié (0,000012 $)
 - [ ] Mémoire longue des conversations (ordres, promesses, insultes, cadeaux)
 
 ## 4. Métiers actuels plus malins (indispensable)
