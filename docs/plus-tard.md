@@ -28,3 +28,11 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
   - `bloque` est calculé une fois avant la boucle des règles (une règle qui change son mode ne bloque pas les suivantes du même passage) ;
   - « attends » du chef pendant une attente posée par une règle : la fin de la règle peut le remettre au travail ;
   - « rentre » à un gréviste : rien n'est fait, sans message de grève.
+- Obéissance (lot 3, première passe, relecture du 13/10, non corrigés) :
+  - marché ou insistance **par lettre** impossibles : l'attente de 60 s est plus courte que l'aller-retour du corbeau ;
+  - le refus se contourne : « rentre au poste » ou « arrête de me suivre » (ordres légers) le remettent au travail ; l'écran du poste règle horaires et expéditions sans passer par l'obéissance ;
+  - réduire ses obligations (expéditions plus courtes, moins d'heures) compte comme pénible ;
+  - pas d'obéissance pendant les 30 s de confirmation d'un renvoi ;
+  - « mine à la verticale » compté comme mortel (discutable) ;
+  - un ordre visé accepté plus tard vise ce que le chef regarde au moment de l'acceptation ;
+  - chemins par l'IA (réponse imposée) non testés en jeu ; effets du moral dans la durée testés seulement en calcul pur.
