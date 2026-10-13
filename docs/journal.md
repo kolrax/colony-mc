@@ -179,3 +179,18 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Non testé en jeu : objet donné en main, coup du chef, lettres, chemins avec l'IA.
 - **Lot 3 « Ordres et IA » fini** (première passe de ses 6 cases).
 - Prochaine étape exacte : lot 4, **mineur plus malin** (cahier : suivre un filon, branches, carrière, tri, « trouve-moi du diamant », jamais sous la base d'un autre joueur ni dans une structure), première passe.
+
+## 2026-10-13 13 h - 15 h 05 UTC : session routine (cloud), lot 4 « mineur plus malin » (première passe)
+- **0.9.5 « mineur prudent »**, livrée sur le serveur à 13 h 38 UTC (personne connecté), « Done » sans erreur du mod.
+  - Jamais dans une **structure générée** (puits de mine, village, ruines, fort, cité antique…) : `Monde.structure` (`getStructureWithPieceAt`, sortie immédiate sans référence dans le chunk), vérifié pour les filons, les marches, couloirs et galeries, et l'entrée du puits. Il laisse, change d'endroit et écrit au chef où il l'a trouvée.
+  - Jamais à moins de 32 blocs à l'horizontale du **poste d'un autre joueur** (`Mineur.baseVoisine`, `Courrier.postes`) : lettre « les terres de Robert ».
+  - Une lettre par structure (zone de 128 blocs) et par voisin toutes les 6 h ; jamais un bloc construit cassé dans ses galeries (`Monde.construit`).
+  - « Trouve-moi du diamant » = commande (32 diamants), plus l'action « montrer le minerai ».
+  - Tests : `TestsMineur` (lot `voisins` : vraie `StructureStart` d'une pièce posée dans le chunk ; faux poste voisin), `OrdresTest.chercherUnMineraiPrecis`. Relu une fois : rien de bloquant, 3 points corrigés.
+- **0.9.6 « chantiers du mineur »**, livrée sur le serveur vers 15 h UTC (voir ci-dessous).
+  - **Salle / cave** (« creuse une salle de 7 sur 4 », 5 × 5 × 3 par défaut), **carrière** (8 × 8 sur 4 couches, escalier pour remonter), **tunnel selon un plan** (« tunnel de 30 blocs vers le nord », « tunnel de train » 3 × 4 × 16, 64 au plus). Nouvelle classe pure `Fouille` (lecture des mesures, ordre des blocs), exécution dans `Consignes.Faire.fouiller`. Sécurités : jamais au-dessus du vide (il casse depuis une place sûre à 2 blocs), jamais un bloc construit, une structure ou les terres d'un voisin, lave bouchée, eau seulement sous terre loin des constructions, minerai laissé sans la bonne pioche, sac plein → dépôt (même loin du poste), deuxième passe.
+  - **Tri au dépôt** (tout ouvrier) : minerai dans le coffre voisin du poste qui a déjà du minerai, pierre avec la pierre, sinon un coffre vide ; rien de perdu.
+  - Tests : `FouilleTest` (6 JUnit), `TestsMineur` (salle, carrière, tunnel de 12, tri, carrière au-dessus d'un vide, sac plein sans rien par terre, diamant laissé sans bonne pioche), chacun vu en échec sur l'ancien code. Relu une fois : rien de bloquant, 8 points corrigés (dont une chute mortelle possible dans une grotte et des objets jetés au sol loin du poste).
+- Mesures : **122/122 JUnit, 164/164 en jeu** (lancés par moi avant chaque push). Instables vus par le développeur sous retard du serveur : `mineurNeCassePasUneStructure` (2 fois, vert ensuite), `iavoix` (réseau). Modpack inchangé (0.4.9), canal réseau inchangé.
+- Non testé en jeu : vraie structure générée (le monde plat de test n'en a pas), bouchage d'eau pendant un chantier, tri vers un coffre vide, tunnel de train 3 × 4, charge à 50 PNJ. Restes dans `docs/plus-tard.md`.
+- Prochaine étape exacte : lot 4, **bûcheron** (feuilles, forêt en rangs, essence demandée, planches et charbon de bois, défricher), première passe. Le mineur garde « suivre un filon » et « galeries en branches » tels qu'avant (déjà faits).
