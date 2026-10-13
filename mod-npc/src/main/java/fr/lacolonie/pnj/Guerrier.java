@@ -392,7 +392,7 @@ final class Guerrier extends Metier {
         t.memoire.putInt("poste", poste);
         t.memoire.putLong("pause", maintenant + (ronde ? 4 : 15));
         // À la garde, sans menace, il s'entraîne de temps en temps sur un mannequin près du poste (une fois par tour).
-        if (!ronde && poste == 0) {
+        if (!ronde && poste == 1) {
             ArmorStand mannequin = t.level().getEntitiesOfClass(ArmorStand.class, new AABB(b).inflate(10, 3, 10), e -> e.isAlive() && !e.isMarker())
                     .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(Vec3.atCenterOf(b)))).orElse(null);
             if (mannequin != null) { Cerveau.dire(t, "mannequin", 600, "Un peu d'exercice, ça garde le bras ferme."); Cerveau.lancer(t, new Mannequin(mannequin)); return; }

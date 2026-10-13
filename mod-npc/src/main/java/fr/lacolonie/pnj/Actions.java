@@ -714,13 +714,13 @@ public final class Actions {
             double d2 = t.distanceToSqr(cible);
             boolean creeper = cible instanceof net.minecraft.world.entity.monster.Creeper;
             boolean vue = t.getSensing().hasLineOfSight(cible);
-            // De loin, à l'arc : il ne va pas au-devant d'un creeper, il recule et le tire.
-            if (arc && (d2 > 4 * 4 || creeper) && d2 < 24 * 24) {
-                if (creeper && d2 < 7 * 7) {
+            // De loin, à l'arc : il garde ses distances (de loin avec un creeper, qu'il ne va jamais frapper au corps à corps).
+            if (arc && d2 < 24 * 24 && (creeper || !t.isWithinMeleeAttackRange(cible))) {
+                double pres = creeper ? 7 : 3;
+                if (d2 < pres * pres) {
                     if (recul == null || age % 20 == 0 || t.position().distanceToSqr(recul) < 2) recul = DefaultRandomPos.getPosAway(t, 10, 4, cible.position());
-                    if (recul != null && (poste == null || recul.distanceToSqr(poste) <= laisse * laisse + 16)) { t.setGeste(""); marcher(t, recul, 1.3); return Etat.EN_COURS; }
-                }
-                if (vue && Monde.ligneDeTir(t, cible)) {
+                    if (recul != null && (poste == null || recul.distanceToSqr(poste) <= (laisse + 4) * (laisse + 4))) { t.setGeste(""); marcher(t, recul, 1.3); return Etat.EN_COURS; }
+                } else if (vue && Monde.ligneDeTir(t, cible)) {
                     t.getNavigation().stop();
                     Guerrier.prendreArc(t);
                     t.setGeste("tirer_arc");
