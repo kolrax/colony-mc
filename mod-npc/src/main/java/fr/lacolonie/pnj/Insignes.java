@@ -14,11 +14,29 @@ public final class Insignes {
     static final List<String> ETATS = List.of("blesse", "peur", "greve", "faim", "attente", "paie", "colere", "sommeil");
     /** Faim forte (il ne travaille plus, voir {@code Cerveau}), moral en colère, santé de blessé. */
     static final int FAIM = 8, COLERE = 30, BLESSE = 6;
+    /** Chez le joueur : le prénom se lit jusqu'à {@link #PORTEE_NOM} blocs, l'icône du métier, le rôle et l'état jusqu'à {@link #PORTEE_DETAILS}. */
+    static final int PORTEE_NOM = 32, PORTEE_DETAILS = 12;
+    /** Chez le joueur : la vue directe sur un ouvrier est revue toutes les {@link #REVUE} ticks. */
+    static final int REVUE = 10;
 
-    /** Ce qu'il est et pour qui : « Mineur · KOLRAX_MC » ; « Cherche du travail » tant qu'il n'a pas de chef. */
+    /** Ce qu'il est et pour qui : « Mineur · KOLRAX_MC » ; son métier seul si on ne sait pas qui est son chef ; « Cherche du travail » sans emploi. */
     static String role(String nomMetier, String chef, boolean embauche) {
-        if (!embauche || chef == null || chef.isEmpty()) return "Cherche du travail";
+        if (!embauche) return "Cherche du travail";
+        if (chef == null || chef.isEmpty()) return nomMetier;
         return nomMetier + " · " + chef;
+    }
+
+    /** Revoir la vue directe, vue pour la dernière fois au tick {@code vueLe} ? Oui aussi la première fois ({@code Long.MIN_VALUE}) et si le temps a reculé. */
+    static boolean arevoir(long maintenant, long vueLe) {
+        return maintenant < vueLe || maintenant >= vueLe + REVUE; // pas « maintenant - vueLe » : déborde avec Long.MIN_VALUE
+    }
+
+    /** « Philippa (Mineur) », « Philippa · en grève » → « Philippa » (le nom du jeu, posé par {@code Travailleur.majNom}). */
+    static String prenom(String nom) {
+        int i = nom.indexOf(" (");
+        int j = nom.indexOf(" ·");
+        if (j >= 0 && (i < 0 || j < i)) i = j;
+        return (i < 0 ? nom : nom.substring(0, i)).trim();
     }
 
     /** Ce qu'on sait de lui, lu chaque seconde par le serveur. */

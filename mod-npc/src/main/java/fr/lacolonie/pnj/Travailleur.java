@@ -643,9 +643,13 @@ public class Travailleur extends PathfinderMob {
 
     public String etat() { return entityData.get(ETAT); }
 
-    /** Côté client : vu par le joueur (rien de plein entre leurs yeux), revu toutes les 10 ticks ({@code Client.Rendu}). */
+    /** Côté client : vu par le joueur (rien de plein entre leurs yeux), revu toutes les 10 ticks ({@link Insignes#arevoir}, {@code Client.Rendu}). */
     long vueLe = Long.MIN_VALUE;
     boolean vue;
+    /** Côté client : son prénom, tiré du nom du jeu tant que celui-ci ne change pas (pas de découpe à chaque image). */
+    Component nomLu;
+    String prenomLu = "", roleLu = "";
+    int largeurPrenom, largeurRole;
 
     /**
      * Ce qu'on lit au-dessus de sa tête ({@link Insignes}) : son rôle et son état. Toutes les secondes et à chaque
@@ -1750,6 +1754,8 @@ public class Travailleur extends PathfinderMob {
         chefNom = "";
         mode = Mode.CHOMEUR;
         prime = 0;
+        besoin = ""; // sinon un renvoyé garderait l'icône d'attente ou de paie
+        impayes = 0;
         enAttente = null;
         lit = null;
         bureau = null;
@@ -1777,6 +1783,8 @@ public class Travailleur extends PathfinderMob {
         t.tirerAuSort(metier, 5);
         t.mode = Mode.TRAVAIL;
         t.chef = chef;
+        ServerPlayer j = chef == null ? null : l.getServer().getPlayerList().getPlayer(chef);
+        if (j != null) t.chefNom = j.getName().getString(); // son nom au-dessus de la tête de l'ouvrier
         t.prochainePaie = Monnaie.SANS_PAIE;
         t.debut = 0;
         t.fin = 0; // de 0 h à 0 h : en service toute la journée

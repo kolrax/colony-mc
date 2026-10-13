@@ -14,7 +14,28 @@ class InsignesTest {
     void role() {
         assertEquals("Mineur · KOLRAX_MC", Insignes.role("Mineur", "KOLRAX_MC", true));
         assertEquals("Cherche du travail", Insignes.role("Mineur", "", false));
-        assertEquals("Cherche du travail", Insignes.role("Mineur", "", true));
+        assertEquals("Cherche du travail", Insignes.role("Mineur", "KOLRAX_MC", false));
+        // employé dont on ne connaît pas le chef (banc, vieille sauvegarde) : son métier seul
+        assertEquals("Mineur", Insignes.role("Mineur", "", true));
+        assertEquals("Mineur", Insignes.role("Mineur", null, true));
+    }
+
+    @Test
+    void vueRevueAuDebutPuisToutesLesDixTicks() {
+        assertTrue(Insignes.arevoir(0, Long.MIN_VALUE), "jamais vu : on regarde tout de suite");
+        assertTrue(Insignes.arevoir(123456, Long.MIN_VALUE));
+        assertFalse(Insignes.arevoir(105, 100));
+        assertFalse(Insignes.arevoir(109, 100));
+        assertTrue(Insignes.arevoir(110, 100));
+        assertTrue(Insignes.arevoir(50, 100), "le temps a reculé (autre monde) : on regarde de nouveau");
+    }
+
+    @Test
+    void prenom() {
+        assertEquals("Philippa", Insignes.prenom("Philippa (Mineur)"));
+        assertEquals("Philippa", Insignes.prenom("Philippa · en grève"));
+        assertEquals("Philippa", Insignes.prenom("Philippa · cherche du travail"));
+        assertEquals("Jean-Baptiste", Insignes.prenom("Jean-Baptiste"));
     }
 
     @Test
@@ -39,5 +60,6 @@ class InsignesTest {
         for (String e : Insignes.ETATS) assertTrue(Files.exists(gui.resolve(Insignes.icone("etat", e))), e);
         for (String m : Tenues.METIERS) assertTrue(Files.exists(gui.resolve(Insignes.icone("metier", m))), m);
         assertEquals("textures/gui/metier/chomeur.png", Insignes.icone("metier", "inconnu"));
+        assertTrue(Files.isRegularFile(gui.resolve("textures/gui/metier/chomeur.png")), "l'icône du chômeur, prise par défaut");
     }
 }

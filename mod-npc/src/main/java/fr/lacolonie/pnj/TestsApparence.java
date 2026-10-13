@@ -86,9 +86,22 @@ public class TestsApparence {
 
         t.commencerGreve();
         h.assertTrue(t.etat().equals("greve"), "en grève : icône de grève, tout de suite (" + t.etat() + ")");
+        t.besoin = "Il me faut une pioche, chef.";
         t.licencier();
         h.assertTrue(t.role().equals("Cherche du travail"), "renvoyé : il cherche du travail (« " + t.role() + " »)");
+        h.assertTrue(t.etat().isEmpty(), "renvoyé : ni grève, ni attente, ni paie (" + t.etat() + ")");
         t.discard();
-        h.succeed();
+
+        // Sans rien appeler à la main : un chercheur qui vit sa vie voit son icône posée par son propre tick (une fois par seconde).
+        Travailleur affame = ColoniePnj.TRAVAILLEUR.get().create(h.getLevel());
+        affame.moveTo(p.x, p.y, p.z, 0, 0);
+        affame.tirerAuSort("mineur", 2);
+        affame.faim = 4; // après tirerAuSort (qui pose l'état) : seul le tick peut le voir
+        h.getLevel().addFreshEntity(affame);
+        h.assertTrue(affame.etat().isEmpty(), "pas encore revu (" + affame.etat() + ")");
+        h.succeedWhen(() -> {
+            h.assertTrue(affame.etat().equals("faim"), "au bout d'une seconde, icône de faim (" + affame.etat() + ")");
+            affame.discard();
+        });
     }
 }
