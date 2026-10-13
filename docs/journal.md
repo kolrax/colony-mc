@@ -248,3 +248,10 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Tests sur ce commit : **160/160 JUnit, 217/217 en jeu** au 2e passage ; au 1er, seul `TestsMineur.mineurNeCassePasUneStructure` a échoué (test déjà connu instable, sans rapport).
   - Journal du serveur : seules erreurs, celles des autres mods (tables de butin de `railways` et `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 20 min de retard (« Can't keep up », 24 023 ticks) : machine sans doute mise en pause par l'hébergeur.
 - **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé ; tenue et icône du fermier déjà dans 0.5.1).
+
+## 2026-10-13 22 h 53 - 22 h 55 UTC : livraison 0.9.13 (éleveur)
+- **0.9.13**, commit `3256586` (sur `main`), livrée sur le serveur à 22 h 54 UTC (personne connecté : `list` = 0 joueur), « Done » à 22 h 54 min 41 s, sans erreur du mod ; `colonie_pnj-0.9.12.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.13, 1 222 708 octets, sha1 `4a11b08e…`, copie figée du jar).
+  - **Éleveur** (lot 6, première passe) : nourrit et fait naître vaches, moutons, cochons, poules dans ses enclos (12 par espèce au plus, réglable), tond, trait, ramasse les œufs, n'abat que le surplus (jamais un petit, une bête nommée, le dernier couple, une bête d'un voisin ou au pré), passe le portillon et le referme toujours ; ordres « nourris les bêtes », « tonds les moutons », « abats deux vaches ».
+  - Tests sur ce code : **164/164 JUnit, 223/223 en jeu** (même code, à la doc près).
+  - Journal du serveur : seules erreurs, celles des autres mods (tables de butin de `railways` et `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 17 min de retard (« Can't keep up », 20 583 ticks) : machine sans doute mise en pause par l'hébergeur.
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé ; tenue et icône de l'éleveur déjà dans 0.5.1).
