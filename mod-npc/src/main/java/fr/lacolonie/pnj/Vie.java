@@ -131,8 +131,8 @@ final class Vie {
 
     static final int FAIM_LEGERE = 12, FAIM_FORTE = 6, FATIGUE = 80;
     static final int PLAINTE_DOUCE = Conversations.MORAL_BAS, PLAINTE_FORTE = 25, CONTENT = Conversations.MORAL_HAUT, FIER = 90;
-    /** Une pause : moral moyen ou bas, après tant de ticks de travail (6 heures du jeu), pour 20 à 40 s. */
-    static final int PAUSE_MORAL = 60, PAUSE_APRES = 6000, PAUSE_MIN = 400, PAUSE_MAX = 800;
+    /** Une pause : moral moyen ou bas (sous 60, strictement), après tant de ticks de travail (6 heures du jeu), pour 20 à 40 s. */
+    static final int PAUSE_MORAL = Obeissance.REPOS, PAUSE_APRES = 6000, PAUSE_MIN = 400, PAUSE_MAX = 800;
 
     /** « faim_forte », « faim_legere » ou null. */
     static String faim(int faim) { return faim <= FAIM_FORTE ? "faim_forte" : faim <= FAIM_LEGERE ? "faim_legere" : null; }
@@ -148,7 +148,7 @@ final class Vie {
     }
 
     /** Il a envie d'une pause : moral moyen ou bas, et longtemps au travail. */
-    static boolean veutPause(int moral, int travail) { return moral <= PAUSE_MORAL && travail >= PAUSE_APRES; }
+    static boolean veutPause(int moral, int travail) { return moral < PAUSE_MORAL && travail >= PAUSE_APRES; }
 
     static {
         charger();

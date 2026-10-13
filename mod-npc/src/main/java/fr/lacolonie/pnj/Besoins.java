@@ -1,6 +1,8 @@
 package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -18,10 +20,24 @@ final class Besoins {
 
     /** Une même réplique de besoin, au plus une fois par tant de secondes (10 minutes). */
     static final int DELAI = 600;
+    /** Entre deux répliques de besoin, quelles qu'elles soient : au moins tant de secondes. */
+    static final int ENTRE = 60;
 
-    /** Il dit la réplique {@code cle} de vie.txt, au plus une fois par {@link #DELAI}. {@code nom} : l'autre PNJ en jeu (ou null). */
+    /** Vrai (et noté) si la réplique {@code cle} peut être dite : pas dite depuis {@link #DELAI}, et aucune autre depuis {@link #ENTRE}. */
+    static boolean permis(Travailleur t, String cle) {
+        CompoundTag dits = t.memoire.getCompound("dits");
+        long maintenant = Cerveau.temps(t);
+        if (dits.contains("vie") && maintenant - dits.getLong("vie") < ENTRE) return false;
+        if (dits.contains("vie_" + cle) && maintenant - dits.getLong("vie_" + cle) < DELAI) return false;
+        dits.putLong("vie", maintenant);
+        dits.putLong("vie_" + cle, maintenant);
+        t.memoire.put("dits", dits);
+        return true;
+    }
+
+    /** Il dit la réplique {@code cle} de vie.txt, si elle est permise ({@link #permis}). {@code nom} : l'autre en jeu (ou null : « quelqu'un »). */
     static boolean parler(Travailleur t, String cle, String nom) {
-        if (t.muet() || !Cerveau.parfois(t, "vie_" + cle, DELAI)) return false;
+        if (t.muet() || !permis(t, cle)) return false;
         Map<String, String> v = new HashMap<>();
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
@@ -33,35 +49,44 @@ final class Besoins {
     /** Toutes les 5 s environ : ce que son corps et son humeur lui font dire. Rien à terre, endormi, en combat ou en fuite. */
     static void veiller(Travailleur t) {
         if (t.aTerre || t.isSleeping() || t.menace()) return;
-        String faim = Vie.faim(t.faim);
-        if (faim != null) parler(t, faim, null);
-        String blessure = Vie.blessure(t.getHealth(), t.getMaxHealth());
-        if (blessure != null) parler(t, blessure, null);
-        boolean repos = !t.enService() || t.memoire.getBoolean("epuise");
-        if (t.fatigue >= Vie.FATIGUE && !repos) parler(t, "fatigue", null);
-        // À l'heure du repos, chez lui : son lit est-il toujours là (monLit le voit cassé : lit_vole) ? Pas de lit à lui :
-        // il le dit. Pas de nouvelle recherche ici (un balayage de blocs) : le repos (Actions.Reposer) la fait.
-        if (repos && t.bureau != null && t.chezLui(t.blockPosition())) {
-            if (t.lit != null) t.monLit();
-            if (t.lit == null) parler(t, "sans_lit", null);
-        }
         int avant = t.memoire.contains("moral_vu") ? t.memoire.getInt("moral_vu") : Obeissance.DEPART;
-        String humeur = Vie.humeur(t.moral, avant);
-        if (humeur != null) parler(t, humeur, null);
         t.memoire.putInt("moral_vu", t.moral);
+        // Au repos chez lui, son lit est-il toujours là ? (monLit le voit cassé, en cherche un autre, et s'il n'y en a pas, le dit.)
+        boolean repos = !t.enService() || t.memoire.getBoolean("epuise");
+        if (repos && t.lit != null && t.bureau != null && t.chezLui(t.blockPosition())) t.monLit();
+        // Une seule réplique par passage : la première qui a quelque chose à dire.
+        String faim = Vie.faim(t.faim), blessure = Vie.blessure(t.getHealth(), t.getMaxHealth()), humeur = Vie.humeur(t.moral, avant);
+        if (faim != null && parler(t, faim, null)) return;
+        if (blessure != null && parler(t, blessure, null)) return;
+        if (t.fatigue >= Vie.FATIGUE && !repos && parler(t, "fatigue", null)) return;
+        // Pas de lit : seulement au travail (pas s'il suit ou attend), au repos, après une vraie recherche (Actions.Reposer).
+        if (t.mode == Travailleur.Mode.TRAVAIL && t.action instanceof Actions.Reposer r && r.sansLit && parler(t, "sans_lit", null)) return;
+        if (humeur != null) parler(t, humeur, null);
     }
 
-    /** Son lit est cassé, ou un autre y dort ({@code nom}, ou null) : il le dit, et son moral baisse (une fois par 10 minutes). */
-    static void litVole(Travailleur t, String nom) {
+    /** Son lit n'est plus là (cassé, ou le poste a changé) et il n'en trouve pas d'autre : moral −3 et « pas de lit » (une fois par 10 minutes). */
+    static void litPerdu(Travailleur t) {
+        if (!Cerveau.parfois(t, "lit_perdu", DELAI)) return;
+        t.changerMoral(Obeissance.LIT_VOLE);
+        parler(t, "sans_lit", null);
+    }
+
+    /**
+     * Un autre dort dans son lit : il le dit (son prénom pour un ouvrier, son nom pour un joueur, sinon « quelqu'un ») et son
+     * moral baisse (une fois par 10 minutes). Un autre ouvrier : il lui laisse ce lit et en cherchera un autre.
+     */
+    static void litVole(Travailleur t, LivingEntity qui) {
+        String nom = qui instanceof Travailleur o ? o.prenom : qui instanceof Player p ? p.getName().getString() : null;
+        if (qui instanceof Travailleur && t.lit != null) { t.litRefuse = t.lit; t.lit = null; }
         if (!Cerveau.parfois(t, "lit_perdu", DELAI)) return;
         t.changerMoral(Obeissance.LIT_VOLE);
         parler(t, "lit_vole", nom);
     }
 
     /** Qui dort dans ce lit, à part lui (null : personne). */
-    static String dormeur(Travailleur t, BlockPos lit) {
+    static LivingEntity dormeur(Travailleur t, BlockPos lit) {
         for (LivingEntity e : t.level().getEntitiesOfClass(LivingEntity.class, new AABB(lit).inflate(2), e -> e != t && lit.equals(e.getSleepingPos().orElse(null))))
-            return e instanceof Travailleur o ? o.prenom : e.getName().getString();
+            return e;
         return null;
     }
 
@@ -73,12 +98,15 @@ final class Besoins {
     static boolean pause(Travailleur t) {
         if (t.mode != Travailleur.Mode.TRAVAIL || t.bureau == null || t.consigne != null || !t.chezLui(t.blockPosition())
                 || !Vie.veutPause(t.moral, t.travailSansPause)) return false;
+        // Le chef vient de lui donner un ordre (« au travail ! » en pleine pause) : pas de pause avant longtemps.
+        if (t.ordreChef > 0 && t.level().getGameTime() - t.ordreChef < Vie.PAUSE_APRES) return false;
+        t.travailSansPause = 0; // une pause coupée (ordre, coup, danger) ne recommence pas aussitôt
         Cerveau.lancer(t, new Flaner(Vie.PAUSE_MIN + t.getRandom().nextInt(Vie.PAUSE_MAX - Vie.PAUSE_MIN + 1)));
         parler(t, "envie_pause", null);
         return true;
     }
 
-    /** La pause : il va près du poste, s'assied un moment, puis reprend (moral + 2). */
+    /** La pause : il va près du poste, s'assied un moment, puis reprend (moral + 2 à la fin ; le compte de travail est remis à zéro dès le début). */
     static final class Flaner extends Actions.Action {
         final int duree;
         int assis = -1;
@@ -86,6 +114,7 @@ final class Besoins {
         Flaner(int duree) { super("pause"); this.duree = duree; }
 
         Actions.Etat tick(Travailleur t) {
+            if (t.bureau == null) return Actions.Etat.ECHEC;
             Vec3 poste = Vec3.atBottomCenterOf(t.bureau);
             if (assis < 0) {
                 if (t.position().distanceToSqr(poste) > 4 * 4 && !coince()) { marcher(t, poste, 0.8); return Actions.Etat.EN_COURS; }
@@ -96,7 +125,6 @@ final class Besoins {
             }
             if (age - assis < duree) return Actions.Etat.EN_COURS;
             t.changerMoral(Obeissance.PAUSE);
-            t.travailSansPause = 0;
             return Actions.Etat.OK;
         }
 

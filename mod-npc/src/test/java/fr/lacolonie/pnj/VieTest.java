@@ -91,6 +91,8 @@ class VieTest {
         assertNull(Vie.humeur(82, 85), "il baisse : pas de contentement");
         assertTrue(Vie.veutPause(50, Vie.PAUSE_APRES));
         assertFalse(Vie.veutPause(80, Vie.PAUSE_APRES), "content : pas besoin de pause");
+        assertFalse(Vie.veutPause(Obeissance.REPOS, Vie.PAUSE_APRES), "moral au repos (60) : pas de pause, il faut moins");
+        assertTrue(Vie.veutPause(Obeissance.REPOS - 1, Vie.PAUSE_APRES));
         assertFalse(Vie.veutPause(50, Vie.PAUSE_APRES - 1), "pas assez travaillé");
     }
 

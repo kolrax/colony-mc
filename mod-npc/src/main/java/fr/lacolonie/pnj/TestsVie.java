@@ -22,7 +22,8 @@ public class TestsVie {
 
     /**
      * Deux ouvriers épuisés, un seul lit près du poste : le premier qui le prend le garde, l'autre ne le prend jamais et
-     * dit qu'il n'a pas de lit. Puis le lit est cassé : son propriétaire le dit (lit_vole) et son moral baisse de 3.
+     * dit qu'il n'a pas de lit. Puis le lit est cassé, sans autre lit libre : son propriétaire dit qu'il n'a plus de lit
+     * (sans_lit, pas lit_vole : personne ne le lui a pris) et son moral baisse de 3.
      */
     @GameTest(template = "vide", timeoutTicks = 1200)
     public static void litASoiPasPrisParUnAutre(GameTestHelper h) {
@@ -57,7 +58,7 @@ public class TestsVie {
             h.assertTrue(autre.lit == null, "l'autre n'a pas de lit (" + autre.lit + ")");
             h.assertTrue(dites(autre, "sans_lit") == 1, "l'autre dit une fois qu'il n'a pas de lit (" + autre.paroles + ")");
             h.assertTrue(casse[0], "lit cassé");
-            h.assertTrue(dites(o, "lit_vole") == 1, "son lit cassé, il le dit une fois (" + o.paroles + ")");
+            h.assertTrue(dites(o, "sans_lit") == 1 && dites(o, "lit_vole") == 0, "son lit cassé, il dit une fois qu'il n'a plus de lit (" + o.paroles + ")");
             h.assertTrue(o.lit == null && o.moral <= moralAvant[0] - 3, "lit perdu, moral " + moralAvant[0] + " → " + o.moral);
             a.discard();
             b.discard();
@@ -113,18 +114,50 @@ public class TestsVie {
         });
     }
 
-    /** Blessé (40 % de sa vie), pas affamé (16) : il mange son pain pour reprendre des forces. Avant, il attendait d'avoir faim (14). */
+    /**
+     * Blessé (40 % de sa vie), pas affamé (16) : il mange pour reprendre des forces (avant, il attendait d'avoir faim : 14). Il
+     * choisit la carotte (3, juste ce qui manque) : ni la chair putréfiée (néfaste), ni la pomme dorée (rare), ni le steak (8, trop).
+     */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void blesseMangePourGuerir(GameTestHelper h) {
         BlockPos base = TestsJeu.sol(h, 113 * 400, 60000);
         Travailleur t = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
         t.forcerChunk();
-        t.inventaire.addItem(new ItemStack(Items.BREAD, 3));
+        t.inventaire.addItem(new ItemStack(Items.ROTTEN_FLESH, 3));
+        t.inventaire.addItem(new ItemStack(Items.GOLDEN_APPLE, 3));
+        t.inventaire.addItem(new ItemStack(Items.COOKED_BEEF, 3));
+        t.inventaire.addItem(new ItemStack(Items.CARROT, 3));
         t.faim = 16;
         t.setHealth(t.getMaxHealth() * 0.4f);
         h.succeedWhen(() -> {
-            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:bread")) < 3, "il mange un pain (" + TestsJeu.etat(t, base) + ", faim " + t.faim + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:carrot")) == 2, "il mange une carotte (" + TestsJeu.etat(t, base) + ", faim " + t.faim + ")");
+            for (var i : java.util.List.of("rotten_flesh", "golden_apple", "cooked_beef"))
+                h.assertTrue(t.compter(Actions.Filtre.de("minecraft:" + i)) == 3, "pas touché : " + i);
             h.assertTrue(dites(t, "blessure_legere") == 1, "il dit sa blessure (" + t.paroles + ")");
+            t.discard();
+        });
+    }
+
+    /** En pleine pause, le chef dit « au travail » : il se lève, et ne se rassoit pas aussitôt (rien pendant 200 ticks). */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void ordreCoupeLaPause(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 114 * 400, 60000);
+        Travailleur t = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
+        t.forcerChunk();
+        t.mission("charbon", "stock", 64);
+        t.moral = 50;
+        t.travailSansPause = Vie.PAUSE_APRES;
+        long[] ordre = {-1};
+        boolean[] rassis = {false};
+        h.onEachTick(() -> {
+            boolean pause = t.action instanceof Besoins.Flaner;
+            if (ordre[0] < 0 && pause) { t.appliquer(Ordres.lire("au travail", "mineur"), null); ordre[0] = h.getTick(); }
+            else if (ordre[0] >= 0 && pause) rassis[0] = true;
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(ordre[0] >= 0, "la pause commence (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertFalse(rassis[0], "il ne se rassoit pas après l'ordre (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(h.getTick() >= ordre[0] + 200, "200 ticks sans pause");
             t.discard();
         });
     }
