@@ -319,4 +319,22 @@ class IATest {
         assertEquals(1000 * ReponsesIA.PRIX_JETON, ReponsesIA.cout("{\"usage\":{\"total_tokens\":1000}}"), 1e-12);
         assertEquals(ReponsesIA.PRIX_APPEL, ReponsesIA.cout("{}"), 1e-12);
     }
+    /** Un fichier de dépenses abîmé ne remet pas le compteur à zéro : plus d'appel payant jusqu'au mois suivant. Absent : on part de zéro. */
+    @Test
+    void depensesAbimees() throws Exception {
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("depenses");
+        java.nio.file.Path f = dir.resolve("depenses-ia.json");
+        java.time.LocalDate j = java.time.LocalDate.of(2026, 10, 13);
+        assertTrue(DepensesIA.charger(f, j).permis(5, j), "absent : on part de zéro");
+        java.nio.file.Files.writeString(f, "");
+        assertTrue(DepensesIA.charger(f, j).permis(5, j), "vide : comme absent");
+        java.nio.file.Files.writeString(f, "{abîmé");
+        DepensesIA d = DepensesIA.charger(f, j);
+        assertFalse(d.permis(5, j), "abîmé : bloqué ce mois-ci");
+        assertTrue(d.permis(5, java.time.LocalDate.of(2026, 11, 1)), "le mois suivant, ça repart");
+        d.ajouter(0.01, java.time.LocalDate.of(2026, 11, 1));
+        assertEquals(0.01, DepensesIA.charger(f, java.time.LocalDate.of(2026, 11, 1)).mois(java.time.LocalDate.of(2026, 11, 1)), 1e-9, "réécrit et relu");
+        java.nio.file.Files.deleteIfExists(f);
+        java.nio.file.Files.deleteIfExists(dir);
+    }
 }

@@ -192,7 +192,11 @@ final class IA {
                 .header("Authorization", "Bearer " + r().openrouter_cle).header("Content-Type", "application/json")
                 .header("X-Title", "La Colonie")
                 .POST(HttpRequest.BodyPublishers.ofString(ReponsesIA.pourOpenRouter(corps, r().modele_openrouter))).build();
-        return envoyer(OPENROUTER, req).thenApply(rep -> {
+        return envoyer(OPENROUTER, req).whenComplete((rep, e) -> {
+            // Coupé en route (délai, connexion) : l'appel est peut-être facturé quand même, on le compte au prix prudent.
+            if (e != null && !(e instanceof CompletionException ce && ce.getCause() instanceof IllegalStateException))
+                DEPENSES.ajouter(ReponsesIA.PRIX_APPEL, aujourdhui());
+        }).thenApply(rep -> {
             DEPENSES.ajouter(ReponsesIA.cout(rep), aujourdhui());
             T x = lire.apply(rep);
             OPENROUTER.reussite(ReponsesIA.jetons(rep));

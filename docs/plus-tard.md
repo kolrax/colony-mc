@@ -37,3 +37,12 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
   - un ordre visé accepté plus tard vise ce que le chef regarde au moment de l'acceptation ;
   - chemins par l'IA (réponse imposée) non testés en jeu ; effets du moral dans la durée testés seulement en calcul pur.
   - 2e relecture : « J'ai dit non » face à un marché est pris pour une insistance (fait l'ordre sans prime) ; « va dans le feu de camp » pris pour mortel ; ordres mortels tournés autrement (« saute vite dans la lave », « va nager dans la lave », « je veux que tu sautes dans la lave ») non refusés en parole (le réflexe de survie et `Monde.mortel` protègent) ; correction « l'IA reprend l'ordre en suspens » (accord et insistance lus sur les mots du chef) sans test en jeu (les tests tournent sans IA).
+- OpenRouter (lot 3, première passe, relecture du 13/10, non corrigés) :
+  - pas de réservation avant l'appel : jusqu'à 20 appels en vol peuvent passer le plafond ensemble (~0,01-0,02 $ avec gpt-oss-120b ; plus avec un modèle cher) ;
+  - aucune part par chef : un chef bavard peut user le plafond du jour (0,33 $) pour tous ;
+  - plafond du jour = 2 × la moyenne : en gros usage, le mois peut être vidé vers le 15 (puis interpréteur jusqu'au 1er) ;
+  - `reasoning_effort` décidé d'après `modele_conversation`, pas `modele_openrouter` (sans effet tant que c'est le même modèle) ;
+  - `usage.include` est obsolète chez OpenRouter (sans effet) ;
+  - pseudo du chef et prénoms envoyés aux fournisseurs : envisager `provider: {data_collection: "deny"}` (vérifier d'abord qu'il reste des fournisseurs pour le modèle) ;
+  - Groq puis OpenRouter tous deux au délai de 25 s : le chef peut attendre ~50 s avant l'interpréteur ;
+  - jamais essayé contre le vrai OpenRouter (schéma JSON, `usage.cost`) : à vérifier avec un seul appel réel après livraison.
