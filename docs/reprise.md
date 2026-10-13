@@ -1,15 +1,15 @@
 # Reprise : où on en est
 
-Mise à jour : 13/10/2026, 23 h 00 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 13/10/2026, 23 h 10 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.9.13** (13/10, 23 h UTC ; 164 JUnit et 223 en jeu verts). Session 21 h - 23 h 30 UTC : 4 versions livrées.
+- Mod `colonie_pnj` : **0.9.14** (13/10, 23 h 08 UTC ; 170 JUnit et 228 en jeu verts). Session 21 h - 23 h 30 UTC : 5 versions livrées.
   - 0.9.13 = **éleveur** (lot 6) : `Elevage` (pur), `Eleveur` (enclos `clore`, `Corvee`, action `Passer` pour le portillon, crochet `Metier.sortir` appelé tôt dans `Cerveau.decider`), réglage `betes_par_enclos` (12), `Monde.construit` compte les portillons ; tests `EleveurTest`, `TestsEleveur` (coins 140-145).
   - 0.9.12 = **fermier** (lot 6 : `Fermier`, `Cultures`, `Parcelle`, `Fermier.aLui`, ordres `champ`/`recolter`/`pain`/`oublier_champ`, `TestsFermier` coins 120-127) et **blessures** (lot 5 : `Gravite`, `Blessures` ; à terre 3/5/8 min puis mort, comme le cahier 5.12 ; compagnons qui accourent ; `TestsBlessures` coins 130-134).
   - 0.9.11 = **besoins** (lot 5 : `Vie` lit `vie.txt` (45 sections, 457 répliques), `Besoins` : répliques, lit à soi, pause `Flaner`, soin en mangeant sans aliment néfaste ; `TestsVie` coins 110-114).
   - 0.9.10 = **outils au dépôt** (lot 4 : `Outils`, `Metier.outilAuDepot`/`PrendreOutil`, `Reglages.usure_outils` = 3 ; `TestsOutils` coins 80-86) et **nom, métier, chef et icône d'état au-dessus des têtes** (lot 8 : `Insignes`, `Travailleur.ROLE`/`ETAT`, `Client.Rendu.renderNameTag` ; **canal réseau 8**).
 - Modpack : **0.5.1** (13/10, **obligatoire** : canal 8). Il n'a pas à changer tant que le client ne change pas.
-- **En cours, pas sur main** : **guérisseur** (lot 5), branche `guerisseur` (commit b051eb8 + corrections de relecture en cours). Voir « Prochaine étape ».
+- 0.9.14 = guérisseur (lot 5 : `Guerisseur`, `Soins`, `Actions.Action.nouveauBut`, `TestsGuerisseur` coins 150-154)
 - Mod `colonie_pnj` : **0.9.9** dans le dépôt et sur le serveur (13/10, 20 h 23 UTC ; 139 JUnit et 191 en jeu verts). 0.9.9 = guerrier (lot 4) : `Guerrier` (s'équiper au dépôt, se soigner, défendre un ouvrier, chasse de nuit, ronde sur parcours `ronde_point`/`ronde_effacer`, mannequin), `Actions.Attaquer` (arc et arbalète, recul, creeper de loin, `tenir`, `portee`), flèches marquées et `Guerrier.impact` (une flèche ne blesse jamais qu'un monstre ou la cible ordonnée), `Monde.ligneDeTir`, `garder_ici` (porte, pont, tireurs), ouvriers qui fuient un creeper (`Cerveau`) ; tests `TestsGuerrier`, `GuerrierTest`.
 - 0.9.8 (20 h 00) = conversations entre PNJ sans IA (lot 7) : `Conversations` (lit `conversations.txt`, 237 blocs), `Causeries` (dans `Cerveau.decider`), `Reglages.secondes_entre_conversations` (180) ; tests `ConversationsTest`, `TestsConversations`.
 - 0.9.7 (19 h 07) = bûcheron (lot 4 : feuilles, géants, `foret`, `planches`, `charbon_bois`, `defricher_zone`, `TestsBucheron`) et tenues par métier (lot 8 : `Tenues`, donnée synchronisée `Travailleur.TENUE`, 36 skins dans `textures/entity/ouvrier/`). **Canal réseau 7.**
@@ -44,13 +44,12 @@ Mise à jour : 13/10/2026, 23 h 00 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » dans CLAUDE.md.**
-1. **Guérisseur** : reprendre la branche `origin/guerisseur` (classes `Guerisseur`, `Soins`, `TestsGuerisseur` coins 150-153, `SoinsTest`). La relecture a trouvé 1 bloquant (un ouvrier à terre « menacé » n'est jamais relevé la nuit : surcharger `Guerisseur.vigilance`) et 6 points ; ils ont été confiés au développeur en fin de session : regarder le dernier commit de la branche et `docs/journal.md` pour savoir ce qui est fait. Puis passe complète verte, livrer 0.9.14 (serveur seulement).
-2. Lot 6 : pêcheur, chasseur, cuisinier ou boulanger, transporteur (sur le modèle du fermier/éleveur) ; « va me chercher du fer » dit à un bûcheron.
-3. Lot 5 : moral (causes et effets : grève, démission, fuite, vol, sabotage, révolte après avertissements — répliques déjà dans `vie.txt`), réactions selon le caractère, deuil et enterrement.
-4. Restes : `docs/plus-tard.md`. Les noms au-dessus des têtes n'ont jamais été vus à l'écran (banc photo, il faut un écran).
-5. Instables : `TestsMineur.mineurNeCassePasUneStructure` (1 échec ce soir, vert à la relance), `TestsMineur.carriereAuDessusDUnVide` (1 échec dans une passe où deux serveurs de test tournaient peut-être en même temps), `TestsIA.iavoix`. **Ne jamais lancer deux `runGameTestServer` en même temps.**
-6. Piège de cette session : un livreur qui travaille dans le dossier principal suit la branche extraite. **Rester sur `main` dans /home/user/colony-mc pendant une livraison** ; tester les branches dans un `git worktree` à part.
-7. Les branches `en-cours`, `textes`, `skins`, `apparence`, `conversations`, `tetes`, `textes-vie`, `vie`, `fermier`, `blessures`, `livraison`, `eleveur` restent sur GitHub (suppression refusée depuis le cloud) : toutes fusionnées dans `main` sauf `guerisseur` (et `en-cours`, qui suit le guérisseur).
+1. Lot 6 : pêcheur, chasseur, cuisinier ou boulanger, transporteur (sur le modèle du fermier/éleveur) ; « va me chercher du fer » dit à un bûcheron.
+2. Lot 5 : moral (causes et effets : grève, démission, fuite, vol, sabotage, révolte après avertissements — répliques déjà dans `vie.txt`), réactions selon le caractère, deuil et enterrement.
+3. Restes : `docs/plus-tard.md`. Les noms au-dessus des têtes n'ont jamais été vus à l'écran (banc photo, il faut un écran).
+4. Instables : `TestsMineur.mineurNeCassePasUneStructure` (1 échec ce soir, vert à la relance), `TestsMineur.carriereAuDessusDUnVide` (1 échec dans une passe où deux serveurs de test tournaient peut-être en même temps), `TestsIA.iavoix`. **Ne jamais lancer deux `runGameTestServer` en même temps.**
+5. Piège de cette session : un livreur qui travaille dans le dossier principal suit la branche extraite. **Rester sur `main` dans /home/user/colony-mc pendant une livraison** ; tester les branches dans un `git worktree` à part.
+6. Les branches `en-cours`, `textes`, `skins`, `apparence`, `conversations`, `tetes`, `textes-vie`, `vie`, `fermier`, `blessures`, `livraison`, `eleveur` restent sur GitHub (suppression refusée depuis le cloud) : toutes fusionnées dans `main` sauf `guerisseur` (et `en-cours`, qui suit le guérisseur).
 
 ## Envoi du jar depuis le cloud
 `panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.

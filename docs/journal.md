@@ -266,3 +266,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Incident sans conséquence : un livreur a écrit son commit sur ma branche locale `eleveur` (j'avais changé de branche dans le dossier principal) ; `main` sur GitHub n'a jamais reçu de code pas vert ; commit remis sur `main`.
 - Serveur : l'hébergeur le met en pause entre deux visites (« Can't keep up », 17 à 59 min de retard au réveil), sans dégât.
 - Prochaine étape exacte : **guérisseur** (branche `guerisseur`, voir `docs/reprise.md`), puis lot 6 (pêcheur, chasseur, cuisinier, transporteur), puis lot 5 (moral, réactions, deuil).
+
+## 2026-10-13 23 h 07 - 23 h 09 UTC : livraison 0.9.14 (guérisseur)
+- **0.9.14**, commit `e92ae96` (sur `main`), livrée sur le serveur à 23 h 07 UTC (personne connecté : `list` = 0 joueur), « Done » à 23 h 08 min 11 s, sans erreur du mod ; `colonie_pnj-0.9.13.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.14, 1 246 599 octets, sha1 `7dd2af36…`, copie figée du jar).
+  - **Guérisseur** (lot 5, première passe) : relève un ouvrier à terre avec un pain (ou une potion de soin) du dépôt, panse un blessé grave ou très grave (un cran de moins, un tiers de vie rendu, une fois par blessure), attend que le danger s'éloigne et reprend même la nuit, ne quitte jamais un ordre du chef ; ordres « soigne Jean », « va soigner les blessés ».
+  - Tests sur ce code : **170/170 JUnit, 228/228 en jeu** (même code, à la doc près) au 2e passage ; au 1er, seuls les tests instables connus `TestsMineur.mineurNeCassePasUneStructure` et `TestsIA.iavoix` ont échoué.
+  - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, avertissements de mixins), comme avant. Avant le redémarrage, le serveur avait pris 54 s de retard (« Can't keep up », 1 078 ticks).
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé ; tenue et icône du guérisseur déjà dans 0.5.1).

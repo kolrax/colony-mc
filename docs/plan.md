@@ -42,7 +42,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 5. Vie, santé, moral (indispensable)
 - [x] Besoins : faim, fatigue, moral, lit à soi, santé, loisirs (première passe 13/10, 0.9.11 : ils disent quand ils ont faim, sommeil, mal ou le moral bas ; chacun son lit ; courtes pauses ; un blessé mange pour guérir)
 - [x] Blessures à plusieurs gravités ; à terre plus longtemps selon la gravité ; les autres se rassemblent autour du blessé (première passe 13/10, 0.9.12 : légère, grave, très grave selon la vie perdue ; à terre 3, 5 ou 8 min ; les 3 compagnons les plus proches viennent)
-- [ ] Guérisseur (nouveau métier)
+- [x] Guérisseur (nouveau métier) (première passe 13/10, 0.9.14 : relève un ouvrier à terre avec un pain ou une potion de soin du dépôt, panse un blessé grave ou très grave, attend que le danger s'éloigne, ne quitte jamais un ordre du chef ; « soigne Jean », « va soigner les blessés »)
 - [ ] Moral : causes (paie, nourriture variée, lit, dangers, ton du chef, deuil, météo, amitiés, réussite de la colonie) ; effets (lenteur, plaintes, grève, démission, fuite, vol, sabotage, révolte armée après avertissements)
 - [ ] Réactions selon le caractère : insulte, coup, impayé, diamant gardé en cachette, cadeau
 - [ ] Deuil, et enterrement possible pour adoucir le moral
