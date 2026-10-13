@@ -83,16 +83,16 @@ final class Cerveau {
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
-        if (t.action != null) { m.vigilance(t); return; }
+        if (t.action != null) { if (!Blessures.horsDeCombat(t)) m.vigilance(t); return; }
         CompoundTag mem = t.memoire;
 
         // Attaqué (même en grève) : un combattant riposte contre un monstre ou un autre PNJ, sinon il recule ; les autres
         // s'enfuient. Sans ordre de son chef, il ne frappe ni un joueur (une consigne, en guerre), ni une bête, ni un golem.
         LivingEntity agresseur = t.getLastHurtByMob();
         if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
-            if (m.combattant && Monde.combattable(agresseur)) lancer(t, new Actions.Attaquer(agresseur));
+            if (m.combattant && Monde.combattable(agresseur) && !Blessures.horsDeCombat(t)) lancer(t, new Actions.Attaquer(agresseur));
             else {
-                if (!m.combattant) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
+                if (!m.combattant || Blessures.horsDeCombat(t)) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
                 else if (agresseur instanceof Player) dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
                 else dire(t, "fuite", 30, "Holà, tout doux ! Je ne lève pas mon arme sur une bête.");
                 lancer(t, new Actions.Fuir(agresseur));
@@ -240,6 +240,9 @@ final class Cerveau {
 
         // Longtemps au travail, le moral moyen ou bas : une courte pause au poste, puis il reprend (loisirs, lot 5).
         if (Besoins.pause(t)) return;
+
+        // Blessé très gravement : ni mine ni combat, il se repose au poste (Blessures).
+        if (Blessures.auRepos(t, m)) return;
 
         m.travailler(t);
     }

@@ -216,7 +216,7 @@ public final class PanneauWeb {
         Travailleur t = ColoniePnj.tous(serveur).stream().filter(x -> x.getUUID().equals(id)).findFirst().orElse(null);
         if (t == null) return resultat("PNJ introuvable");
         switch (chaine(c, "action")) {
-            case "relever" -> { if (t.aTerre) { t.aTerre = false; t.setPose(net.minecraft.world.entity.Pose.STANDING); } t.setHealth(t.getMaxHealth()); t.faim = 20; t.majNom(); }
+            case "relever" -> { if (t.aTerre) { t.aTerre = false; t.setPose(net.minecraft.world.entity.Pose.STANDING); } t.setHealth(t.getMaxHealth()); t.faim = 20; Blessures.noter(t, Gravite.AUCUNE); t.majNom(); }
             case "licencier" -> t.licencier();
             case "supprimer" -> t.discard();
             case "skin" -> t.setSkin(chaine(c, "valeur"));
