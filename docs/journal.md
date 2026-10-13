@@ -255,3 +255,14 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Tests sur ce code : **164/164 JUnit, 223/223 en jeu** (même code, à la doc près).
   - Journal du serveur : seules erreurs, celles des autres mods (tables de butin de `railways` et `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 17 min de retard (« Can't keep up », 20 583 ticks) : machine sans doute mise en pause par l'hébergeur.
 - **Modpack inchangé** (0.5.1 reste valable : rien de client, canal 8 inchangé ; tenue et icône de l'éleveur déjà dans 0.5.1).
+
+## 2026-10-13 21 h 00 - 23 h 30 UTC : session routine (cloud), bilan
+- **4 versions livrées** sur le serveur, toutes sans erreur du mod : **0.9.10** (outils au dépôt, usure 3 fois plus lente ; nom, métier, chef et icône d'état au-dessus des têtes ; canal réseau 8) avec le **modpack 0.5.1 obligatoire** ; **0.9.11** (besoins : répliques, lit à soi, pauses, soin en mangeant) ; **0.9.12** (fermier ; blessures à plusieurs gravités) ; **0.9.13** (éleveur).
+- Textes : `vie.txt`, 45 sections et 457 répliques (faim, fatigue, blessures, moral, deuil, enterrement, réactions), par tempérament.
+- Chaque case relue une fois ; bloquants trouvés et corrigés : nom jamais affiché (débordement d'un calcul de temps), pause relancée aussitôt après un ordre, eau du champ qui pouvait inonder une pente, fermier qui moissonnait les champs d'un voisin, éleveur enfermé dans son enclos portillon fermé, guérisseur qui ne relevait jamais un ouvrier « menacé » la nuit.
+- Vérifié à chaque fois que les nouveaux tests échouent sur l'ancien code : outils (5 + 2), têtes (JUnit `arevoir`), besoins (`ordreCoupeLaPause`, `pausePrisePuisTravailRepris`). Pour le fermier, l'éleveur, les blessures et le guérisseur : par raisonnement seulement (les classes n'existaient pas ; les tests de relecture du fermier non relancés sur l'ancien code).
+- Décision prise seul (cahier 5.12) : un PNJ à terre meurt toujours si personne ne le relève, mais plus tard selon la gravité (3, 5 ou 8 min au lieu de 2). Le développeur avait d'abord proposé qu'une blessure légère ou grave se relève seule : refusé, contraire au cahier.
+- Instables vus : `TestsMineur.mineurNeCassePasUneStructure` (1 fois, vert à la relance), `carriereAuDessusDUnVide` (1 fois), `TestsIA.iavoix`, `TestsEleveur.abatLExcedent` (1 fois dans la passe du guérisseur).
+- Incident sans conséquence : un livreur a écrit son commit sur ma branche locale `eleveur` (j'avais changé de branche dans le dossier principal) ; `main` sur GitHub n'a jamais reçu de code pas vert ; commit remis sur `main`.
+- Serveur : l'hébergeur le met en pause entre deux visites (« Can't keep up », 17 à 59 min de retard au réveil), sans dégât.
+- Prochaine étape exacte : **guérisseur** (branche `guerisseur`, voir `docs/reprise.md`), puis lot 6 (pêcheur, chasseur, cuisinier, transporteur), puis lot 5 (moral, réactions, deuil).
