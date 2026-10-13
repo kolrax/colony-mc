@@ -1,9 +1,10 @@
 # Reprise : où on en est
 
-Mise à jour : 12/10/2026, 20 h 10 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 13/10/2026, 1 h 50 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.9.1** dans le dépôt et sur le serveur (livrée le 12/10 à 20 h 01 UTC, 103 JUnit et 150 en jeu verts). 0.9.1 = ordres longs (lot 3) : classe `OrdresLongs` (règles pluie, orage, nuit, jour, matin, après-midi, soir, « quand tu as fini », « si tu vois… » ; « tous les jours » ; « oublie tes ordres »), `Travailleur.regles`/`tickRegles`/`declencher`/`reprendre`, `Mission.quotidienne`, « les mineurs, tous à la mine » ; tests `OrdresLongsTest`, `TestsOrdres`.
+- Mod `colonie_pnj` : **0.9.2** dans le dépôt et sur le serveur (livrée le 13/10 à 1 h 43 UTC, 108 JUnit et 153 en jeu verts). 0.9.2 = obéissance (lot 3) : classe `Obeissance` (décision OBEIT/RALE/NEGOCIE/REFUSE, peine de l'ordre, `mortel`, `accepte`, `insiste`, `abandonne`, `sansOrdre`, `question`, `prime`), `Travailleur.moral`/`prime`/`enAttente`, point de décision `Travailleur.appliquer → obeir → appliquerOrdre` ; tests `ObeissanceTest`, `TestsOrdres` (3 de plus).
+- Avant : 0.9.1 = ordres longs (lot 3) : classe `OrdresLongs` (règles pluie, orage, nuit, jour, matin, après-midi, soir, « quand tu as fini », « si tu vois… » ; « tous les jours » ; « oublie tes ordres »), `Travailleur.regles`/`tickRegles`/`declencher`/`reprendre`, `Mission.quotidienne`, « les mineurs, tous à la mine » ; tests `OrdresLongsTest`, `TestsOrdres`.
 - Avant : 0.9.0 = journal des phrases non comprises : classe `Incompris` (regroupement par `Ordres.normaliser`, 500 entrées, noms des joueurs et des PNJ remplacés par `@`), noté dans `Dialogue.noterIncompris` (motifs `rien`, `ia_seule` hors gestes spontanés via `Decision.lectureDemandee`, `ia_parole`), fichier `config/colonie_pnj/incompris.json` sur le serveur, `/pnj incompris [vider]`, route `/api/incompris`, carte dans l'onglet Actions du panneau, `tools/incompris.py` (lecture à distance, jamais dans le dépôt).
 - Avant : 0.8.9 = messages du poste (lot 2) : classe `Boite` (regroupement « ×N », lettre unique pour la colonie : dépôt plein, paie en retard, sans poste, poste détruit ; purge des lues d'abord ; tri importantes en tête), boutons Tout lu / Archiver / Archives / Tout effacer (`Bureau.Entite.action` : `tout_lu`, `archiver`, `desarchiver`, `tout_effacer`), tests `BoiteTest` et `TestsMessages`. Écran jamais vu en vrai.
 - Avant : 0.8.8 (livrée le 12/10 à 12 h 13 UTC, relue deux fois, 74 JUnit et 124 tests en jeu verts). 0.8.8 = plus de morts bêtes : le mineur bouche la lave (et l'eau sous terre), ne se met jamais sous du gravier/sable qui tombe ; réflexe de survie pour tous (`Travailleur.survivre`/`enPeril`, `Actions.Echapper`, `Actions.Boucher`, `Monde.ligneSure`/`refuge`/`eboulement`/`coulee`/`tombe`/`eauProche`), tests `TestsMorts` (lot `morts`, 24 tests).
@@ -28,7 +29,7 @@ Mise à jour : 12/10/2026, 20 h 10 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme jusqu'à vendredi » dans CLAUDE.md.**
-1. Lot 3 : **obéissance selon le moral et le caractère** (refuser, négocier ; refus d'un ordre mortel : cahier 8.4, 8.5), première passe. Puis OpenRouter, mémoire longue. Restes des ordres longs dans `docs/plus-tard.md`.
+1. Lot 3 : **OpenRouter** (conversation payante, clé propre au serveur, Groq et Gemini gratuits en premier), première passe ; puis mémoire longue. Restes de l'obéissance et des ordres longs dans `docs/plus-tard.md`.
 2. Restes du lot 2 : regarder l'écran du poste en vrai (banc photo, il faut un écran) ; message de la barre d'action non testé.
 3. Restes du lot « morts » : `Boucher` ne se déplace pas ; à 1 PV par la faim le moindre coup le met à terre ; non testés : coup pendant une fuite grave, messager/lettre en péril, « à bout d'air », montée de 2 blocs refusée par `ligneSure`.
 4. Restes faibles : compteur « coincé » et retours non sauvegardés ; allers-retours de plus de 8 blocs jamais comptés coincés ; changement de dimension non testé ; sortie par des lianes (15 s) ; chemin direct raté ~10 ms ; `Biomes.chercher` sur les fils de génération ; bancs `charge*` sensibles à des chunks lents (même cause que `etapeEnMontee`, corrigé le 12/10).
@@ -38,6 +39,7 @@ Mise à jour : 12/10/2026, 20 h 10 UTC. Une page à lire en début de session, a
 `panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.
 
 ## Fichiers à ouvrir
+- Obéissance : `Obeissance`, `Travailleur` (`obeir`, `moral`, `prime`, `changerMoral`, `raisonDuRefus`), `Messages` (`rale`, `negocie`, `refus_*`, `mortel_*`), `ObeissanceTest`, `TestsOrdres`.
 - Ordres longs : `OrdresLongs`, `Ordres.lire`, `Travailleur` (`regles`, `tickRegles`, `declencher`, `reprendre`, `appliquer`), `Dialogue.repondreAvec`, `TestsOrdres`, `OrdresLongsTest`.
 - Messages du poste : `Boite`, `Courrier`, `Bureau` (`fiche`, `action`), `Client.EcranPoste`, `Messages` (`IMPORTANTES`, `SEULES`), `TestsMessages`, `BoiteTest`.
 - Morts bêtes : `Travailleur.survivre`, `Actions` (`Casser`, `Echapper`, `Boucher`), `Mineur.creuserCase`, `Monde`, `TestsMorts.java`.
