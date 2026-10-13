@@ -93,9 +93,12 @@ public class TestsBucheron {
         BlockPos pied = b[0].east(4);
         List<BlockPos> tronc = arbre(l, pied, Blocks.SPRUCE_LOG, Blocks.SPRUCE_LEAVES, 42, 2);
         List<BlockPos> carre = List.of(pied, pied.east(), pied.south(), pied.south().east());
+        java.util.LinkedHashSet<String> vu = new java.util.LinkedHashSet<>();
+        h.onEachTick(() -> { if (vu.size() < 30) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat + "@" + (h.getTick() / 100)); });
         h.succeedWhen(() -> {
             long restent = tronc.stream().filter(q -> l.getBlockState(q).is(Blocks.SPRUCE_LOG)).count();
-            h.assertTrue(restent == 0, "tout le tronc doit tomber : " + restent + " bûches restent (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(restent == 0, "tout le tronc doit tomber : " + restent + " bûches restent (vu : " + Actions.chercherArbre(l, t.blockPosition(), 24)
+                    + ", arbre " + (Actions.arbre(l, pied) == null ? "non" : "oui") + ", inaccessible " + t.blocInaccessible(pied.asLong()) + ", suite " + vu + ", " + TestsJeu.etat(t, t.bureau) + ")");
             long pousses = carre.stream().filter(q -> l.getBlockState(q).is(Blocks.SPRUCE_SAPLING)).count();
             h.assertTrue(pousses == 4, "4 pousses de sapin en carré : " + pousses + " (" + TestsJeu.etat(t, t.bureau) + ")");
             t.discard();
@@ -214,7 +217,7 @@ public class TestsBucheron {
         BlockPos fleur = centre.offset(-4, 1, -1), fougere = centre.offset(1, 1, 4);
         l.setBlockAndUpdate(fleur, Blocks.POPPY.defaultBlockState());
         l.setBlockAndUpdate(fougere, Blocks.FERN.defaultBlockState());
-        BlockPos planche = centre.offset(-2, 1, -2), coffre = centre.offset(-3, 1, 0), posee = centre.offset(4, 1, -4);
+        BlockPos planche = centre.offset(-2, 1, -2), coffre = centre.offset(-3, 1, 2), posee = centre.offset(4, 1, -4);
         l.setBlockAndUpdate(planche, Blocks.OAK_PLANKS.defaultBlockState());
         l.setBlockAndUpdate(coffre, Blocks.CHEST.defaultBlockState());
         l.setBlockAndUpdate(posee, Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));

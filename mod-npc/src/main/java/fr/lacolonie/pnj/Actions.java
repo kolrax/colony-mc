@@ -482,6 +482,20 @@ public final class Actions {
         /** Les feuilles à faire tomber, une fois le bois coupé (null avant) ; le tick où les chercher. */
         List<BlockPos> feuilles;
         int abattu = -1;
+        /** Où se tenir pour l'abattre : à côté du pied (à 2 blocs pour un tronc 2 x 2), au plus près de lui. */
+        BlockPos place;
+
+        static BlockPos place(Travailleur t, BlockPos pied) {
+            BlockPos r = null;
+            for (Direction d : Direction.Plane.HORIZONTAL)
+                for (int k = 1; k <= 2; k++) {
+                    BlockPos q = pied.relative(d, k);
+                    if (!Monde.debout(t.level(), q)) continue;
+                    if (r == null || q.distSqr(t.blockPosition()) < r.distSqr(t.blockPosition())) r = q;
+                    break;
+                }
+            return r;
+        }
 
         Abattre(BlockPos pied) { super("abattre"); this.pied = pied; }
 
@@ -495,7 +509,10 @@ public final class Actions {
             if (!lvl.getBlockState(pied).is(BlockTags.LOGS)) return Etat.OK;
             if (!aPortee(t, pied)) {
                 if (coince() || age > 20 * 60) { t.blocInaccessible(pied); return echec("inaccessible"); }
-                marcher(t, Vec3.atCenterOf(pied), 1.0);
+                // Vers une place à côté du tronc : viser le bois lui-même, c'est viser le haut du tronc (le chemin du jeu
+                // remonte un bloc plein jusqu'à l'air), hors d'atteinte pour un grand arbre.
+                if (place == null) place = place(t, pied);
+                marcher(t, place != null ? Vec3.atBottomCenterOf(place) : Vec3.atCenterOf(pied), 1.0);
                 return Etat.EN_COURS;
             }
             if (total == 0) for (BlockPos p : bois) total += duree(t, lvl.getBlockState(p), p);
