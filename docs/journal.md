@@ -265,7 +265,8 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Instables vus : `TestsMineur.mineurNeCassePasUneStructure` (1 fois, vert à la relance), `carriereAuDessusDUnVide` (1 fois), `TestsIA.iavoix`, `TestsEleveur.abatLExcedent` (1 fois dans la passe du guérisseur).
 - Incident sans conséquence : un livreur a écrit son commit sur ma branche locale `eleveur` (j'avais changé de branche dans le dossier principal) ; `main` sur GitHub n'a jamais reçu de code pas vert ; commit remis sur `main`.
 - Serveur : l'hébergeur le met en pause entre deux visites (« Can't keep up », 17 à 59 min de retard au réveil), sans dégât.
-- Prochaine étape exacte : **guérisseur** (branche `guerisseur`, voir `docs/reprise.md`), puis lot 6 (pêcheur, chasseur, cuisinier, transporteur), puis lot 5 (moral, réactions, deuil).
+- Guérisseur fini, relu, corrigé et livré en 0.9.14 avant la fin de session (voir l'entrée de livraison).
+- Prochaine étape exacte : lot 6 (pêcheur, chasseur, cuisinier, transporteur), puis lot 5 (moral, réactions, deuil).
 
 ## 2026-10-13 23 h 07 - 23 h 09 UTC : livraison 0.9.14 (guérisseur)
 - **0.9.14**, commit `e92ae96` (sur `main`), livrée sur le serveur à 23 h 07 UTC (personne connecté : `list` = 0 joueur), « Done » à 23 h 08 min 11 s, sans erreur du mod ; `colonie_pnj-0.9.13.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.14, 1 246 599 octets, sha1 `7dd2af36…`, copie figée du jar).
