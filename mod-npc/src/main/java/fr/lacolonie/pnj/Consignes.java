@@ -106,6 +106,11 @@ final class Consignes {
         }
     }
 
+    /** Les chantiers creusés selon un plan ({@link Fouille}) : salle ou cave, carrière, tunnel. */
+    static final Set<String> FOUILLES = Set.of("tunnel", "salle", "carriere");
+    /** Au plus tant de liquides bouchés pour un chantier ; au-delà, il s'arrête (un lac, une rivière). */
+    static final int BOUCHONS = 24;
+
     static final String[] ACQUIS = {"À tes ordres, chef.", "Bien, chef.", "Tout de suite, chef.", "D'accord, chef.", "C'est parti !", "Compte sur moi."};
 
     // --- Recevoir un ordre ------------------------------------------------------------------------------------
@@ -161,7 +166,7 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "torche_la", "abattre_la", "planter_la").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
             if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
@@ -191,7 +196,18 @@ final class Consignes {
             case "travail" -> {
                 String refus = verifierTravail(t, a, lieu);
                 if (refus != null) return refus;
-                if (a.equals("tunnel")) texte = chef.getDirection().getName();
+                if (FOUILLES.contains(a)) {
+                    // Le plan dit (mesures, direction) ; de face, il creuse vers l'intérieur de la paroi, au niveau des pieds du chef.
+                    Fouille.Plan p = Fouille.lire(a, phrase, nombre(e));
+                    Direction face = chef.pick(48, 1.0f, false) instanceof BlockHitResult b ? b.getDirection() : Direction.UP;
+                    boolean bas = p.descend() || a.equals("salle") && face == Direction.UP;
+                    Direction d = !p.direction().isEmpty() ? Direction.byName(p.direction()) : face.getAxis().isHorizontal() ? face.getOpposite() : chef.getDirection();
+                    if (!bas && lieu.getY() > chef.getBlockY() && lieu.getY() - chef.getBlockY() <= 2) lieu = lieu.atY(chef.getBlockY());
+                    texte = p.vers(d.getName(), bas).texte();
+                    // Une salle ou une carrière : tout le chantier près de son poste.
+                    if (!a.equals("tunnel") && t.bureau != null && !(t.chezLui(lieu) && t.chezLui(lieu.relative(d, p.longueur() - 1))))
+                        return "C'est trop loin de mon poste, chef : je creuse près de chez nous.";
+                }
             }
             case "aller" -> {
                 if (a.equals("chef")) entite = chef.getUUID();
@@ -831,7 +847,7 @@ final class Consignes {
                 if (!cassable(l, vu)) return "Je ne casse pas ça, chef : ce n'est pas de la roche ou de la terre naturelle.";
                 if (vu.distSqr(t.blockPosition()) > 32 * 32) return "C'est trop loin, chef.";
             }
-            case "tunnel" -> { if (vu.distSqr(t.blockPosition()) > 24 * 24) return "C'est trop loin pour commencer un tunnel, chef."; }
+            case "tunnel", "salle", "carriere" -> { if (vu.distSqr(t.blockPosition()) > 24 * 24) return "C'est trop loin pour commencer ce chantier, chef."; }
             case "abattre_la" -> {
                 if (!l.getBlockState(vu).is(BlockTags.LOGS) && !l.getBlockState(vu).is(BlockTags.LEAVES)) return "Ce n'est pas un arbre, ça, chef.";
                 if (pied(l, vu) == null) return "Ce bois-là n'est pas un arbre, chef : on dirait une construction.";
@@ -996,6 +1012,13 @@ final class Consignes {
         int hele;
         boolean arrive;
         final List<BlockPos> chantier = new ArrayList<>();
+        /** Chantier selon un plan : où poser une torche, liquides bouchés, blocs laissés (pas à nous), sac vidé, deuxième passe. */
+        final java.util.Set<BlockPos> torches = new java.util.HashSet<>();
+        /** D'où creuser chaque bloc du plan (le sol de la tranche d'avant, la couche au-dessus) : un bloc dans la paroi ne s'atteint pas en marchant vers lui. */
+        final Map<BlockPos, BlockPos> debout = new java.util.HashMap<>();
+        BlockPos approche;
+        int bouchons, laisses;
+        boolean vide, repasse;
         String instrument;
         int[] air;
 
@@ -1400,7 +1423,7 @@ final class Consignes {
             String m = e.arg();
             if (age == 0) {
                 switch (m) {
-                    case "miner_la", "tunnel", "trou" -> { if (!t.equiper(Actions.Filtre.de("#minecraft:pickaxes"))) t.equiper(Actions.Filtre.de("#minecraft:shovels")); }
+                    case "miner_la", "tunnel", "trou", "salle", "carriere" -> { if (!t.equiper(Actions.Filtre.de("#minecraft:pickaxes"))) t.equiper(Actions.Filtre.de("#minecraft:shovels")); }
                     case "abattre_la", "abattre_autour" -> t.equiper(Actions.Filtre.de("#minecraft:axes"));
                     default -> {}
                 }
@@ -1440,6 +1463,14 @@ final class Consignes {
             // Le chantier, bloc par bloc.
             while (!chantier.isEmpty()) {
                 BlockPos p = chantier.remove(0);
+                if (FOUILLES.contains(m)) {
+                    String arret = fouiller(t, p);
+                    if (arret != null) { Voix.dire(t, arret, "inquiet"); return ok(t); }
+                    if (sous != null) return Actions.Etat.EN_COURS;
+                    // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
+                    if (chantier.isEmpty() && !repasse) { repasse = true; chantier.addAll(chantier(t)); }
+                    continue;
+                }
                 switch (m) {
                     case "miner_la", "tunnel", "trou", "defricher" -> {
                         if (l.getBlockState(p).isAir()) continue;
@@ -1461,7 +1492,52 @@ final class Consignes {
                 if (sous != null) return Actions.Etat.EN_COURS;
             }
             if (m.equals("torches") && etape < 2) return Actions.Etat.EN_COURS;
+            if (FOUILLES.contains(m)) Voix.dire(t, (m.equals("tunnel") ? "Le tunnel est percé, chef." : m.equals("salle") ? "C'est creusé, chef." : "La carrière est vidée, chef.")
+                    + (laisses > 0 ? " Je n'ai pas touché à ce qui n'est pas à nous." : ""), "calme");
             return ok(t);
+        }
+
+        /**
+         * Un bloc d'un chantier selon un plan, avec les sécurités du mineur : jamais un bloc construit ni un contenant
+         * ({@link #cassable}), ni une structure ou les terres d'un voisin ({@link Mineur#interdit}) ; un liquide contre le bloc
+         * est d'abord bouché (pierre ou terre de son sac) ; sac plein, il va le vider au dépôt ; le gravier au-dessus, c'est
+         * {@link Actions.Casser} qui s'en garde. Met dans {@code sous} ce qu'il faut faire (rien : bloc suivant). Renvoie
+         * ce qu'il dit s'il doit s'arrêter, sinon null.
+         */
+        String fouiller(Travailleur t, BlockPos p) {
+            var l = t.level();
+            if (l.getBlockState(p).isAir()) {
+                if (torches.remove(p) && l.getMaxLocalRawBrightness(p) < 8 && t.compter(Actions.Filtre.de("minecraft:torch")) > 0)
+                    sous = new Actions.Poser(p, Actions.Filtre.de("minecraft:torch"));
+                return null;
+            }
+            if (!cassable(l, p)) return null;
+            if (Mineur.interdit(t, p, true)) { laisses++; return null; }
+            for (Direction d : Direction.values()) {
+                BlockPos n = p.relative(d);
+                if (Monde.liquide(l, n) == null) continue;
+                if (Itineraire.caseDeChantier(t, true) < 0 || ++bouchons > BOUCHONS) return "De l'eau ou de la lave, chef, et plus de quoi la boucher : je m'arrête là.";
+                chantier.add(0, p);
+                sous = Actions.aPortee(t, n) ? new Actions.Boucher(n) : new Actions.Aller(Vec3.atCenterOf(p), 2);
+                return null;
+            }
+            if (Monde.libres(t) == 0 && Bureau.entite(t) != null) {
+                if (vide) return "Mon sac est plein, et le dépôt aussi, chef.";
+                vide = true;
+                Metier mt = Metier.de(t.metier);
+                chantier.add(0, p);
+                sous = new Actions.Deposer(mt == null ? List.of() : mt.garder);
+                return null;
+            }
+            vide = false;
+            if (!Actions.aPortee(t, p) && !p.equals(approche) && debout.containsKey(p)) {
+                approche = p;
+                chantier.add(0, p);
+                sous = new Actions.Aller(Vec3.atBottomCenterOf(debout.get(p)), 1.5);
+                return null;
+            }
+            sous = new Actions.Casser(p);
+            return null;
         }
 
         /** Les blocs à travailler, dans l'ordre. */
@@ -1472,10 +1548,18 @@ final class Consignes {
             switch (e.arg()) {
                 case "miner_la" -> r.add(v);
                 case "trou" -> { for (int i = 0; i < Math.max(1, c.nombre); i++) r.add(v.below(i)); }
-                case "tunnel" -> {
-                    Direction d = Direction.byName(c.texte);
+                case "tunnel", "salle", "carriere" -> {
+                    // Le plan gardé dans la consigne ; une consigne d'avant (la direction seule) : le tunnel de toujours.
+                    Fouille.Plan p = Fouille.Plan.de(c.texte);
+                    if (p == null) p = new Fouille.Plan(Math.max(1, c.nombre), 1, 2, c.texte, false);
+                    Direction d = Direction.byName(p.direction());
                     if (d == null || d.getAxis().isVertical()) d = Direction.fromYRot(t.getYRot());
-                    for (int i = 0; i < Math.max(1, c.nombre); i++) { r.add(v.relative(d, i)); r.add(v.relative(d, i).above()); }
+                    for (int[] b : Fouille.blocs(p)) {
+                        BlockPos q = v.relative(d, b[0]).relative(d.getClockWise(), b[1]).above(b[2]);
+                        r.add(q);
+                        if (b[3] == 1) torches.add(q);
+                        else debout.put(q, p.descend() ? q.above() : v.relative(d, b[0] - 1).relative(d.getClockWise(), b[1]));
+                    }
                 }
                 case "abattre_la" -> { BlockPos p = pied(l, v); if (p != null) r.add(p); }
                 case "torche_la", "planter_la" -> r.add(v.above());

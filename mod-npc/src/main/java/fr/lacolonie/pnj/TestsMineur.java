@@ -120,4 +120,124 @@ public class TestsMineur {
             t.discard();
         });
     }
+
+    // --- Lot 4, chantiers dits de vive voix (cahier 3.2) : salle, tunnel selon un plan, tri au dépôt ---------------
+
+    /** Un pavé de pierre, coins a et b compris (coordonnées absolues). */
+    static void pierre(ServerLevel l, BlockPos a, BlockPos b) {
+        for (BlockPos q : BlockPos.betweenClosed(a, b)) l.setBlockAndUpdate(q, Blocks.STONE.defaultBlockState());
+    }
+
+    /** « Creuse une salle de 5 sur 5 » face à une paroi : 5 x 5 x 3 vidés, rien autour, et la planche posée dedans reste. */
+    @GameTest(template = "vide", timeoutTicks = 4000)
+    public static void salleDeCinqSurCinq(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 60);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(-4, 0, 3), o.offset(4, 4, 11));
+        BlockPos planche = o.offset(1, 1, 5);
+        l.setBlockAndUpdate(planche, Blocks.OAK_PLANKS.defaultBlockState());
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 0.5, o.getY() + 0.5, o.getZ() + 3.02));
+                    bertrand.parler(chef, "Creuse une salle de 5 sur 5");
+                },
+                () -> {
+                    List<String> restes = new ArrayList<>();
+                    for (BlockPos q : BlockPos.betweenClosed(o.offset(-2, 0, 3), o.offset(2, 2, 7)))
+                        if (!q.equals(planche) && !l.getBlockState(q).isAir()) restes.add(q.subtract(o).toShortString());
+                    h.assertTrue(restes.isEmpty(), "la salle doit être vidée : " + restes + " (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")");
+                },
+                () -> {
+                    h.assertTrue(l.getBlockState(planche).is(Blocks.OAK_PLANKS), "la planche (un bloc construit) doit rester");
+                    for (BlockPos q : List.of(o.offset(0, 0, 8), o.offset(3, 0, 5), o.offset(-3, 1, 5), o.offset(0, 3, 5)))
+                        h.assertTrue(l.getBlockState(q).is(Blocks.STONE), "rien hors de la salle : " + q.subtract(o));
+                    h.assertTrue(bertrand.consigne == null, "fini, il reprend son travail (" + TestsRepertoire.c(bertrand) + ")");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** « Fais une carrière de 4 sur 4 sur 3 couches » (en regardant le sol) : vidée couche par couche, un escalier gardé pour remonter. */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void carriereEnCouches(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 62);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(-3, -3, 2), o.offset(3, -1, 8));
+        List<BlockPos> marches = List.of(o.offset(1, -2, 3), o.offset(1, -3, 3), o.offset(1, -3, 4));
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 0.5, o.getY() - 0.02, o.getZ() + 3.5));
+                    bertrand.parler(chef, "Fais une carrière de 4 sur 4 sur 3 couches");
+                },
+                () -> {
+                    List<String> restes = new ArrayList<>();
+                    for (BlockPos q : BlockPos.betweenClosed(o.offset(-2, -3, 3), o.offset(1, -1, 6)))
+                        if (!marches.contains(q) && !l.getBlockState(q).isAir()) restes.add(q.subtract(o).toShortString());
+                    h.assertTrue(restes.isEmpty(), "la carrière doit être vidée : " + restes + " (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")");
+                },
+                () -> {
+                    for (BlockPos q : marches) h.assertTrue(l.getBlockState(q).is(Blocks.STONE), "l'escalier reste : " + q.subtract(o));
+                    for (BlockPos q : List.of(o.offset(0, -1, 7), o.offset(-3, -1, 4), o.offset(2, -2, 4)))
+                        h.assertTrue(l.getBlockState(q).is(Blocks.STONE), "rien hors de la carrière : " + q.subtract(o));
+                    h.assertTrue(bertrand.consigne == null, "fini, il reprend son travail (" + TestsRepertoire.c(bertrand) + ")");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** « Creuse un tunnel de 12 blocs vers l'est » : 12 blocs de long (pas les 8 d'avant), 2 de haut, et pas un de plus. */
+    @GameTest(template = "vide", timeoutTicks = 2400)
+    public static void tunnelDeDouzeBlocs(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 61);
+        Travailleur bertrand = e[0];
+        bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        pierre(l, o.offset(3, 0, -2), o.offset(20, 3, 2));
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
+                    bertrand.parler(chef, "Creuse un tunnel de 12 blocs vers l'est");
+                },
+                () -> {
+                    for (int x = 3; x <= 14; x++) for (int y = 0; y <= 1; y++)
+                        h.assertTrue(l.getBlockState(o.offset(x, y, 0)).isAir(), "le tunnel doit être percé : " + x + "," + y + " (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")");
+                },
+                () -> {
+                    h.assertTrue(bertrand.consigne == null, "fini, il reprend son travail (" + TestsRepertoire.c(bertrand) + ")");
+                    h.assertTrue(l.getBlockState(o.offset(15, 0, 0)).is(Blocks.STONE) && l.getBlockState(o.offset(8, 2, 0)).is(Blocks.STONE)
+                            && l.getBlockState(o.offset(8, 0, 1)).is(Blocks.STONE), "pas un bloc de plus");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Au dépôt, le minerai va dans le coffre voisin qui a déjà du minerai, la pierre dans celui qui a déjà de la pierre. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void triAuDepot(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 3, 2, 3, new ItemStack(Items.IRON_PICKAXE));
+        h.setBlock(1, 2, 0, Blocks.CHEST);
+        h.setBlock(0, 2, 1, Blocks.CHEST);
+        var pierres = (net.minecraft.world.level.block.entity.ChestBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(new BlockPos(1, 2, 0)));
+        var minerais = (net.minecraft.world.level.block.entity.ChestBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(new BlockPos(0, 2, 1)));
+        pierres.setItem(5, new ItemStack(Items.COBBLESTONE));
+        minerais.setItem(5, new ItemStack(Items.RAW_IRON));
+        t.inventaire.addItem(new ItemStack(Items.RAW_IRON, 10));
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 20));
+        t.inventaire.addItem(new ItemStack(Items.COAL, 5));
+        t.inventaire.addItem(new ItemStack(Items.DIRT, 7));
+        Cerveau.lancer(t, new Actions.Deposer(List.of()));
+        h.succeedWhen(() -> {
+            h.assertTrue(pierres.countItem(Items.COBBLESTONE) == 21 && pierres.countItem(Items.DIRT) == 7, "la pierre et la terre vont avec la pierre (" + pierres.countItem(Items.COBBLESTONE) + ")");
+            h.assertTrue(minerais.countItem(Items.RAW_IRON) == 11 && minerais.countItem(Items.COAL) == 5, "le minerai va avec le minerai (" + minerais.countItem(Items.RAW_IRON) + ")");
+            t.discard();
+        });
+    }
 }

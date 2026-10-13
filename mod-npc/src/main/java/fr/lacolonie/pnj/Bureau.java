@@ -184,6 +184,11 @@ public final class Bureau {
 
         // --- Le dépôt : le bureau, plus les coffres, tonneaux ou réservoirs collés à lui -----------------
 
+        /** Les sortes que le dépôt trie : le minerai, puis la pierre (terre, gravier, ardoise comprises). */
+        static final List<Actions.Filtre> SORTES = List.of(
+                Actions.Filtre.de("#c:ores|#c:raw_materials|minecraft:coal|minecraft:diamond|minecraft:emerald|minecraft:lapis_lazuli|minecraft:redstone"),
+                Actions.Filtre.de("#c:cobblestones|#c:stones|#minecraft:dirt|minecraft:gravel|minecraft:cobbled_deepslate|minecraft:deepslate"));
+
         List<IItemHandler> voisins() {
             List<IItemHandler> l = new ArrayList<>();
             if (level == null) return l;
@@ -196,9 +201,25 @@ public final class Bureau {
             return l;
         }
 
-        /** Range un objet au dépôt puis dans les coffres voisins ; renvoie ce qui n'a pas trouvé de place. */
+        /**
+         * Range un objet au dépôt puis dans les coffres voisins ; renvoie ce qui n'a pas trouvé de place. Trié (cahier 3.2) :
+         * le minerai va d'abord dans un coffre voisin qui contient déjà du minerai, la pierre dans un coffre qui contient
+         * déjà de la pierre.
+         */
         public ItemStack ranger(ItemStack s) {
-            ItemStack reste = depot.addItem(s);
+            ItemStack reste = s;
+            for (Actions.Filtre sorte : SORTES) {
+                if (!sorte.objet(reste)) continue;
+                for (IItemHandler h : voisins()) {
+                    if (reste.isEmpty()) break;
+                    boolean deja = false;
+                    for (int i = 0; i < h.getSlots() && !deja; i++) deja = sorte.objet(h.getStackInSlot(i));
+                    if (deja) reste = ItemHandlerHelper.insertItemStacked(h, reste, false);
+                }
+                break;
+            }
+            if (reste.isEmpty()) return reste;
+            reste = depot.addItem(reste);
             for (IItemHandler h : voisins()) {
                 if (reste.isEmpty()) break;
                 reste = ItemHandlerHelper.insertItemStacked(h, reste, false);
