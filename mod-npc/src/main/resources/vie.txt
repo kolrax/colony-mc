@@ -1,0 +1,626 @@
+# Répliques de la vie des PNJ : corps, santé, moral, deuil, réactions (lot 5). Fichier UTF-8.
+#
+# FORMAT
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#   peureux: réplique réservée aux peureux
+#
+# - « [cle] » ouvre une section : une situation. La clé est courte, en minuscules, sans accent ni espace
+#   (lettres, chiffres et « _ »). Chaque clé n'apparaît qu'une fois dans le fichier.
+# - Chaque ligne qui suit est une réplique, jusqu'à la section suivante. Une réplique tient sur une ligne.
+# - Préfixe facultatif « temperament: » en tout début de ligne : la réplique n'est dite que par un PNJ de ce
+#   tempérament. Préfixes permis (aucun autre) : calme:, peureux:, fourbe:, colerique:
+#   Un espace suit les deux-points. Aucune réplique sans préfixe ne commence par l'un de ces mots suivi de « : ».
+# - Les répliques sans préfixe sont pour tout le monde. Chaque section en a au moins quatre, pour qu'aucun
+#   tempérament ne reste muet. Proposition de tirage (comme Messages.java) : une fois sur deux, une réplique
+#   du tempérament du PNJ s'il en a ; sinon une réplique commune.
+#
+# VARIABLES (remplacées par le code ; seulement dans les sections indiquées)
+#   {chef}   nom du chef de la colonie (partout)
+#   {nom}    prénom de l'autre PNJ en jeu : celui qui soigne (soigne), qui a pris le lit (lit_vole)
+#   {objet}  l'objet en jeu, tel qu'on le dit (« du pain », « une pioche ») : vol, sabotage_avoue, cadeau
+#   {mort}   prénom du PNJ mort : ami_mort, deuil_annonce, deuil_tristesse, enterrement_discours,
+#            enterrement_apaisement
+#
+# QUI PARLE, À QUI
+# - Celui qui parle est le PNJ concerné. Il parle au chef (tutoiement, comme dans Messages.java) ou à voix
+#   haute pour les autres, en bulle. Les textes évitent les accords de genre sur celui qui parle, sur le chef
+#   et sur le mort (« j'ai sommeil » plutôt que « je suis fatigué » ; « {mort} nous a quittés »).
+# - Aucun fait inventé : pas de monstre, de lieu ni de jour précis qui ne serait pas arrivé.
+#
+# SECTIONS
+#   Corps :      faim_legere, faim_forte, fatigue, sans_lit, lit_vole
+#   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne
+#   Loisirs :    envie_pause
+#   Moral bas :  plainte_douce, plainte_forte, menace_greve, greve, menace_demission, demission, fuite_nuit,
+#                vol, sabotage_avoue, avertissement_1, avertissement_2, avertissement_3, revolte
+#   Moral haut : content, fier_colonie
+#   Causes :     paie_retard, repas_pareils, repas_varies, danger, chef_crie, chef_poli, meteo_mauvaise,
+#                meteo_belle, ami_mort
+#   Deuil :      deuil_annonce, deuil_tristesse, enterrement_discours, enterrement_apaisement
+#   Réactions :  insulte, coup, impaye, diamant_avoue, diamant_nie, cadeau
+
+# ============================================================
+# CORPS
+# ============================================================
+
+[faim_legere]
+Mon ventre commence à gargouiller.
+Un morceau de pain ne serait pas de refus.
+J'ai un petit creux. Ça ira encore un moment.
+On mange bientôt ? Je demande, comme ça.
+Je travaillerais mieux avec quelque chose dans l'estomac.
+L'heure du repas approche, je le sens.
+calme: Je mangerai quand la tâche sera finie. Mais pas beaucoup plus tard.
+peureux: Il reste de quoi manger au dépôt ? Juste pour savoir…
+fourbe: Une pomme qui traînerait quelque part, personne ne la regretterait, non ?
+colerique: J'ai faim. Et quand j'ai faim, je n'ai pas bon caractère.
+
+[faim_forte]
+J'ai trop faim. Mes bras ne suivent plus.
+Je n'ai rien mangé depuis trop longtemps, {chef}.
+La tête me tourne. Il me faut à manger, vite.
+On ne peut pas travailler le ventre vide. Personne ne peut.
+Je mangerais une botte de paille, je crois.
+S'il te plaît, {chef}, un peu de nourriture au dépôt.
+Je vais tomber si je ne mange pas.
+calme: Je ne me plains pas souvent. Là, il me faut vraiment manger.
+peureux: J'ai si faim que mes mains tremblent… Je t'en prie.
+fourbe: Un ouvrier qui a faim regarde les réserves des autres. Je dis ça…
+colerique: Je crève de faim ! Rien à manger, rien de fait. C'est simple.
+
+[fatigue]
+J'ai sommeil. Mes paupières sont lourdes.
+Je ne tiens plus debout. Il me faut du repos.
+Mes bras sont en plomb.
+Encore un peu et je dors debout.
+Une bonne nuit, et je serai de nouveau bon à quelque chose.
+Je bâille plus que je ne travaille.
+Laisse-moi dormir un peu, {chef}. Je reprendrai mieux après.
+calme: Le corps a ses limites. J'arrive aux miennes.
+peureux: Si je m'endors ici, quelque chose va me tomber dessus…
+fourbe: Je ferai semblant de travailler encore un peu. Puis je dormirai.
+colerique: Assez ! Même un bœuf a le droit de se coucher.
+
+[sans_lit]
+Je n'ai pas de lit. Où je dors, moi ?
+Dormir par terre, encore une nuit… Mon dos ne dit pas merci.
+Un lit, {chef}. Juste un lit. Ce n'est pas trop demander.
+Je n'ai même pas un coin à moi pour dormir.
+Chacun son lit, sauf moi, on dirait.
+La paille du sol pique. Un vrai lit, ce serait bien.
+calme: Je dormirai où je peux. Mais un lit à moi m'aiderait beaucoup.
+peureux: Dormir dehors sans lit… et sans toit… J'ai peur la nuit, tu sais.
+fourbe: Il y a des lits libres chez les voisins. Je dis ça, je ne dis rien.
+colerique: Pas de lit ? Alors pas de travail demain. Voilà.
+
+[lit_vole]
+Quelqu'un dort dans mon lit !
+{nom} a pris mon lit. Ce n'est pas juste.
+C'était mon lit. Mon lit à moi.
+Je reviens du travail et ma place est prise.
+{nom}, sors de là, c'est ma couche.
+On a dormi dans mon lit, et ce n'était pas moi.
+calme: {nom}, ce lit est le mien. Je te demande de le rendre, gentiment.
+peureux: Je n'ose pas réveiller {nom}… Mais c'est mon lit…
+fourbe: {nom} veut mon lit ? Très bien. On verra demain qui rira.
+colerique: {nom} ! Debout ! Ce lit est à moi, et tout le monde le sait !
+
+# ============================================================
+# SANTÉ
+# ============================================================
+
+[blessure_legere]
+Aïe ! Ce n'est rien, une égratignure.
+Je saigne un peu. Ça passera.
+Ouille. J'ai connu pire.
+Rien de cassé. Je continue.
+Une bosse de plus. J'en fais la collection.
+Ça pique, mais je tiens debout.
+calme: Petite blessure. Je la soignerai ce soir.
+peureux: Je saigne ! C'est grave ? Dis-moi que ce n'est pas grave…
+fourbe: Je boite un peu. Ça mérite bien une pause, non ?
+colerique: Qui m'a fait ça ? Je vais lui apprendre !
+
+[blessure_grave]
+J'ai mal. Vraiment mal.
+Il me faut un guérisseur. Vite.
+Je ne peux plus bouger le bras.
+Ça saigne beaucoup… Aidez-moi.
+Je ne vais pas pouvoir continuer comme ça.
+{chef}, il me faut des soins. Ce n'est pas une petite chose.
+Appelez quelqu'un. Je n'y arriverai pas sans aide.
+calme: Je vais m'asseoir. Il faut que quelqu'un regarde ma blessure.
+peureux: Je vais mourir ? Ne me laissez pas !
+fourbe: Je le savais, que ce travail finirait par me coûter cher.
+colerique: Maudite tâche ! Voilà où elle m'a mené !
+
+[a_terre]
+Aidez-moi… Je ne peux plus me lever.
+Je suis à terre… Quelqu'un…
+Ne me laissez pas là.
+J'ai froid… Venez vite.
+Un guérisseur… s'il vous plaît…
+Je ne sens plus mes jambes.
+{chef}… viens…
+calme: Je reste tranquille. Il faut que quelqu'un vienne.
+peureux: J'ai peur… Ne partez pas…
+fourbe: Celui qui me relève aura ma reconnaissance… et ma part.
+colerique: Ne restez pas plantés là ! Aidez-moi !
+
+[releve]
+Je suis debout. Merci.
+Ouf. Ce n'était pas encore mon heure.
+Je tiens sur mes jambes. Doucement, mais je tiens.
+J'ai eu chaud. Merci à vous.
+Je reprends mon souffle, puis le travail.
+On m'a relevé. Je ne l'oublierai pas.
+calme: Ça va mieux. Je vais avancer lentement.
+peureux: J'ai cru que c'était la fin… J'en tremble encore.
+fourbe: Bien. Personne n'a touché à mes affaires pendant ce temps, j'espère ?
+colerique: Debout ! Et le prochain qui me met à terre le paiera.
+
+[soigne]
+Merci, {nom}. Ça va déjà mieux.
+{nom} a des mains d'or.
+Grâce à {nom}, je vais m'en tirer.
+Ça pique, ton onguent, {nom}. Mais ça marche.
+Je te dois une fière chandelle, {nom}.
+Bien soigné, bien reposé. Je reprends bientôt.
+calme: Merci, {nom}. Je te revaudrai ça.
+peureux: Ça va guérir, {nom} ? Tu me le promets ?
+fourbe: {nom}, tu ne diras pas au chef que c'était si peu grave, hein ?
+colerique: Doucement, {nom} ! Bon… merci quand même.
+
+# ============================================================
+# LOISIRS
+# ============================================================
+
+[envie_pause]
+Une petite pause me ferait du bien.
+On pourrait souffler un moment, non ?
+J'irais bien boire un coup à la taverne.
+Travailler, travailler… Et un peu de bon temps, quand ?
+Une chanson, un verre, et je repars de plus belle.
+Le soleil est beau. Juste un instant assis…
+calme: Un moment de repos, et je travaillerai mieux après.
+peureux: Je peux m'arrêter un peu ? Je ne veux pas d'ennuis…
+fourbe: Si personne ne regarde, je m'assieds. Personne ne regarde ?
+colerique: J'ai bien mérité une pause, et je la prendrai !
+
+# ============================================================
+# MORAL BAS
+# ============================================================
+
+[plainte_douce]
+Ce n'est pas tous les jours facile, ici.
+Je n'ai pas trop le cœur à l'ouvrage.
+On fait aller. Mais pas bien fort.
+Un peu de reconnaissance, ça ne ferait pas de mal.
+J'ai connu des jours meilleurs.
+Le travail est long, la paie est courte.
+Bof. Je fais ce que je peux.
+calme: Ça ira mieux demain. Enfin, je l'espère.
+peureux: Je n'ose rien dire… mais ça ne va pas très bien.
+fourbe: Certains ici ont la vie plus douce que d'autres. Suivez mon regard.
+colerique: Je râle, je râle… Mais qui m'écoute ?
+
+[plainte_forte]
+J'en ai assez, {chef}. Vraiment assez.
+On nous traite comme des bêtes de somme.
+Ça ne peut plus durer comme ça.
+Je travaille dur et je n'en vois pas le bout.
+Si rien ne change, je ne réponds plus de moi.
+Tout le monde se plaint, et personne n'écoute.
+Écoute-nous, {chef}. Avant qu'il soit trop tard.
+calme: Je le dis calmement, mais je le dis : ça ne va plus.
+peureux: Je ne voulais pas me plaindre… mais je n'en peux plus.
+fourbe: Les autres pensent comme moi. Ils n'osent juste pas le dire.
+colerique: Ras-le-bol ! On mérite mieux que ça !
+
+[menace_greve]
+Si ça continue, je pose mes outils.
+Encore un jour comme ça, et je ne travaille plus.
+On pourrait bien tous s'arrêter, {chef}. Tu y as pensé ?
+Les bras croisés, ça s'apprend vite.
+Change quelque chose, ou la colonie s'arrête.
+Un ouvrier mécontent, ça peut aussi ne rien faire.
+calme: Je ne veux pas arrêter. Ne m'y oblige pas.
+peureux: Je n'aime pas les histoires… mais je pourrais arrêter, moi aussi.
+fourbe: Il suffirait d'un mot pour que tout le monde s'arrête. Un seul mot.
+colerique: Encore une fois, et je jette ma pioche !
+
+[greve]
+Je ne travaille plus. C'est la grève.
+Mes outils restent par terre tant que rien ne change.
+Je m'assieds là. Et j'y reste.
+Pas un coup de plus tant qu'on ne nous écoute pas.
+Tu sais ce qu'il faut faire, {chef}.
+On arrête. Tous ensemble, s'il le faut.
+calme: Je reprendrai quand on m'aura entendu. Pas avant.
+peureux: Je fais grève… C'est bien comme ça qu'on dit ?
+fourbe: Les autres travaillent encore ? Pas pour longtemps.
+colerique: Grève ! Et ne viens pas me dire de reprendre !
+
+[menace_demission]
+Je pourrais bien aller travailler ailleurs.
+Il y a d'autres colonies, tu sais.
+Encore un peu, et je rends mon tablier.
+Aucune chaîne ne me retient ici.
+On m'a déjà proposé du travail ailleurs. J'y pense.
+Si rien ne s'arrange, je pars.
+calme: Je réfléchis à partir. Je préférerais rester.
+peureux: Je ne veux pas partir… mais je ne veux pas rester comme ça non plus.
+fourbe: Une autre colonie me paierait mieux. Je dis ça…
+colerique: Un mot de plus, et je fais mon sac !
+
+[demission]
+C'est fini. Je m'en vais.
+Je pars, {chef}. Trouve quelqu'un d'autre.
+Adieu. J'ai assez donné.
+Je rends mes outils. Bonne chance.
+Je ne reviendrai pas. N'insiste pas.
+J'ai tenu tant que j'ai pu.
+calme: Je pars sans rancune. Mais je pars.
+peureux: Pardon, {chef}… Je ne peux plus.
+fourbe: Je pars. Et je sais où on me paiera mieux.
+colerique: Je m'en vais ! Et bon débarras !
+
+[fuite_nuit]
+Personne ne me verra partir.
+Cette nuit, je file.
+Doucement… Pas un bruit.
+Adieu la colonie. Je ne reviendrai pas.
+Je prends la route avant l'aube.
+Mieux vaut partir sans rien dire.
+calme: Je pars en silence. C'est mieux pour tout le monde.
+peureux: Pourvu qu'on ne m'entende pas…
+fourbe: Un sac bien rempli, et personne pour le compter.
+colerique: Qu'ils se débrouillent sans moi, demain matin !
+
+[vol]
+Personne ne verra qu'il manque {objet}.
+Je prends {objet}. On me le doit bien.
+Juste {objet}. Ce n'est pas grand-chose.
+{objet}… Ça me revient de droit.
+Chut. Personne n'a rien vu.
+Vite, dans le sac.
+calme: Ça ne me plaît pas de faire ça. Mais on ne m'a pas laissé le choix.
+peureux: Pardon, pardon… Je le prends quand même.
+fourbe: {objet} ? Je n'ai rien vu, moi. Rien du tout.
+colerique: On ne me paie pas ? Alors je me paie moi-même !
+
+[sabotage_avoue]
+Oui, c'est moi qui ai abîmé {objet}.
+J'ai cassé {objet}. Exprès. Pour qu'on m'écoute.
+Je l'avoue : {objet}, c'est moi.
+Je ne voulais pas en arriver là. Mais voilà.
+C'était le seul moyen de me faire entendre.
+Tu voulais savoir qui ? C'est moi.
+calme: J'ai abîmé {objet}. Je le regrette déjà.
+peureux: C'est moi… Pardon… Je ne savais plus quoi faire…
+fourbe: C'est moi. Et tu as bien de la chance que ce ne soit que {objet}.
+colerique: Oui, c'est moi ! Et je recommencerai si rien ne change !
+
+# Les trois avertissements avant la révolte vont du plus doux au plus grave.
+
+[avertissement_1]
+{chef}, il faut que je te parle. Ça ne va pas du tout.
+Je te préviens une fois : on ne tiendra pas longtemps comme ça.
+Les gens grondent, {chef}. Écoute-les.
+Les autres en ont assez, eux aussi.
+Il faut que ça change. Je le dis gentiment, pour l'instant.
+Prends garde, {chef}. La colère monte.
+calme: Je te le dis en ami : il est temps de changer quelque chose.
+peureux: Je n'ose pas le dire… mais certains parlent de se révolter.
+fourbe: J'entends des choses, le soir. Des choses qui ne te plairaient pas.
+colerique: Premier avertissement, {chef}. Il n'y en aura pas beaucoup d'autres.
+
+[avertissement_2]
+Deuxième fois que je te préviens, {chef}.
+Tu ne nous écoutes pas. Ça va mal finir.
+On a parlé entre nous. On n'est pas contents.
+Je ne pourrai bientôt plus retenir les autres.
+Encore un peu, et ce ne sera plus des mots.
+Je t'ai mis en garde une fois. Je le fais encore.
+calme: Je garde mon calme. Les autres, beaucoup moins.
+peureux: Les autres prennent des armes… J'ai peur de ce qui va arriver.
+fourbe: Moi, je suis de ton côté, bien sûr. Pour l'instant.
+colerique: Tu nous prends pour qui ? Ma patience est à bout !
+
+[avertissement_3]
+Dernier avertissement, {chef}. Après, ce sera trop tard.
+C'est la dernière fois que je parle. La prochaine, on agit.
+Change tout, maintenant. Ou on se lève contre toi.
+Tu as encore une chance. Une seule.
+Ce soir, les outils pourraient devenir des armes.
+Écoute bien : il n'y aura pas d'autre mise en garde.
+calme: J'ai tout essayé avec des mots. Il ne m'en reste plus.
+peureux: Fais quelque chose, {chef}, je t'en supplie… Ils sont prêts.
+fourbe: Tout est prêt. Il ne manque qu'une étincelle. À toi de voir.
+colerique: Dernière fois, {chef}. La prochaine, c'est avec ma hache que je parle !
+
+[revolte]
+Assez ! On se lève !
+À bas le chef ! On prend ce qui nous revient !
+Tu ne nous as pas écoutés, {chef}. Maintenant, tu vas nous entendre.
+Tous ensemble ! Ils ne peuvent rien contre nous tous !
+Fini de courber le dos !
+On t'avait mis en garde, {chef}. Trois fois.
+calme: Je ne voulais pas en arriver là. Tu ne m'as pas laissé le choix.
+peureux: On y va… on y va vraiment ? Bon… À l'assaut…
+fourbe: Enfin. J'attendais ce jour depuis longtemps.
+colerique: À l'attaque ! Pour tous les jours sans paie !
+
+# ============================================================
+# MORAL HAUT
+# ============================================================
+
+[content]
+Belle journée, hein ?
+Le travail avance, et le cœur est léger.
+Je chanterais presque.
+On est bien, ici.
+Merci, {chef}. Ça fait plaisir de travailler comme ça.
+Pas une plainte aujourd'hui. Rien à redire.
+Le ventre plein, la bourse aussi. Que demander de plus ?
+calme: Tout va bien. C'est assez rare pour le dire.
+peureux: Pour une fois, je n'ai peur de rien. C'est agréable.
+fourbe: Je n'ai rien à redire. Même moi, ça m'étonne.
+colerique: Aujourd'hui, personne ne m'énerve. Profitez-en.
+
+[fier_colonie]
+Regarde ce qu'on a construit. Pas mal, hein ?
+À mon arrivée, il n'y avait rien ici. Et maintenant…
+Notre colonie, on peut en être fiers.
+Les voisins doivent nous envier.
+Pierre après pierre, on en a fait quelque chose.
+Je raconterai ça à mes petits-enfants.
+calme: On a bien travaillé, tous ensemble.
+peureux: Avec de si bons murs, on ne craint plus grand-chose.
+fourbe: Une si belle colonie… J'espère que le chef sait à qui il la doit.
+colerique: La plus belle colonie du pays ! Qui dit le contraire ?
+
+# ============================================================
+# CAUSES DU MORAL
+# ============================================================
+
+[paie_retard]
+{chef}, ma paie n'est pas arrivée.
+Je travaille, mais je ne vois pas la couleur de mes pièces.
+On m'a oublié pour la paie, on dirait.
+Une bourse vide, ça décourage.
+Je veux bien attendre un peu. Mais pas trop.
+Toujours rien dans ma bourse, {chef}.
+calme: Je patiente. Mais ma paie devrait déjà être là.
+peureux: Je ne veux pas déranger… mais il me faudrait ma paie.
+fourbe: Pas de paie ? Il y a d'autres façons de se payer, tu sais.
+colerique: Où sont mes pièces ? Je ne travaille pas pour rien !
+
+[repas_pareils]
+Encore la même chose à manger.
+Toujours pareil… Mon ventre s'ennuie.
+Un peu de changement dans l'assiette, ce serait bien.
+Si je mange encore ça, je vais finir par lui ressembler.
+Ça nourrit, mais ça ne réjouit pas.
+On ne pourrait pas varier un peu ?
+calme: C'est mangeable. Mais toujours la même chose, ça use.
+peureux: Je ne me plains pas… mais un autre plat, juste une fois ?
+fourbe: Les voisins mangent mieux. Je l'ai entendu dire.
+colerique: Encore ça ? Je vais le jeter aux cochons !
+
+[repas_varies]
+Ah, enfin quelque chose de différent !
+Ça, c'est un bon repas.
+Le cuisinier s'est surpassé aujourd'hui.
+Du pain, de la viande, des légumes… Un vrai festin.
+Bien manger, ça redonne du cœur à l'ouvrage.
+Mon ventre te remercie, {chef}.
+calme: Un bon repas. Merci.
+peureux: C'est bon… Je peux en reprendre un peu ?
+fourbe: Excellent. Il en reste ? Pour plus tard, bien sûr.
+colerique: Voilà qui me met de bonne humeur ! Pour une fois.
+
+[danger]
+Ce travail est trop dangereux.
+J'ai bien cru y rester, tout à l'heure.
+On risque sa peau ici, {chef}.
+Un jour, il y aura un malheur.
+Il faudrait mieux nous protéger.
+Je travaille avec la peur au ventre.
+calme: Il faut plus de prudence. Pour tout le monde.
+peureux: J'ai peur… Je ne veux plus y retourner.
+fourbe: Pour un travail si risqué, on devrait être mieux payés.
+colerique: Qui nous protège, ici ? Personne !
+
+[chef_crie]
+Pas la peine de crier, j'entends bien.
+Doucement, {chef}. On n'est pas des bêtes.
+Si tu me cries dessus, je travaille moins bien.
+On parle mieux sans crier.
+Je fais de mon mieux. Inutile de hurler.
+Ta voix porte loin, {chef}. Trop loin.
+calme: Je comprends. Mais parle-moi autrement, s'il te plaît.
+peureux: Pardon, pardon… Ne crie pas…
+fourbe: Crie autant que tu veux. Je m'en souviendrai.
+colerique: Ne me crie pas dessus ! Je crie plus fort que toi !
+
+[chef_poli]
+Merci de me parler comme ça, {chef}.
+Avec un chef poli, le travail est plus doux.
+Ça fait plaisir, un mot gentil.
+Pour toi, je veux bien en faire un peu plus.
+On est bien traités, ici.
+Un « s'il te plaît », et tout devient facile.
+calme: Merci, {chef}. C'est apprécié.
+peureux: Tu me parles avec douceur… Merci.
+fourbe: Un chef poli, c'est rare. J'en profite.
+colerique: Bon. Avec toi, je ne peux même pas me mettre en colère.
+
+[meteo_mauvaise]
+Encore de la pluie… L'eau me coule jusque dans le dos.
+Quel temps de chien.
+Ce froid me rentre dans les os.
+Avec ce temps, tout est plus dur.
+Le ciel nous en veut, aujourd'hui.
+J'ai les pieds mouillés depuis ce matin.
+calme: Il pleut. Ça finira bien par s'arrêter.
+peureux: L'orage me fait peur… Je peux rentrer ?
+fourbe: Par un temps pareil, personne ne travaille vraiment. Moi non plus.
+colerique: Maudite pluie ! Elle ne s'arrête donc jamais ?
+
+[meteo_belle]
+Quel beau soleil !
+Il fait bon travailler, aujourd'hui.
+Le ciel est clair. Ça met de bonne humeur.
+Une journée comme ça, on la garde en mémoire.
+Le beau temps, c'est la moitié du travail de fait.
+Les oiseaux chantent. Moi aussi, presque.
+calme: Belle journée. Profitons-en.
+peureux: Pas un nuage… Rien à craindre, pour une fois.
+fourbe: Belle journée pour une sieste à l'ombre. Je dis ça…
+colerique: Même moi, ce soleil me calme.
+
+[ami_mort]
+{mort} me manque.
+Je travaillais toujours avec {mort}. Plus maintenant.
+Je pense à {mort} sans arrêt.
+Ce n'est plus pareil, sans {mort}.
+{mort} aurait ri de ça.
+Pourquoi {mort}… pourquoi ?
+calme: {mort} comptait pour moi. Je n'oublierai pas.
+peureux: Et si c'était moi, la prochaine fois ?
+fourbe: {mort} me devait encore des pièces. Pauvre {mort}.
+colerique: Ce n'est pas juste ! {mort} ne méritait pas ça !
+
+# ============================================================
+# DEUIL
+# ============================================================
+
+[deuil_annonce]
+{mort} nous a quittés.
+Il faut que vous le sachiez : {mort} ne se relèvera pas.
+{mort} ne reviendra pas.
+On a perdu {mort}.
+Une triste nouvelle : {mort} n'est plus.
+{mort}… Je n'arrive pas à y croire.
+calme: Il faut que je vous le dise : {mort} nous a quittés.
+peureux: {mort} n'est plus… Qui sera le prochain ?
+fourbe: {mort} n'est plus. Ses affaires, qui les garde ?
+colerique: {mort} n'est plus ! Et personne n'a rien pu faire !
+
+[deuil_tristesse]
+Je n'ai pas le cœur à l'ouvrage.
+La place de {mort} est vide.
+Je repense à {mort}.
+C'est calme, sans {mort}. Trop calme.
+Je mets un pied devant l'autre. C'est tout.
+Le temps passe, mais ça fait encore mal.
+calme: Il faut continuer. {mort} l'aurait voulu.
+peureux: Je n'ose plus aller là-bas, là où {mort} travaillait.
+fourbe: On fait comme si de rien n'était. Mais tout le monde y pense.
+colerique: Je cogne plus fort, aujourd'hui. Ça aide un peu.
+
+[enterrement_discours]
+{mort} était des nôtres. On ne l'oubliera pas.
+Repose en paix, {mort}. Tu as bien travaillé.
+{mort} a donné sa peine à cette colonie. Merci.
+Adieu, {mort}. La terre te sera douce.
+Ici repose {mort}, qui a travaillé dur et partagé notre pain.
+On gardera ta place au coin du feu, {mort}.
+calme: Que {mort} repose tranquille. On veillera sur ce qui reste.
+peureux: Adieu, {mort}… Veille sur nous, de là où tu es.
+fourbe: {mort} avait ses défauts. Qui n'en a pas ? Adieu quand même.
+colerique: Adieu, {mort} ! Tu étais la meilleure tête de mule d'ici !
+
+[enterrement_apaisement]
+Ça fait du bien de lui avoir dit adieu.
+Au moins, {mort} repose en paix.
+On a fait les choses bien. J'ai le cœur moins lourd.
+Merci d'avoir organisé ça, {chef}.
+Je peux reprendre le travail, maintenant.
+{mort} aurait aimé cette cérémonie.
+calme: C'était juste. Maintenant, on peut avancer.
+peureux: Je me sens un peu moins triste. Un peu.
+fourbe: Belle cérémonie. Le chef sait faire les choses, parfois.
+colerique: Bon. Ça m'a calmé. Un peu.
+
+# ============================================================
+# RÉACTIONS AU CHEF
+# ============================================================
+
+[insulte]
+Pourquoi tu me parles comme ça ?
+Je ne mérite pas ça, {chef}.
+Ça fait mal, tu sais. Les mots aussi.
+Je travaille dur, et voilà le merci.
+Garde tes insultes pour toi.
+Je m'en souviendrai.
+calme: Je vais faire comme si je n'avais rien entendu. Cette fois.
+peureux: Pardon… J'ai fait quelque chose de mal ?
+fourbe: Très bien. On verra qui rira le dernier.
+colerique: Répète un peu, pour voir ?
+
+[coup]
+Aïe ! Pourquoi tu me frappes ?
+On ne frappe pas ses ouvriers, {chef} !
+Arrête ! Je n'ai rien fait !
+Ça, je ne l'oublierai pas.
+Tu te prends pour qui ?
+Encore une fois, et je m'en vais.
+calme: Je ne riposte pas. Mais je n'oublie pas.
+peureux: Ne me frappe plus… Je ferai ce que tu veux…
+fourbe: Frappe. Frappe donc. Les nuits sont longues, ici.
+colerique: Tu veux te battre ? Viens donc !
+
+[impaye]
+Trois jours sans paie, {chef}. Trois.
+Je n'ai pas vu une pièce depuis des jours.
+Comment je fais, moi, sans argent ?
+Je travaille gratuitement, maintenant ?
+Ma bourse sonne creux. Ce n'est pas normal.
+Paie-moi, {chef}. Ou je ne ferai plus rien.
+calme: Je te fais confiance. Mais il faut me payer, maintenant.
+peureux: Tu m'as oublié ? Je n'ai plus rien pour manger…
+fourbe: Pas de paie ? Je me servirai moi-même, alors. Au dépôt.
+colerique: Mes pièces ! Tout de suite ! Ou je pose tout !
+
+[diamant_avoue]
+J'ai trouvé un diamant. Je l'ai gardé. Pardon.
+Je dois te dire… J'avais un diamant dans ma poche.
+Tiens, le diamant. J'ai eu tort de le cacher.
+Oui, je l'ai gardé. Il brillait trop. Je n'ai pas résisté.
+Le voilà. Je ne recommencerai pas.
+Je l'avoue : il y avait un diamant de plus.
+calme: J'ai gardé un diamant. Je te le rends. C'était une erreur.
+peureux: Pardon, pardon ! Le voilà, le diamant ! Ne me renvoie pas !
+fourbe: Ah, ce diamant-là ? Je le gardais pour toi. En lieu sûr.
+colerique: Oui, je l'ai gardé ! Avec ce qu'on me paie, tu t'étonnes ?
+
+[diamant_nie]
+Un diamant ? Je n'ai rien trouvé, moi.
+Des diamants ? Je n'en ai jamais vu de ma vie.
+Je t'ai tout donné. Tout.
+Fouille-moi si tu veux. Il n'y a rien.
+Tu me crois capable de ça ? Moi ?
+Non. Pas de diamant. Rien que de la pierre.
+calme: Je n'ai rien gardé. Je te l'assure.
+peureux: Un diamant ? Non… non, non… Rien du tout…
+fourbe: Diamant ? Quel diamant ? Tu as dû mal compter.
+colerique: Tu me traites de voleur ? Moi ?
+
+[cadeau]
+Pour moi ? {objet} ? Merci !
+Oh, {objet} ! Qu'est-ce que je dois en faire ?
+Merci, {chef}. Je le garde précieusement.
+C'est un cadeau ? Vraiment ?
+{objet}… Je ne sais pas quoi dire. Merci.
+Je m'en servirai bien, promis.
+calme: Merci, {chef}. C'est très généreux.
+peureux: C'est pour moi ? Vraiment pour moi ? Je n'ai rien fait de spécial…
+fourbe: {objet} ? Excellent. Je sais déjà à qui le revendre. Je plaisante.
+colerique: Un cadeau ? Bon… Merci. Ma colère est passée. Presque.
