@@ -279,6 +279,8 @@ final class IA {
                 .append("Ce que tu sais de toi : ").append(etat(t)).append(" Il est ").append(heure(t)).append(" h.\n")
                 .append("Ton métier : ").append(Metier.description(t.metier)).append(" Missions possibles (id = nom) : ").append(catalogue(t)).append(".\n")
                 .append(actions(enFace));
+        String souvenirs = t.souvenirs.pourIA(t.jour(), heure(t));
+        if (!souvenirs.isEmpty()) b.append("\nTes souvenirs : ").append(souvenirs).append('.');
         String echange = echange(t, 8);
         if (!echange.isEmpty()) b.append("\nVos derniers échanges :\n").append(echange);
         return b.toString();
@@ -310,6 +312,8 @@ final class IA {
             if (t == vise) b.append(", le chef le regarde");
             b.append(". ").append(etat(t)).append(" Missions possibles de son métier (id = nom) : ").append(catalogue(t)).append('.');
             String e = echange(t, 4);
+            String sv = t.souvenirs.pourIA(t.jour(), heure(t));
+            if (!sv.isEmpty()) b.append(" Ses souvenirs : ").append(sv).append('.');
             if (!e.isEmpty()) b.append(" Derniers échanges avec le chef : ").append(e.replace("\n", " / ")).append('.');
             if (t.consigne != null && t.consigne.entree() != null) b.append(" En ce moment, à la demande du chef : ").append(t.consigne.entree().nom()).append('.');
             String faits = repertoire.isEmpty() ? "" : Consignes.faits(t, chef instanceof net.minecraft.server.level.ServerPlayer sp ? sp : null, parole, repertoire);

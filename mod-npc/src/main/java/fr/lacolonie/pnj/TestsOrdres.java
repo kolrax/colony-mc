@@ -318,4 +318,30 @@ public class TestsOrdres {
                 () -> h.assertTrue(!b.isInLava() && !b.isOnFire() && b.blockPosition().distSqr(lave) > 9, "loin de la lave (" + b.blockPosition() + ")"),
                 () -> { h.getLevel().setBlockAndUpdate(lave, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()); fin(h, e); });
     }
+
+    // --- La mémoire longue (cahier 7.5, 14.7) -------------------------------------------------------------------
+
+    /** Le chef l'insulte : il se vexe (moral en baisse) ; deux jours plus tard, « tu te souviens ? » : il le lui rappelle. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void insulteRappeleeDeuxJoursPlusTard(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 56);
+        Travailleur b = e[0];
+        etapes(h, chef, e,
+                () -> {
+                    b.moral = 60;
+                    regarder(chef, b);
+                    b.parler(chef, "Tu es un bon à rien !");
+                    h.assertTrue(b.moral == 60 + Obeissance.INSULTE && b.souvenirs.liste.size() == 1,
+                            "il se vexe (moral " + b.moral + ", souvenirs " + b.souvenirs.liste + ", " + IA.echange(b, 1) + ")");
+                    // Deux jours de jeu passent (sans toucher à l'heure du monde, que les autres tests du lot partagent).
+                    b.souvenirs.liste.replaceAll(s -> new Souvenirs.Souvenir(s.genre(), s.jour() - 2, s.heure(), s.texte()));
+                },
+                () -> {
+                    b.parler(chef, "Tu te souviens de ce que je t'ai dit ?");
+                    String r = IA.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi") && r.contains("bon à rien") && r.contains("il y a 2 jours"), "il s'en souvient (" + r + ")");
+                },
+                () -> fin(h, e));
+    }
 }

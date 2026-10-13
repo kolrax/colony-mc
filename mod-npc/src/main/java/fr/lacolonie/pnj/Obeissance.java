@@ -22,7 +22,7 @@ final class Obeissance {
     // --- Le moral -----------------------------------------------------------------------------------------------
 
     static final int DEPART = 70, REPOS = 60;
-    static final int PAIE = 10, RETARD = -12, FAIM = -2, MANGER = 5, COUP_CHEF = -10, MARCHE = 5, FORCE = -8;
+    static final int PAIE = 10, RETARD = -12, FAIM = -2, MANGER = 5, COUP_CHEF = -10, MARCHE = 5, FORCE = -8, INSULTE = -5, COMPLIMENT = 2;
     /** Au-dessous, même en insistant, il refuse : seuls la paie, la nourriture ou le repos le font remonter. */
     static final int FERME = 15;
     /** Une mission d'au moins autant d'objets est une grosse mission. */

@@ -211,6 +211,7 @@ final class Dialogue {
      * « rien » sinon (IA absente, en échec ou muette). Ne change rien à ce que font les ouvriers.
      */
     static void noterIncompris(ServerPlayer p, String dit, List<Travailleur> dest, List<ReponsesIA.Decision> decisions, long maintenant) {
+        if (Souvenirs.question(dit) || !Souvenirs.lire(dit).isEmpty()) return; // compris : une question sur ses souvenirs, une insulte, une promesse…
         Set<String> metiers = new java.util.TreeSet<>();
         for (Travailleur t : dest)
             if (metiers.add(t.metier) && !Ordres.lire(dit, t.metier).vide()) return; // compris sans l'IA

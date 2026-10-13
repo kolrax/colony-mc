@@ -7,6 +7,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -317,6 +318,10 @@ public class Travailleur extends PathfinderMob {
     boolean attenteMarche;
     /** Vrai quand sa réponse au dernier ordre vient de son obéissance (refus, marché, râle) : l'IA ne parle pas à sa place. */
     boolean reponseImposee;
+    /** Sa mémoire longue : promesses, insultes, compliments, cadeaux, coups, ordres longs, marchés (NBT « Souvenirs »). */
+    final Souvenirs souvenirs = new Souvenirs();
+    /** Ce qu'il répond tout de suite à ce qui le marque dans la phrase du chef (le temps d'appliquer un ordre). */
+    String reaction = "";
     // Corps
     public int faim = 20;
     int faimCompteur, soinCompteur;
@@ -1119,6 +1124,7 @@ public class Travailleur extends PathfinderMob {
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
             changerMoral(Obeissance.COUP_CHEF);
             memoire.putLong("coup_chef", level().getGameTime());
+            souvenirs.noter(Souvenirs.Genre.COUP, jour(), IA.heure(this), "un coup");
         }
         return touche;
     }
@@ -1312,9 +1318,12 @@ public class Travailleur extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         if (player.isShiftKeyDown() && !enMain.isEmpty()) {
+            // De quoi travailler ou manger : il remercie. Autre chose (un diamant…) : il s'en souvient et demande quoi en faire.
+            boolean utile = enMain.getFoodProperties(this) != null || enMain.isDamageableItem() || enMain.getItem() instanceof net.minecraft.world.item.BlockItem;
+            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), enMain.getCount() + " " + enMain.getHoverName().getString().toLowerCase());
             ranger(enMain.copy());
             enMain.setCount(0);
-            dire(Messages.corps(this, "dit_merci_objet"));
+            dire(Messages.corps(this, utile ? "dit_merci_objet" : "souv_cadeau"));
             return InteractionResult.CONSUME;
         }
         getLookControl().setLookAt(player);
@@ -1392,10 +1401,41 @@ public class Travailleur extends PathfinderMob {
         Mode avant = mode;
         Actions.Action actionAvant = action;
         reponseImposee = false;
+        reaction = parRegle ? "" : seSouvenir(l);
         String reponse = obeir(l, enFace);
+        if (!reaction.isEmpty()) reponse = reponse.isEmpty() ? reaction : reponse + " " + reaction;
+        reaction = "";
         // Un ordre qui change ce qu'il fait (pas une question, pas une lettre de nouvelles) : le compte « coincé » repart de zéro.
         if (mode != avant || action != actionAvant) coince.progres(getX(), getY(), getZ());
         return reponse;
+    }
+
+    /** Le jour de jeu (il change à minuit), pour dater ses souvenirs. */
+    long jour() { return (level().getDayTime() + 6000) / 24000; }
+
+    /**
+     * Ce que la phrase du chef lui laisse en mémoire ({@link Souvenirs}) et ce qu'il en dit tout de suite : vexé par une
+     * insulte (moral en baisse), content d'un compliment ou d'un cadeau (moral en hausse, une fois par jour), il retient une
+     * promesse. « Tu te souviens… ? » : il raconte.
+     */
+    private String seSouvenir(Ordres.Lecture l) {
+        if (chef == null || mode == Mode.CHOMEUR || l.texte.isBlank()) return "";
+        long j = jour();
+        int h = IA.heure(this);
+        if (Souvenirs.question(l.texte)) return souvenirs.raconter(l.texte, j, h);
+        if (!l.missions.isEmpty() || !l.regles.isEmpty() || l.jours > 0 || l.quotidien) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, l.texte);
+        List<String> r = new ArrayList<>();
+        for (Souvenirs.Genre g : Souvenirs.lire(l.texte)) {
+            souvenirs.noter(g, j, h, l.texte);
+            switch (g) {
+                case INSULTE -> { changerMoral(Obeissance.INSULTE); r.add(Messages.corps(this, "souv_insulte")); }
+                case COMPLIMENT -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_compliment")); }
+                case CADEAU -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_cadeau_content")); }
+                case PROMESSE -> r.add(Messages.corps(this, "souv_promesse"));
+                default -> {}
+            }
+        }
+        return String.join(" ", r);
     }
 
     /**
@@ -1427,6 +1467,7 @@ public class Travailleur extends PathfinderMob {
                 reponseImposee = true;
                 changerMoral(Obeissance.MARCHE);
                 prime += Obeissance.prime(salaireVerse());
+                souvenirs.noter(Souvenirs.Genre.MARCHE, jour(), IA.heure(this), Reglages.texte(Obeissance.prime(salaireVerse())) + " de plus pour « " + avant.texte + " »");
                 return Messages.corps(this, "marche") + " " + appliquerOrdre(avant, enFace);
             }
             if (seule && Obeissance.abandonne(l.texte)) { reponseImposee = true; return Messages.corps(this, "abandon"); }
@@ -1586,9 +1627,10 @@ public class Travailleur extends PathfinderMob {
         if (l.intentions.contains(Ordres.Intention.POURQUOI)) r.add(pourquoi());
         if (l.intentions.contains(Ordres.Intention.AIDE)) r.add(Messages.corps(this, "dit_aide"));
         if (r.isEmpty() && l.intentions.contains(Ordres.Intention.SALUT)) r.add(Messages.corps(this, "dit_salut"));
-        if (l.intentions.contains(Ordres.Intention.MERCI)) r.add(Messages.corps(this, "dit_merci"));
+        if (l.intentions.contains(Ordres.Intention.MERCI) && reaction.isEmpty()) r.add(Messages.corps(this, "dit_merci"));
         majNom();
-        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty()) return enFace == null ? "" : Messages.corps(this, "dit_pas_compris");
+        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty())
+            return enFace == null || !reaction.isEmpty() ? "" : Messages.corps(this, "dit_pas_compris");
         return String.join(" ", r);
     }
 
@@ -1659,6 +1701,7 @@ public class Travailleur extends PathfinderMob {
         bureau = null;
         missions.clear();
         regles.clear();
+        souvenirs.liste.clear(); // ses souvenirs parlent de ce chef-là
         lettresADeposer.clear();
         lettresALire.clear();
         lettresAuCalme.clear();
@@ -1769,6 +1812,10 @@ public class Travailleur extends PathfinderMob {
         t.putInt("ATerreTicks", aTerreTicks);
         t.put("Inventaire", inventaire.createTag(registryAccess()));
         t.put("Etat", memoire);
+        ListTag sv = new ListTag();
+        souvenirs.enTextes().forEach(x -> sv.add(StringTag.valueOf(x)));
+        t.put("Souvenirs", sv);
+        t.putLong("SouvenirsBonus", souvenirs.jourBonus);
         if (consigne != null) t.put("Consigne", consigne.sauver());
         if (consigneFond != null) t.put("ConsigneFond", consigneFond.sauver());
         ListTag ad = new ListTag(), al = new ListTag();
@@ -1830,6 +1877,11 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) setPose(Pose.SLEEPING);
         inventaire.fromTag(t.getList("Inventaire", Tag.TAG_COMPOUND), registryAccess());
         memoire = t.getCompound("Etat"); // l'ancienne mémoire des scripts (« Memoire ») n'est pas reprise
+        ListTag sv = t.getList("Souvenirs", Tag.TAG_STRING);
+        List<String> lignes = new ArrayList<>();
+        for (int i = 0; i < sv.size(); i++) lignes.add(sv.getString(i));
+        souvenirs.lireTextes(lignes);
+        souvenirs.jourBonus = t.contains("SouvenirsBonus") ? t.getLong("SouvenirsBonus") : -1;
         consigne = t.contains("Consigne") ? Consignes.Consigne.lire(t.getCompound("Consigne")) : null;
         consigneFond = t.contains("ConsigneFond") ? Consignes.Consigne.lire(t.getCompound("ConsigneFond")) : null;
         lettresADeposer.clear();

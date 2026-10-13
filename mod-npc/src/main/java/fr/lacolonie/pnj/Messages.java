@@ -189,6 +189,23 @@ final class Messages {
         m("dit_aide", null, "Tu peux me dire : « suis-moi », « arrête de me suivre », « attends ici », « au travail », « rentre au poste », « montre ton sac », « ramène 10 fers et 1 diamant », « garde 32 charbons en stock », « travaille de 8 h à 20 h », « comment ça va ? », « où en es-tu ? », « pourquoi tu ne travailles pas ? ». Et des centaines d'autres choses : « garde à vous », « assieds-toi », « danse », « fais le cochon », « mets-toi derrière moi », « donne-moi ton pain », « raconte une blague », « où est le poste ? », « repos »… (la liste est dans l'onglet Actions du panneau).");
         m("dit_merci_objet", null, "Merci, chef !", "Merci, ça tombe bien.", "Parfait, merci.");
 
+        // La mémoire longue (cahier 7.5, 14.7, 14.14) : ce qu'il répond tout de suite, et dont il se souviendra.
+        m("souv_insulte", null, "Je ne mérite pas ça, chef.", "Voilà qui est dur à entendre, chef.", "Je m'en souviendrai, chef.");
+        t("souv_insulte", "colerique", "Répète un peu ça, chef ? Je ne suis pas ton chien !", "Garde tes injures pour toi, chef. Je ne les oublierai pas.");
+        t("souv_insulte", "peureux", "Pardon, chef… je ferai mieux, je te le jure.", "Ne te fâche pas, chef… je fais de mon mieux.");
+        t("souv_insulte", "fourbe", "Comme tu voudras, chef… On verra bien qui rira le dernier.", "Je note, chef. Je note tout.");
+        m("souv_compliment", null, "Merci, chef ! Ça fait chaud au cœur.", "C'est bon à entendre, chef.", "Merci, chef. Je fais de mon mieux.");
+        t("souv_compliment", "colerique", "Hmpf… Merci, chef. C'est mérité.");
+        t("souv_compliment", "peureux", "Vraiment ? Merci, chef… ça me rassure.");
+        t("souv_compliment", "fourbe", "Tu as l'œil, chef. Un ouvrier comme moi, ça ne court pas les chemins.");
+        m("souv_promesse", null, "Je m'en souviendrai, chef.", "C'est promis, alors. Je ne l'oublierai pas.", "Entendu, chef : je retiens ta parole.");
+        t("souv_promesse", "fourbe", "Une promesse de chef, ça vaut de l'or… Je m'en souviendrai.");
+        t("souv_promesse", "colerique", "Tiens parole, chef. Je n'oublie rien.");
+        m("souv_cadeau", null, "Merci, chef ! Que dois-je en faire ?", "Merci, chef. Où veux-tu que je mette cela ?", "Bien reçu, chef. Qu'en fais-je ?");
+        m("souv_cadeau_content", null, "Pour moi ? Merci, chef, je le garderai précieusement !", "Un présent ? Merci, chef, tu es bon.",
+                "Merci, chef ! Je n'en attendais pas tant.");
+        t("souv_cadeau_content", "fourbe", "Ah, chef, tu sais parler aux hommes ! Merci bien.");
+
         // L'obéissance (cahier 8.4) : il râle, marchande ou refuse, selon son moral et son caractère.
         m("rale", null, "Encore moi… Bon, j'y vais, chef.", "Toujours les mêmes qui triment… Soit, j'y vais.", "Hmpf. Si tu le dis, chef.");
         t("rale", "peureux", "Je n'aime pas ça du tout, chef… mais j'y vais.", "Brr… Bon, puisqu'il le faut.");
