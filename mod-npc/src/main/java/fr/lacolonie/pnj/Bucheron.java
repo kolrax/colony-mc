@@ -17,7 +17,7 @@ import java.util.List;
  * <p>
  * Il ne cherche pas au hasard : il sait dans quels biomes pousse chaque bois (biomes des mods compris), trouve le
  * plus proche et y va directement, en sortie à la journée ou en expédition si c'est loin. Il retient les coins où il
- * a trouvé du bois et y retourne. Sans hache il travaille quand même, bien plus lentement.
+ * a trouvé du bois et y retourne. Il prend sa hache au dépôt ; s'il n'y en a pas, il travaille quand même, bien plus lentement.
  */
 final class Bucheron extends Metier {
     static final class Bois extends Commande {
@@ -51,8 +51,9 @@ final class Bucheron extends Metier {
         Bois c = Metier.commande(t) instanceof Bois b ? b : (Bois) commandes.get(0); // sans commande : n'importe quel bois
         ServerLevel l = (ServerLevel) t.level();
 
-        if (!t.equiper(Actions.Filtre.de("#minecraft:axes")))
-            Cerveau.ecrire(t, "hache", 1800, "hache");
+        // Sa hache : prise au dépôt s'il y en a une (ou une meilleure) ; sinon, il le dit et travaille sans.
+        if (outilAuDepot(t, HACHES, HACHES, "hache")) return;
+        if (!equiperMeilleur(t, HACHES)) Cerveau.ecrire(t, "hache", 1800, "hache");
 
         // 1. Ramasser ce qui traîne (bois, pousses, pommes tombées des feuilles), pas plus d'une fois par 45 s
         //    (un objet coincé dans les feuilles ne doit pas l'occuper indéfiniment) ; tout de suite après un abattage.
@@ -140,6 +141,7 @@ final class Bucheron extends Metier {
     }
 
     static final Actions.Filtre POUSSES = Actions.Filtre.de("#minecraft:saplings");
+    static final Actions.Filtre HACHES = Actions.Filtre.de("#minecraft:axes");
     /** Les pousses qui ne donnent un arbre qu'à 4 en carré. */
     static final java.util.Set<String> SEUL_IMPOSSIBLE = java.util.Set.of("minecraft:dark_oak_sapling");
 

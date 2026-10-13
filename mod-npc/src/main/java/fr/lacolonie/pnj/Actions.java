@@ -187,9 +187,15 @@ public final class Actions {
         lvl.destroyBlock(p, false, t);
     }
 
+    /**
+     * Use l'outil (ou l'arme) en main pour {@code n} coups : la seule règle d'usure des ouvriers (cahier 3.13). Il s'use
+     * {@code Reglages.usure_outils} fois moins vite que celui d'un joueur (3 par défaut ; 1 : comme un joueur).
+     */
     static void userOutil(Travailleur t, int n) {
         ItemStack outil = t.getMainHandItem();
-        if (!outil.isEmpty() && outil.isDamageableItem()) outil.hurtAndBreak(n, t, EquipmentSlot.MAINHAND);
+        if (outil.isEmpty() || !outil.isDamageableItem()) return;
+        int u = Outils.usure(n, Reglages.actuel.usure_outils, t.getRandom().nextDouble());
+        if (u > 0) outil.hurtAndBreak(u, t, EquipmentSlot.MAINHAND);
     }
 
     // --- Déplacements -----------------------------------------------------------------------------
@@ -742,7 +748,7 @@ public final class Actions {
                 if (Guerrier.TIR.objet(t.getMainHandItem())) Guerrier.armer(t);
                 if (recharge == 0) {
                     t.swing(InteractionHand.MAIN_HAND);
-                    t.doHurtTarget(cible);
+                    if (t.doHurtTarget(cible)) userOutil(t, 1); // l'arme s'use, comme celle d'un joueur (en plus lent)
                     recharge = (int) Math.max(6, 14 / t.facteurTravail());
                 }
             } else {

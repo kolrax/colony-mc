@@ -16,11 +16,12 @@ import net.minecraft.world.phys.Vec3;
  * Il pose une torche tous les 8 blocs s'il en a, comble les trous du sol avec de la pierre, abandonne une galerie
  * devant la lave ou l'eau s'il n'a pas de quoi la boucher ; pour un filon, il bouche d'abord la lave qui le touche (ou
  * l'eau au-dessus) et ne le casse jamais en se tenant dessous s'il porte du gravier ou du sable ({@link Actions.Casser}) ;
- * et il vient demander la pioche qu'il lui faut (fer pour le diamant). Pour remonter, il
+ * et il prend au dépôt la pioche qu'il lui faut (fer pour le diamant), ou vient la demander s'il n'y en a pas. Pour remonter, il
  * reprend son escalier.
  */
 final class Mineur extends Metier {
     static final String PIOCHE = "#minecraft:pickaxes";
+    static final Actions.Filtre PIOCHES = Actions.Filtre.de(PIOCHE);
     static final String PIERRE_OU_MIEUX = "minecraft:stone_pickaxe|minecraft:iron_pickaxe|minecraft:diamond_pickaxe|minecraft:netherite_pickaxe";
     static final String FER_OU_MIEUX = "minecraft:iron_pickaxe|minecraft:diamond_pickaxe|minecraft:netherite_pickaxe";
     static final int PALIER = 6, GALERIE = 24, GALERIES = 8, TORCHES = 8;
@@ -254,8 +255,9 @@ final class Mineur extends Metier {
         }
         CompoundTag ignores = m.getCompound("ignores");
 
-        // La bonne pioche.
-        if (!t.equiper(c.outil)) {
+        // La bonne pioche : prise au dépôt s'il y en a une (ou une meilleure), sinon demandée au chef.
+        if (outilAuDepot(t, PIOCHES, c.outil, "pioche")) return;
+        if (!equiperMeilleur(t, c.outil)) {
             if (t.compter(Actions.Filtre.de(PIOCHE)) > 0)
                 Cerveau.lancer(t, new Actions.Demander("meilleure_pioche", c.outil, 1, c.nom.toLowerCase()));
             else Cerveau.lancer(t, new Actions.Demander("pioche", c.outil, 1));

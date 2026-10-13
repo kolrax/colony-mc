@@ -117,7 +117,7 @@ final class Guerrier extends Metier {
         f.shoot(dx, dy + Math.sqrt(dx * dx + dz * dz) * 0.2, dz, 1.6f, 2);
         t.level().addFreshEntity(f);
         t.playSound(arbalete ? SoundEvents.CROSSBOW_SHOOT : SoundEvents.ARROW_SHOOT, 1, 1 / (t.getRandom().nextFloat() * 0.4f + 0.8f));
-        arme.hurtAndBreak(1, t, EquipmentSlot.MAINHAND);
+        Actions.userOutil(t, 1); // l'arc en main s'use, plus lentement que celui d'un joueur
         return (int) ((arbalete ? 40 : 25) / Math.min(1.2, t.facteurTravail()));
     }
 

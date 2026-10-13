@@ -1,5 +1,10 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.Tiers;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +53,98 @@ public abstract class Metier {
 
     /** En mode « Suivre » : vrai s'il a trouvé mieux à faire que suivre (le guerrier combat). */
     boolean escorter(Travailleur t) { return false; }
+
+    // --- Les outils, fournis au dépôt (cahier 3.12) --------------------------------------------------
+
+    /** La note d'un outil : le matériau d'abord, puis le moins usé ({@link Outils#note}). */
+    static double note(ItemStack s) {
+        int rang = s.getItem() instanceof TieredItem ti ? Outils.rang(ti.getTier() instanceof Tiers x ? x.name() : "", ti.getTier().getSpeed()) : 1;
+        return Outils.note(rang, s.getDamageValue(), s.getMaxDamage());
+    }
+
+    /** La note de son meilleur outil de ce filtre (en main ou au sac), 0 s'il n'en a pas. */
+    static double meilleure(Travailleur t, Actions.Filtre f) {
+        double n = f.objet(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (f.objet(t.inventaire.getItem(i))) n = Math.max(n, note(t.inventaire.getItem(i)));
+        return n;
+    }
+
+    /** Prend en main son meilleur outil de ce filtre (l'objet tenu retourne au sac). Faux s'il n'en a pas. */
+    static boolean equiperMeilleur(Travailleur t, Actions.Filtre f) {
+        double n = f.objet(t.getMainHandItem()) ? note(t.getMainHandItem()) : 0;
+        int k = -1;
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+            ItemStack s = t.inventaire.getItem(i);
+            if (f.objet(s) && note(s) > n) { n = note(s); k = i; }
+        }
+        if (k >= 0) {
+            ItemStack tenu = t.getMainHandItem();
+            t.setItemSlot(EquipmentSlot.MAINHAND, t.inventaire.getItem(k));
+            t.inventaire.setItem(k, tenu);
+        }
+        return n > 0;
+    }
+
+    /**
+     * L'outil de son métier est fourni au dépôt (cahier 3.12). Il lui manque un outil {@code bon} (aucun, cassé, ou pas assez
+     * bon pour ce minerai) : il regarde au dépôt de son poste (coffres collés compris), au plus toutes les 10 s s'il n'y en
+     * a pas (30 s après être parti en prendre un). Il en a un : passé près du poste, au plus une fois par minute, il regarde s'il y en a
+     * un d'un meilleur matériau. Vrai s'il part le prendre ({@link PrendreOutil}) ; sinon, il fait comme avant (il le demande,
+     * ou travaille sans). Sans poste, ou loin de chez lui, rien.
+     */
+    static boolean outilAuDepot(Travailleur t, Actions.Filtre sorte, Actions.Filtre bon, String nom) {
+        if (!t.chezLui(t.blockPosition())) return false;
+        long maintenant = Cerveau.temps(t);
+        double mien = meilleure(t, bon);
+        boolean manque = mien == 0;
+        if (manque ? t.memoire.getLong("outil_vu") > maintenant
+                : t.memoire.getLong("revue_outil") > maintenant || t.distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(t.bureau)) > 16 * 16) return false;
+        Bureau.Entite b = Bureau.entite(t);
+        if (b == null) return false;
+        double seuil = manque ? 0 : Outils.seuilMieux(mien);
+        boolean vu = !Guerrier.auDepot(b, s -> bon.objet(s) ? note(s) : 0, seuil, false).isEmpty();
+        if (manque) t.memoire.putLong("outil_vu", maintenant + (vu ? 30 : 10)); // trouvé : s'il n'arrive pas au poste, pas d'essai sans fin
+        else t.memoire.putLong("revue_outil", maintenant + 60);
+        if (!vu) return false;
+        Cerveau.lancer(t, new PrendreOutil(sorte, bon, seuil, nom, manque));
+        return true;
+    }
+
+    /**
+     * Au poste, il prend au dépôt le meilleur outil {@code bon} (au-dessus de {@code seuil}) et le met en main ; le sien de la
+     * même sorte (le meilleur qu'il avait) retourne au dépôt. Rien ne se perd, rien ne se crée, rien ne tombe par terre.
+     */
+    static final class PrendreOutil extends Actions.AuBureau {
+        final Actions.Filtre sorte, bon;
+        final double seuil;
+        final String nom;
+        final boolean manque;
+
+        PrendreOutil(Actions.Filtre sorte, Actions.Filtre bon, double seuil, String nom, boolean manque) {
+            super("prendre_outil");
+            this.sorte = sorte;
+            this.bon = bon;
+            this.seuil = seuil;
+            this.nom = nom;
+            this.manque = manque;
+        }
+
+        Actions.Etat tick(Travailleur t) {
+            Bureau.Entite b = arriver(t);
+            if (b == null) return raison.isEmpty() ? Actions.Etat.EN_COURS : Actions.Etat.ECHEC;
+            ItemStack neuf = Guerrier.auDepot(b, s -> bon.objet(s) ? note(s) : 0, seuil, true);
+            if (neuf.isEmpty()) return echec("rien_au_depot"); // quelqu'un l'a pris entre-temps
+            equiperMeilleur(t, sorte);
+            ItemStack vieux = t.getMainHandItem();
+            t.setItemSlot(EquipmentSlot.MAINHAND, neuf);
+            if (sorte.objet(vieux)) Guerrier.rendre(t, b, vieux);      // la sienne, à la place de la neuve
+            else if (!vieux.isEmpty()) Guerrier.garder(t, b, vieux);    // ce qu'il tenait d'autre : au sac (sinon au dépôt)
+            t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            Cerveau.dire(t, "outil_depot", 60, manque ? "Je prends une " + nom + " au dépôt, et au travail."
+                    : "Une meilleure " + nom + " au dépôt : je la prends, et je laisse la mienne.");
+            return Actions.Etat.OK;
+        }
+    }
 
     // --- Le registre --------------------------------------------------------------------------------
 
