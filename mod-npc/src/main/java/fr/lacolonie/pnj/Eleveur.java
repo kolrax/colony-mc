@@ -46,7 +46,7 @@ import java.util.WeakHashMap;
  * <li>il abat l'excédent d'adultes au-delà du plafond ; sur ordre (« abats deux vaches »), jusqu'au dernier couple.</li>
  * </ul>
  * Jamais : un petit, le dernier couple, une bête qui a un nom, sellée ou tenue en laisse, une bête hors de son espace de
- * vie, hors d'un enclos ou chez un voisin ({@link Mineur#interdit}). Il ne frappe ni un joueur, ni un villageois, ni une bête
+ * vie, hors d'un enclos ou chez un voisin (plus près du poste d'un autre chef, {@link #aLui}). Il ne frappe ni un joueur, ni un villageois, ni une bête
  * apprivoisée : seulement ces quatre espèces, dans ses enclos (l'élevage, permis par les règles du serveur). Le butin va
  * droit dans son sac ({@link #butin}) : rien ne traîne par terre.
  * <p>
@@ -254,7 +254,8 @@ final class Eleveur extends Metier {
 
     /** Ce qu'il peut abattre : une bête de ferme adulte de son enclos, à personne, vivante. */
     static boolean abattable(Travailleur t, Animal a, Elevage.Enclos e) {
-        return a.isAlive() && !a.isBaby() && espece(a) != null && !intouchable(a) && e.contient(a.getBlockX(), a.getBlockZ()) && t.chezLui(a.blockPosition());
+        return a.isAlive() && !a.isBaby() && espece(a) != null && !intouchable(a) && e.contient(a.getBlockX(), a.getBlockZ()) && t.chezLui(a.blockPosition())
+                && Fermier.aLui(t, a.blockPosition());
     }
 
     /**
@@ -274,7 +275,7 @@ final class Eleveur extends Metier {
         for (Animal a : betes) {
             if (!a.isAlive()) continue;
             boolean adulte = !a.isBaby();
-            vues.add(new Elevage.Bete(a.getId(), espece(a).id(), adulte, intouchable(a) || !t.chezLui(a.blockPosition()),
+            vues.add(new Elevage.Bete(a.getId(), espece(a).id(), adulte, intouchable(a) || !t.chezLui(a.blockPosition()) || !Fermier.aLui(t, a.blockPosition()),
                     adulte && a.getAge() == 0 && a.canFallInLove()));
             parId.put(a.getId(), a);
         }
@@ -315,10 +316,13 @@ final class Eleveur extends Metier {
         return new Corvee(e, p, taches, t);
     }
 
-    /** L'enclos est à lui : dans son espace de vie, ni chez un voisin ni dans une structure (un village). */
+    /**
+     * L'enclos est à lui : dans son espace de vie, hors d'une structure (un village), et aucun poste d'un autre chef n'en est
+     * plus près que le sien (la règle du fermier, {@link Fermier#aLui}).
+     */
     static boolean aLui(Travailleur t, Elevage.Enclos e) {
         BlockPos milieu = new BlockPos((e.minX() + e.maxX()) / 2, e.y(), (e.minZ() + e.maxZ()) / 2);
-        return t.chezLui(milieu) && !Mineur.interdit(t, milieu, false);
+        return t.chezLui(milieu) && Fermier.aLui(t, milieu);
     }
 
     /** Ce qui traîne par terre dans l'enclos et qu'il ramasse : des œufs, des plumes, de la laine. */

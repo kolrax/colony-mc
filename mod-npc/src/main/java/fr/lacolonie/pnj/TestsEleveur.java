@@ -226,7 +226,8 @@ public class TestsEleveur {
     }
 
     /**
-     * Lot « voisins » : un enclos à 28 blocs du poste d'un autre joueur. « Abats deux vaches » : il n'y touche pas, et le dit.
+     * Lot « voisins » : un enclos à 12 blocs de son poste, mais à 8 de celui d'un autre chef : il n'est pas à lui. « Abats deux
+     * vaches » : il n'y touche pas, et le dit.
      */
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "voisins")
     public static void laisseLesBetesDuVoisin(GameTestHelper h) {
@@ -237,9 +238,9 @@ public class TestsEleveur {
         ServerLevel l = h.getLevel();
         UUID voisin = UUID.randomUUID();
         Courrier c = Courrier.de(l.getServer());
-        c.definirPoste(voisin, l, b[0].offset(36, 0, 0));
+        c.definirPoste(voisin, l, b[0].offset(20, 0, 0));
         TestsMineur.A_DEFAIRE.add(() -> c.postes.remove(voisin));
-        BlockPos centre = b[0].offset(8, 0, 0);
+        BlockPos centre = b[0].offset(12, 0, 0);
         enclos(l, centre);
         for (int i = 0; i < 4; i++) bete(l, EntityType.COW, centre.offset(1, 0, i - 2), false, null);
         TestsIA.etapes(h, chef, e,

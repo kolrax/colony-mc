@@ -341,6 +341,12 @@ public class Travailleur extends PathfinderMob {
     int faimCompteur, soinCompteur;
     public boolean aTerre, mortDefinitive;
     int aTerreTicks;
+    /**
+     * Le coup en cours ({@link #hurt}) : sa vie juste avant (-1 hors d'un coup) et sa source. La gravité se mesure à la vie
+     * vraiment perdue (armure comprise), aussi dans {@link #tomberATerre} s'il le met à terre.
+     */
+    float vieAvantCoup = -1;
+    Gravite.Source sourceCoup = Gravite.Source.SANS;
     public final SimpleContainer inventaire = new SimpleContainer(27) {
         @Override
         public boolean stillValid(Player p) { return isAlive() && p.distanceToSqr(Travailleur.this) < 64; }
@@ -578,6 +584,8 @@ public class Travailleur extends PathfinderMob {
             case TRAVAIL -> bureau == null ? "Sans poste" : expedition ? "En expédition"
                     : action instanceof Actions.Reposer || !enService() ? "Se repose"
                     : action instanceof Besoins.Flaner ? "En pause"
+                    : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
+                    : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
                     : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
@@ -1062,7 +1070,7 @@ public class Travailleur extends PathfinderMob {
             if (action instanceof Actions.Reposer && moral < Obeissance.REPOS) changerMoral(1); // le repos le fait remonter
         }
         if (tickCount % 10 == 0) ramasserAutour();
-        if (tickCount % 20 == 0) Consignes.verifierVitesse(this);
+        if (tickCount % 20 == 0) { Consignes.verifierVitesse(this); Blessures.lenteur(this); }
         // Il nage comme un joueur : allongé, quand il court dans l'eau profonde.
         boolean nage = isInWater() && isSprinting() && !isPassenger() && !isSleeping() && level().getFluidState(blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER);
         if (nage && getPose() == Pose.STANDING) setPose(Pose.SWIMMING);
@@ -1141,8 +1149,13 @@ public class Travailleur extends PathfinderMob {
     }
 
     void tomberATerre() {
+        // Le temps à terre avant la mort dépend de la gravité : 3 min (légère), 5 min (grave), 8 min (très grave).
+        Gravite coup = vieAvantCoup < 0 ? Gravite.AUCUNE : Gravite.du(vieAvantCoup - Math.max(0, getHealth()), getMaxHealth(), sourceCoup);
+        vieAvantCoup = -1;
+        Gravite g = Gravite.aTerre(Blessures.gravite(this), coup);
+        Blessures.noter(this, g);
         aTerre = true;
-        aTerreTicks = 2 * 60 * 20;
+        aTerreTicks = g.ticksATerre();
         setHealth(1);
         setPose(Pose.SLEEPING);
         finirAction("a_terre");
@@ -1150,7 +1163,8 @@ public class Travailleur extends PathfinderMob {
         for (Mob m : level().getEntitiesOfClass(Mob.class, getBoundingBox().inflate(32), m -> m.getTarget() == this)) m.setTarget(null);
         majNom();
         Courrier.ecrire(this, "a_terre", blockPosition().toShortString());
-        dire("Je suis touché… aidez-moi !");
+        Besoins.dire(this, "a_terre", null);
+        Blessures.accourir(this); // les ouvriers de son chef, tout près, viennent autour de lui
     }
 
     /**
@@ -1172,7 +1186,7 @@ public class Travailleur extends PathfinderMob {
         setPose(Pose.STANDING);
         setHealth(6);
         majNom();
-        dire("Merci… je te dois la vie, " + p.getName().getString() + ".");
+        Besoins.dire(this, "releve", null);
     }
 
     @Override
@@ -1182,7 +1196,13 @@ public class Travailleur extends PathfinderMob {
             if (!(src.getEntity() instanceof Player) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false;
             mortDefinitive = true;
         }
+        // La gravité du coup (vie vraiment perdue, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
+        boolean debout = !aTerre && !level().isClientSide;
+        if (debout) { vieAvantCoup = getHealth(); sourceCoup = Blessures.source(src); }
+        float avant = vieAvantCoup;
         boolean touche = super.hurt(src, amount);
+        if (touche && debout && !aTerre) Blessures.blesser(this, Gravite.du(avant - getHealth(), getMaxHealth(), sourceCoup));
+        vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
             changerMoral(Obeissance.COUP_CHEF);
