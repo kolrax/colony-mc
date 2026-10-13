@@ -3,7 +3,7 @@ package fr.lacolonie.pnj;
 /**
  * La gravité d'une blessure (lot 5, cahier 1.11 et 5.12), pur Java : déduite des dégâts et de leur source, cumulée, aggravée
  * quand il tombe à terre, résorbée avec le temps (un cran par jour de jeu : légère 1 jour, grave 2, très grave 3). Elle
- * fixe le temps à terre, la lenteur, le repos forcé et la réplique. Le jeu est dans {@link Blessures}.
+ * fixe le temps à terre (avant la mort, s'il n'est pas relevé), la lenteur, le repos forcé et la réplique. Le jeu est dans {@link Blessures}.
  */
 enum Gravite {
     AUCUNE, LEGERE, GRAVE, TRES_GRAVE;
@@ -47,17 +47,17 @@ enum Gravite {
         return values()[(int) Math.max(0, g.ordinal() - Math.min(jours, 3))];
     }
 
-    /** Le temps à terre, en ticks : 30 s, 90 s, 5 min (avant : 2 min pour tous). */
+    /**
+     * Le temps à terre avant la mort, s'il n'est pas relevé (cahier 5.12 : toujours plus long qu'avant, 2 min) : 3 min
+     * (légère), 5 min (grave), 8 min (très grave).
+     */
     int ticksATerre() {
         return switch (this) {
-            case AUCUNE, LEGERE -> 30 * 20;
-            case GRAVE -> 90 * 20;
-            case TRES_GRAVE -> 5 * 60 * 20;
+            case AUCUNE, LEGERE -> 3 * 60 * 20;
+            case GRAVE -> 5 * 60 * 20;
+            case TRES_GRAVE -> 8 * 60 * 20;
         };
     }
-
-    /** À terre, s'il n'est pas relevé à temps : il meurt (très grave), sinon il se relève seul. */
-    boolean mortelle() { return this == TRES_GRAVE; }
 
     /** Ce que la blessure ôte à sa vitesse de marche : grave 15 %, très grave 30 %. */
     double lenteur() { return this == GRAVE ? 0.15 : this == TRES_GRAVE ? 0.30 : 0; }

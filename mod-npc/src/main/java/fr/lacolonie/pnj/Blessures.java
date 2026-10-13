@@ -115,7 +115,7 @@ final class Blessures {
 
     /**
      * Il se tient à 2 ou 3 blocs du blessé, le regarde, lui dit un mot ; il repart quand le blessé se relève ou meurt (au
-     * plus 6 minutes). Un coup, un ordre ou un danger l'interrompent comme toute action.
+     * plus 9 minutes). Un coup, un ordre ou un danger l'interrompent comme toute action.
      */
     static final class Accourir extends Actions.Action {
         final Travailleur blesse;
@@ -135,7 +135,7 @@ final class Blessures {
         }
 
         Actions.Etat tick(Travailleur t) {
-            if (!blesse.isAlive() || blesse.isRemoved() || !blesse.aTerre || age > 6 * 60 * 20) return Actions.Etat.OK;
+            if (!blesse.isAlive() || blesse.isRemoved() || !blesse.aTerre || age > 9 * 60 * 20) return Actions.Etat.OK;
             double d = t.distanceToSqr(blesse);
             if (!arrive) {
                 if (d > 3.2 * 3.2 && !coince()) { marcher(t, place(), 1.0); return Actions.Etat.EN_COURS; }

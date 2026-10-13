@@ -34,11 +34,11 @@ public class TestsBlessures {
     }
 
     /**
-     * Deux ouvriers à terre : l'un d'un coup très grave (100 points), l'autre d'un coup léger qui l'achève (3 points). Le
-     * blessé léger se relève seul au bout de 30 s (« releve ») ; le très grave reste à terre, pour 5 minutes. Avant : tous
-     * deux à terre 2 minutes, et morts au bout.
+     * Deux ouvriers à terre : l'un d'un coup très grave (100 points, 8 min), l'autre d'un coup léger qui l'achève (3 points,
+     * 3 min). Tous deux vivent encore après 2 min 05 (avant : morts au bout de 2 min). Puis le temps du léger écourté : il
+     * meurt au bout, comme avant (pas de relevé seul), le très grave reste à terre.
      */
-    @GameTest(template = "vide", timeoutTicks = 900)
+    @GameTest(template = "vide", timeoutTicks = 2700)
     public static void aTerrePlusLongtempsSiTresGrave(GameTestHelper h) {
         BlockPos base = TestsJeu.sol(h, 130 * 400, 60000);
         Travailleur grave = ouvrier(h, "mineur", base, base.west(3), UUID.randomUUID(), new ItemStack(Items.IRON_PICKAXE));
@@ -50,16 +50,23 @@ public class TestsBlessures {
         h.assertTrue(grave.aTerre && leger.aTerre, "tous deux à terre");
         h.assertTrue(Blessures.gravite(grave) == Gravite.TRES_GRAVE, "très grave : " + Blessures.gravite(grave));
         h.assertTrue(Blessures.gravite(leger) == Gravite.LEGERE, "légère : " + Blessures.gravite(leger));
-        h.assertTrue(grave.aTerreTicks == 6000 && leger.aTerreTicks == 600, "à terre " + grave.aTerreTicks + " / " + leger.aTerreTicks);
+        h.assertTrue(grave.aTerreTicks == 8 * 60 * 20 && leger.aTerreTicks == 3 * 60 * 20, "à terre " + grave.aTerreTicks + " / " + leger.aTerreTicks);
         long debut = h.getTick();
+        boolean[] vivants = {false};
+        h.onEachTick(() -> {
+            if (!vivants[0] && h.getTick() - debut >= 2500) {
+                h.assertTrue(grave.aTerre && grave.isAlive() && leger.aTerre && leger.isAlive(),
+                        "après 2 min 05, tous deux à terre et vivants (" + grave.aTerreTicks + " / " + leger.aTerreTicks + ")");
+                vivants[0] = true;
+                leger.aTerreTicks = 5; // la fin de ses 3 minutes
+            }
+        });
         h.succeedWhen(() -> {
-            h.assertFalse(leger.aTerre, "le blessé léger se relève seul (" + leger.aTerreTicks + " ticks restants)");
-            h.assertTrue(leger.isAlive() && h.getTick() - debut >= 590, "relevé vivant, après 30 s (" + (h.getTick() - debut) + " ticks)");
-            h.assertTrue(TestsVie.dites(leger, "releve") == 1, "il dit qu'il se relève (" + leger.paroles + ")");
+            h.assertTrue(vivants[0], "2 min 05 passées");
+            h.assertFalse(leger.isAlive(), "le léger meurt au bout de son temps, sans se relever seul");
             h.assertTrue(grave.aTerre && grave.isAlive(), "le très grave est toujours à terre, vivant");
             h.assertTrue(TestsVie.dites(grave, "a_terre") == 1, "il appelle à l'aide (" + grave.paroles + ")");
             grave.discard();
-            leger.discard();
         });
     }
 

@@ -54,11 +54,11 @@ class GraviteTest {
 
     @Test
     void effets() {
-        // Plus c'est grave, plus il reste à terre (avant : 2 min pour tous) ; seule la très grave est mortelle.
-        assertTrue(LEGERE.ticksATerre() < GRAVE.ticksATerre() && GRAVE.ticksATerre() < TRES_GRAVE.ticksATerre());
-        assertTrue(TRES_GRAVE.ticksATerre() > 2 * 60 * 20);
-        assertFalse(LEGERE.mortelle() || GRAVE.mortelle());
-        assertTrue(TRES_GRAVE.mortelle());
+        // Plus c'est grave, plus il reste à terre avant de mourir ; toujours plus longtemps qu'avant (2 min pour tous).
+        assertEquals(3 * 60 * 20, LEGERE.ticksATerre());
+        assertEquals(5 * 60 * 20, GRAVE.ticksATerre());
+        assertEquals(8 * 60 * 20, TRES_GRAVE.ticksATerre());
+        assertEquals(LEGERE.ticksATerre(), AUCUNE.ticksATerre());
         assertEquals(0, LEGERE.lenteur());
         assertEquals(0.15, GRAVE.lenteur());
         assertEquals(0.30, TRES_GRAVE.lenteur());

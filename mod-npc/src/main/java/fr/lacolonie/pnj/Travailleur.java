@@ -1137,17 +1137,15 @@ public class Travailleur extends PathfinderMob {
     void tickATerre() {
         getNavigation().stop();
         if (--aTerreTicks <= 0) {
-            // Très grave : il meurt s'il n'a pas été relevé. Sinon, il se relève seul, à bout de forces.
-            if (Blessures.gravite(this).mortelle()) { mortDefinitive = true; kill(); return; }
-            seRelever(4);
-            Besoins.dire(this, "releve", null);
+            mortDefinitive = true;
+            kill();
             return;
         }
         if (aTerreTicks % 600 == 0) dire("À l'aide… à manger ou une potion de soin, vite !");
     }
 
     void tomberATerre() {
-        // Le temps à terre dépend de la gravité : 30 s (légère), 90 s (grave), 5 min (très grave, la seule mortelle).
+        // Le temps à terre avant la mort dépend de la gravité : 3 min (légère), 5 min (grave), 8 min (très grave).
         Gravite g = Gravite.aTerre(Blessures.gravite(this), coupRecu);
         coupRecu = Gravite.AUCUNE;
         Blessures.noter(this, g);
@@ -1179,15 +1177,11 @@ public class Travailleur extends PathfinderMob {
     }
 
     void relever(Player p) {
-        seRelever(6);
-        Besoins.dire(this, "soigne", p.getName().getString());
-    }
-
-    void seRelever(float vie) {
         aTerre = false;
         setPose(Pose.STANDING);
-        setHealth(vie);
+        setHealth(6);
         majNom();
+        Besoins.dire(this, "soigne", p.getName().getString());
     }
 
     @Override
