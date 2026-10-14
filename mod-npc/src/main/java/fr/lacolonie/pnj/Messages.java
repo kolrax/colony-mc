@@ -314,6 +314,7 @@ final class Messages {
         m("relais_loin", null, "{0} est loin d'ici, chef : je lui fais porter le mot.", "Trop loin pour y courir, chef : je fais passer le mot à {0}.");
         m("relais_non", null, "Bien, chef. Je retourne à mon ouvrage.", "Comme tu voudras, chef.", "Soit. Je reprends ma tâche.");
         m("relais_lettre", null, "Ce n'est pas mon ouvrage, chef : j'ai fait passer ta demande à {0}.");
+        m("relais_absent", null, "C'est le travail de {0}, chef, mais il est bien trop loin d'ici pour que je le prévienne.");
         m("relais_deja", null, "{0} s'en occupe déjà, chef.", "C'est déjà en route : {0} y travaille, chef.");
         // {0} le collègue, {1} la commande, {2} ce qu'il a répondu.
         m("relais_refuse", null, "J'ai porté ta commande à {0} ({1}), chef, mais il ne veut pas s'y mettre ainsi. Il m'a dit : « {2} » C'est à toi de lui répondre.",

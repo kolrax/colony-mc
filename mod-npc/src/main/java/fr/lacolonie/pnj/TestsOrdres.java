@@ -360,6 +360,11 @@ public class TestsOrdres {
                 () -> {
                     bertrand.mode = Travailleur.Mode.ATTENDRE;
                     bertrand.teleportTo(bertrand.getX() + 10, bertrand.getY(), bertrand.getZ());
+                    bertrand.forcerChunk();
+                },
+                // Arrivé dans un tronçon pas encore chargé, il n'est visible qu'un peu plus tard.
+                () -> h.assertTrue(ColoniePnj.tous(h.getLevel().getServer()).contains(bertrand), "Bertrand pas encore visible"),
+                () -> {
                     regarder(chef, odon);
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
                 },
@@ -452,7 +457,6 @@ public class TestsOrdres {
                 () -> {
                     bertrand.mission("fer", "quantite", 64);
                     bertrand.missions.get(0).livre = 10;
-                    bertrand.teleportTo(bertrand.getX() + 20, bertrand.getY(), bertrand.getZ());
                     regarder(chef, odon);
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
                 },

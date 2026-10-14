@@ -1654,7 +1654,14 @@ public class Travailleur extends PathfinderMob {
         autres = autres.stream().filter(o -> o.mode != Mode.GREVE && !o.aTerre).toList();
         int i = Relais.choisir(f, autres.stream().map(o -> new Relais.Candidat(o.metier, o.level() == level() ? distanceToSqr(o) : Double.MAX_VALUE)).toList());
         String objet = Relais.objet(Metier.nomCommande(met, m.id()));
-        if (i < 0) return Messages.corps(this, "relais_personne", Relais.personne(met), Metier.nom(met).toLowerCase(), objet);
+        if (i < 0) {
+            // Personne à portée : un ouvrier de ce métier peut être inscrit à l'effectif, mais loin, hors des terres chargées.
+            var effectif = Courrier.de(level().getServer()).effectifs.get(chef);
+            if (effectif != null) for (var x : effectif.entrySet())
+                if (!x.getKey().equals(getUUID()) && x.getValue().mort.isEmpty() && f.contains(x.getValue().metier))
+                    return Messages.corps(this, "relais_absent", Relais.qui(x.getValue().nom, Metier.nom(x.getValue().metier)));
+            return Messages.corps(this, "relais_personne", Relais.personne(met), Metier.nom(met).toLowerCase(), objet);
+        }
         Travailleur o = autres.get(i);
         Relais.Commande c = new Relais.Commande(o.getUUID(), o.prenom, o.metier, m, l.ajouter, l.quotidien, chef);
         String qui = Relais.qui(o.prenom, Metier.nom(o.metier));
