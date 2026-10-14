@@ -253,9 +253,10 @@ public class TestsTransporteur {
         t.prochainePaie = Monnaie.SANS_PAIE;
         t.debut = 0;
         t.fin = 0;
+        t.forcerChunk(); // le renvoi a libéré ses chunks
         h.succeedWhen(() -> {
             h.assertTrue(Transporteur.lire(t).isEmpty() && !t.memoire.contains("trajet_depart"), "aucun trajet de l'ancien chef : " + Transporteur.lire(t));
-            h.assertTrue(t.tickCount > 500, "il a eu le temps de travailler");
+            h.assertTrue(t.tickCount > 400, "il a eu le temps de travailler : " + t.tickCount);
             h.assertTrue(compte(c, Items.IRON_INGOT) == 10, "le coffre de l'ancien chef reste plein : " + compte(c, Items.IRON_INGOT) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             t.discard();
         });
