@@ -196,4 +196,36 @@ public class TestsTransporteur {
                 },
                 () -> TestsRepertoire.fin(e));
     }
+
+    /** « Prends dans ce coffre », puis « dépose dans celui-là » : le trajet d'un coffre à l'autre, et le fer arrive. Coin 195, 200 blocs plus loin. */
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void prendsPuisDepose(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        BlockPos base = TestsJeu.sol(h, 195 * 400 + 200, 60000);
+        ServerLevel l = h.getLevel();
+        Vec3 o = Vec3.atBottomCenterOf(base);
+        chef.moveTo(o.x, o.y, o.z - 3);
+        Travailleur g = TestsJeu.employe(h, "transporteur", base, o.add(-0.5, 0, 2.5), ItemStack.EMPTY);
+        g.chef = chef.getUUID();
+        g.prenom = "Gaspard";
+        g.forcerChunk();
+        BlockPos a = base.offset(6, 0, -3), z = base.offset(-6, 0, -3);
+        Container ca = coffre(l, a, new ItemStack(Items.IRON_INGOT, 8));
+        Container cz = coffre(l, z);
+        Travailleur[] e = {g};
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(a));
+                    g.parler(chef, "Prends dans ce coffre");
+                },
+                () -> h.assertTrue(g.memoire.contains("trajet_depart"), "le départ est retenu : " + IA.echange(g)),
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(z));
+                    g.parler(chef, "Dépose dans celui-là");
+                },
+                () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).dest() == z.asLong(), "le trajet est retenu : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                () -> h.assertTrue(compte(cz, Items.IRON_INGOT) == 8 && compte(ca, Items.IRON_INGOT) == 0,
+                        "le fer est passé d'un coffre à l'autre : " + compte(cz, Items.IRON_INGOT) + " (" + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> TestsRepertoire.fin(e));
+    }
 }
