@@ -57,6 +57,15 @@ public class Reglages {
     public int usure_outils = 3;
     /** L'éleveur garde au plus N bêtes de chaque espèce par enclos : il n'en fait plus naître et abat l'excédent (2 au moins). */
     public int betes_par_enclos = 12;
+    /** Moral (lot 5, cahier 5.2) : un bilan de ses causes (paie, repas, lit, danger, deuil, météo…) toutes les N minutes. */
+    public int moral_minutes_bilan = 5;
+    /** Sous ce moral, il travaille plus lentement et écrit au chef ce qui ne va pas (une lettre par jour du jeu au plus). */
+    public int moral_seuil_lettre = 30;
+    /** Sous ce moral, plus lent encore ; tant de jours du jeu de suite, après deux lettres, il démissionne (0 jour = jamais). */
+    public int moral_seuil_demission = 15;
+    public int moral_jours_avant_demission = 3;
+    /** La lenteur au plus bas, en pour cent de sa vitesse (la moitié sous le seuil de lettre). */
+    public int moral_lenteur = 20;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -111,6 +120,11 @@ public class Reglages {
         pnj_max_par_joueur = Math.max(0, pnj_max_par_joueur);
         secondes_entre_conversations = Math.max(0, secondes_entre_conversations);
         usure_outils = Math.max(1, usure_outils);
+        moral_minutes_bilan = Math.clamp(moral_minutes_bilan, 1, 20);
+        moral_seuil_lettre = Math.clamp(moral_seuil_lettre, 0, 100);
+        moral_seuil_demission = Math.clamp(moral_seuil_demission, 0, moral_seuil_lettre);
+        moral_jours_avant_demission = Math.max(0, moral_jours_avant_demission);
+        moral_lenteur = Math.clamp(moral_lenteur, 0, 50);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
