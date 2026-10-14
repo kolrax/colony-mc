@@ -51,7 +51,8 @@ public class TestsMineur {
     @AfterBatch(batch = "voisins")
     public static void apres(ServerLevel l) {
         Mineur.voisinsEnEssai = false;
-        A_DEFAIRE.forEach(Runnable::run);
+        // À rebours : deux puits de mine dans le même chunk reviennent ainsi à l'état d'avant le premier.
+        for (int i = A_DEFAIRE.size() - 1; i >= 0; i--) A_DEFAIRE.get(i).run();
         A_DEFAIRE.clear();
     }
 
@@ -65,7 +66,11 @@ public class TestsMineur {
         ChunkPos cp = new ChunkPos(a);
         ChunkAccess chunk = l.getChunk(cp.x, cp.z);
         var startsAvant = new HashMap<>(chunk.getAllStarts());
-        l.structureManager().setStartForStructure(SectionPos.bottomOf(chunk), s, new StructureStart(s, cp, 0, new PiecesContainer(List.of(piece))), chunk);
+        // Un chunk n'a qu'un départ par structure : deux tests voisins (même chunk) gardent chacun leur pièce.
+        List<StructurePiece> pieces = new ArrayList<>(List.of(piece));
+        StructureStart deja = chunk.getStartForStructure(s);
+        if (deja != null && deja.isValid()) pieces.addAll(deja.getPieces());
+        l.structureManager().setStartForStructure(SectionPos.bottomOf(chunk), s, new StructureStart(s, cp, 0, new PiecesContainer(pieces)), chunk);
         A_DEFAIRE.add(() -> chunk.setAllStarts(startsAvant));
         // La référence dans chaque chunk que touche la pièce (selon où tombe le test, elle peut en chevaucher deux), comme le fait le monde.
         for (int x = a.getX() >> 4; x <= b.getX() >> 4; x++)
@@ -94,6 +99,31 @@ public class TestsMineur {
         h.assertTrue(Monde.structure(h.getLevel(), h.absolutePos(new BlockPos(3, 2, 4))) != null, "la fausse structure doit être reconnue");
         Travailleur t = TestsJeu.ouvrier(h, "mineur", 1, 2, 4, new ItemStack(Items.IRON_PICKAXE));
         t.mission("charbon", "stock", 64);
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertBlockPresent(Blocks.COAL_ORE, 3, 2, 4);
+            h.assertBlockPresent(Blocks.COAL_ORE, 3, 3, 4);
+            h.assertTrue(lettre(t, "structure"), "il doit prévenir son chef (" + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
+
+    /**
+     * Coincé contre le charbon d'un puits de mine (son puits à creuser est hors d'atteinte, à l'est, derrière l'enceinte du
+     * test) : il ne se creuse pas une marche à travers le minerai. Avant, son escalier de déblocage ({@link Itineraire})
+     * cassait le bloc du haut ; c'est ce qui faisait échouer de temps en temps le test d'avant.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400, batch = "voisins")
+    public static void mineurCoinceNeCreusePasLaStructure(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        h.setBlock(3, 2, 4, Blocks.COAL_ORE);
+        h.setBlock(3, 3, 4, Blocks.COAL_ORE);
+        puitsDeMine(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 3)), h.absolutePos(new BlockPos(4, 4, 5)));
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 4, new ItemStack(Items.IRON_PICKAXE));
+        t.mission("charbon", "stock", 64);
+        // Son puits est déjà choisi, à 10 blocs à l'est : il ne peut pas y aller à pied.
+        t.memoire.putString("chantier", "charbon@" + Mineur.cle(t.bureau) + "/48");
+        t.memoire.putLong("puits", h.absolutePos(new BlockPos(12, 0, 4)).asLong());
         h.runAtTickTime(h.getTick() + 300, () -> {
             h.assertBlockPresent(Blocks.COAL_ORE, 3, 2, 4);
             h.assertBlockPresent(Blocks.COAL_ORE, 3, 3, 4);
