@@ -57,6 +57,7 @@ public class TestsPecheur {
         ServerLevel l = h.getLevel();
         mare(l, b[0], 4, -2, 8, 2);
         t.memoire.putInt("prises", Pecheur.PRISES - 1); // la prochaine prise remplit son panier : il la porte au dépôt
+        t.inventaire.addItem(new ItemStack(Items.COD, 3)); // les 9 premières, déjà au sac (sinon le compte repart de zéro)
         boolean[] m = mouille(h, t);
         h.succeedWhen(() -> {
             h.assertFalse(m[0], "il ne doit jamais entrer dans l'eau (" + TestsJeu.etat(t, t.bureau) + ")");
