@@ -1488,3 +1488,68 @@ A | Tu as vu des traces, en forêt ?
 B | Des loups, et quelque chose de plus gros.
 A | Plus gros comment ?
 B | Assez gros pour que j'aille te chercher.
+
+# ============================================================
+# LOT 6 : PÊCHEURS, CHASSEURS, CUISINIERS, BOULANGERS, TRANSPORTEURS
+# ============================================================
+
+= travail | metier_a=pecheur, meme_metier
+A | Tu as pris ma place au bord de l'eau.
+B | Ta place ? Je n'y vois pas ton nom.
+A | Les poissons, eux, le connaissent.
+B | Alors qu'ils viennent me le dire.
+
+= travail | metier_a=pecheur, metier_b=transporteur
+A | Tu peux porter mes paniers jusqu'à la cuisine ?
+B | Encore du poisson ? Ma charrette va sentir la marée pendant une semaine.
+A | C'est l'odeur du travail bien fait.
+B | C'est l'odeur qui fait fuir les chevaux.
+
+= travail | metier_a=chasseur, metier_b=pecheur
+A | Toi, tu attends que ton repas vienne à toi.
+B | Et toi, tu cours après le tien toute la journée.
+A | Au moins, je ne m'endors pas.
+B | Moi non plus. Je réfléchis les yeux fermés.
+
+= travail | metier_a=chasseur, metier_b=fermier
+A | Les lapins ont encore grignoté tes carottes ?
+B | La moitié du rang. Tu ne pourrais pas t'en occuper ?
+A | Laisse-moi faire. Ce soir, ils seront dans la marmite.
+B | Avec mes carottes, alors. Qu'elles servent à quelque chose.
+
+= travail | metier_a=cuisinier, metier_b=transporteur, faim
+A | Tu m'apportes le charbon pour le four ?
+B | Il est sur mon dos. Mais j'ai faim.
+A | Pas de charbon, pas de pain.
+B | Pas de pain, pas de charbon. Nous voilà bien.
+A | Bon. Pose le sac, je te donne une croûte.
+
+= travail | metier_a=boulanger, metier_b=fermier
+A | Ton dernier blé était magnifique.
+B | Tu le dis enfin ! Depuis le temps.
+A | Je le pense à chaque fournée. Je le dis rarement.
+B | Dis-le plus souvent. Ça fait pousser le blé.
+
+= travail | metier_a=transporteur, meme_metier
+A | Le coffre de la mine était plein à craquer, ce matin.
+B | Et celui du dépôt aussi. Je ne savais plus où poser.
+A | Il faudrait le dire à {chef}.
+B | Dis-le, toi. Moi, je l'ai dit hier.
+
+= travail | metier_a=transporteur, metier_b=eleveur, temperament_a=colerique
+A | Qui a mis des sacs de blé dans mon chemin ?
+B | Moi. C'est pour les vaches.
+A | Les vaches savent marcher. Moi, je porte déjà assez !
+B | Bon, bon. Je les pousse contre la clôture.
+
+= humour | metier_a=cuisinier, metier_b=chasseur, temperament_b=fourbe
+A | Ton lapin d'hier était bien petit.
+B | Il était gros quand je l'ai vu courir.
+A | Il a rétréci en route, alors ?
+B | C'est la peur. Ça fait maigrir.
+
+= nourriture | metier_a=pecheur, metier_b=cuisinier, soir
+A | Tu fais quoi, de mes poissons, ce soir ?
+B | Grillés, avec des herbes.
+A | Encore grillés ?
+B | Apporte-moi autre chose que des poissons, et je ferai autre chose.

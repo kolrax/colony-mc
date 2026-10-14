@@ -23,7 +23,8 @@
 #   {chef}   nom du chef de la colonie (partout)
 #   {nom}    prénom de l'autre PNJ en jeu : celui qui soigne (soigne), qui a pris le lit (lit_vole),
 #            le blessé à terre (blesse_vu), celui que le guérisseur a relevé ou pansé (guerisseur_soigne)
-#   {objet}  l'objet en jeu, tel qu'on le dit (« du pain », « une pioche ») : vol, sabotage_avoue, cadeau
+#   {objet}  l'objet en jeu, tel qu'on le dit (« du pain », « une pioche ») : vol, sabotage_avoue, cadeau,
+#            peche_prise, peche_dechet, peche_tresor
 #   {mort}   prénom du PNJ mort : ami_mort, deuil_annonce, deuil_tristesse, enterrement_discours,
 #            enterrement_apaisement
 #
@@ -44,6 +45,9 @@
 #                meteo_belle, ami_mort
 #   Deuil :      deuil_annonce, deuil_tristesse, enterrement_discours, enterrement_apaisement
 #   Réactions :  insulte, coup, impaye, diamant_avoue, diamant_nie, cadeau
+#   Métiers :    peche_attente, peche_prise, peche_dechet, peche_tresor, chasse_piste, chasse_rate, chasse_retour,
+#                cuisine_four, cuisine_brule, cuisine_odeur, transport_charge, transport_coffre_plein,
+#                transport_coffre_introuvable
 
 # ============================================================
 # CORPS
@@ -647,3 +651,176 @@ calme: Merci, {chef}. C'est très généreux.
 peureux: C'est pour moi ? Vraiment pour moi ? Je n'ai rien fait de spécial…
 fourbe: {objet} ? Excellent. Je sais déjà à qui le revendre. Je plaisante.
 colerique: Un cadeau ? Bon… Merci. Ma colère est passée. Presque.
+
+# ============================================================
+# MÉTIERS (lot 6) : pêcheur, chasseur, cuisinier et boulanger, transporteur
+# Répliques de travail, dites en bulle à voix haute (ou au chef s'il est là).
+# {objet} : ce qui vient d'être pêché, dit comme on le dit (« une vieille botte », « un arc »),
+#           dans peche_prise, peche_dechet et peche_tresor. Sans {objet} connu, ces répliques-là ne sortent pas.
+# ============================================================
+
+[peche_attente]
+Allez, mords… Mords donc.
+Le bouchon ne bouge pas. Moi non plus.
+L'eau est calme. Un peu trop calme.
+Ils sont là-dessous, je le sais. Ils se moquent de moi.
+Pêcher, c'est surtout attendre. Et j'attends très bien.
+Un frémissement… Non. Rien. Le vent.
+Si un poisson m'entend, qu'il sache que j'ai tout mon temps.
+Pas un bruit, s'il vous plaît. Vous allez les effrayer.
+calme: L'eau finit toujours par donner quelque chose. Il suffit de rester assis.
+peureux: Pourvu que rien de gros ne morde. Je ne saurais pas quoi en faire.
+fourbe: Je ne dirai à personne où ça mord le mieux. Pas même à toi, {chef}.
+colerique: Ça fait une heure ! Ces poissons n'ont donc pas faim ?
+
+[peche_prise]
+En voilà un beau !
+Ça a mordu ! Tenez bon… Je l'ai !
+Regarde-moi ça, {chef}. De quoi nourrir la table ce soir.
+Encore un pour le panier.
+Il s'est bien débattu, celui-là.
+J'ai sorti {objet}. Pas mal du tout.
+Le cuisinier va être content.
+Une prise pareille, ça se raconte au repas.
+calme: Un de plus. L'eau est généreuse aujourd'hui.
+peureux: Il a failli m'emporter la canne… Mais je l'ai !
+fourbe: Celui-là, il pesait le double. Enfin, presque.
+colerique: Ah ! Enfin ! Tu vois, quand on s'acharne ?
+
+[peche_dechet]
+Une vieille botte. Il manque juste le pied.
+J'ai repêché {objet}. Ce n'est pas tout à fait ce que je cherchais.
+Encore une saleté au bout de ma ligne.
+Quelqu'un jette ses affaires dans notre eau, et c'est moi qui les ramasse.
+Ce n'est pas un poisson. Ça n'a même jamais été un poisson.
+Bon. Ça fera de la place au fond de l'eau.
+calme: Tout ce que l'eau rend n'est pas à manger. C'est ainsi.
+peureux: Qu'est-ce que c'est que ça ? Ça bouge encore ? Non… Tant mieux.
+fourbe: {objet}… Je le garde. On ne sait jamais à qui ça peut se vendre.
+colerique: Des ordures ! L'eau me prend pour une décharge !
+
+[peche_tresor]
+Ça alors ! Regarde ce que l'eau m'a donné !
+J'ai repêché {objet} ! Qui a bien pu perdre ça ?
+Ce n'est pas un poisson… C'est bien mieux !
+{chef}, viens voir ! Un trésor, au bout de ma ligne !
+Celui qui a perdu ça doit encore le chercher.
+Je pêche depuis des années, et je n'avais jamais vu ça.
+calme: L'eau garde ses secrets longtemps. Aujourd'hui, elle m'en a confié un.
+peureux: Et si quelqu'un venait le réclamer ? Je le porte au dépôt tout de suite.
+fourbe: {objet}… Personne ne m'a vu le sortir, n'est-ce pas ?
+colerique: Ha ! Et on disait que pêcher ne rapportait rien !
+
+[chasse_piste]
+Des traces fraîches. Elles vont vers le bois.
+Chut. Il y a quelque chose derrière ces buissons.
+Le vent vient de face. Bien. Il ne me sentira pas.
+Une branche cassée, de l'herbe couchée… Il est passé par là.
+Pas un bruit. Je marche sur la mousse.
+Il n'est pas loin. Je le sens.
+Doucement… Encore quelques pas.
+calme: La bête a tout son temps. Moi aussi.
+peureux: Pourvu que ce soit un lapin. Ces traces sont un peu grandes pour un lapin.
+fourbe: Je l'attends à la sortie du bois. Il passera forcément par là.
+colerique: Montre-toi, à la fin ! Je ne vais pas te suivre jusqu'au soir !
+
+[chasse_rate]
+Raté. Elle m'a vu venir.
+Ma flèche est partie dans le décor.
+Trop lent. La bête court plus vite que mon arc.
+Elle a filé. La prochaine sera la bonne.
+Le vent a tourné au mauvais moment.
+J'ai visé juste. C'est elle qui a bougé.
+Il faudra que j'aille chercher ma flèche. Si je la retrouve.
+calme: Une bête manquée vit un jour de plus. Ce n'est pas un drame.
+peureux: J'ai tremblé au dernier moment… Elle l'a senti, je crois.
+fourbe: Je l'ai laissée partir exprès. Elle était trop maigre.
+colerique: Raté ! Encore ! Cet arc est tordu, j'en suis sûr !
+
+[chasse_retour]
+Je rentre avec de la viande pour tout le monde.
+Bonne chasse, aujourd'hui. Le dépôt va se remplir.
+De quoi manger, et du cuir en plus.
+Le cuisinier n'aura pas à se plaindre, ce soir.
+J'ai les jambes en compote, mais le sac est plein.
+Voilà pour la table, {chef}.
+La forêt a été généreuse.
+calme: Je n'ai pris que ce qu'il fallait. Il en restera pour demain.
+peureux: Rentrer avant la nuit, c'était le plus important. Le reste suit.
+fourbe: Si on te demande, c'était la plus grosse bête de la forêt.
+colerique: Du gibier, tout ça ! Et qu'on ne vienne pas me dire que je traîne !
+
+[cuisine_four]
+Le four chauffe bien. On va pouvoir enfourner.
+Encore un peu de bois, et ce sera parfait.
+Ne touchez pas, c'est brûlant.
+Il faut surveiller la cuisson. Pas une minute de distraction.
+La pâte a bien levé, ce matin.
+On enfourne. Et maintenant, on attend.
+Un four bien tenu, c'est une colonie bien nourrie.
+Qui a laissé la porte du four ouverte ?
+calme: Chaque chose cuit à son rythme. On ne presse pas un pain.
+peureux: Les flammes montent un peu haut… Non, ça va. Ça va.
+fourbe: Le premier qui sort du four, c'est pour le cuisinier. C'est la règle.
+colerique: Personne ne touche au four tant que je n'ai pas dit oui !
+
+[cuisine_brule]
+Oh non. Celui-là a trop cuit.
+Ça sent le brûlé… C'est le mien.
+Un pain noir comme du charbon. Ce n'était pas prévu.
+J'ai tourné la tête deux instants, pas plus.
+Ce n'est pas brûlé. C'est bien doré. Très bien doré.
+On grattera le dessus. Le dedans est bon.
+calme: Une fournée ratée sur dix, ce n'est pas si mal.
+peureux: Ne le dites à personne… Je refais une fournée tout de suite.
+fourbe: Celui-là, on le donnera à ceux qui se plaignent toujours.
+colerique: Qui m'a distrait ? Avouez ! Ma fournée est perdue !
+
+[cuisine_odeur]
+Ça sent bon, hein ? Patience, ce n'est pas encore prêt.
+L'odeur du pain chaud, il n'y a rien de mieux.
+Je vois des têtes qui passent devant la cuisine. Curieux, ce hasard.
+Ça embaume jusqu'aux champs, à ce qu'on m'a dit.
+Si ça sent jusqu'au poste, c'est que c'est presque cuit.
+Bientôt prêt. Allez vous laver les mains.
+calme: Une bonne odeur, c'est déjà la moitié du repas.
+peureux: Pourvu que ça plaise à tout le monde…
+fourbe: Je laisse la fenêtre ouverte exprès. Ça donne du cœur à l'ouvrage.
+colerique: Ce n'est pas prêt ! Arrêtez de tourner autour de ma cuisine !
+
+[transport_charge]
+Tout est chargé. On y va.
+Mon dos se souviendra de ce voyage.
+Une caisse de plus et je ne vois plus mes pieds.
+Place, place ! Lourde charge qui passe !
+Tout est là. Je compte une dernière fois.
+Ce sac pèse plus lourd qu'à l'aller. Bizarre.
+Un aller, un retour, et on recommence.
+calme: Pas trop vite. Ce qui tombe en route ne sert à personne.
+peureux: Pourvu que rien ne m'attende sur le chemin, avec tout ça sur le dos.
+fourbe: Personne ne compte ce que je porte. Heureusement que je suis honnête.
+colerique: Qui a rempli ce sac de cailloux ? Ah. Ce sont bien des cailloux.
+
+[transport_coffre_plein]
+Ce coffre est plein à craquer. Je ne peux rien y mettre.
+Plus une place là-dedans. Il faut un autre coffre, {chef}.
+Je pose quoi, où ? Tout déborde.
+Le coffre refuse. Il est plein jusqu'au couvercle.
+Je garde la charge sur moi en attendant qu'on fasse de la place.
+Il faudrait vider ce coffre avant que je le remplisse.
+calme: Un coffre plein, c'est une bonne nouvelle. Il en faut juste un autre.
+peureux: Il n'y a plus de place… Je fais quoi de tout ça, moi ?
+fourbe: Je pourrais toujours en laisser un peu sous mon lit. Pour dépanner.
+colerique: Plein ! Encore plein ! Je ne vais pas porter ça toute la journée !
+
+[transport_coffre_introuvable]
+Le coffre n'est plus là. Il était pourtant là.
+Je cherche le coffre partout. Quelqu'un l'a déplacé ?
+J'arrive avec ma charge, et plus de coffre. Ça commence bien.
+{chef}, où est passé le coffre ? Je ne le trouve pas.
+Je ne vais pas poser tout ça par terre. Il me faut un coffre.
+Un coffre ne s'envole pas. Pourtant, celui-là a disparu.
+calme: Pas de coffre ici. J'attends qu'on m'en montre un autre.
+peureux: Le coffre a disparu… Quelqu'un l'a volé ? Avec tout ce qu'il y avait dedans ?
+fourbe: Un coffre qui disparaît… Je n'y suis pour rien, je le précise.
+colerique: Qui a pris le coffre ? Qu'il le remette, et vite !
