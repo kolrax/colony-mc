@@ -1,44 +1,311 @@
 # Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7). Fichier UTF-8.
-# FORMAT : exactement celui de vie.txt et remarques.txt (lecteur Vie.lire). Rempli par l'auteur.
+#
+# FORMAT : exactement celui de vie.txt et remarques.txt (même lecteur : Vie.lire).
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#
+# - « [cle] » ouvre une section. Clé en minuscules, sans accent ni espace (lettres, chiffres et « _ »),
+#   unique dans ce fichier ET différente de toutes les clés de vie.txt et de remarques.txt.
+# - Une réplique par ligne, courte (bulle en jeu, 90 caractères au plus). Préfixe facultatif « temperament: »
+#   (calme:, peureux:, fourbe:, colerique: ; aucun autre). Chaque section a au moins six répliques sans préfixe
+#   et au moins deux par tempérament.
+# - Tirage proposé (comme vie.txt) : une fois sur deux une réplique du tempérament du PNJ, sinon une commune.
+# - Les caractères sont les quatre tempéraments du mod : calme (posé, digne), peureux (timide),
+#   fourbe (rusé, rancunier), colerique (soupe au lait, mais vite apaisé).
+#
+# VARIABLES (seulement celles-ci)
+#   {chef}   nom du chef de la colonie (partout)
+#   {mort}   prénom du compagnon mort : toujours connu dans les sections deuil_ et enterrement_
+#   {nom}    prénom du collègue concerné : toujours connu dans les sections ami_, inimitie_ et couple_
+# liens_reponse_aucun n'a pas de {nom} (il n'a personne à nommer).
+#
+# ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle, sur {nom}, sur {mort} ni sur le chef.
+# Tournures neutres seulement (« {mort} n'est plus », pas « il est mort » ni « elle est partie »).
+#
+# CLÉS
+# 1. DEUIL (cahier 14.13 : les autres sont tristes, ils en parlent ; un enterrement peut adoucir le moral)
+#   deuil_apprend          il apprend la mort de {mort}
+#   deuil_souvenir         dans les jours suivants, il évoque {mort} (souvenir, anecdote, manque)
+#   enterrement_propose    il propose au chef d'enterrer {mort}
+#   enterrement_mots       quelques mots au bord de la tombe de {mort}
+#   enterrement_recueil    les autres, au bord de la tombe (court, recueilli)
+#   enterrement_apres      en repartant au travail, un peu apaisé
+# 2. RELATIONS
+#   ami_salut              il salue un ami ({nom})
+#   ami_causerie           une phrase complice à un ami
+#   inimitie_pique         une pique à quelqu'un qu'il n'aime pas ({nom}), jamais de menace de violence
+#   inimitie_evite         il évite {nom} (« je vais travailler ailleurs »)
+#   couple_annonce         il annonce être en couple avec {nom}
+#   couple_tendresse       petit mot tendre à {nom}, pudique
+#   couple_inquiet         {nom} est blessé, il accourt inquiet
+#   liens_reponse_aucun    le chef demande qui sont ses amis : il n'en a pas
+# ------------------------------------------------------------
 
-# Deuil (provisoire, remplacé par l'auteur)
-# deuil_apprend : la nouvelle, dite à voix haute ; deuil_souvenir : les jours suivants, en remarque ;
-# enterrement_propose : au chef, un jour sans enterrement ; enterrement_mots : l'orateur, devant la tombe ;
-# enterrement_recueil : les autres, devant la tombe ; enterrement_apres : à la fin, en reprenant le travail.
-# Variables : {mort} (prénom du mort, partout), {chef}.
+# ============================================================
+# 1. DEUIL
+# ============================================================
 
 [deuil_apprend]
-{mort} nous a quittés.
-On a perdu {mort}. Je n'arrive pas à y croire.
-{mort} ne reviendra plus parmi nous.
-Triste jour : {mort} n'est plus.
+Quoi ? {mort} ? Non…
+{mort} n'est plus ? Ce matin encore, on parlait ensemble.
+Je viens de l'apprendre. {mort}… Ce n'est pas possible.
+On a perdu {mort}. Je n'ai plus de mots.
+{mort} ne reviendra pas du travail ce soir. Ni demain.
+Pas {mort}. Pas maintenant.
+Qui va le dire aux autres, pour {mort} ?
+Je pose mes outils. Juste un moment. Pour {mort}.
+calme: {mort} n'est plus. Asseyons-nous un instant.
+calme: C'est une perte pour toute la colonie. {mort} va nous manquer.
+calme: Je m'y attendais si peu. Laissez-moi un moment.
+peureux: {mort}… Mais comment ? Et si ça recommence ?
+peureux: Non, non… Dites-moi que ce n'est pas vrai, pour {mort}…
+peureux: Je n'ose plus sortir. Pas après ce qui est arrivé à {mort}.
+fourbe: {mort}, vraiment ? Quelqu'un sait comment c'est arrivé ?
+fourbe: Hier encore, {mort} se moquait de moi. Ça va me manquer, tiens.
+colerique: Non ! Pas {mort} ! Qui a laissé faire ça ?
+colerique: Ce n'est pas juste ! {mort} valait mieux que ça !
 
 [deuil_souvenir]
-Je repense à {mort}, ce matin encore.
-{mort} aurait ri de me voir peiner ainsi.
-La place de {mort} reste vide.
-Il me semble encore entendre {mort} siffler à l'ouvrage.
+{mort} chantait faux en travaillant. Ça me manque, ce chant faux.
+Tu te souviens de {mort} sous la pluie, à rire comme un enfant ?
+Je garde encore une place pour {mort} au repas. Par habitude.
+{mort} disait toujours : « Encore un effort, et on mange. »
+C'est bête. Je me retourne pour parler à {mort}, et il n'y a personne.
+Le coin où travaillait {mort} est bien calme, maintenant.
+{mort} m'avait appris à tenir une pioche. Je la tiens encore comme ça.
+Quand je fais une bêtise, j'entends {mort} se moquer de moi.
+Le soir, au feu, il manque une voix. Celle de {mort}.
+calme: Je pense souvent à {mort}. Ça passe. Doucement.
+calme: {mort} aurait su quoi faire, aujourd'hui.
+peureux: J'ai rêvé de {mort} cette nuit. Ce n'était pas un mauvais rêve.
+peureux: {mort} me rassurait, les nuits d'orage. Plus personne ne le fait.
+fourbe: {mort} trichait aux dés. Tout le monde le savait. Personne ne disait rien.
+fourbe: {mort} me devait trois pièces. Je les lui laisse.
+colerique: {mort} et moi, on se disputait tous les jours. Je donnerais cher pour une dispute.
+colerique: Ne prends pas la place de {mort} ! Pas encore !
 
 [enterrement_propose]
-Chef, {mort} n'a toujours pas de sépulture. Si on lui faisait ses adieux ?
-Chef, on pourrait enterrer {mort} dignement. Ça nous ferait du bien à tous.
-{mort} mérite qu'on se recueille sur sa tombe, chef.
-Chef, quand ferons-nous nos adieux à {mort} ?
+{chef}, il faudrait enterrer {mort}. Comme il se doit.
+{mort} mérite une vraie tombe, {chef}.
+On ne peut pas laisser {mort} comme ça. Faisons une tombe.
+{chef}, on pourrait se réunir pour {mort} ? Juste quelques mots.
+Une pierre, quelques fleurs, et un adieu. {mort} le mérite.
+Si tu permets, {chef}, on enterre {mort} avant la nuit.
+Les autres ne pensent qu'à ça. Un enterrement nous ferait du bien.
+calme: {chef}, un adieu pour {mort} aiderait tout le monde à reprendre.
+calme: Je peux creuser, {chef}. Il faut juste ta permission.
+peureux: {chef}… On pourrait enterrer {mort} ? Je n'aime pas y penser sans tombe.
+peureux: Je n'ose pas demander, mais… une tombe pour {mort} ?
+fourbe: Un bel enterrement, {chef}, et les autres reprendront le travail. Crois-moi.
+fourbe: {mort} a assez travaillé pour cette colonie. Une tombe, c'est bien le moins.
+colerique: Alors, {chef} ? On l'enterre, {mort}, oui ou non ?
+colerique: Une tombe pour {mort}, {chef}. Et pas dans un coin perdu !
 
 [enterrement_mots]
-{mort} était des nôtres. On ne l'oubliera pas.
-Repose en paix, {mort}. Tu as bien travaillé.
-Adieu, {mort}. La terre te sera douce.
-{mort} a partagé notre pain et notre peine. Merci.
+{mort} a porté sa part du travail. Plus que sa part.
+On a fait connaissance ici, {mort}. On se reverra peut-être ailleurs.
+Merci pour les repas partagés, {mort}. Et pour les rires.
+Dors bien, {mort}. Le travail attendra.
+{mort} râlait souvent. Mais répondait toujours présent.
+Cette colonie te doit beaucoup, {mort}.
+Tu nous laisses un grand vide, {mort}.
+On racontera encore tes histoires, {mort}. Même les fausses.
+calme: Que la terre soit légère à {mort}. Nous, on continue.
+calme: {mort} a fait son chemin. Honorons sa mémoire en faisant le nôtre.
+peureux: Adieu, {mort}… Je… je n'arrive pas à en dire plus.
+peureux: Tu nous protégeais, {mort}. Qui va le faire, maintenant ?
+fourbe: {mort} connaissait tous nos secrets. Les voilà bien gardés.
+fourbe: On se disputait souvent, {mort}. J'avais tort une fois sur deux.
+colerique: Tu partais toujours trop vite, {mort} ! Cette fois aussi !
+colerique: Repose-toi, {mort}. Tu l'as bien mérité, tête de pioche !
 
 [enterrement_recueil]
 Adieu, {mort}.
+Que la paix soit avec toi, {mort}.
 Repose en paix.
-On pensera à toi, {mort}.
-Que la terre te soit légère.
+On ne t'oubliera pas, {mort}.
+Silence. Pour {mort}.
+Merci, {mort}.
+Que la terre te garde, {mort}.
+Au revoir.
+calme: Paix à {mort}.
+calme: Un dernier moment ensemble.
+peureux: Adieu… {mort}…
+peureux: Je ne pleure pas. C'est le vent.
+fourbe: Bon voyage, {mort}.
+fourbe: Celui-là, je le pense vraiment : adieu, {mort}.
+colerique: Adieu, vieille branche.
+colerique: Tu vas nous manquer, {mort}. Voilà, c'est dit.
 
 [enterrement_apres]
-Allons, au travail. {mort} l'aurait voulu.
-J'ai le cœur moins lourd. Je reprends l'ouvrage.
-C'était bien de lui dire adieu.
-Retournons à la tâche, maintenant.
+Ça fait du bien de s'être réunis.
+Allez. {mort} n'aimerait pas nous voir traîner.
+J'ai le cœur un peu moins lourd. Un peu.
+On reprend. Pour {mort} aussi.
+C'était un bel adieu. Merci à tous.
+Le travail aide. On y retourne.
+Je passerai fleurir la tombe de temps en temps.
+Bon. La vie continue. Il le faut bien.
+calme: L'adieu est fait. On peut regarder devant.
+calme: Chacun à son poste. C'est comme ça qu'on honore {mort}.
+peureux: J'avais peur de ce moment. Finalement, ça va mieux.
+peureux: On reste ensemble, d'accord ? Tous ensemble.
+fourbe: Belle cérémonie. {mort} aurait demandé du vin, quand même.
+fourbe: Maintenant que c'est fait, qui reprend le travail de {mort} ?
+colerique: Assez pleuré. Au travail ! {mort} l'aurait dit aussi.
+colerique: Je suis encore en colère. Mais moins. Allez, on y va.
+
+# ============================================================
+# 2. RELATIONS
+# ============================================================
+
+[ami_salut]
+Salut, {nom} !
+Tiens, {nom} ! Ça va, depuis ce matin ?
+{nom} ! Ça fait plaisir de te voir.
+Ah, voilà {nom}. La journée s'arrange.
+Bonjour, {nom}. Bien dormi ?
+Hé, {nom} ! On mange ensemble, ce midi ?
+Te voilà, {nom}. Je te cherchais partout.
+{nom} ! Viens par ici, que je te raconte.
+calme: Bonjour, {nom}. Toujours un plaisir.
+calme: {nom}. Une bonne journée à toi.
+peureux: Ah, {nom}, c'est toi… Ouf. Bonjour.
+peureux: {nom} ! Je peux travailler à côté de toi, aujourd'hui ?
+fourbe: {nom}, mon ami ! J'ai des nouvelles. Approche.
+fourbe: Toi, {nom}, tu tombes bien. J'ai besoin de quelqu'un de confiance.
+colerique: {nom} ! Enfin une tête qui ne m'énerve pas !
+colerique: Ha ! {nom} ! Viens donc, vieille branche !
+
+[ami_causerie]
+Tu te souviens de la fois où on a tourné en rond dans la forêt, {nom} ?
+On fait une pause ensemble, {nom} ? Juste une petite.
+Avec toi, {nom}, le travail passe plus vite.
+Ce soir, je te garde une place au feu, {nom}.
+Si tu as besoin d'un coup de main, {nom}, tu sais où me trouver.
+Toi et moi, {nom}, on est les seuls à travailler vraiment, ici.
+J'ai gardé un morceau de pain pour toi, {nom}.
+Ne le répète pas, {nom}, mais personne ici ne travaille mieux que toi.
+Un jour, {nom}, on aura chacun une maison. Côte à côte.
+calme: C'est bon de travailler avec quelqu'un sur qui compter, {nom}.
+calme: Prends ton temps, {nom}. Je finis ma part et je t'aide.
+peureux: Tu restes près de moi cette nuit, {nom} ? Juste au cas où.
+peureux: Avec toi, {nom}, j'ai moins peur du noir. Un peu moins.
+fourbe: Entre nous, {nom} : le chef ne voit rien. On le sait, tous les deux.
+fourbe: Je te garde la meilleure place à table, {nom}. Ça reste entre nous.
+colerique: Si quelqu'un t'embête, {nom}, dis-le-moi. Je lui dirai deux mots.
+colerique: Toi au moins, {nom}, tu ne me casses pas les oreilles.
+
+[inimitie_pique]
+Tiens, {nom}. Encore à te reposer ?
+Tu as fini quelque chose aujourd'hui, {nom} ? Non ? Ça m'aurait étonné.
+Ah, {nom}. La journée était trop belle.
+Prends exemple sur les autres, {nom}. N'importe lesquels.
+Tu tiens ta pelle à l'envers, {nom}. Comme d'habitude.
+{nom}, si la paresse payait, tu serais riche.
+On t'entend arriver de loin, {nom}. Et partir de loin, aussi, quand il y a du travail.
+Merci, {nom}, de me rappeler pourquoi j'aime la solitude.
+Ne touche pas à mes outils, {nom}. Je les compte.
+calme: Je n'ai rien à te dire, {nom}. Et c'est déjà beaucoup.
+calme: Chacun son travail, {nom}. Fais le tien, pour changer.
+peureux: Ne me regarde pas comme ça, {nom}… Je n'ai rien fait.
+peureux: {nom}, tu pourrais au moins dire bonjour.
+fourbe: Oh, {nom}. Tu sais ce qu'on dit sur toi ? Non ? Dommage.
+fourbe: Joli travail, {nom}. Vraiment. Le chef va adorer.
+colerique: Encore toi, {nom} ! Tu ne pouvais pas rester de l'autre côté ?
+colerique: Tu me casses les oreilles, {nom} ! Va donc parler aux poules !
+
+[inimitie_evite]
+{nom} est là ? Je vais travailler ailleurs.
+Je prends l'autre chemin. Il y a {nom} sur celui-ci.
+Pas à côté de {nom}. N'importe où, mais pas là.
+Je reviendrai quand {nom} sera ailleurs.
+Je mange plus tard. {nom} est à table.
+Je change de côté. L'air est meilleur par ici.
+Garde {nom} loin de moi, {chef}, et tout ira bien.
+Je finirai ça demain. Quand {nom} ne sera plus dans les parages.
+calme: Je préfère éviter {nom}. Ça vaut mieux pour tout le monde.
+calme: Pas de dispute aujourd'hui. Je m'éloigne de {nom}.
+peureux: {nom} arrive… Je file avant qu'on me voie.
+peureux: Je me cache derrière le tas de bois. {nom} ne me verra pas.
+fourbe: Je laisse la place à {nom}. Pour l'instant.
+fourbe: Que {nom} travaille ici. On verra qui finit le premier.
+colerique: Près de {nom}, je dirais des choses que je regretterais. Je m'en vais.
+colerique: Non. Pas avec {nom}. Je préfère encore la pluie.
+
+[couple_annonce]
+{chef}, il faut que je te dise : {nom} et moi, on est ensemble.
+Voilà, c'est dit. {nom} et moi, c'est sérieux.
+{nom} et moi, on partage la même table, désormais. Et le reste.
+Tout le monde l'a deviné, je crois. {nom} et moi, on est ensemble.
+J'ai demandé à {nom}. {nom} a dit oui.
+Ne riez pas ! Avec {nom}, on a décidé d'être ensemble.
+{chef}, on voudrait une maison pour deux, {nom} et moi.
+Mon cœur est pris. Par {nom}.
+calme: {nom} et moi, on s'est trouvés. Ça s'est fait doucement.
+calme: Je voulais que tu l'apprennes de moi, {chef} : {nom} et moi, on est ensemble.
+peureux: Je… euh… {nom} et moi… enfin, voilà. Ensemble.
+peureux: Ne le dites à personne. Bon, si, dites-le. {nom} et moi, c'est sérieux.
+fourbe: Tu ne l'avais pas vu venir, hein ? {nom} et moi. Ensemble.
+fourbe: Oui, {nom} et moi. Et non, je ne dirai pas comment ça a commencé.
+colerique: {nom} et moi, on est ensemble ! Et que personne n'y trouve à redire !
+colerique: Oui, avec {nom} ! Et alors ? Ça vous gêne ?
+
+[couple_tendresse]
+Tu as bien mangé, {nom} ?
+Fais attention à toi, {nom}.
+Je t'ai gardé la meilleure pomme, {nom}.
+Ce soir, on regarde les étoiles, {nom} ?
+Ne rentre pas trop tard, {nom}.
+Tu as de la terre sur la joue, {nom}. Là. Voilà.
+Tiens, {nom}. J'ai cueilli ça pour toi.
+La journée est longue sans toi, {nom}.
+Tu m'as manqué, ce matin, {nom}.
+calme: Je suis bien, à côté de toi, {nom}.
+calme: Repose-toi un peu, {nom}. Je m'occupe du reste.
+peureux: Tu restes près de moi, ce soir, {nom} ?
+peureux: Avec toi, {nom}, même l'orage ne me fait plus peur.
+fourbe: J'ai mis de côté une part de gâteau. Pour toi seulement, {nom}.
+fourbe: Les autres nous regardent, {nom}. Laissons-les jaser.
+colerique: Si quelqu'un t'ennuie, {nom}, tu me le dis. Tout de suite.
+colerique: Il fait froid. Mets mon manteau, {nom}. Pas de discussion.
+
+[couple_inquiet]
+{nom} ! Tu m'entends ? {nom} !
+Où as-tu mal, {nom} ? Montre-moi.
+Ne bouge pas, {nom}. J'arrive !
+Un guérisseur ! Vite ! C'est {nom} !
+Reste avec moi, {nom}. Respire.
+Ça va aller, {nom}. Je suis là.
+Qui t'a fait ça, {nom} ?
+Doucement, {nom}. Appuie-toi sur moi.
+calme: Calme-toi, {nom}. On va te soigner. Je reste.
+calme: Ce n'est rien, {nom}. On s'en occupe tout de suite.
+peureux: {nom} ! Non, non, non… Il faut faire quelque chose !
+peureux: Je ne te laisse pas, {nom}. Même si j'ai peur.
+fourbe: {nom}, tiens bon. Je sais où le guérisseur cache ses remèdes.
+fourbe: Ne fais pas ça, {nom}. Qui me supporterait, après ?
+colerique: Qui a touché à {nom} ? Le chef va le savoir !
+colerique: Tiens bon, {nom} ! Tu m'entends ? Tu tiens bon !
+
+[liens_reponse_aucun]
+Des amis ? Pas vraiment, {chef}.
+Je m'entends avec tout le monde. Mais des amis, non.
+Personne en particulier. Je travaille, c'est tout.
+Mon meilleur ami, c'est ma pioche.
+Pas encore. Ça viendra, peut-être.
+Je n'ai pas eu le temps de m'en faire, {chef}.
+Je préfère ma propre compagnie. Elle ne me contredit jamais.
+Les poules m'aiment bien. Ça compte ?
+Ici ? Non. Pas encore.
+calme: Je suis plutôt solitaire, {chef}. Ça me va.
+calme: L'amitié, ça se construit. Lentement.
+peureux: Je… je n'ose pas trop parler aux autres.
+peureux: Des amis ? Ils ne me remarquent pas beaucoup, je crois.
+fourbe: Des amis ? On a des alliés, {chef}. Et je choisis bien les miens.
+fourbe: Moins on a d'amis, moins on a de gens à qui rendre des services.
+colerique: Des amis ? Ils m'énervent tous ! Enfin, presque tous.
+colerique: Pourquoi faire ? Les amis, ça parle trop.
