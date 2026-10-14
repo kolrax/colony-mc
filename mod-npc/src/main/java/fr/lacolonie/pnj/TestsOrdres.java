@@ -362,6 +362,8 @@ public class TestsOrdres {
                     bertrand.teleportTo(bertrand.getX() + 10, bertrand.getY(), bertrand.getZ());
                     regarder(chef, odon);
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> { // à part : une étape qui échoue est rejouée, la phrase ne doit être dite qu'une fois
                     String r = IA.echange(odon, 1);
                     h.assertTrue(r.contains("Bertrand le mineur") && r.endsWith("?") && bertrand.missions.isEmpty(), "il propose de prévenir Bertrand (" + r + ")");
                 },
@@ -386,6 +388,8 @@ public class TestsOrdres {
                 () -> {
                     regarder(chef, odon);
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> {
                     String r = IA.echange(odon, 1);
                     h.assertTrue(r.contains("ne mine") && r.contains("un mineur"), "personne ne mine (" + r + ")");
                 },
