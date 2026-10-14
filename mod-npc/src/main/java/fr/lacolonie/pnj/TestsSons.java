@@ -76,13 +76,19 @@ public class TestsSons {
     public static void coupsDArme(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = ouvrier(h, "guerrier", 293, b, new ItemStack(Items.IRON_SWORD));
-        Husk m = EntityType.HUSK.spawn(h.getLevel(), t.blockPosition().east(2), MobSpawnType.MOB_SUMMONED);
-        m.setNoAi(true);
-        Cerveau.lancer(t, new Actions.Attaquer(m));
+        Husk[] m = new Husk[1];
+        h.onEachTick(() -> {
+            if (m[0] == null && h.getTick() >= 5) { // un PNJ tout juste apparu ne voit rien au même tick
+                m[0] = EntityType.HUSK.spawn(h.getLevel(), t.blockPosition().east(2), MobSpawnType.MOB_SUMMONED);
+                m[0].setNoAi(true);
+            }
+            if (m[0] != null && m[0].isAlive() && !(t.action instanceof Actions.Attaquer)) Cerveau.lancer(t, new Actions.Attaquer(m[0]));
+        });
         h.succeedWhen(() -> {
-            h.assertTrue(t.sons.joues(Cadence.Genre.FRAPPE) >= 2, "ses coups sonnent : " + t.sons.joues(Cadence.Genre.FRAPPE) + " (" + TestsJeu.etat(t, b[0]) + ")");
+            h.assertTrue(t.sons.joues(Cadence.Genre.FRAPPE) >= 2, "ses coups sonnent : " + t.sons.joues(Cadence.Genre.FRAPPE) + " (monstre "
+                    + (m[0] == null ? "-" : m[0].isAlive() + " " + m[0].getHealth()) + ", " + TestsJeu.etat(t, b[0]) + ")");
             t.discard();
-            m.discard();
+            m[0].discard();
         });
     }
 
@@ -103,14 +109,17 @@ public class TestsSons {
     public static void ronfleEtGemit(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = ouvrier(h, "mineur", 295, b, ItemStack.EMPTY);
-        BlockPos lit = t.blockPosition().east(2);
+        BlockPos lit = t.blockPosition().south(3); // loin du poste, posé en b[0]
         TestsJeu.lit(h.getLevel(), lit);
-        t.startSleeping(lit);
+        h.runAtTickTime(h.getTick() + 5, () -> { // un PNJ tout juste apparu : on le couche un peu après
+            t.startSleeping(lit);
+            Cerveau.lancer(t, new Actions.Reposer()); // couché, il se repose (sinon, en attente, il se relève)
+        });
         Travailleur blesse = TestsJeu.employe(h, "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(6)), ItemStack.EMPTY);
         blesse.mode = Travailleur.Mode.ATTENDRE;
         blesse.tomberATerre();
         h.succeedWhen(() -> {
-            h.assertTrue(t.isSleeping() && t.sons.joues(Cadence.Genre.RONFLE) >= 1, "il ronfle (" + TestsJeu.etat(t, b[0]) + ")");
+            h.assertTrue(t.isSleeping() && t.sons.joues(Cadence.Genre.RONFLE) >= 1, "il ronfle (dort " + t.isSleeping() + ", " + t.sons.joues(Cadence.Genre.RONFLE) + " ronflements, " + TestsJeu.etat(t, b[0]) + ")");
             h.assertTrue(blesse.sons.joues(Cadence.Genre.PLAINTE) == 1, "il gémit, une fois : " + blesse.sons.joues(Cadence.Genre.PLAINTE));
             t.discard();
             blesse.mortDefinitive = true;
