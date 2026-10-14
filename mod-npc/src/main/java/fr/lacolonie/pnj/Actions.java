@@ -877,12 +877,28 @@ public final class Actions {
         final Filtre filtre;
         final int nombre;
 
-        Prendre(Filtre filtre, int nombre) { super("prendre"); this.filtre = filtre; this.nombre = nombre; }
+        /** Au plus tant de chaque sorte d'abord (0 : sans compter), puis le reste de n'importe laquelle. */
+        final int parSorte;
+
+        Prendre(Filtre filtre, int nombre) { this(filtre, nombre, 0); }
+
+        Prendre(Filtre filtre, int nombre, int parSorte) { super("prendre"); this.filtre = filtre; this.nombre = nombre; this.parSorte = parSorte; }
 
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
-            var pris = b.prendre(filtre, nombre);
+            List<ItemStack> pris = new ArrayList<>();
+            int reste = nombre;
+            if (parSorte > 0) {
+                java.util.Set<String> sortes = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < b.depot.getContainerSize(); i++)
+                    if (filtre.objet(b.depot.getItem(i))) sortes.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.depot.getItem(i).getItem()).toString());
+                for (String id : sortes) {
+                    if (reste <= 0) break;
+                    for (ItemStack x : b.prendre(Filtre.de(id), Math.min(parSorte, reste))) { reste -= x.getCount(); pris.add(x); }
+                }
+            }
+            if (reste > 0) pris.addAll(b.prendre(filtre, reste));
             pris.forEach(t::ranger);
             return pris.isEmpty() ? echec("rien_au_depot") : Etat.OK;
         }

@@ -81,9 +81,14 @@ public class TestsMoral {
      */
     @GameTest(template = "vide", timeoutTicks = 1200)
     public static void demissionApresDeuxLettres(GameTestHelper h) {
-        BlockPos[] b = new BlockPos[1];
-        Travailleur t = mineur(h, 202, b, 3, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos[] b = {TestsJeu.sol(h, 202 * 400, 60000)};
+        // Un vrai chef connecté (faux joueur, loin de lui) : il a pu lire les lettres, le départ est permis.
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = Travailleur.auTravail(h.getLevel(), "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(3)), chef.getUUID(), ItemStack.EMPTY);
+        t.forcerChunk();
         t.inventaire.addItem(new ItemStack(Items.IRON_SWORD));
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE)); // en main
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE)); // sur le dos
         t.impayes = 3;
         t.moral = 5;
         int[] bilans = {0}, avertisAuDepart = {-1}, bilansAuDepart = {-1};
@@ -94,6 +99,7 @@ public class TestsMoral {
                 parti[0] = true;
                 sacVideAuDepart[0] = true;
                 for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (!t.inventaire.getItem(i).isEmpty()) sacVideAuDepart[0] = false;
+                if (!t.getMainHandItem().isEmpty() || !t.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).isEmpty()) sacVideAuDepart[0] = false;
                 return;
             }
             if (t.memoire.getBoolean("demission")) {
@@ -106,12 +112,15 @@ public class TestsMoral {
             h.assertTrue(avertisAuDepart[0] >= 2, "deux lettres avant de partir (" + avertisAuDepart[0] + ")");
             h.assertTrue(bilansAuDepart[0] >= 3 * Humeur.bilansParJour(), "plusieurs jours au plus bas avant de partir (" + bilansAuDepart[0] + " bilans)");
             h.assertTrue(parti[0], "il est parti (" + TestsJeu.etat(t, b[0]) + ")");
-            h.assertTrue(sacVideAuDepart[0], "rien du dépôt dans son sac");
+            h.assertTrue(sacVideAuDepart[0], "rien du dépôt dans son sac, ni en main, ni sur le dos");
             Bureau.Entite d = (Bureau.Entite) h.getLevel().getBlockEntity(b[0]);
-            h.assertTrue(TestsBucheron.compte(d, Items.IRON_PICKAXE) == 1 && TestsBucheron.compte(d, Items.IRON_SWORD) == 1, "pioche et épée rendues au dépôt");
+            h.assertTrue(TestsBucheron.compte(d, Items.IRON_PICKAXE) == 1 && TestsBucheron.compte(d, Items.IRON_SWORD) == 1
+                    && TestsBucheron.compte(d, Items.IRON_CHESTPLATE) == 1, "pioche (en main), épée et plastron (porté) rendus au dépôt");
+            h.assertTrue(t.moral == Obeissance.DEPART && !t.memoire.contains("demission") && !t.memoire.contains("avertis"), "son moral de ce chef-là oublié");
             h.assertTrue(TestsVie.dites(t, "demission") == 1, "il dit au revoir (" + t.paroles + ")");
             h.assertTrue(t.chef == null && t.bureau == null, "chercheur d'emploi");
             t.discard();
+            chef.discard();
         });
     }
 

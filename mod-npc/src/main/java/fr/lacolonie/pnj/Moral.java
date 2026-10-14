@@ -19,10 +19,10 @@ final class Moral {
     enum Cause {
         PAIE("la paie qui ne vient pas", "paie_retard", "paie_retard"),
         REPAS("toujours la même pitance", "repas_pareils", "repas_varies"),
-        LIT("pas de lit à moi", "sans_lit", null),
-        TOIT("pas de toit au-dessus de mon lit", "sans_lit", null),
-        DANGER("le danger du travail", "danger", null),
-        DEUIL("la mort d'un compagnon", "deuil_tristesse", null),
+        LIT("je n'ai pas de lit à moi", "sans_lit", null),
+        TOIT("mon lit est à la belle étoile", null, null),
+        DANGER("le travail est trop dangereux", "danger", null),
+        DEUIL("un compagnon est mort", "deuil_tristesse", null),
         METEO("ce temps de chien", "meteo_mauvaise", "meteo_belle"),
         CHEF("la façon dont on me traite", "chef_crie", null),
         COLONIE("", null, "fier_colonie");
@@ -62,6 +62,11 @@ final class Moral {
     /** La mort d'un compagnon : tout de suite, puis au bilan selon les jours passés (le jour même, le lendemain, le surlendemain). */
     static final int DEUIL_COUP = -10;
     static final int[] DEUIL = {-4, -2, -1};
+    /** Plusieurs morts le même jour : au plus tant de points perdus ce jour-là. */
+    static final int DEUIL_JOUR = 15;
+
+    /** Le coup d'une mort, sachant {@code deja} (≤ 0) déjà perdu pour des morts du même jour. */
+    static int deuilCoup(int deja) { return Math.min(0, Math.max(DEUIL_COUP, -DEUIL_JOUR - deja)); }
     /** Une colonie qui prospère : au moins tant d'ouvriers, et un dépôt d'au moins tant d'objets. */
     static final int OUVRIERS = 4, DEPOT = 256;
     /** Un bilan si mauvais que le moral ne remonte plus tout seul. */

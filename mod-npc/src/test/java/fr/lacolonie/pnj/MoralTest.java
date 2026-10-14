@@ -58,6 +58,10 @@ class MoralTest {
         assertTrue(j0 < j1 && j1 < j2 && j2 < 0 && j5 == 0, j0 + " " + j1 + " " + j2 + " " + j5);
         assertEquals(Moral.Cause.DEUIL, Moral.bilan(un(7, 0)).pire());
         assertTrue(Moral.DEUIL_COUP <= -10, "la mort d'un compagnon : un gros coup sur le moment");
+        // Trois morts le même jour : −10, −5, puis plus rien (au plus −15 ce jour-là).
+        assertEquals(-10, Moral.deuilCoup(0));
+        assertEquals(-5, Moral.deuilCoup(-10));
+        assertEquals(0, Moral.deuilCoup(-15));
     }
 
     @Test

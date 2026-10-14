@@ -1325,6 +1325,7 @@ public class Travailleur extends PathfinderMob {
     }
 
     void equiperArmure() {
+        if (memoire.getBoolean("demission")) return; // il rend tout au dépôt (Humeur.demissionner) : il ne se rhabille pas
         for (int i = 0; i < inventaire.getContainerSize(); i++) {
             ItemStack s = inventaire.getItem(i);
             if (!(s.getItem() instanceof ArmorItem a)) continue;
@@ -1354,13 +1355,17 @@ public class Travailleur extends PathfinderMob {
      */
     public boolean manger() {
         int meilleur = -1, ecart = Integer.MAX_VALUE, nourrit = 0;
+        boolean change = false; // un aliment qu'il n'a pas mangé à ses 3 derniers repas passe avant (Moral : varier les repas)
+        List<String> derniers = Moral.lire(memoire.getString("repas"));
+        derniers = derniers.subList(Math.max(0, derniers.size() - 3), derniers.size());
         for (int i = 0; i < inventaire.getContainerSize(); i++) {
             ItemStack s = inventaire.getItem(i);
             FoodProperties fp = s.getFoodProperties(this);
             if (fp == null || fp.nutrition() <= 0 || s.getRarity() != net.minecraft.world.item.Rarity.COMMON
                     || fp.effects().stream().anyMatch(e -> e.effect().getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL)) continue;
             int trop = Math.max(0, fp.nutrition() - (20 - faim));
-            if (trop < ecart || trop == ecart && fp.nutrition() > nourrit) { meilleur = i; ecart = trop; nourrit = fp.nutrition(); }
+            boolean neuf = !derniers.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath());
+            if (neuf && !change || neuf == change && (trop < ecart || trop == ecart && fp.nutrition() > nourrit)) { meilleur = i; ecart = trop; nourrit = fp.nutrition(); change = neuf; }
         }
         if (meilleur < 0) return false;
         ItemStack s = inventaire.getItem(meilleur);
@@ -1819,6 +1824,7 @@ public class Travailleur extends PathfinderMob {
         lettresALire.clear();
         lettresAuCalme.clear();
         Pecheur.oublier(this); // son coin de pêche était près du poste de ce chef-là
+        Humeur.oublier(this); // son moral auprès de ce chef-là (lettres, démission, rancune) ; il repart à 70
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
         coince.progres(getX(), getY(), getZ());

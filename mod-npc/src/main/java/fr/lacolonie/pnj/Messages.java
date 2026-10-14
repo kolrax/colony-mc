@@ -135,20 +135,20 @@ final class Messages {
                 "Ma paie n'est pas venue. Je continue pour l'instant, mais je compte sur toi.");
         t("paie_retard", "colerique", "La caisse est vide et ma paie aussi ! Remplis-la vite, je ne vais pas travailler pour rien.");
         m("moral_bas", "Le cœur n'y est plus",
-                "Je te l'écris franchement : je n'ai plus le cœur à l'ouvrage. Ce qui me pèse le plus, c'est {0}.",
-                "Ça ne va pas fort, ici. Ce qui me ronge, c'est {0}. Fais quelque chose, je t'en prie.",
-                "Je travaille encore, mais de mauvais gré. La faute à {0}, surtout.");
-        t("moral_bas", "colerique", "Je n'en peux plus de {0} ! Change ça, ou tu le regretteras.");
-        t("moral_bas", "peureux", "Je n'ose pas trop le dire… mais {0}, ça me mine.");
+                "Je te l'écris franchement : je n'ai plus le cœur à l'ouvrage. Ce qui me pèse le plus : {0}.",
+                "Ça ne va pas fort, ici. Ce qui me ronge : {0}. Fais quelque chose, je t'en prie.",
+                "Je travaille encore, mais de mauvais gré. La raison, surtout : {0}.");
+        t("moral_bas", "colerique", "Je n'en peux plus ! Ce qui ne va pas : {0}. Change ça, ou tu le regretteras.");
+        t("moral_bas", "peureux", "Je n'ose pas trop le dire… mais une chose me mine : {0}.");
         m("moral_avertit", "Je pense à partir",
-                "Je te l'ai déjà écrit, et rien n'a changé : {0}. Si ça dure, je m'en irai chercher du travail ailleurs.",
-                "Deuxième lettre, et toujours {0}. Je ne resterai plus longtemps comme ça.",
-                "Je t'avais prévenu. Rien n'a changé : {0}, encore et toujours. Encore quelques jours, et je rends mes outils.");
-        t("moral_avertit", "colerique", "Toujours {0} ! Je te préviens une dernière fois : bientôt, je pars.");
+                "Je te l'ai déjà écrit, et rien n'a changé ({0}). Si ça dure, je m'en irai chercher du travail ailleurs.",
+                "Deuxième lettre, et rien n'a bougé : {0}. Je ne resterai plus longtemps comme ça.",
+                "Je t'avais prévenu. Rien n'a changé : {0}. Encore quelques jours, et je rends mes outils.");
+        t("moral_avertit", "colerique", "Rien n'a changé : {0} ! Je te préviens une dernière fois : bientôt, je pars.");
         m("demission", "Je m'en vais",
-                "J'ai rendu au dépôt tout ce que j'avais pris. Je m'en vais : {0}, je n'en pouvais plus. Adieu.",
-                "Je pars. J'ai tout laissé au dépôt, outils compris. Ce qui m'a fait partir : {0}.",
-                "Je t'avais écrit deux fois, et toujours {0}. Je m'en vais chercher du travail ailleurs. Mes outils sont au dépôt.");
+                "J'ai rendu au dépôt ce que j'avais pris. Je m'en vais, je n'en pouvais plus ({0}). Adieu.{1}",
+                "Je pars. J'ai laissé au dépôt mes outils et le reste. Ce qui m'a fait partir : {0}.{1}",
+                "Je t'avais écrit deux fois, et rien n'a changé : {0}. Je m'en vais chercher du travail ailleurs. Mes outils sont au dépôt.{1}");
         m("reprise_greve", "Je reprends le travail",
                 "J'ai touché mon dû ({0}). Merci, je reprends le travail.",
                 "Paie reçue : {0}. Je retourne à l'ouvrage.");

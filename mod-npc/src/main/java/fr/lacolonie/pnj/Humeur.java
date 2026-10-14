@@ -2,6 +2,7 @@ package fr.lacolonie.pnj;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
@@ -39,7 +40,9 @@ final class Humeur {
         long periode = Reglages.actuel.moral_minutes_bilan * 60L; // en secondes
         CompoundTag dits = m.getCompound("dits");
         boolean blesseVu = dits.contains("blesse_vu") && Cerveau.temps(t) - dits.getLong("blesse_vu") < periode;
-        boolean toit = t.lit != null && !l.canSeeSky(t.lit.above());
+        // Un toit : un bloc qui arrête le pas au-dessus du lit (le verre compte), lu dans la carte des hauteurs.
+        boolean toit = t.lit != null && l.isLoaded(t.lit)
+                && l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, t.lit.getX(), t.lit.getZ()) > t.lit.getY() + 1;
         int jourDeuil = m.contains("deuil_le") ? (int) (t.jour() - m.getLong("deuil_le")) : -1;
         boolean pluie = l.isRaining(), orage = l.isThundering();
         int bilansPluie = pluie ? m.getInt("bilans_pluie") + 1 : 0;
@@ -86,7 +89,8 @@ final class Humeur {
     static void suite(Travailleur t, Moral.Cause pire) {
         CompoundTag m = t.memoire;
         Reglages r = Reglages.actuel;
-        if (t.moral >= Moral.APAISE) { m.remove("avertis"); m.remove("avertis_depuis"); }
+        if (t.moral >= Moral.APAISE) for (String k : List.of("avertis", "avertis_depuis", "demission", "demission_essais", "chef_lu")) m.remove(k);
+        if (m.getInt("avertis") >= 2 && t.chefJoueur() != null) m.putBoolean("chef_lu", true); // le chef a pu lire ses lettres
         int bas = t.moral < r.moral_seuil_demission ? m.getInt("bilans_bas") + 1 : 0;
         m.putInt("bilans_bas", bas);
         int depuis = m.getInt("avertis_depuis") + 1, avertis = m.getInt("avertis");
@@ -96,9 +100,11 @@ final class Humeur {
             case AVERTIT -> {
                 m.putInt("avertis", avertis + 1);
                 m.putInt("avertis_depuis", 0);
+                if (avertis >= 1) m.putBoolean("chef_lu", t.chefJoueur() != null);
                 Courrier.ecrire(t, avertis == 0 ? "moral_bas" : "moral_avertit", pire == null ? "le cœur n'y est plus" : pire.dit);
             }
-            case DEMISSIONNE -> m.putBoolean("demission", true);
+            // Il ne part pas sans que son chef ait été là depuis sa deuxième lettre (connecté, il a pu la lire).
+            case DEMISSIONNE -> { if (m.getBoolean("chef_lu")) m.putBoolean("demission", true); }
             case RIEN -> {}
         }
     }
@@ -111,21 +117,53 @@ final class Humeur {
     static boolean demissionner(Travailleur t) {
         if (!t.memoire.getBoolean("demission") || t.mode == Travailleur.Mode.CHOMEUR || t.chef == null) return false;
         if (t.enDanger()) return false;
-        boolean vide = true;
-        for (int i = 0; i < t.inventaire.getContainerSize() && vide; i++) vide = t.inventaire.getItem(i).isEmpty();
-        if (!vide) {
-            if (Bureau.entite(t) != null && Cerveau.parfois(t, "demission_depot", 30)) Cerveau.lancer(t, new Actions.Deposer(List.of()));
-            else Cerveau.attendre(t, 5);
-            return true;
+        desequiper(t);
+        boolean laisse = false;
+        if (!vide(t)) {
+            int essais = t.memoire.getInt("demission_essais");
+            if (t.bureau != null && essais < ESSAIS) {
+                t.memoire.putInt("demission_essais", essais + 1);
+                Cerveau.lancer(t, new Actions.Deposer(List.of()));
+                return true;
+            }
+            // Sans poste, ou le dépôt plein (ou hors d'atteinte) trois fois : il laisse le reste là, à terre, et le dit.
+            for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (!t.inventaire.getItem(i).isEmpty()) t.spawnAtLocation(t.inventaire.removeItemNoUpdate(i));
+            for (EquipmentSlot e : PORTES) if (!t.getItemBySlot(e).isEmpty()) { t.spawnAtLocation(t.getItemBySlot(e)); t.setItemSlot(e, ItemStack.EMPTY); }
+            laisse = true;
         }
         Besoins.dire(t, "demission", null);
-        Courrier.ecrire(t, "demission", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t));
+        Courrier.ecrire(t, "demission", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t),
+                laisse ? " Ce qui ne tenait pas au dépôt, je l'ai laissé à terre, là où j'étais." : "");
         Courrier.deposer(t); // il est au poste : ses lettres y restent (licencier les oublierait)
-        for (String k : List.of("demission", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause", "bilan_le", "deuil_le", "deuil_nom"))
-            t.memoire.remove(k);
-        t.licencier();
-        t.moral = Obeissance.DEPART; // libre, il repart d'un bon pied
+        t.licencier(); // efface aussi son moral de ce chef-là (oublier)
         return true;
+    }
+
+    static final int ESSAIS = 3;
+    static final List<EquipmentSlot> PORTES = List.of(EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+            EquipmentSlot.LEGS, EquipmentSlot.FEET);
+
+    /** Ce qu'il tient et ce qu'il porte retourne dans son sac (ce qui n'y tient pas reste porté). */
+    static void desequiper(Travailleur t) {
+        for (EquipmentSlot e : PORTES) {
+            ItemStack p = t.getItemBySlot(e);
+            if (!p.isEmpty()) t.setItemSlot(e, t.inventaire.addItem(p));
+        }
+    }
+
+    /** Rien dans le sac, rien en main, rien sur le dos. */
+    static boolean vide(Travailleur t) {
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (!t.inventaire.getItem(i).isEmpty()) return false;
+        for (EquipmentSlot e : PORTES) if (!t.getItemBySlot(e).isEmpty()) return false;
+        return true;
+    }
+
+    /** Renvoyé ou parti : le moral de ce chef-là s'oublie (sinon, réembauché, il repartirait aussitôt). */
+    static void oublier(Travailleur t) {
+        for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
+                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "repas", "bilans_pluie", "coup_chef"))
+            t.memoire.remove(k);
+        t.moral = Obeissance.DEPART;
     }
 
     /** Une fois par seconde : la lenteur d'un moral bas (comme {@link Blessures#lenteur}, sans toucher au sprint). */
@@ -151,7 +189,11 @@ final class Humeur {
         if (mort.chef == null || mort.level().getServer() == null) return;
         for (Travailleur t : ColoniePnj.pnjDe(mort.level().getServer(), mort.chef)) {
             if (t == mort) continue;
-            t.changerMoral(Moral.DEUIL_COUP);
+            // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là.
+            int deja = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour() ? t.memoire.getInt("deuil_coup") : 0;
+            int coup = Moral.deuilCoup(deja);
+            t.changerMoral(coup);
+            t.memoire.putInt("deuil_coup", deja + coup);
             t.memoire.putLong("deuil_le", t.jour());
             t.memoire.putString("deuil_nom", mort.prenom);
         }
