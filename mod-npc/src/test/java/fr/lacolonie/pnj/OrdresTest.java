@@ -232,4 +232,15 @@ class OrdresTest {
         assertTrue(adr("Mine du fer").demande());
         assertTrue(adr("Ton sac est plein ?").deuxiemePersonne());
     }
+
+    /** L'enterrement (lot 5, cahier 14.13) : les tournures du chef, et ce qui n'en est pas un. */
+    @Test
+    void enterrement() {
+        for (String x : List.of("On va enterrer Bertrand.", "Enterrement !", "Allez à la tombe de Raoul.", "Tous à la tombe d'Odon",
+                "Venez, on enterre Bertrand", "Les funérailles de Raoul, maintenant.", "Allons dire adieu à Bertrand", "Rendons hommage à Odon"))
+            intention(x, Intention.ENTERRER);
+        for (String x : List.of("Attention, ça tombe !", "Il tombe de la pluie", "Ramène 10 fers", "Abats cet arbre", "adieu", "Va à la mine"))
+            pasIntention(x, Intention.ENTERRER);
+        assertFalse(Obeissance.sansOrdre(lire("On va enterrer Bertrand", "mineur")), "c'est un ordre");
+    }
 }

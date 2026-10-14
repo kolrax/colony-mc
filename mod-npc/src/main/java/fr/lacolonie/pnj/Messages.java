@@ -297,6 +297,16 @@ final class Messages {
                 "Bien reçu ta lettre. {0}Je suis {1}. {2} {3}",
                 "Merci pour ta lettre. {0}Je suis {1}. {2} {3}");
         m("deces", null);
+        m("deuil", "Un deuil",
+                "{0} nous a quittés pendant ton absence. Nous sommes tous dans la peine. Si tu le veux, nous pourrions l'enterrer dignement.",
+                "Triste nouvelle, chef : {0} n'est plus. Personne ici n'a le cœur à l'ouvrage. Un enterrement nous ferait du bien.",
+                "{0} n'est plus. Les autres en parlent sans cesse, la tristesse pèse sur tout le monde.");
+        t("deuil", "peureux", "{0} nous a quittés… Depuis, tout le monde a peur et personne n'ose en parler. Reviens vite, chef.");
+        m("dit_enterrement", null, "Allons lui dire adieu.", "Nous y allons, chef.", "C'est juste. Allons à la tombe.");
+        m("dit_enterrement_seul", null, "Personne d'autre n'est assez près. J'irai seul lui dire adieu.");
+        m("dit_enterrement_rien", null, "Il n'y a personne à enterrer, chef.", "Je ne connais aucune tombe à veiller, chef.");
+        m("dit_enterrement_loin", null, "La tombe est trop loin d'ici, chef : personne n'y est assez près.");
+        m("dit_enterrement_fait", null, "Nous avons déjà fait nos adieux, chef.", "C'est déjà fait, chef : la tombe a eu sa veillée.");
 
         // La parole, face à face (bulle au-dessus de la tête ; fenêtre de conversation).
         m("dit_suivre", null, "Je te suis, chef.", "J'arrive, je te suis.", "Après toi, chef.");

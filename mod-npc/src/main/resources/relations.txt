@@ -1,2 +1,44 @@
 # Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7). Fichier UTF-8.
 # FORMAT : exactement celui de vie.txt et remarques.txt (lecteur Vie.lire). Rempli par l'auteur.
+
+# Deuil (provisoire, remplacé par l'auteur)
+# deuil_apprend : la nouvelle, dite à voix haute ; deuil_souvenir : les jours suivants, en remarque ;
+# enterrement_propose : au chef, un jour sans enterrement ; enterrement_mots : l'orateur, devant la tombe ;
+# enterrement_recueil : les autres, devant la tombe ; enterrement_apres : à la fin, en reprenant le travail.
+# Variables : {mort} (prénom du mort, partout), {chef}.
+
+[deuil_apprend]
+{mort} nous a quittés.
+On a perdu {mort}. Je n'arrive pas à y croire.
+{mort} ne reviendra plus parmi nous.
+Triste jour : {mort} n'est plus.
+
+[deuil_souvenir]
+Je repense à {mort}, ce matin encore.
+{mort} aurait ri de me voir peiner ainsi.
+La place de {mort} reste vide.
+Il me semble encore entendre {mort} siffler à l'ouvrage.
+
+[enterrement_propose]
+Chef, {mort} n'a toujours pas de sépulture. Si on lui faisait ses adieux ?
+Chef, on pourrait enterrer {mort} dignement. Ça nous ferait du bien à tous.
+{mort} mérite qu'on se recueille sur sa tombe, chef.
+Chef, quand ferons-nous nos adieux à {mort} ?
+
+[enterrement_mots]
+{mort} était des nôtres. On ne l'oubliera pas.
+Repose en paix, {mort}. Tu as bien travaillé.
+Adieu, {mort}. La terre te sera douce.
+{mort} a partagé notre pain et notre peine. Merci.
+
+[enterrement_recueil]
+Adieu, {mort}.
+Repose en paix.
+On pensera à toi, {mort}.
+Que la terre te soit légère.
+
+[enterrement_apres]
+Allons, au travail. {mort} l'aurait voulu.
+J'ai le cœur moins lourd. Je reprends l'ouvrage.
+C'était bien de lui dire adieu.
+Retournons à la tâche, maintenant.

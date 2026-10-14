@@ -123,6 +123,7 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
             PanneauWeb.arreter();
             Remarques.oublier(); // elles tiennent les mondes du serveur arrêté
+            Deuil.oublier(); // les enterrements en cours aussi
             Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);

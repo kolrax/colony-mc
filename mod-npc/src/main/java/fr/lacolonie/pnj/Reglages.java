@@ -75,6 +75,9 @@ public class Reglages {
     public boolean moral_vol_autres = true;
     /** Révolte armée (cahier 5.4) : après plusieurs avertissements, les ouvriers au plus bas frappent leur chef, et lui seul. */
     public boolean moral_revolte = true;
+    /** Deuil (lot 5, cahier 14.13) : un enterrement dure tant de secondes autour de la tombe ; y viennent les ouvriers du chef à moins de tant de blocs. */
+    public int deuil_secondes_enterrement = 30;
+    public int deuil_rayon = 48;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -137,6 +140,8 @@ public class Reglages {
         moral_lenteur = Math.clamp(moral_lenteur, 0, 50);
         moral_mefaits = Math.clamp(moral_mefaits, 0, 100);
         moral_vol_max = Math.max(0, moral_vol_max);
+        deuil_secondes_enterrement = Math.clamp(deuil_secondes_enterrement, 1, 300);
+        deuil_rayon = Math.clamp(deuil_rayon, 8, 128);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);

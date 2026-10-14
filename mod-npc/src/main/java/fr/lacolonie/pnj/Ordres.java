@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, ENTERRER }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -286,6 +286,11 @@ final class Ordres {
             l.intentions.add(Intention.SALUT);
         if (dit(n, "merci", "bravo", "bien joue", "beau travail", "bon travail", "excellent", "parfait"))
             l.intentions.add(Intention.MERCI);
+        // Un enterrement (lot 5, cahier 14.13) : « on va enterrer Bertrand », « allez à la tombe de Raoul », « les funérailles ».
+        if (dit(n, "enterrement", "enterrer", "enterrons", "enterrez", "on enterre", "funerailles", "obseques", "mise en terre",
+                "a la tombe", "sur la tombe", "vers la tombe", "devant la tombe", "pres de la tombe", "a sa tombe", "sur sa tombe", "autour de la tombe",
+                "dire adieu a", "faire nos adieux", "rendre hommage a", "rendons hommage a", "veillee funebre"))
+            l.intentions.add(Intention.ENTERRER);
         l.ajouter = dit(n, "aussi", "en plus", "ajoute", "egalement", "de plus", "apres ca", "apres cela", "ensuite aussi");
 
         // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode (« au bois » est un lieu, pas une mission).

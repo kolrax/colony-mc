@@ -63,6 +63,7 @@ final class Humeur {
         boolean toit = t.lit != null && l.isLoaded(t.lit)
                 && l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, t.lit.getX(), t.lit.getZ()) > t.lit.getY() + 1;
         int jourDeuil = m.contains("deuil_le") ? (int) (t.jour() - m.getLong("deuil_le")) : -1;
+        if (jourDeuil >= 0 && m.getBoolean("deuil_enterre")) jourDeuil++; // enterré : le deuil pèse moins, et un jour de moins (Deuil)
         boolean pluie = l.isRaining(), orage = l.isThundering();
         int bilansPluie = pluie ? m.getInt("bilans_pluie") + 1 : 0;
         m.putInt("bilans_pluie", bilansPluie);
@@ -191,7 +192,7 @@ final class Humeur {
     static void oublier(Travailleur t) {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
-                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
+                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "deuils", "deuil_apprend", "deuil_enterre", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
                 "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
@@ -215,7 +216,7 @@ final class Humeur {
         t.memoire.putString("repas", Moral.retenir(t.memoire.getString("repas"), net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath()));
     }
 
-    /** Un ouvrier du même chef est mort : le deuil (moral −10 tout de suite, puis moins chaque jour). Crochet pour la case « Deuil, enterrement ». */
+    /** Un ouvrier du même chef est mort : le deuil (moral −10 tout de suite, puis moins chaque jour). La suite (la nouvelle, les souvenirs, l'enterrement) : {@link Deuil}. */
     static void deuil(Travailleur mort) {
         if (mort.chef == null || mort.level().getServer() == null) return;
         for (Travailleur t : ColoniePnj.pnjDe(mort.level().getServer(), mort.chef)) {
@@ -227,6 +228,8 @@ final class Humeur {
             t.memoire.putInt("deuil_coup", deja + coup);
             t.memoire.putLong("deuil_le", t.jour());
             t.memoire.putString("deuil_nom", mort.prenom);
+            t.memoire.remove("deuil_enterre");
+            Deuil.noter(t, mort, coup); // ce qu'un enterrement rendra, et la nouvelle à dire (Deuil.veiller)
         }
     }
 

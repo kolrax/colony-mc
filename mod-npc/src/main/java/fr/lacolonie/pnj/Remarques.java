@@ -47,7 +47,9 @@ final class Remarques {
         for (Object[] d : DITES) if (d[0] == sl && ((BlockPos) d[1]).closerThan(t.blockPosition(), PROCHES)) return;
         Object[] nouveau = NOUVEAUX.get(t.chef);
         String nom = nouveau != null && maintenant - (long) nouveau[1] < 24000 && !t.prenom.equals(nouveau[0]) ? (String) nouveau[0] : null;
-        String cle = Vie.remarque(Vie.TOUTES, moment(t, sl, maintenant, nom), k -> recente(t, k), t.getRandom()::nextDouble);
+        // Un compagnon mort il y a peu (et la nouvelle déjà dite) : il en reparle d'abord, une fois par jour (Deuil).
+        String cle = Deuil.souvenir(t) && !recente(t, Deuil.SOUVENIR) && Vie.TOUTES.containsKey(Deuil.SOUVENIR) ? Deuil.SOUVENIR
+                : Vie.remarque(Vie.TOUTES, moment(t, sl, maintenant, nom), k -> recente(t, k), t.getRandom()::nextDouble);
         t.prochaineRemarque = maintenant + delai(t, secondes);
         if (cle == null || !Besoins.dire(t, cle, nom)) return;
         var dits = t.memoire.getCompound("dits");
