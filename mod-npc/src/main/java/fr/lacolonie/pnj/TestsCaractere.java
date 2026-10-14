@@ -17,7 +17,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Lot 5 : réactions selon le caractère. Le diamant gardé en cachette (cahier 14.3 ; lot « caractere », chance réglée à
- * 100 % pour que le fourbe triche à coup sûr) et les excuses du chef. Coins 230 à 233.
+ * 100 % pour que le fourbe triche à coup sûr) et les excuses du chef. Coins 230 à 234.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -149,6 +149,27 @@ public class TestsCaractere {
                     h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_avoue", r.substring(6)), "il avoue (" + IA.echange(b, 2) + ")");
                     h.assertTrue(diamantsCaches(b) == 0 && Humeur.butin(b) == 2, "le pain reste caché, plus de diamant (" + b.memoire.get("butin") + ")");
                     h.assertTrue(TestsBucheron.compte(TestsBucheron.depot(b), Items.DIAMOND) == 1, "le diamant est au dépôt");
+                },
+                () -> TestsOrdres.fin(h, e));
+    }
+    /** Il a déjà nié aujourd'hui : même un peureux nie encore, sans nouveau tirage, et garde son diamant jusqu'au lendemain. */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void nieJusquAuLendemain(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 234);
+        Travailleur b = e[0];
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    b.temperament = "peureux";
+                    Humeur.cacher(b, new ItemStack(Items.DIAMOND));
+                    b.memoire.putLong("diamant_nie", b.jour());
+                    TestsIA.regarder(chef, b);
+                    b.parler(chef, "Tu as gardé un diamant, Bertrand ?");
+                },
+                () -> {
+                    String r = IA.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_nie", r.substring(6)), "il nie encore (" + IA.echange(b, 2) + ")");
+                    h.assertTrue(diamantsCaches(b) == 1, "le diamant reste caché (" + b.memoire.get("butin") + ")");
                 },
                 () -> TestsOrdres.fin(h, e));
     }

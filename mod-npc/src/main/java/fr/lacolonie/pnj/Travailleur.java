@@ -1561,7 +1561,18 @@ public class Travailleur extends PathfinderMob {
                 x = Messages.corps(this, "souv_excuses_rien");
             if (x != null) { r.add(x); reponseImposee = reactionSuffit = true; }
         }
-        if (Ordres.diamantCache(l.texte)) { r.add(Humeur.questionDiamant(this)); reponseImposee = reactionSuffit = true; }
+        if (Ordres.diamantCache(l.texte)) {
+            // La lecture de l'IA aussi : rien à faire dans la question elle-même, seulement dans le reste de la phrase.
+            Ordres.Lecture seul = Ordres.lire(l.texte, metier);
+            l.missions.clear(); l.missions.addAll(seul.missions);
+            l.horsMetier.clear(); l.horsMetier.putAll(seul.horsMetier);
+            l.pourAutres.clear(); l.pourAutres.putAll(seul.pourAutres);
+            l.faire.clear(); l.faire.addAll(seul.faire);
+            if (!seul.intentions.contains(Ordres.Intention.SAC)) l.intentions.remove(Ordres.Intention.SAC);
+            l.intentions.add(Ordres.Intention.DIAMANT);
+            r.add(Humeur.questionDiamant(this));
+            reponseImposee = reactionSuffit = true;
+        }
         for (Souvenirs.Genre g : Souvenirs.lire(l.texte)) {
             if (g == Souvenirs.Genre.CADEAU && souvenirs.deja(g, j)) { /* l'objet tendu tout à l'heure est déjà noté */ }
             else souvenirs.noter(g, j, h, g == Souvenirs.Genre.CADEAU ? Souvenirs.PRESENT : l.texte);

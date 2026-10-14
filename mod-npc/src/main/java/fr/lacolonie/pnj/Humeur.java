@@ -192,7 +192,7 @@ final class Humeur {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
                 "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
-                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage"))
+                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", "offense_le", "offense_perte"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
     }
@@ -506,8 +506,17 @@ final class Humeur {
 
     /** Il vient de ranger des diamants au dépôt : s'il n'en a gardé aucun aujourd'hui, il s'en vante (pas à chaque fois). */
     static void diamantsRendus(Travailleur t) {
-        if (!t.metier.equals("mineur") || t.memoire.contains("diamant_garde") && t.memoire.getLong("diamant_garde") == t.jour()) return;
+        CompoundTag m = t.memoire;
+        if (!t.metier.equals("mineur") || m.contains("diamant_garde") && m.getLong("diamant_garde") == t.jour() || diamantsCaches(t) > 0
+                || m.getBoolean("demission") || m.getBoolean("fuite") || m.getBoolean("revolte")) return; // un tricheur ou un ouvrier fâché ne s'en vante pas
         Besoins.parler(t, "caractere_diamant_rendu", null);
+    }
+
+    static int diamantsCaches(Travailleur t) {
+        int n = 0;
+        for (Tag x : t.memoire.getList("butin", Tag.TAG_COMPOUND))
+            if (((CompoundTag) x).getString("id").equals("minecraft:diamond")) n += ((CompoundTag) x).getInt("count");
+        return n;
     }
 
     /**
@@ -522,7 +531,11 @@ final class Humeur {
             ItemStack s = ItemStack.parse(t.registryAccess(), x).orElse(ItemStack.EMPTY);
             if (s.is(net.minecraft.world.item.Items.DIAMOND)) diamants.add(s); else reste.add(x);
         }
-        boolean avoue = !diamants.isEmpty() && t.getRandom().nextDouble() < Moral.avoueDiamant(t.temperament, t.moral);
+        // Une fois qu'il a nié, il nie jusqu'au lendemain : on ne le fait pas avouer à force de reposer la question.
+        long j = t.jour();
+        boolean nie = t.memoire.contains("diamant_nie") && t.memoire.getLong("diamant_nie") == j;
+        boolean avoue = !diamants.isEmpty() && !nie && t.getRandom().nextDouble() < Moral.avoueDiamant(t.temperament, t.moral);
+        if (!avoue) t.memoire.putLong("diamant_nie", j);
         if (avoue) {
             if (reste.isEmpty()) t.memoire.remove("butin"); else t.memoire.put("butin", reste);
             for (ItemStack s : diamants) {

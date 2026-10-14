@@ -58,8 +58,12 @@ final class Impossible {
     }
 
     /** Vrai si l'interpréteur a lu quelque chose à faire : intention, mission, horaires, règle, ou une action du répertoire qui n'est pas qu'une information (« la lune » : sa phase). */
+    /** Des paroles, pas des choses à faire : « Pardon, va sur la lune » reste une demande impossible. */
+    static final java.util.Set<Ordres.Intention> PAROLES = java.util.EnumSet.of(Ordres.Intention.EXCUSES, Ordres.Intention.DIAMANT,
+            Ordres.Intention.SALUT, Ordres.Intention.MERCI);
+
     static boolean faisable(Ordres.Lecture l) {
-        if (!l.intentions.isEmpty() || !l.missions.isEmpty() || l.debut >= 0 || l.fin >= 0 || l.jours >= 0 || !l.horsMetier.isEmpty() || !l.regles.isEmpty() || l.annulerRegles) return true;
+        if (l.intentions.stream().anyMatch(i -> !PAROLES.contains(i)) || !l.missions.isEmpty() || l.debut >= 0 || l.fin >= 0 || l.jours >= 0 || !l.horsMetier.isEmpty() || !l.regles.isEmpty() || l.annulerRegles) return true;
         for (Ordres.Faire f : l.faire) {
             Repertoire.Entree e = Repertoire.PAR_ID.get(f.id());
             if (e == null || !e.comportement().equals("info")) return true;
