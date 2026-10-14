@@ -282,3 +282,11 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, avertissements de mixins), comme avant. Avant le redémarrage, le serveur avait pris 79 min de retard (« Can't keep up », 95 314 ticks : serveur probablement mis en veille par l'hébergeur).
 - **Modpack inchangé** (0.5.1 reste valable : rien de client, canal inchangé ; tenue et icône du chasseur déjà dans 0.5.1).
 - Reste au lot 6 : pêcheur, cuisinier, transporteur.
+
+## 2026-10-14 01 h 00 - 01 h 02 UTC : livraison 0.9.16 (pêcheur)
+- **0.9.16**, commit `7505a0d` (sur `main`), livrée sur le serveur à 01 h 00 UTC (personne connecté : `list` = 0 joueur), « Done » à 01 h 01 min 24 s, sans erreur du mod ; `colonie_pnj-0.9.15.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.16, 1 315 130 octets, sha1 `3be3bd37…`, copie figée du jar).
+  - **Pêcheur** (lot 6, première passe) : prend une canne à pêche au dépôt (sinon il écrit une lettre au chef) ; cherche une mare ou un lac à lui à 32 blocs du poste, jamais chez un voisin ; pêche depuis la rive sans entrer dans l'eau ; une prise toutes les 15 à 40 s (plus vite sous la pluie), tirée de la vraie table de pêche du jeu (trésors seulement en eau libre de 5 x 5 sur 2 de fond, comme pour un joueur) ; porte ses prises au dépôt ; deux pêcheurs prennent deux rives différentes ; ordres « va pêcher », « pêche ici », missions « ramène 10 morues ».
+  - Tests sur ce code (branche `pecheur`, identique à la version près) : **181/181 JUnit, 243/243 en jeu**. Pour la livraison, seul `build` a été relancé (jar construit, 181/181 JUnit) ; les tests en jeu n'ont pas été relancés sur `main`.
+  - Journal du serveur : seules erreurs, celles des autres mods (tables de butin de `railways` et `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 9 min de retard (« Can't keep up », 10 829 ticks : serveur probablement mis en veille par l'hébergeur).
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal inchangé).
+- Reste au lot 6 : cuisinier, transporteur.

@@ -48,7 +48,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [ ] Deuil, et enterrement possible pour adoucir le moral
 
 ## 6. Nouveaux métiers indispensables
-- [ ] Fermier, éleveur, pêcheur, chasseur, cuisinier ou boulanger, transporteur (fermier fait, 0.9.12 ; éleveur fait (0.9.13) ; chasseur fait (0.9.15) ; restent pêcheur, cuisinier, transporteur)
+- [ ] Fermier, éleveur, pêcheur, chasseur, cuisinier ou boulanger, transporteur (fermier fait, 0.9.12 ; éleveur fait (0.9.13) ; chasseur fait (0.9.15) ; pêcheur fait (0.9.16) ; restent cuisinier, transporteur)
 - [ ] « Va me chercher du fer », dit à un bûcheron : il propose d'aller prévenir le mineur
 
 ## 7. Conversations et relations (indispensable)
