@@ -118,6 +118,7 @@ public class TestsGuerrier {
         m.chef = t.chef;
         TestsBucheron.depot(t).proprietaire = t.chef;
         m.mode = Travailleur.Mode.ATTENDRE;
+        m.temperament = "calme"; // il ne le tue pas lui-même (le colérique le chargerait : Bravoure)
         var husk = fige(h, EntityType.HUSK, b[0].east(26));
         boolean[] tue = {false};
         h.succeedWhen(() -> {

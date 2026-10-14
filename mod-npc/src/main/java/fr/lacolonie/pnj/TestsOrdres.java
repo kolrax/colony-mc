@@ -78,6 +78,7 @@ public class TestsOrdres {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         Travailleur[] e = equipe(h, chef, 44);
         Travailleur b = e[0];
+        b.temperament = "calme"; // il voit le zombie sans le charger ni le fuir (Bravoure)
         net.minecraft.world.entity.monster.Zombie[] z = {null};
         java.util.function.LongSupplier avis = () -> Courrier.de(h.getLevel().getServer()).boite(chef.getUUID()).stream().filter(l -> l.objet.contains("zombie")).count();
         etapes(h, chef, e,

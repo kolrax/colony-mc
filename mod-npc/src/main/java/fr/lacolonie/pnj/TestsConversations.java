@@ -78,6 +78,7 @@ public class TestsConversations {
     public static void frappeArreteLaCauserie(GameTestHelper h) {
         UUID chef = UUID.randomUUID();
         Travailleur t1 = auPoste(h, "mineur", 2, 3, chef), t2 = auPoste(h, "bucheron", 5, 3, chef);
+        t1.temperament = t2.temperament = "calme"; // devant le monstre, leur caractère ne joue pas au hasard (Bravoure)
         Causeries.Causerie[] vue = new Causeries.Causerie[1];
         long[] coup = {-1};
         Zombie[] z = new Zombie[1];
