@@ -85,6 +85,8 @@ public class Reglages {
     public boolean liens_couples = true;
     /** Un mineur fourbe qui trouve des diamants en garde un en cachette, au plus un par jour du jeu : chance en pour cent (le colérique au moral bas : à peine plus de la moitié ; jamais le calme ; 0 = jamais). */
     public int caractere_diamant = 50;
+    /** Nuit dehors (lot 9, cahier 14.12) : loin du poste, un ouvrier se creuse un trou dans la terre et s'y enferme jusqu'au matin (false : il dort à la belle étoile). */
+    public boolean abri_nuit = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
