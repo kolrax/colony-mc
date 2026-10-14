@@ -353,6 +353,7 @@ final class Adressage {
     /** Ce que sait faire chaque métier, en quelques mots (pour que l'IA relie la demande au bon ouvrier). */
     static final Map<String, String> CAPACITES = Map.of(
             "mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre ; creuse, perce des tunnels, pose des torches",
+            "cuisinier", "cuisinier et boulanger : cuit au four la viande, le poisson et les pommes de terre du dépôt, fait le pain avec le blé ; cuisine, cuit, fait du pain",
             "guerisseur", "relève les ouvriers à terre avec du pain ou une potion de soin, panse les blessés ; soigne quelqu'un, fait le tour des blessés",
             "bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle ; abat les arbres, replante",
             "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge",

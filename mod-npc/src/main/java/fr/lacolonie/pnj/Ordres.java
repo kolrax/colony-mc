@@ -119,6 +119,18 @@ final class Ordres {
         NOMS.put("guerrier", guerrier);
     }
 
+    static {
+        Map<String, List<String>> cuisinier = new LinkedHashMap<>();
+        cuisinier.put("pain", List.of("pain", "pains", "miche", "miches", "miche de pain", "miches de pain", "boule de pain", "boules de pain"));
+        cuisinier.put("viande", List.of("viande cuite", "viandes cuites", "viande", "viandes", "steak", "steaks", "roti", "rotis", "boeuf cuit",
+                "porc cuit", "cotelette cuite", "cotelettes cuites", "poulet roti", "poulets rotis", "mouton cuit", "lapin cuit"));
+        cuisinier.put("poisson", List.of("poisson cuit", "poissons cuits", "poisson grille", "poissons grilles", "poisson", "poissons",
+                "morue cuite", "saumon cuit"));
+        cuisinier.put("patate", List.of("pomme de terre cuite", "pommes de terre cuites", "patate cuite", "patates cuites",
+                "pomme de terre au four", "pommes de terre au four"));
+        NOMS.put("cuisinier", cuisinier);
+    }
+
     /** Des mots qui désignent le bois, même entourés d'autres (« des bûches de bouleau ») : ils ne comptent pas comme « n'importe quel bois ». */
     static final Set<String> MOTS_DU_BOIS = Set.of("bois", "buche", "buches", "rondin", "rondins", "tronc", "troncs");
 
@@ -460,6 +472,8 @@ final class Ordres {
     /** Les métiers par leur nom : singulier, pluriel ; les mots marqués d'une étoile ne comptent qu'avec un article (« garde » est aussi un verbe). */
     static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
             "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
+            "cuisinier", List.of(new String[]{"cuisinier", "cuisiniers"}, new String[]{"cuisiniere", "cuisinieres"}, new String[]{"boulanger", "boulangers"},
+                    new String[]{"boulangere", "boulangeres"}, new String[]{"*cuistot", "*cuistots"}),
             "guerisseur", List.of(new String[]{"guerisseur", "guerisseurs"}, new String[]{"guerisseuse", "guerisseuses"}, new String[]{"medecin", "medecins"},
                     new String[]{"soigneur", "soigneurs"}, new String[]{"soigneuse", "soigneuses"}),
             "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),

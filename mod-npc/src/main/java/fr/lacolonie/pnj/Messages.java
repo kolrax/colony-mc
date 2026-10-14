@@ -73,6 +73,24 @@ final class Messages {
         m("cisailles", "Il me faut des cisailles",
                 "Nos moutons portent toute leur laine, et je n'ai pas de cisailles pour les tondre. Laisse-m'en une paire au dépôt.",
                 "Sans cisailles, la laine reste sur le dos des moutons. Il m'en faudrait une paire au dépôt.");
+        m("sans_combustible", "Plus de combustible",
+                "Mon four est froid : je n'ai plus de charbon ni de bois pour le chauffer. Laisse-m'en au dépôt.",
+                "Sans combustible, pas de cuisson. Un peu de charbon, ou du bois, au dépôt, et je rallume le four.",
+                "Le feu s'est éteint, et il n'y a plus rien à brûler, ni sur moi ni au dépôt.");
+        t("sans_combustible", "colerique", "Un four sans feu, c'est une boîte en pierre ! Du charbon au dépôt, tout de suite.");
+        m("sans_ble", "Plus de blé",
+                "Je n'ai plus de blé pour faire le pain. Laisse-m'en au dépôt, ou demande au fermier de m'en porter.",
+                "La huche est vide : plus un grain de blé. Sans lui, pas de pain demain matin.",
+                "Il me faut du blé pour pétrir. Il n'y en a plus, ni sur moi ni au dépôt.");
+        t("sans_ble", "peureux", "Plus de blé… Tout le monde va me réclamer du pain, et je n'aurai rien à leur donner. Laisse-m'en au dépôt, je t'en prie.");
+        m("rien_a_cuire", "Rien à cuire",
+                "Je n'ai rien à mettre au four : ni {0}, ni rien d'autre de cru. Laisse-m'en au dépôt.",
+                "Plus de {0} à cuire. Le four est chaud, mais la marmite est vide.",
+                "Mon four attend, et moi aussi : il me faudrait du {0} cru au dépôt.");
+        t("rien_a_cuire", "fourbe", "Plus rien à cuire. Je pourrais bien faire rôtir une poule de l'éleveur, mais il compte ses bêtes. Laisse-moi de quoi cuisiner au dépôt.");
+        m("sans_four", "Il me faut un four",
+                "Je ne trouve aucun four libre près du poste : ni fourneau, ni fumoir, ni feu de camp allumé. Bâtis-m'en un à quelques pas, et je cuirai ce qu'il y a au dépôt.",
+                "Sans four, je ne peux rien cuire. Un fourneau ou un fumoir près du poste, et je m'y mets.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");

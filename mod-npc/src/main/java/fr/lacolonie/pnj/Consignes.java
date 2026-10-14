@@ -909,7 +909,7 @@ final class Consignes {
             case "planter" -> { if (t.compter(Actions.Filtre.de("#minecraft:saplings")) == 0) return "Je n'ai pas de pousses à planter, chef."; }
             case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
             case "nourrir", "tondre", "abattre_betes" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
-            case "champ", "recolter", "pain", "oublier_champ" -> {
+            case "champ", "recolter", "pain", "oublier_champ", "cuire", "cuisiner" -> {
                 if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
                 if (mode.equals("champ") && vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef.";
             }
@@ -1561,6 +1561,11 @@ final class Consignes {
                 case "soigner", "soigner_blesses" -> {
                     // Le guérisseur : son action dit elle-même ce qu'elle a fait.
                     if (etape++ == 0) { sous = Guerisseur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
+                }
+                case "cuire", "cuisiner" -> {
+                    // Le cuisinier : son action dit elle-même ce qu'elle a fait (« fais du pain » est celle du fermier).
+                    if (etape++ == 0) { sous = Cuisinier.consigne(t, m, c); return Actions.Etat.EN_COURS; }
                     return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "champ", "recolter", "pain", "oublier_champ" -> {

@@ -206,6 +206,8 @@ public abstract class Metier {
 
     static { TOUS.put("guerisseur", new Guerisseur()); } // lot 5 (à part : l'éleveur s'inscrit sur la ligne du haut)
 
+    static { TOUS.put("cuisinier", new Cuisinier()); } // lot 6 (à part, comme le guérisseur)
+
     static List<String> actifs() {
         return TOUS.keySet().stream().filter(m -> !Reglages.actuel.metiers_inactifs.contains(m)).toList();
     }
