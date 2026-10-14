@@ -29,6 +29,9 @@ final class Remarques {
     /** Par chef : son dernier embauché (prénom, moment), dont les autres parlent dans la journée. */
     static final Map<UUID, Object[]> NOUVEAUX = new HashMap<>();
 
+    /** Le serveur s'arrête : on lâche ses mondes. */
+    static void oublier() { DITES.clear(); NOUVEAUX.clear(); }
+
     /** Le chef vient d'embaucher {@code t} : ses ouvriers pourront en parler. */
     static void embauche(Travailleur t) { NOUVEAUX.put(t.chef, new Object[]{t.prenom, t.level().getGameTime()}); }
 
@@ -49,6 +52,7 @@ final class Remarques {
         if (cle == null || !Besoins.dire(t, cle, nom)) return;
         var dits = t.memoire.getCompound("dits");
         dits.putLong("rq_" + cle, Cerveau.temps(t));
+        dits.putLong("vie", Cerveau.temps(t)); // pas de réplique de besoin juste après (Besoins.permis)
         t.memoire.put("dits", dits);
         t.memoire.putString("remarque", cle); // la dernière (lue par les tests)
         DITES.add(new Object[]{sl, t.blockPosition(), maintenant});

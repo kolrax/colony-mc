@@ -1107,7 +1107,7 @@ public class Travailleur extends PathfinderMob {
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
             else {
                 Courrier.ecrire(this, "paie_retard");
-                Besoins.parler(this, "impaye", null); // paie manquée : il le dit, selon son caractère (avant la grève)
+                Besoins.parler(this, impayes >= 2 ? "impaye" : "paie_retard", null); // « des jours sans paie » seulement à la 2e paie manquée
             }
         }
     }
@@ -1215,7 +1215,7 @@ public class Travailleur extends PathfinderMob {
             changerMoral(Obeissance.COUP_CHEF);
             memoire.putLong("coup_chef", level().getGameTime());
             souvenirs.noter(Souvenirs.Genre.COUP, jour(), IA.heure(this), "un coup");
-            if (!aTerre && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
+            if (!aTerre && !muet() && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
         }
         return touche;
     }
@@ -1586,7 +1586,7 @@ public class Travailleur extends PathfinderMob {
         }
         if (parRegle) return appliquerOrdre(l, enFace);
         // L'impossible (voler, aller sur la lune, casser la roche du fond du monde…) : il en rit, sans rien faire (cahier 14.9).
-        String impossible = Impossible.genre(l.texte);
+        String impossible = Impossible.demande(l.texte, Ordres.lire(l.texte, metier)); // seulement si rien n'y est faisable
         String blague = impossible == null ? null : Besoins.texte(this, "impossible_" + impossible, null, null);
         if (blague != null) {
             reponseImposee = true;
