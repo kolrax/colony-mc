@@ -595,7 +595,7 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
-                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") ? "Sans mission"
+                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") && !metier.equals("macon") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
     }
@@ -2000,6 +2000,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
     void licencier() {
+        Macon.oublier(this); // son chantier était celui de ce chef-là
         Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
         chef = null;
@@ -2071,6 +2072,7 @@ public class Travailleur extends PathfinderMob {
         }
         // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
         Transporteur.oublier(this);
+        Macon.oublier(this);
         memoire.remove("champs");
         memoire.remove("plants_laisses");
         Fermier.TOURS.remove(this);

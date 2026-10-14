@@ -140,6 +140,21 @@ final class Messages {
         t("coffre_plein", "colerique", "Le coffre {0} est plein ! J'ai porté cette charge pour rien. Vide-le, ou donne-m'en un autre !");
         t("coffre_plein", "peureux", "Le coffre {0} est plein… J'ai rapporté ce que je portais. Dis-moi quoi faire, s'il te plaît.");
 
+        m("materiau_manque", "Il me manque des matériaux",
+                "Pour l'ouvrage « {1} », il me manque {0} : il m'en faudrait encore {2} au moins. Le chantier attend ; dès qu'il y en a au dépôt, je reprends.",
+                "Plus de {0} au dépôt, et l'ouvrage « {1} » en réclame encore ({2} au moins). Je pose mes outils en attendant.",
+                "Le chantier « {1} » est à l'arrêt faute de {0}. Mets-en au dépôt, et je m'y remets.");
+        t("materiau_manque", "colerique", "On ne bâtit pas avec du vent ! Il me faut {0} pour l'ouvrage « {1} », et le dépôt est vide.");
+        t("materiau_manque", "peureux", "Pardon de te déranger… il me manque {0} pour l'ouvrage « {1} ». J'attends au poste.");
+        m("chantier_fini", "Le chantier est fini",
+                "L'ouvrage « {0} » est bâti, comme sur le plan. Viens voir !{1}",
+                "J'ai posé la dernière pierre de l'ouvrage « {0} ». Ce qui me restait est rangé au dépôt.{1}");
+        m("chantier_gene", "Quelque chose gêne le chantier",
+                "Sur le chantier « {0} », un ouvrage qui n'est pas de moi occupe une place du plan, en {1}. Je n'y touche pas : je laisse cette place.",
+                "Une construction gêne l'ouvrage « {0} », en {1}. Ce n'est pas à moi de la défaire : je bâtis autour.");
+        m("schema_perdu", "Je ne trouve plus le plan",
+                "Le plan de l'ouvrage « {0} » a disparu, ou je ne sais plus le lire. J'arrête ce chantier.");
+
         m("coffre_introuvable", "Je ne trouve pas le coffre",
                 "Je ne trouve plus le coffre {0}. Il a été cassé ou déplacé ? Montre-moi le nouveau.",
                 "J'ai fait le chemin jusqu'au coffre {0}, mais il n'y est plus. Je ne peux ni prendre ni déposer.");

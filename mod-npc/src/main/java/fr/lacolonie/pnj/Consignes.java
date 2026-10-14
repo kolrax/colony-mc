@@ -178,10 +178,10 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ", "pecher_la", "trajet", "trajet_prendre", "trajet_deposer").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ", "pecher_la", "trajet", "trajet_prendre", "trajet_deposer", "construire").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
-            if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
+            if (vu == null && !a.equals("garder_ici") && !a.equals("construire")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
             lieu = vu;
         }
         if (e.visePersonne()) {
@@ -266,6 +266,12 @@ final class Consignes {
                     String r = a.equals("oublier_trajets") ? null : Transporteur.verifierOrdre(t, a, sens, objet, lieu);
                     if (r != null) return r;
                     texte = (a.equals("trajet") ? sens.name() : "") + "|" + (objet.isEmpty() ? "" : Transporteur.nomDit(phrase)) + "|" + objet;
+                }
+                if (a.equals("construire")) {
+                    // Le maçon : le plan dit, l'endroit regardé (ou là où il est), le sens du regard du chef.
+                    Macon.Preparation p = Macon.preparer(t, chef, phrase, lieu);
+                    if (p.refus() != null) return p.refus();
+                    texte = p.texte();
                 }
                 if (a.equals("planches") || a.equals("charbon")) {
                     // Le bois dit (« des planches de bouleau »), sinon n'importe quelle bûche (qui brûle, pour le charbon) ; la quantité dite.
@@ -718,6 +724,8 @@ final class Consignes {
         BlockPos ici = t.blockPosition();
         return switch (sujet) {
             case "heure" -> new Fait("Il est " + IA.heure(t) + " h.", null);
+            case "schemas" -> new Fait(Macon.schemasTexte(), null);
+            case "chantier" -> new Fait(Macon.etatTexte(t), null);
             case "meteo" -> new Fait(l.isThundering() ? "Il y a de l'orage : mieux vaut rester à l'abri." : l.isRaining()
                     ? (l.getBiome(ici).value().coldEnoughToSnow(ici) ? "Il neige." : "Il pleut.") : l.isDay() ? "Il fait beau." : "La nuit est claire.", null);
             case "jour" -> new Fait("Nous sommes au jour " + (l.getDayTime() / 24000 + 1) + ", et il fait " + (l.isDay() ? "jour." : "nuit."), null);
@@ -946,6 +954,7 @@ final class Consignes {
             }
             case "soigner", "soigner_blesses" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
             case "trajet", "trajet_prendre", "trajet_deposer", "oublier_trajets" -> { return Transporteur.refus(t, mode, vu); }
+            case "construire", "arreter_chantier", "reprendre_chantier", "abandonner_chantier" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
             case "torches" -> {
                 if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0 && Bureau.entite(t) == null) return "Je n'ai pas de torches, chef.";
             }
@@ -1609,6 +1618,11 @@ final class Consignes {
                 case "trajet", "trajet_prendre", "trajet_deposer", "oublier_trajets" -> {
                     // Le transporteur : il retient ses trajets, et dit lui-même ce qu'il a compris.
                     if (etape++ == 0) { sous = Transporteur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
+                }
+                case "construire", "arreter_chantier", "reprendre_chantier", "abandonner_chantier" -> {
+                    // Le maçon : il retient son chantier, et dit lui-même ce qu'il a compris.
+                    if (etape++ == 0) { sous = Macon.consigne(t, m, c); return Actions.Etat.EN_COURS; }
                     return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "chasser" -> {

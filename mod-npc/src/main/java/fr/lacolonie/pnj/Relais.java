@@ -96,6 +96,7 @@ final class Relais {
             case "guerrier" -> "ne porte les armes";
             case "transporteur" -> "ne fait de charrois";
             case "guerisseur" -> "ne soigne";
+            case "macon" -> "ne bâtit";
             default -> "ne fait ce travail";
         };
     }
