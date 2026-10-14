@@ -380,6 +380,11 @@ final class Eleveur extends Metier {
         int nourries, tondus, traites, abattues;
         boolean sansFourrage, sansCisailles;
         final Map<String, Integer> abattuesPar = new LinkedHashMap<>();
+        /** La tâche d'abattage en cours (pour la reprendre si la bête lui a échappé) ; les reprises par bête. */
+        Tache frappe;
+        final Map<Integer, Integer> reprises = new java.util.HashMap<>();
+        /** Une bête qui lui a échappé est reprise au plus tant de fois dans la même visite. */
+        static final int REPRISES = 3;
 
         /** Son poste est dans cet enclos (sa cour) : il y est chez lui, sans passer le portillon. */
         final boolean cour;
@@ -417,7 +422,13 @@ final class Eleveur extends Metier {
                     abattues++;
                     Elevage.Espece esp = a.cible instanceof Animal x ? espece(x) : null;
                     if (esp != null) abattuesPar.merge(esp.id(), 1, Integer::sum);
+                } else if (fait instanceof Actions.Attaquer a && frappe != null) {
+                    // La bête lui a échappé (coincé derrière les autres bêtes de l'enclos, « inaccessible » au bout de 15 s) :
+                    // elle est dans son enclos, il la reprend plus tard dans la visite au lieu de renoncer (un ordre serait perdu).
+                    t.inaccessibles.remove(a.cible.getId());
+                    reprendre(frappe);
                 }
+                frappe = null;
                 if (fait instanceof Passer p && r == Actions.Etat.ECHEC) {
                     // Pas réussi à entrer : il renonce (il est dehors). À sortir : il recommence, jamais d'abandon dedans
                     // (5 essais au plus ; ensuite Metier.sortir le relancera).
@@ -485,6 +496,7 @@ final class Eleveur extends Metier {
                     cible = null;
                     if (!abattable(t, a, enclos) || !encoreTrop(t, a, cible0)) return Actions.Etat.EN_COURS;
                     armer(t);
+                    frappe = cible0;
                     sous = new Actions.Attaquer(a).portee(24);
                     return Actions.Etat.EN_COURS;
                 }
@@ -492,7 +504,7 @@ final class Eleveur extends Metier {
             Animal a = cible.bete;
             if (!a.isAlive()) { cible = null; return Actions.Etat.EN_COURS; }
             if (t.distanceToSqr(a) > 2.5 * 2.5) {
-                if (++marche > 20 * 15) cible = null; // elle lui échappe : la suivante
+                if (++marche > 20 * 15) { reprendre(cible); cible = null; } // elle lui échappe : la suivante, puis de nouveau elle
                 else marcher(t, a.position(), 1.0);
                 return Actions.Etat.EN_COURS;
             }
@@ -508,6 +520,15 @@ final class Eleveur extends Metier {
             }
             cible = null;
             return Actions.Etat.EN_COURS;
+        }
+
+        /**
+         * Une bête qui lui a échappé (coincée derrière les autres, dans un coin) : sa tâche revient en fin de liste, au plus
+         * {@link #REPRISES} fois. Sinon il nourrissait une bête sur deux (pas de petit, fourrage perdu) ou un ordre d'abattre
+         * s'arrêtait sans rien faire.
+         */
+        void reprendre(Tache k) {
+            if (k.bete.isAlive() && enclos.contient(k.bete.getBlockX(), k.bete.getBlockZ()) && reprises.merge(k.bete.getId(), 1, Integer::sum) <= REPRISES) taches.add(k);
         }
 
         /**

@@ -106,13 +106,41 @@ public class TestsEleveur {
         return betes.stream().allMatch(a -> Math.abs(a.getBlockX() - centre.getX()) < 3 && Math.abs(a.getBlockZ() - centre.getZ()) < 3);
     }
 
+    /**
+     * Pour comprendre un échec : ce qu'il a fait, tick par tick (chaque changement d'action, de sous-action ou d'étape de
+     * corvée, avec le résultat), et où étaient les bêtes de l'enclos à ce moment-là.
+     */
+    static List<String> suivi(GameTestHelper h, Travailleur t, BlockPos centre) {
+        List<String> l = new java.util.ArrayList<>();
+        String[] avant = {""};
+        h.onEachTick(() -> {
+            String s = decrire(t.action);
+            if (!s.equals(avant[0]) && l.size() < 80) {
+                long dehors = vaches(h.getLevel(), centre).stream().filter(c -> Math.abs(c.getBlockX() - centre.getX()) >= 3 || Math.abs(c.getBlockZ() - centre.getZ()) >= 3).count();
+                l.add(h.getTick() + ":" + s + (t.resultat.isEmpty() ? "" : "=" + t.resultat) + (dehors > 0 ? " [" + dehors + " dehors]" : ""));
+                avant[0] = s;
+            }
+        });
+        return l;
+    }
+
+    static String decrire(Actions.Action a) {
+        if (a == null) return "-";
+        if (a instanceof Consignes.Faire f) return a.nom + "/" + decrire(f.sous) + (f.raisonSous.isEmpty() ? "" : "!" + f.raisonSous);
+        if (a instanceof Eleveur.Tournee r) return a.nom + "/" + decrire(r.sous);
+        if (a instanceof Eleveur.Corvee c) return a.nom + "#" + c.etape + "(" + c.taches.size() + ")" + (c.sous == null ? "" : "/" + c.sous.nom + (c.sous instanceof Eleveur.Passer p ? p.pas : ""));
+        return a.nom + (a.raison.isEmpty() ? "" : "!" + a.raison);
+    }
+
     static int parTerre(ServerLevel l, BlockPos centre) { return l.getEntitiesOfClass(ItemEntity.class, new AABB(centre).inflate(8)).size(); }
 
     /** Deux vaches et 4 blés au dépôt : il en prend 2, nourrit les deux vaches, un veau naît ; le portillon est refermé, rien ne s'échappe. */
     @GameTest(template = "vide", timeoutTicks = 2400)
-    public static void nourritEtFaitNaitreUnVeau(GameTestHelper h) {
+    public static void nourritEtFaitNaitreUnVeau(GameTestHelper h) { nourrit(h, 140); }
+
+    static void nourrit(GameTestHelper h, int coin) {
         BlockPos[] b = new BlockPos[1];
-        Travailleur t = seul(h, 140, b);
+        Travailleur t = seul(h, coin, b);
         ServerLevel l = h.getLevel();
         BlockPos centre = b[0].offset(8, 0, 0);
         BlockPos porte = enclos(l, centre);
@@ -120,13 +148,14 @@ public class TestsEleveur {
         bete(l, EntityType.COW, centre.offset(2, 0, -1), false, null);
         Bureau.Entite d = TestsBucheron.depot(t);
         d.depot.setItem(0, new ItemStack(Items.WHEAT, 4));
+        List<String> suivi = suivi(h, t, centre);
         h.succeedWhen(() -> {
             List<Cow> v = vaches(l, centre);
             long veaux = v.stream().filter(Cow::isBaby).count();
             int ble = t.compter(Actions.Filtre.de("minecraft:wheat")) + TestsBucheron.compte(d, Items.WHEAT);
-            h.assertTrue(veaux == 1 && v.size() == 3, "un veau doit naître : " + veaux + " veau(x), " + v.size() + " vaches (" + TestsJeu.etat(t, t.bureau) + ")");
-            h.assertTrue(ble == 2, "2 blés donnés, 2 restent : " + ble);
-            h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos");
+            h.assertTrue(veaux == 1 && v.size() == 3, "un veau doit naître : " + veaux + " veau(x), " + v.size() + " vaches (" + TestsJeu.etat(t, t.bureau) + ") " + suivi);
+            h.assertTrue(ble == 2, "2 blés donnés, 2 restent : " + ble + " " + suivi);
+            h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos " + suivi);
             h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + ", x " + (t.getX() - porte.getX()));
             t.discard();
         });
@@ -170,10 +199,11 @@ public class TestsEleveur {
         Cow veau = bete(l, EntityType.COW, centre.offset(2, 0, -2), true, null);
         for (int i = 0; i < 3; i++) bete(l, EntityType.COW, centre.offset(1, 0, i - 1), false, null);
         Bureau.Entite d = TestsBucheron.depot(t);
+        List<String> suivi = suivi(h, t, centre);
         h.succeedWhen(() -> {
             List<Cow> v = vaches(l, centre);
             long adultes = v.stream().filter(c -> !c.isBaby()).count();
-            h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos");
+            h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos " + suivi);
             h.assertTrue(adultes <= 2, "l'excédent doit être abattu : " + adultes + " adultes (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(adultes == 2 && marguerite.isAlive() && veau.isAlive() && veau.isBaby(), "le dernier couple, Marguerite et le veau restent");
             h.assertTrue(TestsBucheron.compte(d, Items.BEEF) >= 2, "la viande au dépôt : " + TestsBucheron.compte(d, Items.BEEF));
@@ -206,10 +236,26 @@ public class TestsEleveur {
      * couple (Marguerite comprise) et le veau ; il referme le portillon.
      */
     @GameTest(template = "vide", timeoutTicks = 2400)
-    public static void abatSurOrdreSansToucherAuDernierCouple(GameTestHelper h) {
+    public static void abatSurOrdreSansToucherAuDernierCouple(GameTestHelper h) { abatSurOrdre(h, 143); }
+
+    // PROVISOIRE (mesure) : copies pour voir l'échec intermittent plusieurs fois par passe.
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre1(GameTestHelper h) { abatSurOrdre(h, 180); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre2(GameTestHelper h) { abatSurOrdre(h, 181); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre3(GameTestHelper h) { abatSurOrdre(h, 182); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre4(GameTestHelper h) { abatSurOrdre(h, 183); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre5(GameTestHelper h) { abatSurOrdre(h, 184); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre6(GameTestHelper h) { abatSurOrdre(h, 185); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre7(GameTestHelper h) { abatSurOrdre(h, 186); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre8(GameTestHelper h) { abatSurOrdre(h, 187); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau1(GameTestHelper h) { nourrit(h, 188); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau2(GameTestHelper h) { nourrit(h, 189); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau3(GameTestHelper h) { nourrit(h, 190); }
+    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau4(GameTestHelper h) { nourrit(h, 191); }
+
+    static void abatSurOrdre(GameTestHelper h, int coin) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         BlockPos[] b = new BlockPos[1];
-        Travailleur[] e = aupres(h, chef, 143, b);
+        Travailleur[] e = aupres(h, chef, coin, b);
         Travailleur g = e[0];
         ServerLevel l = h.getLevel();
         BlockPos centre = b[0].offset(8, 0, 0);
@@ -217,12 +263,13 @@ public class TestsEleveur {
         Cow marguerite = bete(l, EntityType.COW, centre.offset(2, 0, 2), false, "Marguerite");
         Cow veau = bete(l, EntityType.COW, centre.offset(2, 0, -2), true, null);
         for (int i = 0; i < 2; i++) bete(l, EntityType.COW, centre.offset(1, 0, i), false, null);
+        List<String> suivi = suivi(h, g, centre);
         TestsIA.etapes(h, chef, e,
                 () -> g.parler(chef, "Abats deux vaches"),
                 () -> {
                     List<Cow> v = vaches(l, centre);
                     long adultes = v.stream().filter(c -> !c.isBaby()).count();
-                    h.assertTrue(adultes == 2 && g.consigne == null, "une vache abattue, pas plus : " + adultes + " adultes (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")");
+                    h.assertTrue(adultes == 2 && g.consigne == null, "une vache abattue, pas plus : " + adultes + " adultes (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ") " + suivi);
                     h.assertTrue(marguerite.isAlive() && veau.isAlive(), "Marguerite et le veau restent");
                     h.assertTrue(ferme(l, porte) && dehors(g, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + " (" + TestsJeu.etat(g, g.bureau) + ")");
                 },
