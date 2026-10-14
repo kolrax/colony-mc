@@ -140,7 +140,7 @@ final class Schemas {
         for (String x : noms) {
             String k = Ordres.normaliser(x);
             if (k.isBlank()) continue;
-            if ((n.contains(k) || n.contains(k.replaceAll("(\\w)s ", "$1 "))) && (meilleur == null || k.length() > Ordres.normaliser(meilleur).length())) meilleur = x;
+            if ((n.contains(k) || n.replaceAll("([a-z])s ", "$1 ").contains(k)) && (meilleur == null || k.length() > Ordres.normaliser(meilleur).length())) meilleur = x;
         }
         if (meilleur != null) return meilleur;
         for (String x : noms)

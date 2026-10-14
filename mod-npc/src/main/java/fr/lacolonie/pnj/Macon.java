@@ -259,14 +259,25 @@ final class Macon extends Metier {
             return;
         }
         int i = c.getInt("i");
-        // La dernière action sur ce bloc a échoué (hors d'atteinte, la place prise) : au bout de 3 fois, il le saute.
+        // La dernière action sur ce bloc a échoué (hors d'atteinte, la place prise) : au bout de 3 fois, il le remet à la fin
+        // (une seconde passe, une fois tout le reste fait) ; à la seconde passe, il le saute.
         if (c.contains("vise")) {
             if (c.getInt("vise") == i && !t.resultat.isEmpty() && !t.resultat.equals("ok")) c.putInt("essais", c.getInt("essais") + 1);
             c.remove("vise");
-            if (c.getInt("essais") >= ESSAIS) { c.putInt("sautes", c.getInt("sautes") + 1); c.putInt("essais", 0); i++; }
+            if (c.getInt("essais") >= ESSAIS) {
+                if (c.getBoolean("repasse")) c.putInt("sautes", c.getInt("sautes") + 1);
+                else {
+                    int[] tard = c.getIntArray("tard"), plus = java.util.Arrays.copyOf(tard, tard.length + 1);
+                    plus[tard.length] = i;
+                    c.putIntArray("tard", plus);
+                }
+                c.putInt("essais", 0);
+                i++;
+            }
         }
-        for (int k = 0; k < REGARD && i < m.ordre().size(); k++) {
-            Bloc b = m.ordre().get(i);
+        int taille = taille(c, m);
+        for (int k = 0; k < REGARD && i < taille; k++) {
+            Bloc b = entree(c, m, i);
             BlockPos p = place(c, b);
             if (!l.isLoaded(p)) { c.putInt("i", i); Cerveau.attendre(t, 5); return; }
             BlockState voulu = etat(c, m, b), la = l.getBlockState(p);
@@ -296,6 +307,7 @@ final class Macon extends Metier {
             if (t.compter(f) >= n) {
                 if (c.contains("manque")) {
                     c.remove("manque");
+                    c.remove("attente");
                     Cerveau.dire(t, "reprend", 30, "J'ai ce qu'il faut. Je reprends le chantier.");
                 }
                 c.putInt("i", i);
@@ -313,8 +325,19 @@ final class Macon extends Metier {
             return;
         }
         c.putInt("i", i);
-        if (i >= m.ordre().size()) finir(t, c);
+        if (i < taille) return;
+        if (!c.getBoolean("repasse") && c.getIntArray("tard").length > 0) {
+            c.putBoolean("repasse", true);
+            c.putInt("i", 0);
+            return;
+        }
+        finir(t, c);
     }
+
+    /** Le i-ème bloc à faire : dans l'ordre de pose, ou, à la seconde passe, parmi ceux remis à la fin. */
+    static Bloc entree(CompoundTag c, Modele m, int i) { return c.getBoolean("repasse") ? m.ordre().get(c.getIntArray("tard")[i]) : m.ordre().get(i); }
+
+    static int taille(CompoundTag c, Modele m) { return c.getBoolean("repasse") ? c.getIntArray("tard").length : m.ordre().size(); }
 
     static void casser(Travailleur t, CompoundTag c, int i, BlockPos p, BlockState st) {
         c.putInt("i", i);
@@ -353,8 +376,8 @@ final class Macon extends Metier {
      */
     static List<ItemStack> besoins(Travailleur t, CompoundTag c, Modele m, int i, Bureau.Entite d) {
         Map<Item, Integer> total = new LinkedHashMap<>();
-        for (int j = i; j < Math.min(m.ordre().size(), i + AVANCE); j++) {
-            Bloc b = m.ordre().get(j);
+        for (int j = i; j < Math.min(taille(c, m), i + AVANCE); j++) {
+            Bloc b = entree(c, m, j);
             if (Schemas.genre(m.etats().get(b.etat())) == Genre.VIDE) continue;
             BlockState s = etat(c, m, b);
             Item o = objet(s);
@@ -423,6 +446,7 @@ final class Macon extends Metier {
         final Item objet;
         final int n;
         int gene;
+        BlockPos ecart, pied;
 
         Batir(BlockPos pos, BlockState etat, Item objet, int n) {
             super("batir");
@@ -440,16 +464,23 @@ final class Macon extends Metier {
             if (!la.canBeReplaced()) return echec("occupe");
             if (!Actions.aPortee(t, pos)) {
                 if (coince() || age > 20 * 60) return echec("inaccessible");
-                marcher(t, Vec3.atCenterOf(pos), 1.0);
+                // Il marche vers une place debout d'où il touche le bloc (un bloc en l'air ne s'atteint pas en y allant).
+                if (pied == null) pied = place(t, pos, 3, -4);
+                marcher(t, pied == null ? Vec3.atCenterOf(pos) : Vec3.atBottomCenterOf(pied), 1.0);
                 return Actions.Etat.EN_COURS;
             }
             t.getLookControl().setLookAt(Vec3.atCenterOf(pos));
             if (!l.isUnobstructed(etat, pos, CollisionContext.empty())) {
                 // Quelqu'un se tient là (lui-même, souvent) : il s'écarte, ou attend qu'on lui fasse place.
                 if (++gene > 120) return echec("occupe");
-                if (gene % 20 == 1 && t.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(pos))) {
-                    BlockPos q = aCote(t, pos);
-                    if (q != null) t.getNavigation().moveTo(q.getX() + 0.5, q.getY(), q.getZ() + 0.5, 1.0);
+                if (t.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(pos))) {
+                    if (gene % 40 == 1) ecart = place(t, pos, 2, -3);
+                    if (ecart != null) {
+                        t.getNavigation().stop();
+                        Vec3 v = Vec3.atBottomCenterOf(ecart);
+                        t.getMoveControl().setWantedPosition(v.x, v.y, v.z, 0.7);
+                        if (ecart.getY() > t.getBlockY()) t.getJumpControl().jump();
+                    }
                 }
                 return Actions.Etat.EN_COURS;
             }
@@ -470,16 +501,17 @@ final class Macon extends Metier {
             return Actions.Etat.OK;
         }
 
-        /** Une place debout tout près, hors de la case à poser, d'où il la touche encore. */
-        static BlockPos aCote(Travailleur t, BlockPos pos) {
+        /** Une place debout près du bloc (à {@code r} blocs, de {@code bas} à +1 en hauteur), hors de sa colonne, d'où il le touche. */
+        static BlockPos place(Travailleur t, BlockPos pos, int r, int bas) {
             Level l = t.level();
             BlockPos meilleur = null;
             double dMin = Double.MAX_VALUE;
-            for (BlockPos q : BlockPos.betweenClosed(pos.offset(-2, -1, -2), pos.offset(2, 1, 2))) {
+            for (BlockPos q : BlockPos.betweenClosed(pos.offset(-r, bas, -r), pos.offset(r, 1, r))) {
                 if (q.getX() == pos.getX() && q.getZ() == pos.getZ()) continue;
                 if (!Monde.debout(l, q) || Monde.mortel(l, q)) continue;
                 if (Vec3.atBottomCenterOf(q).add(0, 1.6, 0).distanceToSqr(Vec3.atCenterOf(pos)) > 4.2 * 4.2) continue;
-                double d = t.position().distanceToSqr(Vec3.atBottomCenterOf(q));
+                // Plutôt en dessous : à la même hauteur, il se mettrait sur une autre place du plan (le haut d'un mur).
+                double d = t.position().distanceToSqr(Vec3.atBottomCenterOf(q)) + (q.getY() >= pos.getY() ? 16 : 0);
                 if (d < dMin) { dMin = d; meilleur = q.immutable(); }
             }
             return meilleur;
@@ -590,10 +622,10 @@ final class Macon extends Metier {
         if (!(t.level() instanceof ServerLevel l)) return "";
         Modele m = modele(l, c.getString("cle"), false);
         if (m == null) return "Je ne retrouve plus le plan de ce chantier, chef.";
-        int i = c.getInt("i"), total = m.ordre().size();
+        int total = m.ordre().size(), i = c.getBoolean("repasse") ? total - taille(c, m) + c.getInt("i") : c.getInt("i");
         String r = "L'ouvrage « " + c.getString("nom") + " » est fait à " + Schemas.pourcent(i, total) + " pour cent" + (c.getBoolean("pause") ? ", et il attend que tu me dises de reprendre." : ".");
         Map<Item, Integer> reste = new LinkedHashMap<>();
-        for (int j = i; j < total; j++) {
+        for (int j = c.getBoolean("repasse") ? 0 : i; j < total; j++) {
             Bloc b = m.ordre().get(j);
             if (Schemas.genre(m.etats().get(b.etat())) == Genre.VIDE) continue;
             BlockState s = etat(c, m, b);
