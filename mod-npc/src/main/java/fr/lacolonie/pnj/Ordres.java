@@ -59,9 +59,12 @@ final class Ordres {
         boolean annulerRegles, quotidien;
         /** Un ordre qui le tuerait (« saute dans la lave ») : le danger ({@link Obeissance#mortel}), sinon null. */
         String mortel;
+        /** Ce qu'il fera quand on frappe son chef ({@link GardeChef}) : null si rien n'est dit ; les pseudos à ne jamais toucher. */
+        GardeChef.Posture posture;
+        final List<String> epargner = new ArrayList<>();
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
-                && regles.isEmpty() && !annulerRegles && mortel == null; }
+                && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty(); }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -215,6 +218,9 @@ final class Ordres {
             return l;
         }
         Lecture l = new Lecture();
+        // Ce qu'il fera si l'on frappe son chef (« attaque quiconque me frappe », « ne fais jamais rien à Nielscutt »).
+        GardeChef.Lu garde = GardeChef.lire(texte);
+        if (!garde.rien()) { l.posture = garde.posture; l.epargner.addAll(garde.epargner); texte = garde.reste; }
         // Les ordres longs d'abord : la conséquence d'une règle (« s'il pleut, rentre ») ne se fait pas tout de suite.
         OrdresLongs.Lu lu = OrdresLongs.lire(texte);
         for (OrdresLongs.Regle r : lu.regles) {

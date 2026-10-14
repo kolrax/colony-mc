@@ -1863,12 +1863,34 @@ public class Travailleur extends PathfinderMob {
         // Les ordres longs : « oublie tes ordres », puis les nouvelles règles (pas celles d'une règle qui se déclenche).
         if (l.annulerRegles && !parRegle) {
             regles.clear();
+            memoire.remove("garde_chef");
+            memoire.remove("epargnes");
             r.add(Messages.corps(this, "dit_oublie_regles"));
         }
         if (!parRegle) for (OrdresLongs.Regle x : l.regles) {
             x.actif = x.quand.equals("FINI") && missionActive() == null; // « quand tu as fini » : seulement après une mission en cours
             OrdresLongs.ajouter(regles, x);
             r.add(Messages.corps(this, "dit_regle", OrdresLongs.quand(x), quoi(x)));
+        }
+
+        // Ceux qui frappent le chef (GardeChef) : riposter, s'interposer seulement, ne jamais toucher à tel joueur.
+        if (!parRegle && l.posture != null) {
+            memoire.putString("garde_chef", l.posture.name());
+            String cle = l.posture == GardeChef.Posture.ATTAQUE ? "chef_ordre_attaque" : "chef_ordre_tranquille";
+            String dit = Besoins.texte(this, cle, null, null);
+            r.add(dit != null ? dit : l.posture == GardeChef.Posture.ATTAQUE ? "Qu'on te touche, chef, et il aura affaire à moi." : "Bien, chef : je m'interposerai, sans frapper.");
+        }
+        if (!parRegle && !l.epargner.isEmpty()) {
+            memoire.putString("epargnes", GardeChef.ajouter(memoire.getString("epargnes"), l.epargner));
+            String noms = String.join(" ni à ", l.epargner);
+            String dit = Besoins.texte(this, "chef_ordre_epargne", noms, null);
+            r.add(dit != null ? dit : "Entendu, chef : je ne ferai jamais rien à " + noms + ".");
+        }
+        // « Arrête ! » pendant qu'il frappe un homme sur son ordre : il baisse son arme.
+        if (!parRegle && enFace != null && action instanceof Actions.Attaquer a && a.cible instanceof Player && GardeChef.cesser(l.texte)) {
+            finirAction("ordre");
+            String dit = Besoins.texte(this, "chef_cesse", null, null);
+            r.add(dit != null ? dit : "Bien, chef. Je le laisse.");
         }
 
         // Horaires et expéditions.

@@ -15,7 +15,7 @@ class VieTest {
         // Strict : une seule erreur dans le fichier livré fait échouer le test (le jeu, lui, ignorerait la section).
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
         assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size()
-                + Vie.lire(Repertoire.lignes("/defense.txt")).size());
+                + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/chef.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
@@ -38,6 +38,22 @@ class VieTest {
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
         // Sans le prénom du guerrier, l'alerte a toujours de quoi être dite.
         assertTrue(Vie.tirer("creeper_alerte", "calme", Map.of("chef", "Kolrax"), () -> 0.9) != null);
+    }
+
+    /** Lot 9 : quand on frappe le chef (GardeChef), au moins six répliques communes par situation. */
+    @Test
+    void chefSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/chef.txt"));
+        for (String cle : List.of("chef_interpose", "chef_riposte", "chef_frappe_vu", "chef_ordre_attaque", "chef_ordre_tranquille", "chef_ordre_epargne", "chef_cesse")) {
+            assertTrue(banque.containsKey(cle), cle);
+            assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
+            assertTrue(banque.get(cle).stream().filter(r -> r.temperament().isEmpty()).count() >= 6, cle + " : six répliques communes");
+        }
+        for (var e : banque.entrySet())
+            for (Vie.Replique r : e.getValue()) {
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+                assertTrue(r.texte().length() <= 90, r.texte());
+            }
     }
 
     @Test
