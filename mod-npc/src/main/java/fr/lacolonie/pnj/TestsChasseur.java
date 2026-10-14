@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * Le chasseur (lot 6) : il tire un cochon sauvage et dépose la viande, laisse les bêtes d'un enclos, une bête nommée et un
  * petit, écrit sans arc ni lame, ne blesse ni un ouvrier ni un villageois derrière sa proie, et chasse sur ordre l'espèce
- * dite. Chaque test dans son coin du monde plat (coins 170 à 175).
+ * dite. Chaque test dans son coin du monde plat (coins 170 à 176).
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -75,6 +75,31 @@ public class TestsChasseur {
             h.assertTrue(TestsMineur.lettre(t, "sans_gibier"), "il cherche, et écrit qu'il n'y a pas de gibier (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(t.tickCount > 400, "il a eu le temps de chasser");
             h.assertTrue(vivants(cochons) == 4, "les cochons de l'enclos sont tous vivants : " + vivants(cochons));
+            t.discard();
+        });
+    }
+
+    /**
+     * Un grand pré clos de barrières (39 sur 39, plus de 1024 cases : trop grand pour en faire le tour) : on ne sait pas si
+     * c'est un enclos, donc ses 4 cochons ne sont pas du gibier. Il n'y touche pas, et écrit qu'il n'y a pas de gibier.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void laisseLesBetesDUnGrandPreClos(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, 176, b, true);
+        ServerLevel l = h.getLevel();
+        for (int pass = 0; pass < 2; pass++)
+            for (int dx = 4; dx <= 44; dx++)
+                for (int dz = -20; dz <= 20; dz++) {
+                    if (dx != 4 && dx != 44 && Math.abs(dz) != 20) continue;
+                    BlockPos q = b[0].offset(dx, 0, dz);
+                    l.setBlockAndUpdate(q, net.minecraft.world.level.block.Block.updateFromNeighbourShapes(net.minecraft.world.level.block.Blocks.OAK_FENCE.defaultBlockState(), l, q));
+                }
+        List<Pig> cochons = betes(l, EntityType.PIG, b[0], 12, 4);
+        h.succeedWhen(() -> {
+            h.assertTrue(TestsMineur.lettre(t, "sans_gibier"), "il cherche, et écrit qu'il n'y a pas de gibier (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.tickCount > 400, "il a eu le temps de chasser");
+            h.assertTrue(vivants(cochons) == 4, "les cochons du pré clos sont tous vivants : " + vivants(cochons));
             t.discard();
         });
     }
