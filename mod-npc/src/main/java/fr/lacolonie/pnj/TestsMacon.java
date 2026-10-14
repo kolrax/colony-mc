@@ -332,4 +332,29 @@ public class TestsMacon {
                 },
                 () -> TestsRepertoire.fin(e));
     }
+
+    /** Relecture : de l'herbe et un chemin dans le plan (introuvables tels quels) : il les fait en terre, et finit. Coin 306. */
+    @GameTest(template = "vide", timeoutTicks = 1600, batch = "macon")
+    public static void herbeEtCheminEnTerre(GameTestHelper h) {
+        Map<BlockPos, BlockState> plan = new LinkedHashMap<>();
+        plan.put(new BlockPos(0, 0, 0), Blocks.GRASS_BLOCK.defaultBlockState());
+        plan.put(new BlockPos(1, 0, 0), Blocks.DIRT_PATH.defaultBlockState());
+        plan.put(new BlockPos(2, 0, 0), Blocks.COBBLESTONE.defaultBlockState());
+        ecrire("essai_herbe.nbt", plan);
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, 306, b);
+        ServerLevel l = h.getLevel();
+        BlockPos o = b[0].offset(4, 0, 0);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.addItem(new ItemStack(Items.DIRT, 2));
+        d.depot.addItem(new ItemStack(Items.COBBLESTONE, 1));
+        Macon.commencer(t, "config:essai_herbe.nbt", "essai herbe", o, 0, 0, null);
+        h.succeedWhen(() -> {
+            h.assertTrue(Macon.chantier(t).isEmpty(), "fini : " + Macon.chantier(t) + " (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(l.getBlockState(o).is(Blocks.DIRT) && l.getBlockState(o.east()).is(Blocks.DIRT) && l.getBlockState(o.east(2)).is(Blocks.COBBLESTONE),
+                    "de la terre pour l'herbe et le chemin");
+            h.assertTrue(TestsBucheron.compte(d, Items.DIRT) == 0, "la terre du dépôt a servi");
+            t.discard();
+        });
+    }
 }
