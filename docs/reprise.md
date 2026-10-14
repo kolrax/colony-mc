@@ -4,7 +4,7 @@ Mise à jour : 14/10/2026, 07 h 40 UTC. Une page à lire en début de session, a
 
 ## Versions
 - **Serveur : 0.9.19** (rien installé depuis : le redémarrage `panel.py power restart` a été **refusé par le contrôle des permissions de Claude Code** le 14/10 à 04 h 12 UTC, motif « Production Deploy »). Demande `redemarrage` posée à KOLRAX dans le panneau. Ne pas contourner.
-- **`main` : 0.9.26** (14/10, 07 h 40 UTC ; 229 JUnit, 288/288 en jeu). Pas encore construite ni envoyée au serveur : la construire, l'envoyer dans `/mods-off` (`panel.py write`), puis livrer comme ci-dessous à la place de 0.9.23.
+- **`main` : 0.9.26** (14/10, 07 h 40 UTC ; 229 JUnit, 288/288 en jeu). Jar `colonie_pnj-0.9.26.jar` (1 540 223 octets, sha1 `990c4a38f3c3…`) déjà dans `/mods-off` du serveur : livrer celui-là (mv 0.9.19 → /mods-off, mv 0.9.26 → /mods, un seul jar, restart, journal jusqu’à « Done »).
   - 0.9.26 = **diamant gardé en cachette et excuses** (`Humeur.trouve`, `questionDiamant`, `excuses`, `Ordres.diamantCache`/`excuses`, `TestsCaractere` coins 230-234).
   - 0.9.25 = **amitiés, inimitiés, couples** (`Liens`, `Relations`, `TestsRelations` coins 262-263).
   - 0.9.24 = **deuil et enterrement** (`Deuil`, `TestsDeuil` coins 246-251, `relations.txt`).
