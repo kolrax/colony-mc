@@ -144,6 +144,9 @@ final class Itineraire {
     /** Il creuse ou suit la route vers la sortie : il ne marche pas droit vers le but, mais il avance. */
     boolean occupe() { return aCreuser != null || sortie != null || pilier != null || !pont.isEmpty(); }
 
+    /** Il suit un chemin direct qui a réussi, sans détour en cours (étape, montée, creusage, pilier, pont) : le refaire ne coûte qu'une recherche courte. */
+    boolean surCheminDirect() { return !bloque && directRate == 0 && direct != null && phase < 0 && montee == null && !occupe(); }
+
     static double horizontale(Vec3 a, Vec3 b) { double dx = a.x - b.x, dz = a.z - b.z; return Math.sqrt(dx * dx + dz * dz); }
 
     static long cellule(BlockPos p) { return ((long) (p.getX() >> 3) << 32) ^ ((p.getZ() >> 3) & 0xffffffffL); }
