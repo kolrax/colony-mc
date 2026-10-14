@@ -81,6 +81,7 @@ public class TestsSons {
             if (m[0] == null && h.getTick() >= 5) { // un PNJ tout juste apparu ne voit rien au même tick
                 m[0] = EntityType.HUSK.spawn(h.getLevel(), t.blockPosition().east(2), MobSpawnType.MOB_SUMMONED);
                 m[0].setNoAi(true);
+                m[0].setPersistenceRequired(); // loin de tout joueur, il disparaîtrait aussitôt
             }
             if (m[0] != null && m[0].isAlive() && !(t.action instanceof Actions.Attaquer)) Cerveau.lancer(t, new Actions.Attaquer(m[0]));
         });
