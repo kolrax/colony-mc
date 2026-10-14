@@ -75,6 +75,11 @@ public class Reglages {
     public boolean moral_vol_autres = true;
     /** Révolte armée (cahier 5.4) : après plusieurs avertissements, les ouvriers au plus bas frappent leur chef, et lui seul. */
     public boolean moral_revolte = true;
+    /** Amitiés, inimitiés et couples entre ouvriers d'un même chef (lot 7) ; {@code liens_vitesse} : multiplie ce qui rapproche (0,1 à 10). */
+    public boolean liens_actifs = true;
+    public double liens_vitesse = 1.0;
+    /** Deux grands amis depuis deux jours peuvent se mettre en couple. */
+    public boolean liens_couples = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -137,6 +142,7 @@ public class Reglages {
         moral_lenteur = Math.clamp(moral_lenteur, 0, 50);
         moral_mefaits = Math.clamp(moral_mefaits, 0, 100);
         moral_vol_max = Math.max(0, moral_vol_max);
+        liens_vitesse = Double.isNaN(liens_vitesse) ? 1.0 : Math.clamp(liens_vitesse, 0.1, 10.0);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);

@@ -79,11 +79,12 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot);
+                !pluie && l.isDay(), coup, ouvriers, depot, Relations.actifs() ? Relations.de(t).moral() : 0);
     }
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */
     static Moral.Bilan bilan(Travailleur t) {
+        Relations.bilan(t); // ceux qui travaillent près de lui, le couple s'il est temps
         Moral.Bilan b = Moral.bilan(etat(t));
         t.changerMoral(b.total());
         t.memoire.putInt("bilan", b.total());
@@ -192,7 +193,7 @@ final class Humeur {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
                 "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
-                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage"))
+                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", Relations.CLE, "mange_t"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
     }
@@ -213,6 +214,7 @@ final class Humeur {
     /** Il vient de manger {@code s} : retenu parmi ses derniers repas. */
     static void repas(Travailleur t, ItemStack s) {
         t.memoire.putString("repas", Moral.retenir(t.memoire.getString("repas"), net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath()));
+        Relations.repas(t); // mangé avec d'autres : ils se rapprochent
     }
 
     /** Un ouvrier du même chef est mort : le deuil (moral −10 tout de suite, puis moins chaque jour). Crochet pour la case « Deuil, enterrement ». */
@@ -222,7 +224,7 @@ final class Humeur {
             if (t == mort) continue;
             // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là.
             int deja = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour() ? t.memoire.getInt("deuil_coup") : 0;
-            int coup = Moral.deuilCoup(deja);
+            int coup = Moral.deuilCoup(deja) * Relations.deuil(t, mort); // un ami pèse double, l'être aimé triple
             t.changerMoral(coup);
             t.memoire.putInt("deuil_coup", deja + coup);
             t.memoire.putLong("deuil_le", t.jour());
@@ -416,9 +418,12 @@ final class Humeur {
     /** Un collègue du même chef, pas au plus bas lui-même, l'a vu faire (à moins de 16 blocs, en vue) : une fois sur deux, il le dit au chef. */
     static void denoncer(Travailleur t, String quoi) {
         if (t.chef == null) return;
+        boolean dit = false;
         for (Travailleur x : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(16),
-                x -> x != t && t.chef.equals(x.chef) && x.mode != Travailleur.Mode.CHOMEUR && x.moral >= Reglages.actuel.moral_seuil_demission))
-            if (x.hasLineOfSight(t) && x.getRandom().nextBoolean()) { Courrier.ecrire(x, "denonce", t.prenom, quoi); return; }
+                x -> x != t && t.chef.equals(x.chef) && x.mode != Travailleur.Mode.CHOMEUR && x.hasLineOfSight(t))) {
+            Relations.vol(t, x); // tous ceux qui l'ont vu le voient d'un autre œil
+            if (!dit && x.moral >= Reglages.actuel.moral_seuil_demission && x.getRandom().nextBoolean()) { Courrier.ecrire(x, "denonce", t.prenom, quoi); dit = true; }
+        }
     }
 
     // --- Le sabotage ----------------------------------------------------------------------------------------------

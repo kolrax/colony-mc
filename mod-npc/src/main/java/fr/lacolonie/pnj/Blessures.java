@@ -109,8 +109,17 @@ final class Blessures {
         List<Travailleur> proches = blesse.level().getEntitiesOfClass(Travailleur.class, blesse.getBoundingBox().inflate(RAYON, 8, RAYON),
                         o -> o != blesse && blesse.chef.equals(o.chef) && o.isAlive() && !o.aTerre
                                 && o.distanceToSqr(blesse) <= RAYON * RAYON && peutAccourir(o))
-                .stream().sorted(Comparator.comparingDouble(o -> o.distanceToSqr(blesse))).limit(ACCOURENT).toList();
-        for (int i = 0; i < proches.size(); i++) Cerveau.lancer(proches.get(i), new Accourir(blesse, i));
+                .stream().sorted(Comparator.comparingDouble(o -> o.distanceToSqr(blesse))).limit(ACCOURENT).collect(java.util.stream.Collectors.toList());
+        // L'être aimé accourt aussi, de plus loin, et vient tout près (Relations).
+        Travailleur conjoint = Relations.conjoint(blesse);
+        if (conjoint != null && !proches.contains(conjoint) && !conjoint.aTerre && conjoint.distanceToSqr(blesse) <= Relations.INQUIET * Relations.INQUIET
+                && peutAccourir(conjoint)) proches.add(conjoint);
+        for (int i = 0; i < proches.size(); i++) {
+            Accourir a = new Accourir(blesse, i);
+            a.inquiet = proches.get(i) == conjoint;
+            Cerveau.lancer(proches.get(i), a);
+            Relations.aide(proches.get(i), blesse);
+        }
     }
 
     static boolean peutAccourir(Travailleur o) {
@@ -131,6 +140,8 @@ final class Blessures {
         final Travailleur blesse;
         final int rang;
         boolean arrive;
+        /** L'être aimé du blessé : il se tient tout près, et le dit (« couple_inquiet »). */
+        boolean inquiet;
 
         Accourir(Travailleur blesse, int rang) {
             super("accourir");
@@ -141,7 +152,8 @@ final class Blessures {
         /** Sa place autour du blessé : un tiers de tour chacun, à 2,5 blocs. */
         Vec3 place() {
             double a = rang * 2 * Math.PI / ACCOURENT + (blesse.getId() % 7);
-            return blesse.position().add(Math.cos(a) * 2.5, 0, Math.sin(a) * 2.5);
+            double r = inquiet ? 1.5 : 2.5;
+            return blesse.position().add(Math.cos(a) * r, 0, Math.sin(a) * r);
         }
 
         Actions.Etat tick(Travailleur t) {
@@ -152,7 +164,8 @@ final class Blessures {
                 if (d > 6 * 6) return Actions.Etat.ECHEC; // pas de passage jusqu'à lui
                 arrive = true;
                 t.getNavigation().stop();
-                if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
+                if (inquiet) Besoins.dire(t, "couple_inquiet", blesse.prenom);
+                else if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
             }
             t.getLookControl().setLookAt(blesse);
             return Actions.Etat.EN_COURS;

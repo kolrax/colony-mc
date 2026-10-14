@@ -75,7 +75,7 @@ final class Causeries {
             t.getNavigation().stop();
             t.getLookControl().setLookAt(o);
             if (t != c.a || age < c.prochaine) return Actions.Etat.EN_COURS;
-            if (c.suivante >= c.textes.size()) { c.fini = true; return Actions.Etat.OK; }
+            if (c.suivante >= c.textes.size()) { c.fini = true; Relations.causerie(c.a, c.b); return Actions.Etat.OK; }
             Travailleur qui = c.conv.repliques().get(c.suivante).deA() ? c.a : c.b;
             String texte = c.textes.get(c.suivante++);
             qui.dire(texte);
@@ -115,11 +115,26 @@ final class Causeries {
         t.prochaineCauserie = maintenant + ESSAI + t.getRandom().nextInt(ESSAI);
         if (sl.getServer() instanceof net.minecraft.gametest.framework.GameTestServer && !enEssai) return false;
         Long der = DERNIERE.get(t.chef);
-        if (der != null && maintenant >= der && maintenant - der < secondes * 20L) return false;
+        // Entre deux conversations de la colonie : deux amis n'attendent que la moitié du temps (Relations).
+        boolean tot = der != null && maintenant >= der && maintenant - der < secondes * 20L;
+        if (tot && (maintenant - der < secondes * 10L || !Relations.actifs())) return false;
         if (!oisif(t)) return false;
-        List<Travailleur> voisins = sl.getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(PRES),
+        List<Travailleur> autour = sl.getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(PRES),
                 o -> o != t && t.chef.equals(o.chef) && t.distanceToSqr(o) <= PRES * PRES && oisif(o) && t.hasLineOfSight(o));
+        // Deux ennemis ne causent pas ensemble : il se détourne, et le dit parfois.
+        Liens liens = Relations.de(t);
+        List<Travailleur> voisins = new ArrayList<>(), amis = new ArrayList<>();
+        Travailleur evite = null;
+        for (Travailleur o : autour) {
+            if (Relations.actifs() && Relations.brouilles(t, liens, o)) { evite = o; continue; }
+            boolean ami = liens.ami(o.getStringUUID());
+            if (tot && !ami) continue;
+            voisins.add(o);
+            if (ami) amis.add(o);
+        }
+        if (voisins.isEmpty() && evite != null && !t.enDanger()) Besoins.parler(t, "inimitie_evite", evite.prenom);
         if (voisins.isEmpty() || t.enDanger()) return false;
+        if (!amis.isEmpty() && t.getRandom().nextInt(3) > 0) voisins = amis; // un ami de préférence
         Travailleur o = voisins.get(t.getRandom().nextInt(voisins.size()));
         if (o.enDanger()) return false;
         int heure = (int) ((sl.getDayTime() + 6000) % 24000 / 1000);

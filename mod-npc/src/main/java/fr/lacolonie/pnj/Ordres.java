@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, LIENS }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -286,6 +286,10 @@ final class Ordres {
             l.intentions.add(Intention.SALUT);
         if (dit(n, "merci", "bravo", "bien joue", "beau travail", "bon travail", "excellent", "parfait"))
             l.intentions.add(Intention.MERCI);
+        // Ses amitiés, inimitiés, son couple (Relations) : « qui sont tes amis ? », « tu t'entends avec qui ? », « tu es en couple ? ».
+        if (dit(n, "tes amis", "ton ami", "ton amie", "tes amies", "tes copains", "ton copain", "ta copine", "tes camarades", "t entends", "tes ennemis",
+                "ton ennemi", "en couple", "ton couple", "ta moitie", "ton amoureux", "ton amoureuse", "tu aimes quelqu un", "ton coeur est pris"))
+            l.intentions.add(Intention.LIENS);
         l.ajouter = dit(n, "aussi", "en plus", "ajoute", "egalement", "de plus", "apres ca", "apres cela", "ensuite aussi");
 
         // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode (« au bois » est un lieu, pas une mission).

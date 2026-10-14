@@ -205,6 +205,13 @@ final class Messages {
                 "Je n'aime pas rapporter, mais tu dois le savoir : j'ai vu {0} {1}.",
                 "Un mot, chef, entre nous : j'ai vu {0} {1}. De mes yeux.");
         t("denonce", "fourbe", "Je n'en dis rien aux autres, chef, mais j'ai vu {0} {1}. Tu t'en souviendras ?");
+        // Amitiés et couples (Relations) : deux grands amis se mettent en couple.
+        m("couple", "Une bonne nouvelle",
+                "{0} et moi, nous avons décidé de partager notre vie. Le travail n'en souffrira pas, chef : bien au contraire.",
+                "Je tenais à te le dire moi-même : {0} et moi, désormais, nous faisons route ensemble.",
+                "Une nouvelle au poste : {0} et moi, nous sommes ensemble. Nous t'en remercions, c'est ici que nous nous sommes trouvés.");
+        t("couple", "peureux", "Je n'osais pas te le dire… {0} et moi, nous sommes ensemble. J'espère que tu n'y vois pas d'objection, chef.");
+        t("couple", "colerique", "Autant que tu l'apprennes de ma bouche : {0} et moi, c'est sérieux. Que personne n'y trouve à redire.");
         m("reprise_greve", "Je reprends le travail",
                 "J'ai touché mon dû ({0}). Merci, je reprends le travail.",
                 "Paie reçue : {0}. Je retourne à l'ouvrage.");

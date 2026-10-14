@@ -1,2 +1,53 @@
 # Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7). Fichier UTF-8.
 # FORMAT : exactement celui de vie.txt et remarques.txt (lecteur Vie.lire). Rempli par l'auteur.
+
+# Relations (provisoire, remplacé par l'auteur)
+# Clés lues par Relations et Causeries ; {nom} = le prénom de l'autre (sauf liens_reponse_aucun). Aucun accord de genre.
+
+[ami_salut]
+Le bonjour, {nom} ! Toujours fidèle au poste ?
+Ah, {nom}, te voir me remet du cœur à l'ouvrage.
+{nom} ! Garde-moi une place au feu ce soir.
+Salut à toi, {nom}. La journée passe mieux en ta compagnie.
+
+[ami_causerie]
+Toujours un plaisir de causer avec toi, {nom}.
+Merci, {nom}. Ça fait du bien de parler à quelqu'un de confiance.
+On remettra ça, {nom}. Allez, à l'ouvrage.
+Avec toi, {nom}, les heures filent sans qu'on y pense.
+
+[inimitie_pique]
+Tiens, {nom}. Encore à traîner dans mes pattes ?
+Je te vois, {nom}. Ne crois pas que j'oublie.
+{nom}, si tu travaillais autant que tu parles…
+Pousse-toi donc, {nom}, tu me caches le jour.
+
+[inimitie_evite]
+Causer avec {nom} ? Plutôt garder ma langue.
+Je n'ai rien à dire à {nom}. Rien du tout.
+Je vais m'asseoir ailleurs. {nom} me gâte l'air.
+Avec {nom}, mieux vaut se taire que se fâcher.
+
+[couple_annonce]
+{nom} et moi, nous avons décidé de faire route ensemble.
+Que tout le monde le sache : je partage désormais ma vie avec {nom}.
+Avec {nom}, c'est décidé. Nous serons ensemble.
+J'ai le cœur léger : {nom} et moi, nous voilà unis.
+
+[couple_tendresse]
+Prends soin de toi, {nom}. Tu es ce que j'ai de plus précieux.
+Je pense à toi à chaque coup d'outil, {nom}.
+Ce soir, {nom}, on regardera les étoiles ensemble.
+Te savoir près de moi, {nom}, me donne du courage.
+
+[couple_inquiet]
+{nom} ! Tiens bon, je suis là !
+Non, pas {nom}… Qu'on vienne vite l'aider !
+Reste avec moi, {nom}. Je ne te laisse pas.
+{nom}, regarde-moi. Tout ira bien, je te le promets.
+
+[liens_reponse_aucun]
+Je ne me suis encore lié à personne ici, chef.
+Des amis ? Pas encore. Je fais mon ouvrage, voilà tout.
+Je m'entends avec tout le monde, sans plus.
+Personne en particulier. Le temps le dira.

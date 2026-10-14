@@ -32,6 +32,17 @@ class MoralTest {
     }
 
     @Test
+    void lesAmitiesComptent() {
+        Moral.Etat b = bien();
+        Moral.Etat ami = new Moral.Etat(b.impayes(), b.payeRecemment(), b.repas(), b.lit(), b.toit(), b.blesse(), b.blesseVu(), b.joursDeuil(), b.pluie(),
+                b.orage(), b.bilansPluie(), b.beauTemps(), b.coupChef(), b.ouvriers(), b.depot(), 2);
+        Moral.Etat ennemi = new Moral.Etat(0, false, List.of(), true, true, false, false, -1, false, false, 0, false, false, 1, 0, -1);
+        assertEquals(0, Moral.bilan(b).de(Moral.Cause.AMITIES), "sans lien : rien");
+        assertEquals(2, Moral.bilan(ami).de(Moral.Cause.AMITIES), "en couple : +2");
+        assertEquals(Moral.Cause.AMITIES, Moral.bilan(ennemi).pire(), "un ennemi : la seule peine");
+    }
+
+    @Test
     void chaqueCauseCompte() {
         assertTrue(Moral.bilan(un(0, 2)).de(Moral.Cause.PAIE) < 0, "impayés");
         assertTrue(Moral.bilan(un(0, 3)).de(Moral.Cause.PAIE) < Moral.bilan(un(0, 1)).de(Moral.Cause.PAIE), "plus d'impayés, pire");

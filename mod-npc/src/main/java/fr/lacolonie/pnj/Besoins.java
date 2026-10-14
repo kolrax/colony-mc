@@ -95,7 +95,7 @@ final class Besoins {
      */
     static void litVole(Travailleur t, LivingEntity qui) {
         String nom = qui instanceof Travailleur o ? o.prenom : qui instanceof Player p ? p.getName().getString() : null;
-        if (qui instanceof Travailleur && t.lit != null) { t.litRefuse = t.lit; t.lit = null; }
+        if (qui instanceof Travailleur o && t.lit != null) { t.litRefuse = t.lit; t.lit = null; Relations.lit(t, o); }
         if (!Cerveau.parfois(t, "lit_perdu", DELAI)) return;
         t.changerMoral(Obeissance.LIT_VOLE);
         parler(t, "lit_vole", nom);
