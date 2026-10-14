@@ -203,7 +203,7 @@ public final class Actions {
         BlockState st = lvl.getBlockState(p);
         ItemStack outil = t.getMainHandItem();
         if (!st.requiresCorrectToolForDrops() || outil.isCorrectToolForDrops(st))
-            for (ItemStack d : Block.getDrops(st, lvl, p, lvl.getBlockEntity(p), t, outil)) t.ranger(d);
+            for (ItemStack d : Block.getDrops(st, lvl, p, lvl.getBlockEntity(p), t, outil)) { d = Humeur.trouve(t, d); if (!d.isEmpty()) t.ranger(d); } // un diamant gardé en cachette ?
         lvl.destroyBlock(p, false, t);
     }
 
@@ -893,7 +893,7 @@ public final class Actions {
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
-            boolean plein = false;
+            boolean plein = false, diamants = false;
             boolean[] garde = new boolean[garder.size()];
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
@@ -908,13 +908,16 @@ public final class Actions {
                     Metier.Commande ci = Metier.catalogue(t.metier, mi.id);
                     if (mi.quantite() && mi.livre < mi.nombre && ci != null && ci.objet != null && ci.objet.objet(s)) { credit = mi; break; }
                 }
+                boolean diamant = s.is(net.minecraft.world.item.Items.DIAMOND);
                 ItemStack reste = b.ranger(s);
                 t.inventaire.setItem(i, reste);
+                if (diamant && reste.getCount() < avant) diamants = true;
                 if (credit != null) credit.livre += avant - reste.getCount();
                 if (!reste.isEmpty()) plein = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
             t.nettoyerMissions();
+            if (diamants) Humeur.diamantsRendus(t); // celui qui ne triche pas s'en vante
             return plein ? echec("depot_plein") : Etat.OK;
         }
     }

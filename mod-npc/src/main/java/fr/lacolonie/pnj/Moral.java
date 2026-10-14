@@ -243,4 +243,34 @@ final class Moral {
     static boolean finRevolte(int moral, int seuilLettre, int impayesAuDebut, int impayes, boolean chefLa) {
         return moral >= seuilLettre || impayesAuDebut > 0 && impayes == 0 || !chefLa;
     }
+
+    // --- Le diamant gardé en cachette (cahier 14.3) et les excuses du chef ----------------------------------------
+
+    /**
+     * Le mineur trouve des diamants (une fois par jour du jeu au plus) : la chance qu'il en garde un en cachette.
+     * {@code reglage} : la chance d'un fourbe, en pour cent ({@code Reglages.caractere_diamant}). Le fourbe : souvent
+     * (une fois et demie plus au moral bas) ; le colérique : parfois, au moral bas seulement ; le peureux : presque
+     * jamais (au plus bas) ; le calme : jamais.
+     */
+    static double gardeDiamant(String temperament, int moral, int reglage) {
+        double c = reglage / 100.0 * switch (temperament) {
+            case "fourbe" -> moral < 40 ? 1.5 : 1;
+            case "colerique" -> moral < 40 ? 0.6 : 0;
+            case "peureux" -> moral < 15 ? 0.1 : 0;
+            default -> 0;
+        };
+        return Math.clamp(c, 0, 1);
+    }
+
+    /** Le chef lui demande s'il a gardé un diamant : la chance qu'il avoue (plus franc au bon moral). Le peureux avoue toujours. */
+    static double avoueDiamant(String temperament, int moral) {
+        double c = switch (temperament) { case "peureux" -> 1; case "calme" -> 0.8; case "colerique" -> 0.5; default -> 0.2; };
+        return Math.min(1, c + (moral >= 60 ? 0.2 : 0));
+    }
+
+    /** Une offense du chef (insulte, coup) que des excuses peuvent effacer en partie, pendant un jour du jeu. */
+    static final long EXCUSES_DELAI = 24000;
+
+    /** Des excuses à temps : il regagne la moitié du moral que l'offense lui a coûté (arrondie au-dessus). */
+    static int pardon(int perdu) { return (Math.max(0, perdu) + 1) / 2; }
 }

@@ -1217,7 +1217,7 @@ public class Travailleur extends PathfinderMob {
         vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
-            changerMoral(Obeissance.COUP_CHEF);
+            Humeur.offense(this, Obeissance.COUP_CHEF); // des excuses pourront en effacer la moitié
             memoire.putLong("coup_chef", level().getGameTime());
             souvenirs.noter(Souvenirs.Genre.COUP, jour(), IA.heure(this), "un coup");
             if (!aTerre && !muet() && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
@@ -1559,11 +1559,32 @@ public class Travailleur extends PathfinderMob {
         List<String> r = new ArrayList<>();
         // Une phrase courte (« Tu es un bon à rien ! », « Bravo, Raoul ! ») est toute comprise ; plus longue, il dit aussi ce qu'il n'a pas compris.
         reactionSuffit = l.texte.strip().split("\\s+").length <= 8;
+        // Des excuses (avant l'insulte de la même phrase, qui reste), et « tu as gardé un diamant ? » : le jeu seul sait la
+        // vérité, l'IA ne répond pas à sa place.
+        if (Ordres.excuses(l.texte)) {
+            String x = Humeur.excuses(this);
+            // Rien à pardonner : une réponse neutre, seulement si la phrase ne demandait rien d'autre (« Pardon, viens ici »).
+            if (x == null && l.missions.isEmpty() && l.faire.isEmpty() && l.intentions.stream().allMatch(i -> i == Ordres.Intention.EXCUSES || i == Ordres.Intention.SALUT))
+                x = Messages.corps(this, "souv_excuses_rien");
+            if (x != null) { r.add(x); reponseImposee = reactionSuffit = true; }
+        }
+        if (Ordres.diamantCache(l.texte)) {
+            // La lecture de l'IA aussi : rien à faire dans la question elle-même, seulement dans le reste de la phrase.
+            Ordres.Lecture seul = Ordres.lire(l.texte, metier);
+            l.missions.clear(); l.missions.addAll(seul.missions);
+            l.horsMetier.clear(); l.horsMetier.putAll(seul.horsMetier);
+            l.pourAutres.clear(); l.pourAutres.putAll(seul.pourAutres);
+            l.faire.clear(); l.faire.addAll(seul.faire);
+            if (!seul.intentions.contains(Ordres.Intention.SAC)) l.intentions.remove(Ordres.Intention.SAC);
+            l.intentions.add(Ordres.Intention.DIAMANT);
+            r.add(Humeur.questionDiamant(this));
+            reponseImposee = reactionSuffit = true;
+        }
         for (Souvenirs.Genre g : Souvenirs.lire(l.texte)) {
             if (g == Souvenirs.Genre.CADEAU && souvenirs.deja(g, j)) { /* l'objet tendu tout à l'heure est déjà noté */ }
             else souvenirs.noter(g, j, h, g == Souvenirs.Genre.CADEAU ? Souvenirs.PRESENT : l.texte);
             switch (g) {
-                case INSULTE -> { changerMoral(Obeissance.INSULTE); r.add(selon("insulte", null, "souv_insulte")); }
+                case INSULTE -> { Humeur.offense(this, Obeissance.INSULTE); r.add(selon("insulte", null, "souv_insulte")); }
                 case COMPLIMENT -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_compliment")); }
                 case CADEAU -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(selon("cadeau", null, "souv_cadeau_content")); }
                 case PROMESSE -> r.add(Messages.corps(this, "souv_promesse"));

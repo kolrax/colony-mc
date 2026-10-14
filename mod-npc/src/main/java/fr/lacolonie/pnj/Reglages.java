@@ -83,6 +83,8 @@ public class Reglages {
     public double liens_vitesse = 1.0;
     /** Deux grands amis depuis deux jours peuvent se mettre en couple. */
     public boolean liens_couples = true;
+    /** Un mineur fourbe qui trouve des diamants en garde un en cachette, au plus un par jour du jeu : chance en pour cent (le colérique au moral bas : à peine plus de la moitié ; jamais le calme ; 0 = jamais). */
+    public int caractere_diamant = 50;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -148,6 +150,7 @@ public class Reglages {
         deuil_secondes_enterrement = Math.clamp(deuil_secondes_enterrement, 1, 300);
         deuil_rayon = Math.clamp(deuil_rayon, 8, 128);
         liens_vitesse = Double.isNaN(liens_vitesse) ? 1.0 : Math.clamp(liens_vitesse, 0.1, 10.0);
+        caractere_diamant = Math.clamp(caractere_diamant, 0, 100);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);

@@ -130,7 +130,7 @@ final class Obeissance {
     /** Une simple question ou politesse (« pourquoi ? », « ça va ? », « merci ») : l'ordre en suspens reste en suspens. */
     static boolean question(Ordres.Lecture l) {
         return sansOrdre(l) && l.faire.isEmpty() && !l.intentions.isEmpty() && l.intentions.stream().allMatch(i -> java.util.EnumSet.of(Ordres.Intention.ETAT,
-                Ordres.Intention.AVANCEMENT, Ordres.Intention.POURQUOI, Ordres.Intention.AIDE, Ordres.Intention.SALUT, Ordres.Intention.MERCI, Ordres.Intention.LIENS).contains(i));
+                Ordres.Intention.AVANCEMENT, Ordres.Intention.POURQUOI, Ordres.Intention.AIDE, Ordres.Intention.SALUT, Ordres.Intention.MERCI, Ordres.Intention.LIENS, Ordres.Intention.DIAMANT, Ordres.Intention.EXCUSES).contains(i));
     }
 
     /** Se jeter (« saute », « jette-toi »…) : vers une falaise ou un ravin, seul ce verbe est mortel. */

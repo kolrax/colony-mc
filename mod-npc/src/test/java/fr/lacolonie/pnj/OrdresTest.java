@@ -256,4 +256,32 @@ class OrdresTest {
             pasIntention(x, Intention.ENTERRER);
         assertFalse(Obeissance.sansOrdre(lire("On va enterrer Bertrand", "mineur")), "c'est un ordre");
     }
+
+    /** « Tu as gardé un diamant ? » est une question (cahier 14.3), « garde 10 diamants » un ordre ; « pardon » des excuses, « demande pardon » un ordre. */
+    @Test
+    void diamantCacheEtExcuses() {
+        for (String p : List.of("Tu as gardé un diamant ?", "As-tu caché des diamants ?", "Bertrand, tu n'as pas gardé un diamant pour toi ?",
+                "Tu caches quelque chose ?", "Qu'est-ce que tu me caches ?", "Est-ce que tu as pris un diamant ?", "Tu caches un diamant ?")) {
+            assertTrue(Ordres.diamantCache(p), p);
+            Ordres.Lecture l = lire(p, "mineur");
+            assertTrue(l.intentions.contains(Intention.DIAMANT) && l.missions.isEmpty() && l.faire.isEmpty() && !l.intentions.contains(Intention.SAC), p);
+        }
+        for (String p : List.of("Garde 10 diamants en stock", "Ramène 3 diamants", "Cache-toi !", "Tu as trouvé des diamants ?", "Montre ton sac"))
+            assertFalse(Ordres.diamantCache(p), p);
+        assertFalse(lire("Garde 10 diamants en stock", "mineur").missions.isEmpty());
+        for (String p : List.of("Pardon, Bertrand.", "Excuse-moi.", "Désolé, je me suis emporté.", "Je te demande pardon.", "Toutes mes excuses, Raoul."))
+            assertTrue(Ordres.excuses(p) && lire(p, "mineur").intentions.contains(Intention.EXCUSES) && lire(p, "mineur").faire.isEmpty(), p + " " + lire(p, "mineur").faire);
+        for (String p : List.of("Demande pardon !", "Excuse-toi tout de suite.", "Bonjour Raoul", "Tu es désolant", "Je regrette de t'avoir embauché",
+                "Pas de pardon pour les voleurs !", "Je suis désolé pour Jean", "Excuse-moi, tu peux rentrer ?"))
+            assertFalse(Ordres.excuses(p), p);
+        // Relecture : une quantité n'est pas la question ; « monter la garde » non plus ; seule la proposition de la question est vidée.
+        for (String p : List.of("Tu as pris 3 diamants ?", "Tu as monté la garde près des diamants ?", "J'ai monté la garde près des diamants"))
+            assertFalse(Ordres.diamantCache(p), p);
+        Ordres.Lecture l = lire("Tu as gardé un diamant ? Ramène 10 fers.", "mineur");
+        assertTrue(l.intentions.contains(Intention.DIAMANT) && l.missions.size() == 1 && l.missions.get(0).nombre() == 10, "la mission du reste demeure : " + l.missions);
+        assertTrue(Ordres.diamantCache(l.texte), "la question reste dans le texte : " + l.texte);
+        assertTrue(lire("Tu caches un diamant dans ton sac ?", "mineur").intentions.contains(Intention.SAC), "« sac » écrit : il le montre");
+        assertTrue(Obeissance.question(lire("Tu as gardé un diamant ?", "mineur")) && Obeissance.question(lire("Pardon, Bertrand.", "mineur")), "des questions, pas des ordres");
+        assertEquals("lune", Impossible.demande("Pardon, va sur la lune", lire("Pardon, va sur la lune", "mineur")), "des excuses ne rendent pas l'impossible faisable");
+    }
 }

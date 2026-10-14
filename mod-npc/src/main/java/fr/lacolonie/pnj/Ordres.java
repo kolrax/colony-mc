@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, ENTERRER, LIENS }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI,
+        /** « Tu as gardé un diamant ? », « tu caches quelque chose ? » (cahier 14.3). */ DIAMANT,
+        /** « Pardon », « excuse-moi », « désolé » : le chef s'excuse (après une insulte ou un coup). */ EXCUSES, ENTERRER, LIENS }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -202,6 +204,16 @@ final class Ordres {
 
     /** Lit un message adressé à un ouvrier de ce métier. */
     static Lecture lire(String texte, String metier) {
+        // « Tu as gardé un diamant ? » : une question, lue à part ; le reste de la phrase (« … Et ramène du fer. ») se lit comme d'habitude.
+        if (diamantCache(texte)) {
+            List<String> question = new ArrayList<>(), reste = new ArrayList<>();
+            for (String p : PROPOSITIONS.split(texte.strip())) (diamantCache(p) ? question : reste).add(p);
+            Lecture l = lire(String.join(" ", reste), metier);
+            l.intentions.add(Intention.DIAMANT);
+            if (dit(normaliser(texte), "sac")) l.intentions.add(Intention.SAC); // « ton sac » écrit : il le montre
+            l.texte = (String.join(" ", question) + " " + l.texte).strip();
+            return l;
+        }
         Lecture l = new Lecture();
         // Les ordres longs d'abord : la conséquence d'une règle (« s'il pleut, rentre ») ne se fait pas tout de suite.
         OrdresLongs.Lu lu = OrdresLongs.lire(texte);
@@ -302,6 +314,7 @@ final class Ordres {
         // Une mission comprise le remet au travail : « escorte-moi » ou « viens avec 10 fers » ne veulent pas dire « suis-moi ».
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);
+        if (excuses(texte)) l.intentions.add(Intention.EXCUSES);
         l.mortel = Obeissance.mortel(texte);
         // « Va aider tes camarades à la mine » n'est pas une question sur ses amis : seulement une question, ou une phrase qui
         // lui parle de lui (« tu es en couple ») sans rien d'autre à faire.
@@ -309,6 +322,42 @@ final class Ordres {
                 || Obeissance.sansOrdre(l) && l.faire.isEmpty() && dit(n, "tu", "t", "toi")))
             l.intentions.remove(Intention.LIENS);
         return l;
+    }
+
+    /** Le chef demande s'il a gardé un diamant, s'il cache quelque chose (une question, pas « garde 10 diamants »). */
+    static final Pattern DIAMANT_CACHE = Pattern.compile(" (?:tu as|t as|as tu|n as tu pas|tu n as pas|tu aurais|aurais tu)"
+            + " (?:(?:pas|bien|encore|deja|vraiment|point|jamais) ){0,2}(?:garde|gardes|garder|cache|caches|cacher|pris|vole|empoche|mis de cote)(?: \\w+){0,3} diamants? "
+            + "| (?:tu (?:me |nous )?caches|caches tu)(?: \\w+){0,3} diamants? ");
+    static final Pattern CACHE_QUOI = Pattern.compile(" (?:tu (?:me |nous )?caches (?:quelque chose|quoi|un truc)|(?:me |nous )?caches tu (?:quelque chose|un truc)"
+            + "|que (?:me |nous )?caches tu|qu est ce que tu (?:me |nous )?caches) ");
+    /** Les propositions d'un message : coupées après « . », « ! », « ? » ou « ; ». */
+    static final Pattern PROPOSITIONS = Pattern.compile("(?<=[.!?;…])\\s+");
+
+    static boolean diamantCache(String texte) {
+        String n = normaliser(texte);
+        if (CACHE_QUOI.matcher(n).find()) return true;
+        Matcher m = DIAMANT_CACHE.matcher(n);
+        while (m.find()) {
+            boolean nombre = false; // « tu as pris 3 diamants » : une quantité, pas la question du diamant gardé
+            for (String w : m.group().strip().split(" ")) nombre |= w.matches("\\d+") || NOMBRES.containsKey(w) && !w.equals("un") && !w.equals("une");
+            if (!nombre) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Le chef s'excuse (« pardon », « excuse-moi », « désolé ») ; pas « demande pardon » ni « excuse-toi », qui sont des
+     * ordres, ni « pas de pardon », ni « désolé pour Jean ». « Pardon » ou « excuse-moi » devant une question (« Excuse-moi,
+     * tu peux rentrer ? ») ne sont qu'une politesse.
+     */
+    static boolean excuses(String texte) {
+        String n = normaliser(texte);
+        if (dit(n, "pas de pardon", "sans pardon", "desole pour", "desolee pour", "desoles pour")) return false;
+        if (dit(n, "demande pardon", "demander pardon", "dis pardon", "demande moi pardon", "dis moi pardon", "excuse toi", "excusez vous", "presente tes excuses")
+                && !dit(n, "je te demande pardon", "je vous demande pardon")) return false;
+        if (dit(n, "pardonne moi", "pardonnez moi", "je m excuse", "je te demande pardon", "je vous demande pardon", "mes excuses", "toutes mes excuses",
+                "desole", "desolee", "je suis desole", "je suis desolee")) return true;
+        return dit(n, "pardon", "excuse moi", "excusez moi") && !n.contains("?");
     }
 
     /**
