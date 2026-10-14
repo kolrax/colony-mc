@@ -43,14 +43,33 @@ public class TestsCaractere {
 
     static boolean aDit(Travailleur t, String cle) { return t.paroles.stream().anyMatch(p -> Vie.vient(cle, p)); }
 
-    /** Un mineur de ce caractère, « ramène 2 diamants », trois minerais de diamant à portée. */
+    /** Un mineur de ce caractère, chargé de diamants, trois minerais de diamant à portée. */
     static Travailleur mineur(GameTestHelper h, int coin, String caractere, BlockPos[] b) {
         Travailleur t = TestsOutils.ouvrier(h, "mineur", coin, b, new ItemStack(Items.IRON_PICKAXE));
         t.temperament = caractere;
         t.moral = 50;
-        t.mission("diamant", "quantite", 2);
+        t.mission("diamant", "stock", 64);
         for (int k = 1; k <= 3; k++) h.getLevel().setBlockAndUpdate(b[0].west(k).south(2), Blocks.DIAMOND_ORE.defaultBlockState());
         return t;
+    }
+
+    /**
+     * Les trois minerais extraits, il est envoyé au dépôt (près du poste, il n'y va de lui-même que sac plein) ; puis
+     * {@code fin} vérifie le résultat.
+     */
+    static void apresLeDepot(GameTestHelper h, Travailleur t, BlockPos[] b, Runnable fin) {
+        boolean[] envoye = {false};
+        h.succeedWhen(() -> {
+            if (!envoye[0]) {
+                for (int k = 1; k <= 3; k++)
+                    h.assertTrue(h.getLevel().getBlockState(b[0].west(k).south(2)).isAir(), "il extrait les trois diamants (" + TestsJeu.etat(t, b[0]) + ")");
+                envoye[0] = true;
+                Cerveau.lancer(t, new Actions.Deposer(java.util.List.of()));
+            }
+            h.assertTrue(!(t.action instanceof Actions.Deposer), "il dépose (" + TestsJeu.etat(t, b[0]) + ")");
+            fin.run();
+            t.discard();
+        });
     }
 
     /** Un fourbe trouve trois diamants : il en garde un, un seul, dans sa cachette (en marmonnant) ; les deux autres vont au dépôt. */
@@ -59,12 +78,11 @@ public class TestsCaractere {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = mineur(h, 230, "fourbe", b);
         Bureau.Entite d = TestsBucheron.depot(t);
-        h.succeedWhen(() -> {
+        apresLeDepot(h, t, b, () -> {
             h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND) == 2, "deux diamants au dépôt (" + TestsBucheron.compte(d, Items.DIAMOND) + ", " + TestsJeu.etat(t, b[0]) + ")");
             h.assertTrue(diamantsCaches(t) == 1, "un seul diamant caché (" + t.memoire.get("butin") + ")");
             h.assertTrue(t.compter(Actions.Filtre.de("minecraft:diamond")) == 0, "aucun dans son sac");
             h.assertTrue(aDit(t, "caractere_diamant_cache"), "il marmonne (" + t.paroles + ")");
-            t.discard();
         });
     }
 
@@ -74,11 +92,10 @@ public class TestsCaractere {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = mineur(h, 231, "calme", b);
         Bureau.Entite d = TestsBucheron.depot(t);
-        h.succeedWhen(() -> {
-            h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND) >= 2, "les diamants au dépôt (" + TestsBucheron.compte(d, Items.DIAMOND) + ", " + TestsJeu.etat(t, b[0]) + ")");
+        apresLeDepot(h, t, b, () -> {
+            h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND) == 3, "les trois diamants au dépôt (" + TestsBucheron.compte(d, Items.DIAMOND) + ", " + TestsJeu.etat(t, b[0]) + ")");
             h.assertTrue(diamantsCaches(t) == 0, "rien de caché (" + t.memoire.get("butin") + ")");
             h.assertTrue(aDit(t, "caractere_diamant_rendu"), "il s'en vante (" + t.paroles + ")");
-            t.discard();
         });
     }
 
