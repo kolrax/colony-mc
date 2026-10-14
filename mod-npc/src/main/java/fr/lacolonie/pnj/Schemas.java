@@ -33,8 +33,8 @@ final class Schemas {
     enum Genre { VIDE, SOLIDE, FRAGILE, COMPAGNON, IGNORE }
 
     /** Les mots d'un identifiant de bloc fragile : ce qui tient à un autre bloc, ou se casse si on le bouscule. */
-    static final List<String> FRAGILES = List.of("torch", "door", "pane", "glass", "ladder", "sign", "button", "lever", "carpet", "rail",
-            "flower", "sapling", "lantern", "banner", "bed", "pressure_plate", "redstone_wire", "repeater", "comparator", "tripwire",
+    static final List<String> FRAGILES = List.of("torch", "door", "pane", "ladder", "sign", "button", "lever", "carpet", "rail",
+            "flower", "sapling", "lantern", "banner", "pressure_plate", "redstone_wire", "repeater", "comparator", "tripwire", "_bed",
             "vine", "candle", "tulip", "poppy", "dandelion", "orchid", "allium", "bluet", "daisy", "cornflower", "lily", "fern",
             "short_grass", "tall_grass", "dead_bush", "mushroom", "potted", "flower_pot", "head", "skull", "chain", "bell", "scaffolding",
             "cobweb", "snow", "item_frame", "campfire", "anvil", "lectern", "brewing_stand", "cake", "sea_pickle", "trapdoor");
@@ -62,8 +62,27 @@ final class Schemas {
         if (IGNORES.contains(id)) return Genre.IGNORE;
         if (propriete(etat, "half").equals("upper") || propriete(etat, "part").equals("head")) return Genre.COMPAGNON;
         String nom = id.substring(id.indexOf(':') + 1);
+        if (Set.of("bedrock", "sea_lantern", "jack_o_lantern", "snow_block", "glass", "tinted_glass").contains(nom) || nom.endsWith("_stained_glass")) return Genre.SOLIDE;
         for (String f : FRAGILES) if (nom.contains(f)) return Genre.FRAGILE;
         return Genre.SOLIDE;
+    }
+
+    /** Les propriétés d'un bloc qui disent combien d'objets il a coûté (4 cornichons de mer, 3 bougies, 8 couches de neige…). */
+    static final Set<String> NOMBRES = Set.of("pickles", "candles", "eggs", "flower_amount", "layers");
+    /**
+     * Les propriétés remises au plus bas à la pose : sinon un plan copierait gratuitement ce qui se gagne (une culture mûre, un
+     * chaudron plein, un composteur, une ruche pleine de miel, une ancre chargée, un gâteau entamé).
+     */
+    static final Set<String> A_ZERO = Set.of("age", "level", "honey_level", "charges", "bites", "hatch", "stage", "moisture", "distance");
+
+    /** Combien d'objets coûte ce bloc : la valeur d'une propriété de {@link #NOMBRES}, 2 pour une double dalle, sinon 1. */
+    static int nombre(String etat) {
+        if (propriete(etat, "type").equals("double") && id(etat).endsWith("_slab")) return 2;
+        for (String k : NOMBRES) {
+            String v = propriete(etat, k);
+            if (!v.isEmpty()) try { return Math.max(1, Integer.parseInt(v)); } catch (NumberFormatException e) { return 1; }
+        }
+        return 1;
     }
 
     /** Un bloc du schéma : sa place relative et son numéro dans la palette. */
@@ -73,15 +92,24 @@ final class Schemas {
      * L'ordre de pose : d'abord tout le solide, couche par couche de bas en haut (dans chaque couche, le dégagement de l'air
      * puis les blocs, en serpentant), puis le fragile, couche par couche aussi. Les compagnons et ce qui est ignoré n'y sont pas.
      */
-    static List<Bloc> ordre(List<Bloc> blocs, List<String> palette) {
+    static List<Bloc> ordre(List<Bloc> blocs, List<String> palette) { return ordre(blocs, genres(palette)); }
+
+    /** La sorte de chaque état de la palette, calculée une fois. */
+    static Genre[] genres(List<String> palette) {
+        Genre[] g = new Genre[palette.size()];
+        for (int i = 0; i < g.length; i++) g[i] = genre(palette.get(i));
+        return g;
+    }
+
+    static List<Bloc> ordre(List<Bloc> blocs, Genre[] genres) {
         List<Bloc> r = new ArrayList<>();
         for (Bloc b : blocs) {
-            Genre g = genre(palette.get(b.etat()));
+            Genre g = genres[b.etat()];
             if (g != Genre.COMPAGNON && g != Genre.IGNORE) r.add(b);
         }
-        r.sort(Comparator.<Bloc>comparingInt(b -> genre(palette.get(b.etat())) == Genre.FRAGILE ? 1 : 0)
+        r.sort(Comparator.<Bloc>comparingInt(b -> genres[b.etat()] == Genre.FRAGILE ? 1 : 0)
                 .thenComparingInt(Bloc::y)
-                .thenComparingInt(b -> genre(palette.get(b.etat())) == Genre.VIDE ? 0 : 1)
+                .thenComparingInt(b -> genres[b.etat()] == Genre.VIDE ? 0 : 1)
                 .thenComparingInt(Bloc::x)
                 .thenComparingInt(b -> (b.x() & 1) == 0 ? b.z() : -b.z()));
         return r;
@@ -124,6 +152,9 @@ final class Schemas {
     }
 
     /** Le nom qu'on dit d'un fichier : « tour_de_guet.nbt » → « tour de guet ». */
+    /** Un nom de fichier qu'on peut dire (pas de « | », qui sépare les champs d'un ordre retenu). */
+    static boolean disable(String nom) { return !nom.isBlank() && !nom.contains("|"); }
+
     static String nom(String fichier) {
         String n = fichier.replace('\\', '/');
         n = n.substring(n.lastIndexOf('/') + 1);

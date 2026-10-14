@@ -122,4 +122,29 @@ class SchemasTest {
         RepertoireTest.demande("Où en est le chantier ?", "macon", "etat_chantier");
         RepertoireTest.demande("Construis la cabane ici", "mineur", "-");
     }
+
+    /** Relecture : un plan ne fabrique rien gratuitement (les cornichons, bougies, œufs, fleurs, couches se paient chacun). */
+    @Test
+    void cequeCouteUnBloc() {
+        assertEquals(4, Schemas.nombre("minecraft:sea_pickle[pickles=4,waterlogged=true]"));
+        assertEquals(3, Schemas.nombre("minecraft:candle[candles=3,lit=false,waterlogged=false]"));
+        assertEquals(4, Schemas.nombre("minecraft:turtle_egg[eggs=4,hatch=0]"));
+        assertEquals(4, Schemas.nombre("minecraft:pink_petals[facing=north,flower_amount=4]"));
+        assertEquals(8, Schemas.nombre("minecraft:snow[layers=8]"));
+        assertEquals(2, Schemas.nombre("minecraft:oak_slab[type=double,waterlogged=false]"));
+        assertEquals(1, Schemas.nombre("minecraft:oak_slab[type=bottom,waterlogged=false]"));
+        assertEquals(1, Schemas.nombre("minecraft:stone"));
+        for (String k : List.of("age", "level", "honey_level", "charges", "bites")) assertTrue(Schemas.A_ZERO.contains(k), k + " remis à zéro");
+    }
+
+    @Test
+    void fragilesSansMeprise() {
+        assertEquals(Genre.SOLIDE, Schemas.genre("minecraft:bedrock"));
+        assertEquals(Genre.SOLIDE, Schemas.genre("minecraft:sea_lantern"));
+        assertEquals(Genre.SOLIDE, Schemas.genre("minecraft:jack_o_lantern[facing=north]"));
+        assertEquals(Genre.FRAGILE, Schemas.genre("minecraft:lantern[hanging=false,waterlogged=false]"));
+        assertEquals(Genre.FRAGILE, Schemas.genre("minecraft:white_bed[facing=north,occupied=false,part=foot]"));
+        assertFalse(Schemas.disable("tour|bis"), "« | » sépare les champs d'un ordre");
+        assertNull(Schemas.choisir("construis-moi un coffre", List.of("cabane")), "pas le seul plan connu à la place d'un coffre");
+    }
 }

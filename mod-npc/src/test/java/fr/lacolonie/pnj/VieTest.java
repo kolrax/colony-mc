@@ -15,13 +15,30 @@ class VieTest {
         // Strict : une seule erreur dans le fichier livré fait échouer le test (le jeu, lui, ignorerait la section).
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
         assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size()
-                + Vie.lire(Repertoire.lignes("/defense.txt")).size());
+                + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/macon.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
         for (var e : banque.entrySet())
             for (Vie.Replique r : e.getValue())
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+    }
+
+    /** Lot 10 : les répliques du maçon, lues strictement et chargées avec les autres ; sans {plan} ni {objet}, toujours de quoi dire. */
+    @Test
+    void maconSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/macon.txt"));
+        for (String cle : List.of("macon_construire_ok", "macon_pause", "macon_reprise", "macon_abandon", "macon_sans_chantier", "macon_fini", "macon_manque",
+                "macon_approvisionne", "macon_plan_create", "macon_plan_illisible", "macon_plan_loin")) {
+            assertTrue(banque.containsKey(cle), cle);
+            assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
+            assertNotNull(Vie.tirer(cle, "colerique", Map.of("chef", "Kolrax"), () -> 0.9), cle + " sans variable");
+        }
+        for (var e : banque.entrySet())
+            for (Vie.Replique r : e.getValue())
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+        String x = Vie.tirer("macon_fini", "calme", Map.of("chef", "Kolrax", "plan", "cabane"), () -> 0.1);
+        assertFalse(x.contains("{"), "variables remplies : " + x);
     }
 
     /** Lot 9 : les répliques de la défense, lues strictement et chargées avec les autres. */

@@ -724,7 +724,7 @@ final class Consignes {
         BlockPos ici = t.blockPosition();
         return switch (sujet) {
             case "heure" -> new Fait("Il est " + IA.heure(t) + " h.", null);
-            case "schemas" -> new Fait(Macon.schemasTexte(), null);
+            case "schemas" -> new Fait(Macon.schemasTexte(t), null);
             case "chantier" -> new Fait(Macon.etatTexte(t), null);
             case "meteo" -> new Fait(l.isThundering() ? "Il y a de l'orage : mieux vaut rester à l'abri." : l.isRaining()
                     ? (l.getBiome(ici).value().coldEnoughToSnow(ici) ? "Il neige." : "Il pleut.") : l.isDay() ? "Il fait beau." : "La nuit est claire.", null);

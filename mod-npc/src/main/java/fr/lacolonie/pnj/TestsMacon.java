@@ -165,6 +165,9 @@ public class TestsMacon {
                     for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++)
                         h.assertTrue(l.getBlockState(o.offset(x, 0, z)).is(Blocks.COBBLESTONE), "le sol est fait");
                     h.assertTrue(l.getBlockState(o.offset(0, 2, 0)).isAir(), "il n'a pas bâti au-dessus du manque");
+                    // Relecture : le manque ne bloque pas tout ; il a bâti les murs de planches, et le toit sur eux.
+                    h.assertTrue(l.getBlockState(o.offset(1, 1, 0)).is(Blocks.OAK_PLANKS) && l.getBlockState(o.offset(1, 2, 0)).is(Blocks.OAK_PLANKS),
+                            "les planches sont posées malgré le manque de bûches");
                     d.depot.addItem(new ItemStack(Items.OAK_LOG, 4));
                 },
                 () -> {
@@ -299,5 +302,34 @@ public class TestsMacon {
         c.putInt("oy", o.getY());
         c.putInt("oz", o.getZ());
         return c;
+    }
+
+    /** Relecture : « abandonne le chantier » : le chantier est oublié, et les matériaux qu'il portait retournent au dépôt. Coin 305. */
+    @GameTest(template = "vide", timeoutTicks = 2400, batch = "macon")
+    public static void abandonRendLesMateriaux(GameTestHelper h) {
+        ecrire(CUBE, cube());
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        BlockPos base = TestsJeu.sol(h, 305 * 400, 130000);
+        Vec3 c = Vec3.atBottomCenterOf(base);
+        chef.moveTo(c.x, c.y, c.z + 3);
+        Travailleur g = TestsJeu.employe(h, "macon", base, c.add(-1.5, 0, 2.5), ItemStack.EMPTY);
+        g.chef = chef.getUUID();
+        g.prenom = "Gautier";
+        g.forcerChunk();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        garnir(d, true);
+        Macon.commencer(g, "config:" + CUBE, "essai cube", base.offset(0, 0, 8), 0, 0, null);
+        Travailleur[] e = {g};
+        TestsIA.etapes(h, chef, e,
+                () -> h.assertTrue(Macon.chantier(g).getInt("i") >= 3 && g.compter(Actions.Filtre.de("minecraft:oak_planks")) > 0,
+                        "il porte des planches : " + Macon.chantier(g) + " (" + TestsJeu.etat(g, base) + ")"),
+                () -> g.parler(chef, "Abandonne le chantier"),
+                () -> {
+                    h.assertTrue(Macon.chantier(g).isEmpty(), "chantier oublié : " + IA.echange(g));
+                    h.assertTrue(g.compter(Actions.Filtre.de("minecraft:oak_planks")) == 0 && g.compter(Actions.Filtre.de("minecraft:cobblestone")) == 0,
+                            "rien gardé sur lui : " + TestsJeu.etat(g, base));
+                    h.assertTrue(TestsBucheron.compte(d, Items.OAK_PLANKS) > 0, "les planches sont au dépôt");
+                },
+                () -> TestsRepertoire.fin(e));
     }
 }

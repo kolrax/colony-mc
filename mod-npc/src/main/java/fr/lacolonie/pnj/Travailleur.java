@@ -970,7 +970,8 @@ public class Travailleur extends PathfinderMob {
 
     void finirAction(String r) {
         // Arrivé où il allait : un vrai progrès. Échoué à y aller : le temps « coincé » compte, même à l'arrêt (Coince).
-        if ("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) coince.echec(level().getGameTime());
+        if (("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) && !(action instanceof Actions.Casser k && k.chantier))
+            coince.echec(level().getGameTime());
         else if ("ok".equals(r) && action != null && action.aMarche()
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());

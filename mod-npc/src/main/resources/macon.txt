@@ -1,0 +1,261 @@
+# Le maçon : il bâtit un plan (schéma) avec les matériaux du dépôt de son poste (lot 10). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt, remarques.txt, relations.txt et defense.txt (même lecteur possible : Vie.lire).
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#
+# - « [cle] » ouvre une section. Clé en minuscules, sans accent ni espace (lettres, chiffres et « _ »),
+#   unique dans ce fichier ET différente de toutes les clés de vie.txt, remarques.txt, relations.txt et defense.txt
+#   (préfixe macon_).
+# - Une réplique par ligne, courte (bulle en jeu, 90 caractères au plus, variables remplies). Préfixe facultatif
+#   « temperament: » (calme:, peureux:, fourbe:, colerique: ; aucun autre). Chaque section a au moins huit répliques
+#   sans préfixe et au moins deux par tempérament.
+# - Tirage proposé (comme vie.txt) : une fois sur deux une réplique du tempérament du PNJ, sinon une commune.
+# - Les caractères sont les quatre tempéraments du mod : calme (posé, digne), peureux (timide),
+#   fourbe (rusé, rancunier), colerique (soupe au lait, mais vite apaisé).
+#
+# VARIABLES (seulement celles-ci)
+#   {chef}   nom du chef de la colonie (partout)
+#   {plan}   nom de l'ouvrage, tel que le donne le plan (« cabane »), dans macon_construire_ok et macon_fini seulement ;
+#            toujours écrit entre guillemets « {plan} », comme dans les lettres
+#   {objet}  le matériau qui manque, tel qu'on le dit (« des planches de chêne »), dans macon_manque seulement ;
+#            toujours après deux-points, pour ne pas dépendre de l'article
+# Les répliques avec une variable ne sortent que si la valeur est connue ; chaque section garde au moins huit
+# répliques communes sans {plan} ni {objet}.
+#
+# ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle, sur le chef ni sur l'ouvrage.
+# Aucun fait inventé : on ne nomme ni le nombre de pierres, ni les blocs sautés, ni l'endroit exact ; le code les
+# donne dans les lettres (Messages : materiau_manque, chantier_fini, chantier_gene, schema_perdu), pas ici.
+#
+# CLÉS
+#   macon_construire_ok    le chef lui demande de bâtir un ouvrage ({plan}) à un endroit : il accepte
+#   macon_pause            le chef lui dit d'arrêter un moment : il pose ses outils, le chantier attend
+#   macon_reprise          le chef lui dit de reprendre le chantier en attente
+#   macon_abandon          le chef abandonne le chantier : ce qui est bâti reste bâti
+#   macon_sans_chantier    on lui parle de chantier (pause, reprise, abandon, travail) mais il n'en a aucun
+#   macon_fini             l'ouvrage ({plan}) est bâti
+#   macon_manque           il lui manque un matériau ({objet}) au dépôt : le chantier attend
+#   macon_approvisionne    il va prendre des matériaux au dépôt du poste
+#   macon_plan_create      le chef lui a donné un plan de Create déjà placé : il le bâtit là où il est placé
+#   macon_plan_illisible   ce plan de Create, il n'arrive pas à le lire (il faut l'envoyer à la table d'abord)
+#   macon_plan_loin        le chantier (endroit montré ou plan placé) est trop loin du poste : il refuse
+# ------------------------------------------------------------
+
+# ============================================================
+# ORDRES DU CHEF
+# ============================================================
+
+[macon_construire_ok]
+Entendu, {chef}. Je bâtis ici, avec ce qu'il y a au dépôt.
+Un nouveau chantier ! Je prends mes outils.
+C'est noté. Je commence par le bas, comme il se doit.
+Bien, chef. Je sors le plan et je m'y mets.
+D'accord. Pierre après pierre, ce sera debout.
+Je m'en occupe. Laisse de quoi bâtir au dépôt, surtout.
+À vos ordres. Je trace les fondations.
+Ici ? Bon endroit. Je commence tout de suite.
+Va pour « {plan} ». Je m'y mets, chef.
+« {plan} », ici même ? C'est parti.
+calme: Bien. Je regarde le plan, puis je pose la première pierre.
+calme: « {plan} », à cet endroit. Je prends mon temps, ce sera solide.
+peureux: Je… je vais essayer. Si je me trompe, tu me le diras ?
+peureux: Tout ça ? D'accord. Une pierre à la fois, ça ira.
+fourbe: Je bâtis. Et quand on demandera qui a fait ça, on dira mon nom.
+fourbe: Bien sûr, chef. Un bel ouvrage, ça vaut bien une petite prime, non ?
+colerique: Enfin du vrai travail ! Écartez-vous, je bâtis !
+colerique: « {plan} » ? Ça va être fait, et bien fait. Pas de remarques !
+
+[macon_pause]
+Je pose mes outils. Le chantier attendra.
+Entendu, j'arrête. Rien ne bouge jusqu'à ton signal.
+Pause. Les pierres ne vont pas s'envoler.
+D'accord, chef. Tu me diras quand reprendre.
+J'arrête là. Le mur restera comme il est.
+Bien. Je laisse le chantier en l'état.
+Je m'arrête. Dis-moi « reprends » quand tu voudras.
+Une pause ? Mes bras ne vont pas s'en plaindre.
+calme: Bien. Un chantier peut attendre, un mur ne pourrit pas.
+calme: J'arrête. Tout est en place pour la suite.
+peureux: J'ai fait quelque chose de travers ? Bon… j'arrête.
+peureux: D'accord, j'arrête. Tu ne m'en veux pas, au moins ?
+fourbe: Une pause payée ? J'accepte volontiers.
+fourbe: J'arrête. Mais le retard, ce ne sera pas ma faute.
+colerique: Juste quand j'avais pris le rythme ! Bon. J'arrête.
+colerique: Arrêter, reprendre, arrêter… Faudrait savoir, chef !
+
+[macon_reprise]
+Je reprends le chantier.
+Retour au mur. Où en étais-je ?
+C'est reparti, chef.
+Je reprends là où j'avais laissé.
+Bien. Les pierres m'attendaient.
+D'accord, je retourne au chantier.
+On s'y remet. Couche par couche.
+Je reprends mes outils et j'y vais.
+calme: Je reprends. Le plan n'a pas changé, moi non plus.
+calme: Bien. Je regarde où j'en étais, puis je continue.
+peureux: Je reprends… J'espère ne rien avoir oublié.
+peureux: D'accord. Je fais bien attention, cette fois encore.
+fourbe: Je reprends. On ne dira pas que j'ai traîné.
+fourbe: Bon, la pause était trop courte. Mais je reprends.
+colerique: Enfin ! Je n'aime pas laisser un mur à moitié fait.
+colerique: Je reprends. Et cette fois, qu'on ne m'arrête plus !
+
+[macon_abandon]
+J'abandonne le chantier. Ce qui est bâti reste bâti.
+Bien, chef. On en reste là.
+D'accord. Je laisse le chantier comme il est.
+Tant pis pour cet ouvrage. Je range mes outils.
+J'arrête pour de bon. Les murs restent debout.
+Entendu. Ce chantier-là ne verra jamais son toit.
+C'est toi le chef. Je laisse tomber ce chantier.
+Je n'y touche plus. Ce qui est fait est fait.
+calme: Bien. Un ouvrage inachevé, ça arrive.
+calme: Entendu. Le reste se fera peut-être un autre jour.
+peureux: Tu abandonnes ? C'était si mal bâti que ça ?
+peureux: D'accord… Je n'y touche plus, promis.
+fourbe: Tout ce travail pour rien. On s'en souviendra, chef.
+fourbe: J'abandonne. Mais si on me demande, c'était ton idée.
+colerique: Tout ce travail pour rien ? Bon… c'est toi qui décides.
+colerique: Abandonner ? Après tout ce mortier ? Pff. Soit.
+
+# ============================================================
+# ÉTAT DU CHANTIER
+# ============================================================
+
+[macon_sans_chantier]
+Je n'ai pas de chantier, chef.
+Rien à bâtir pour l'instant. Montre-moi l'endroit.
+Pas de chantier en cours. Dis-moi quoi bâtir, et où.
+Quel chantier ? Je n'en ai aucun.
+Je n'ai pas de plan à suivre. Donne-m'en un.
+Mes outils sont prêts, mais je n'ai rien à bâtir.
+Pas d'ouvrage en cours. Montre-moi où, et quel plan suivre.
+Je n'ai rien sur le feu. Il me faut un endroit et un plan.
+calme: Aucun chantier en cours. J'attends tes ordres.
+calme: Rien à bâtir. Quand tu sauras quoi, je serai là.
+peureux: Un chantier ? J'en ai oublié un ? Non… je n'en ai pas.
+peureux: Je n'ai rien à bâtir… Tu m'en donnes un ?
+fourbe: Pas de chantier ? Alors je me repose, et c'est permis.
+fourbe: Rien à bâtir. Ça tombe bien, je n'ai rien contre.
+colerique: Quel chantier ? Il n'y en a pas ! Donne-m'en un !
+colerique: Je tourne en rond sans chantier ! Trouve-moi quelque chose à bâtir !
+
+[macon_fini]
+C'est bâti, chef ! Viens voir !
+La dernière pierre est posée.
+Fini ! Et tout tient debout.
+Voilà l'ouvrage. Comme sur le plan.
+Terminé. Je range ce qui reste au dépôt.
+C'est debout. La colonie peut en être fière.
+Fini ! Tu peux venir admirer.
+Le chantier est fini. J'attends le suivant.
+« {plan} » est bâti, chef !
+Voilà « {plan} ». Pierre par pierre, comme prévu.
+calme: Terminé. Un ouvrage bien fait, sans hâte.
+calme: « {plan} » est debout. Il tiendra longtemps.
+peureux: Fini… Ça tient ? Oui, ça tient. Ouf.
+peureux: C'est fini ! Dis-moi que ça te plaît…
+fourbe: Fini. Et regarde bien : pas une pierre de travers.
+fourbe: « {plan} » est bâti. Une si belle chose mérite un petit pourboire.
+colerique: Fini ! Et le premier qui y touche aura affaire à moi !
+colerique: Voilà ! Debout, solide, terminé. Qui disait que ça traînait ?
+
+[macon_manque]
+Il me manque de quoi bâtir. Le chantier attend.
+Le dépôt est vide de ce qu'il me faut. J'attends.
+Plus de matériaux. Je ne bâtis pas avec du vent.
+Le chantier s'arrête : il me manque des matériaux.
+J'attends qu'on remplisse le dépôt.
+Il me faut encore des matériaux, chef. Mets-en au dépôt.
+Rien au dépôt pour la suite. Je patiente.
+Je ne peux pas finir sans matériaux.
+Il me manque : {objet}. J'attends qu'il y en ait au dépôt.
+Il me faudrait : {objet}. Sans ça, le chantier attend.
+calme: Il me manque : {objet}. Je patiente, le mur ne bougera pas.
+calme: Plus rien au dépôt pour la suite. J'attends.
+peureux: Il manque : {objet}… C'est ma faute ? J'ai mal compté ?
+peureux: Je n'ai plus rien à poser… Quelqu'un remplira le dépôt ?
+fourbe: Il manque : {objet}. Quelqu'un s'est servi au dépôt, à mon avis.
+fourbe: Le dépôt est vide. Moi, je n'y suis pour rien.
+colerique: Il me manque : {objet} ! Comment bâtir avec un dépôt vide ?
+colerique: Plus rien au dépôt ! On croit que les pierres poussent toutes seules ?
+
+[macon_approvisionne]
+Je vais chercher de quoi bâtir au dépôt.
+Un tour au dépôt, et je reviens.
+Je prends des matériaux au dépôt.
+Il me faut d'autres pierres. Je file au dépôt.
+Retour au dépôt. Les bras chargés, j'espère.
+Je fais le plein au dépôt.
+Je descends au dépôt, le mur attendra un instant.
+Une charge de plus pour le chantier.
+calme: Je prends juste ce qu'il faut. Pas plus.
+calme: Je vais au dépôt. Le chantier ne bouge pas en m'attendant.
+peureux: Pourvu qu'il en reste assez au dépôt…
+peureux: Je vais au dépôt. Je ne prends que ce qu'il faut, promis.
+fourbe: Au dépôt ! Personne ne compte ce que je prends.
+fourbe: Je me sers au dépôt. Le meilleur d'abord.
+colerique: Encore le dépôt ! Ce chantier avale tout !
+colerique: Je vais au dépôt. Et qu'on ne me barre pas le chemin !
+
+# ============================================================
+# PLANS DE CREATE
+# ============================================================
+
+[macon_plan_create]
+Un plan déjà placé ? Je bâtis là où tu l'as mis.
+Merci pour le plan, chef. Je le suis à la lettre.
+Le plan est posé, il n'y a plus qu'à bâtir.
+Voilà un plan bien clair. Je m'y mets.
+Je bâtis ce plan dans le sens où tu l'as placé.
+Bon plan. Je prends les matériaux au dépôt et j'y vais.
+Je vois où ça va. Je commence par le bas.
+Un plan de la table ? Parfait, je sais le lire.
+calme: Bien. Je suis ce plan, exactement comme il est placé.
+calme: Un plan bien posé, c'est la moitié du travail.
+peureux: Un plan rien que pour moi ? Je ferai de mon mieux.
+peureux: Tout est marqué… Je vais suivre, pas à pas.
+fourbe: Un plan tout prêt ? On dira quand même que c'est mon ouvrage.
+fourbe: Je bâtis ton plan. Mais je garde l'idée pour plus tard.
+colerique: Enfin un plan clair ! Pas besoin de me le répéter !
+colerique: Donne ! Je le bâtis, et vite !
+
+[macon_plan_illisible]
+Ce plan, je n'arrive pas à le lire, chef.
+Il faut d'abord envoyer ce plan à la table.
+Je ne comprends rien à ce plan. Passe-le à la table d'abord.
+Ce plan est vide pour moi. Envoie-le à la table.
+Je ne sais pas lire ce plan-là.
+Rien à faire, ce plan ne me dit rien. Passe par la table.
+Ce plan ne me parle pas. Il doit d'abord passer à la table.
+Je tourne et retourne ce plan. Je n'y vois rien.
+calme: Ce plan ne me dit rien. Passe-le à la table, je le lirai ensuite.
+calme: Je ne peux pas suivre un plan que je ne lis pas.
+peureux: Je… je n'arrive pas à le lire. Pardon, chef.
+peureux: Ce plan me donne le vertige. Tu peux l'envoyer à la table ?
+fourbe: Ce plan est illisible. Pas de chance, j'allais m'y mettre.
+fourbe: Si personne ne peut le lire, personne ne m'en voudra.
+colerique: Qui a griffonné ce plan ? Je ne peux rien en tirer !
+colerique: Illisible ! Envoie-le à la table, et après on parlera !
+
+[macon_plan_loin]
+C'est trop loin du poste, chef. Je bâtis près de chez nous.
+Si loin ? Je ne bâtis qu'autour du poste.
+Trop loin d'ici. Le dépôt ne suivrait pas.
+Je ne vais pas bâtir là-bas. C'est trop loin du poste.
+Ce chantier est trop loin. Choisis un endroit plus près.
+Je bâtis près du poste, pas au bout du monde.
+Là-bas ? Je passerais mes journées sur la route.
+C'est trop loin de notre poste. Montre-moi plus près.
+calme: Trop loin du poste. Rapproche le chantier, et je m'y mets.
+calme: Un chantier si loin, c'est trop de chemin. Plus près, plutôt.
+peureux: Si loin du poste ? Je n'oserai jamais.
+peureux: Là-bas, loin de tout ? Non, je ne peux pas.
+fourbe: Si loin ? On croirait que tu veux te débarrasser de moi.
+fourbe: Trop loin. Et je ne porte pas les pierres sur mon dos sans supplément.
+colerique: Là-bas ? Et pourquoi pas sur la lune, tant que tu y es ?
+colerique: Trop loin ! Je bâtis près du poste, point final !
