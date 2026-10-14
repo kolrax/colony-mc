@@ -72,20 +72,32 @@ fourbe: Je m'en souviendrai, de celui-là.
 fourbe: Tiens, tiens. Le chef a des ennemis…
 
 [chef_ordre_attaque]
-Qu'on te touche, chef, et il aura affaire à moi.
+Compris : je frapperai quiconque te frappe.
 Entendu, chef : qui te frappe, je le frappe.
-Compris. Quiconque lève la main sur toi goûtera de mon fer.
-Bien, chef. Je ne laisserai plus passer un seul coup.
-C'est noté, chef : un coup sur toi, et je réponds.
-À tes ordres. Qu'ils s'y frottent, ils verront.
-calme: Bien, chef. Je défendrai ta personne, s'il le faut par les armes.
-calme: Entendu. J'espère n'avoir jamais à le faire.
-colerique: Avec plaisir, chef ! Qu'ils viennent !
-colerique: Enfin ! Je n'attendais que ça.
-peureux: Bi… bien, chef. Je ferai de mon mieux.
-peureux: Entendu… j'espère qu'ils ne seront pas trop grands.
-fourbe: Compris, chef. Je n'oublierai pas qui te frappe.
-fourbe: Entendu. Ça m'arrange, à vrai dire.
+Compris. Quiconque lève la main sur toi, je le frapperai.
+Bien, chef. Un coup sur toi, et je frappe celui qui l'a porté.
+C'est noté, chef : si on te frappe, je réponds par le fer.
+À tes ordres : qui te touche aura affaire à mon arme.
+calme: Bien, chef. Si l'on te frappe, je frapperai à mon tour, à regret.
+calme: Entendu. Quiconque te frappe, je le frapperai, sans plaisir.
+colerique: Avec plaisir, chef ! Qui te frappe, je le cogne !
+colerique: Enfin ! Qu'on te touche, et je frappe sans attendre.
+peureux: Bi… bien, chef. Si on te frappe, je… je frapperai.
+peureux: Entendu… quiconque te frappe, je le frapperai. Je ferai de mon mieux.
+fourbe: Compris, chef. Qui te frappe, je le frappe, et je m'en souviendrai.
+fourbe: Entendu. Si on te frappe, je frappe. Ça m'arrange, à vrai dire.
+
+[chef_ordre_attaque_civil]
+Je ne porte pas les armes, chef : je crierai, mais je ne frapperai pas.
+Je ne suis pas homme d'armes, chef. Je donnerai l'alerte, pas de coups.
+Moi, frapper ? Je n'ai que mes outils, chef. J'appellerai la garde.
+Ce n'est pas mon métier, chef. Si on te frappe, je crierai à l'aide.
+Je ne sais pas me battre, chef : je préviendrai qui le sait.
+Compris, chef, mais je ne frapperai personne : je ne suis pas soldat.
+calme: Je ne suis pas fait pour la bagarre, chef. Je donnerai l'alerte.
+colerique: Je n'ai pas d'arme, chef, mais je saurai crier, crois-moi !
+peureux: Frapper ? Moi ? Oh non, chef… je crierai, ça oui.
+fourbe: Je ne frappe pas, chef. Mais je saurai qui l'a fait.
 
 [chef_ordre_tranquille]
 Bien, chef : je m'interposerai, sans frapper.

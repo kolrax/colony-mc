@@ -84,7 +84,7 @@ class GardeChefTest {
         assertAll(() -> {
             Ordres.Lecture l = Ordres.lire("Va miner, et si on m'attaque, défends-moi.", "mineur");
             assertEquals(Posture.ATTAQUE, l.posture);
-            assertFalse(l.missions.isEmpty() && l.intentions.isEmpty(), "il va miner : " + l.texte);
+            assertTrue(l.texte.contains("Va miner"), "il va miner (l'interpréteur ou l'IA le lit) : " + l.texte);
         }, () -> {
             Ordres.Lecture l = Ordres.lire("Ramène 64 bûches et si quelqu'un me frappe, tape-le.", "bucheron");
             assertEquals(Posture.ATTAQUE, l.posture);

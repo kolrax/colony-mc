@@ -6,7 +6,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 
 import java.util.Comparator;
 import java.util.List;
@@ -116,23 +122,45 @@ final class Defense {
     /** Jusque-là, ses gens voient qu'on frappe leur chef (et l'agresseur qui s'en éloigne autant est laissé). */
     static final double SCENE = 16;
 
-    /**
-     * Un joueur frappe un autre joueur : les ouvriers du frappé, à {@link #SCENE} blocs et qui voient la scène, réagissent
-     * selon ce que le chef a dit plus tôt ({@link GardeChef}). Une seule recherche, au coup ; rien à chaque tick.
-     */
-    static void chefFrappe(LivingDamageEvent.Post e) {
-        if (!(e.getEntity() instanceof ServerPlayer chef) || !(e.getSource().getEntity() instanceof Player a) || a == chef || !a.isAlive()) return;
-        for (Travailleur t : chef.level().getEntitiesOfClass(Travailleur.class, chef.getBoundingBox().inflate(SCENE, 8, SCENE),
-                x -> x.isAlive() && chef.getUUID().equals(x.chef) && x.distanceTo(chef) <= SCENE))
-            reagir(t, chef, a);
+    /** Le dernier coup de mêlée voulu de chaque joueur : qui il visait, et quand (un coup balayé touche les voisins sans les viser). */
+    private static final java.util.Map<java.util.UUID, long[]> VISE = new java.util.HashMap<>();
+
+    /** Un joueur frappe quelqu'un en mêlée (sa cible à lui, pas les voisins du coup balayé). */
+    static void viser(AttackEntityEvent e) {
+        if (!e.getEntity().level().isClientSide()) VISE.put(e.getEntity().getUUID(), new long[]{e.getTarget().getId(), e.getEntity().level().getGameTime()});
     }
 
-    /** Ce que fait un ouvrier qui voit {@code a} frapper son chef. */
-    static void reagir(Travailleur t, ServerPlayer chef, Player a) {
-        if (t.aTerre || t.isSleeping() || t.mode == Travailleur.Mode.GREVE) return;
+    /**
+     * Un joueur frappe un autre joueur : les ouvriers du frappé, à {@link #SCENE} blocs et qui voient la scène, réagissent
+     * selon ce que le chef a dit plus tôt ({@link GardeChef}). Seulement un coup direct : sa main (le coup visé, pas le coup
+     * balayé) ou un projectile qu'il a tiré ; ni épines, ni explosion, ni faux joueur (machine). Une seule recherche, au coup.
+     */
+    static void chefFrappe(LivingDamageEvent.Post e) {
+        DamageSource s = e.getSource();
+        if (!(e.getEntity() instanceof ServerPlayer chef) || chef instanceof FakePlayer || !(s.getEntity() instanceof Player a) || a instanceof FakePlayer
+                || a == chef || !a.isAlive() || s.is(DamageTypes.THORNS) || s.is(DamageTypeTags.IS_EXPLOSION)) return;
+        boolean tir = s.getDirectEntity() instanceof Projectile pr && pr.getOwner() == a;
+        long[] v = VISE.get(a.getUUID());
+        boolean main = s.getDirectEntity() == a && v != null && v[0] == chef.getId() && v[1] == chef.level().getGameTime();
+        if (!tir && !main) return;
+        for (Travailleur t : chef.level().getEntitiesOfClass(Travailleur.class, chef.getBoundingBox().inflate(SCENE, 8, SCENE),
+                x -> x.isAlive() && chef.getUUID().equals(x.chef) && x.distanceTo(chef) <= SCENE))
+            reagir(t, chef, a, main);
+    }
+
+    /**
+     * Ce que fait un ouvrier qui voit {@code a} frapper son chef. Sur l'ordre « attaque quiconque me frappe », le guerrier
+     * frappe un coup de main visé ; une flèche (qui visait peut-être autre chose) : seulement à la deuxième en 10 s.
+     */
+    static void reagir(Travailleur t, ServerPlayer chef, Player a, boolean main) {
+        if (t.aTerre || t.isSleeping() || t.mode == Travailleur.Mode.GREVE || t.memoire.getBoolean("revolte")) return; // un révolté ne défend pas le chef
         // « Ne fais jamais rien à Nielscutt » : il laisse faire, sans un mot.
         if (GardeChef.epargne(t.memoire.getString("epargnes"), a.getGameProfile().getName())) return;
         if (!t.getSensing().hasLineOfSight(chef) && !t.getSensing().hasLineOfSight(a)) return;
+        long maintenant = t.level().getGameTime();
+        boolean encore = a.getStringUUID().equals(t.memoire.getString("chef_coup_par")) && maintenant - t.memoire.getLong("chef_coup_t") <= 200;
+        t.memoire.putString("chef_coup_par", a.getStringUUID());
+        t.memoire.putLong("chef_coup_t", maintenant);
         Metier m = Metier.de(t.metier);
         boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && (x.cible == a || Monde.hostile(x.cible))
                 || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
@@ -141,15 +169,24 @@ final class Defense {
             if (!combat && Cerveau.parfois(t, "chef_frappe_vu", 30) && !Besoins.dire(t, "chef_frappe_vu", null)) t.dire("Hé ! On ne frappe pas le chef !");
             return;
         }
-        if (GardeChef.posture(t.memoire.getString("garde_chef")) == GardeChef.Posture.ATTAQUE) {
-            // L'ordre du chef, donné plus tôt : il frappe, jusqu'à ce que l'autre s'éloigne ou que le chef dise « arrête ».
+        // Il l'attendait quelque part : il y retourne ensuite (une consigne du chef, elle, reprend d'elle-même).
+        Actions.Action ensuite = t.action instanceof Interposer i && i.agresseur == a ? i.ensuite
+                : t.mode == Travailleur.Mode.ATTENDRE ? new Actions.Aller(t.position(), 1) : null;
+        if (GardeChef.posture(t.memoire.getString("garde_chef")) == GardeChef.Posture.ATTAQUE && (main || encore)) {
+            // L'ordre du chef, donné plus tôt : il frappe, jusqu'à ce que l'autre s'éloigne du chef, que le chef s'en aille ou dise « arrête ».
             if (!Besoins.dire(t, "chef_riposte", null)) t.dire("Tu as levé la main sur mon chef. À toi de goûter le fer !");
             Guerrier.armer(t);
-            Cerveau.lancer(t, new Actions.Attaquer(a).portee(SCENE));
+            Actions.Attaquer x = new Actions.Attaquer(a).portee(SCENE).garder(chef);
+            x.ensuite = ensuite;
+            Cerveau.lancer(t, x);
             return;
         }
         // Sans ordre, ou « reste tranquille » : il se met entre eux et le met en garde, sans frapper.
-        if (!(t.action instanceof Interposer i && i.agresseur == a)) Cerveau.lancer(t, new Interposer(chef, a));
+        if (!(t.action instanceof Interposer i && i.agresseur == a)) {
+            Interposer x = new Interposer(chef, a);
+            x.ensuite = ensuite;
+            Cerveau.lancer(t, x);
+        }
         if (Cerveau.parfois(t, "chef_interpose", 5) && !Besoins.dire(t, "chef_interpose", null)) t.dire("Recule ! Ne touche plus à mon chef.");
     }
 
@@ -163,7 +200,7 @@ final class Defense {
 
         @Override
         Actions.Etat tick(Travailleur t) {
-            if (age > 20 * 10 || !agresseur.isAlive() || !chef.isAlive() || agresseur.level() != t.level() || chef.level() != t.level()
+            if (age > 20 * 10 || !agresseur.isAlive() || !chef.isAlive() || chef.isRemoved() || agresseur.level() != t.level() || chef.level() != t.level()
                     || agresseur.distanceTo(chef) > SCENE) return Actions.Etat.OK;
             t.getLookControl().setLookAt(agresseur);
             if (place == null || age % 10 == 0) {

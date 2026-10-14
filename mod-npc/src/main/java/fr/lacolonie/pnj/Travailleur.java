@@ -807,7 +807,10 @@ public class Travailleur extends PathfinderMob {
             try { e = a.tick(this); }
             catch (RuntimeException ex) { ColoniePnj.LOG.error("Action {} de {} en erreur", a.nom, prenom, ex); e = Actions.Etat.ECHEC; a.raison = "erreur"; }
             a.age++;
-            if (e != Actions.Etat.EN_COURS && action == a) finirAction(e == Actions.Etat.OK ? "ok" : a.raison.isEmpty() ? "echec" : a.raison);
+            if (e != Actions.Etat.EN_COURS && action == a) {
+                finirAction(e == Actions.Etat.OK ? "ok" : a.raison.isEmpty() ? "echec" : a.raison);
+                if (a.ensuite != null && action == null) Cerveau.lancer(this, a.ensuite);
+            }
             h = mesure.mesurer(Charge.Partie.ACTION, h);
         }
         if (pauseCerveau > 0) pauseCerveau--;
@@ -950,6 +953,7 @@ public class Travailleur extends PathfinderMob {
                 Ordres.Lecture li = d.lecture();
                 li.quotidien |= seul.quotidien;
                 Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
+                GardeChef.reprendre(li, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
@@ -1874,21 +1878,28 @@ public class Travailleur extends PathfinderMob {
         }
 
         // Ceux qui frappent le chef (GardeChef) : riposter, s'interposer seulement, ne jamais toucher à tel joueur.
+        // Il redit clairement ce qu'il a compris : c'est le mod qui répond, pas l'IA. Un homme qui ne porte pas les armes ne promet pas de frapper.
         if (!parRegle && l.posture != null) {
             memoire.putString("garde_chef", l.posture.name());
-            String cle = l.posture == GardeChef.Posture.ATTAQUE ? "chef_ordre_attaque" : "chef_ordre_tranquille";
+            Metier mt = Metier.de(metier);
+            boolean arme = mt != null && mt.combattant;
+            String cle = l.posture != GardeChef.Posture.ATTAQUE ? "chef_ordre_tranquille" : arme ? "chef_ordre_attaque" : "chef_ordre_attaque_civil";
             String dit = Besoins.texte(this, cle, null, null);
-            r.add(dit != null ? dit : l.posture == GardeChef.Posture.ATTAQUE ? "Qu'on te touche, chef, et il aura affaire à moi." : "Bien, chef : je m'interposerai, sans frapper.");
+            r.add(dit != null ? dit : l.posture != GardeChef.Posture.ATTAQUE ? "Compris : si on te frappe, je m'interposerai, sans frapper."
+                    : arme ? "Compris : je frapperai quiconque te frappe." : "Je ne porte pas les armes, chef : je crierai, mais je ne frapperai pas.");
+            reponseImposee = true;
         }
         if (!parRegle && !l.epargner.isEmpty()) {
+            reponseImposee = true;
             memoire.putString("epargnes", GardeChef.ajouter(memoire.getString("epargnes"), l.epargner));
             String noms = String.join(" ni à ", l.epargner);
             String dit = Besoins.texte(this, "chef_ordre_epargne", noms, null);
             r.add(dit != null ? dit : "Entendu, chef : je ne ferai jamais rien à " + noms + ".");
         }
         // « Arrête ! » pendant qu'il frappe un homme sur son ordre : il baisse son arme.
-        if (!parRegle && enFace != null && action instanceof Actions.Attaquer a && a.cible instanceof Player && GardeChef.cesser(l.texte)) {
+        if (!parRegle && enFace != null && action instanceof Actions.Attaquer a && a.cible instanceof Player && a.cible != enFace && GardeChef.cesse(l)) {
             finirAction("ordre");
+            reponseImposee = true;
             String dit = Besoins.texte(this, "chef_cesse", null, null);
             r.add(dit != null ? dit : "Bien, chef. Je le laisse.");
         }

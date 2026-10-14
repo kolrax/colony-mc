@@ -44,7 +44,7 @@ class VieTest {
     @Test
     void chefSeLit() {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/chef.txt"));
-        for (String cle : List.of("chef_interpose", "chef_riposte", "chef_frappe_vu", "chef_ordre_attaque", "chef_ordre_tranquille", "chef_ordre_epargne", "chef_cesse")) {
+        for (String cle : List.of("chef_interpose", "chef_riposte", "chef_frappe_vu", "chef_ordre_attaque", "chef_ordre_attaque_civil", "chef_ordre_tranquille", "chef_ordre_epargne", "chef_cesse")) {
             assertTrue(banque.containsKey(cle), cle);
             assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
             assertTrue(banque.get(cle).stream().filter(r -> r.temperament().isEmpty()).count() >= 6, cle + " : six répliques communes");

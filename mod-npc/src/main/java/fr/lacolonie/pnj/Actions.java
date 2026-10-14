@@ -117,6 +117,8 @@ public final class Actions {
          * suit un chemin direct réussi (voir {@link #marcher}).
          */
         boolean dePres;
+        /** Ce qu'il fait quand elle se finit d'elle-même : retourner là où il attendait (après s'être interposé, lot 9). */
+        Action ensuite;
 
         Action(String nom) { this.nom = nom; }
 
@@ -763,12 +765,16 @@ public final class Actions {
         boolean libre;
         /** Au-delà, il laisse la cible (lancé par la veille ou la chasse de nuit : jusqu'au bout de l'espace de vie). */
         double portee = 32;
+        net.minecraft.world.entity.player.Player garde;
 
         Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; mobile = true; }
 
         Attaquer portee(double p) { portee = p; return this; }
 
         Attaquer tenir(Vec3 poste, double laisse) { this.poste = poste; this.laisse = laisse; return this; }
+
+        /** Il défend ce joueur (son chef) : il laisse la cible quand elle s'en éloigne de plus de {@code portee}, ou que le chef s'en va. */
+        Attaquer garder(net.minecraft.world.entity.player.Player chef) { garde = chef; return this; }
 
         @Override
         void fin(Travailleur t) {
@@ -783,6 +789,7 @@ public final class Actions {
                         && "guerrier".equals(t.metier) && Cerveau.parfois(t, "monstre_tue", 20)) Besoins.dire(t, "guerrier_monstre_tue", null);
                 return Etat.OK;
             }
+            if (garde != null && (garde.isRemoved() || !garde.isAlive() || garde.level() != t.level() || garde.distanceToSqr(cible) > portee * portee)) return Etat.OK;
             if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;

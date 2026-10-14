@@ -44,9 +44,23 @@ final class GardeChef {
     /** Pas des noms. */
     static final java.util.Set<String> PAS_UN_NOM = java.util.Set.copyOf(List.of("le", "la", "les", "l", "un", "une", "des", "du", "de", "personne", "rien", "a", "au",
             "aux", "moi", "toi", "lui", "eux", "ca", "cela", "ce", "cet", "cette", "ces", "mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses", "nos", "vos", "leur",
-            "jamais", "plus", "pas", "tout", "tous", "quiconque", "aucun", "aucune", "on", "y", "en", "si", "quand"));
-    /** « Arrête », « ça suffit », « laisse-le » : le guerrier qui frappe un homme sur son ordre cesse. */
-    static final Pattern CESSER = p("arrete|arretez|arrete toi|stop|halte|assez|ca suffit|laisse le|laisse la|laisse tomber|lache le|lache la|cesse|cessez|recule|baisse ton arme|range ton arme|pose ton arme");
+            "leurs", "notre", "votre", "nous", "vous", "il", "ils", "elle", "elles", "ceux", "celui", "celle", "celles", "qui", "que", "autre", "autres", "gens", "monde",
+            "trop", "ici", "bas", "chef", "jamais", "plus", "pas", "tout", "tous", "quiconque", "aucun", "aucune", "on", "y", "en", "si", "quand"));
+    /** « Arrête », « ça suffit », « calme-toi », « range ton épée » : le guerrier qui frappe un homme sur son ordre cesse. */
+    static final Pattern CESSER = p("arrete|arretez|arrete toi|stop|halte|assez|ca suffit|laisse le|laisse la|laisse tomber|lache le|lache la|cesse|cessez|recule"
+            + "|calme toi|calmez vous|du calme|(?:baisse|range|pose|rengaine) (?:ton|ta|tes) (?:arme|armes|epee|lame|fer|hache|glaive)|rengaine");
+
+    /** « Si quelqu'un me frappe » : la condition, dite d'un homme (au plus 4 mots entre « si » et le coup). */
+    static final Pattern SI = Pattern.compile("\\b(?:si|s|quand|lorsque|des que|chaque fois que|au cas ou|pour peu que) +(?:[a-z0-9]+ +){0,4}?(?:" + AGRESSION.pattern() + ")");
+    /** « Quiconque me frappe », « ceux qui me frappent » : celui qui frappe, nommé dans l'ordre même. */
+    static final Pattern QUI = Pattern.compile("\\b(?:quiconque|qui) +(?:" + AGRESSION.pattern() + ")");
+    /**
+     * Une négation ou un évitement, n'importe où dans la phrase : jamais d'attaque alors (dans le doute, il ne frappe pas).
+     * « N'importe qui » n'en est pas une.
+     */
+    static final Pattern NEGATION = p("ne|n(?! importe)|jamais|pas|sans|evite|evites|eviter|evitez|interdit|interdis|refuse|surtout pas|point");
+    /** Entre deux ordres d'une même phrase : « va miner, et si on m'attaque… ». */
+    static final Pattern COUPURE = Pattern.compile(",|\\b(?:et|puis|mais|ensuite)\\b");
 
     /** Lit une phrase du chef. */
     static Lu lire(String texte) {
@@ -59,16 +73,35 @@ final class GardeChef {
             if (i > s0 && !(i < p.length() && p.charAt(i) == '?')) phrase(texte, p, s0, i, lu, sans);
             s0 = i + 1;
         }
-        lu.reste = sans.toString().replaceAll("\\s{2,}", " ").strip();
+        lu.reste = lu.rien() ? texte : sans.toString().replaceAll("\\s{2,}", " ").strip();
         return lu;
     }
 
     private static void effacer(StringBuilder sans, int a, int b) { for (int i = a; i < b; i++) sans.setCharAt(i, ' '); }
 
+    /** Le début de l'ordre qui finit en {@code i} : juste après la dernière virgule (ou « et », « puis »…) avant lui. */
+    private static int debutOrdre(String ph, int i) {
+        int d = 0;
+        Matcher c = COUPURE.matcher(ph.substring(0, i));
+        while (c.find()) d = c.end();
+        return d;
+    }
+
+    /** La fin de l'ordre qui commence en {@code i} : la prochaine virgule (ou « et »…), sinon la fin de la phrase. */
+    private static int finOrdre(String ph, int i) {
+        Matcher c = COUPURE.matcher(ph);
+        return c.find(i) ? c.start() : ph.length();
+    }
+
+    /** La phrase parle d'une bête ou d'un monstre (« si un zombie m'attaque ») : ce n'est pas l'ordre contre les hommes. */
+    static boolean bete(String ph) { return Chasse.monstres(ph) || Chasse.dite(ph) != null; }
+
     private static void phrase(String texte, String p, int s0, int s1, Lu lu, StringBuilder sans) {
-        String ph = p.substring(s0, s1);
+        StringBuilder vu = new StringBuilder(p.substring(s0, s1));
+        String ph = vu.toString();
         // Les noms épargnés (on garde le pseudo tel qu'écrit, avec ses chiffres et ses « _ »).
         Matcher e = EPARGNE.matcher(ph);
+        boolean epargne = false;
         while (e.find()) {
             int g = 1;
             while (g < e.groupCount() && e.group(g) == null) g++;
@@ -78,24 +111,55 @@ final class GardeChef {
             String nom = texte.substring(a, b);
             if (lu.epargner.stream().noneMatch(nom::equalsIgnoreCase)) lu.epargner.add(nom);
             effacer(sans, s0 + e.start(), Math.max(b, s0 + e.end()));
+            effacer(vu, e.start(), Math.min(ph.length(), Math.max(b - s0, e.end())));
+            epargne = true;
         }
-        Matcher ag = AGRESSION.matcher(ph);
-        if (ag.find()) {
-            // « Si on me frappe, attaque-le » / « interpose-toi sans frapper ».
-            String autour = ph.substring(0, ag.start()) + " " + ph.substring(ag.end());
-            Matcher doux = DOUX.matcher(autour), tranq = TRANQUILLE.matcher(autour);
-            if (doux.find() || tranq.find()) lu.posture = Posture.TRANQUILLE;
-            else if (RIPOSTE.matcher(autour).find()) lu.posture = Posture.ATTAQUE;
-            else return;
-            effacer(sans, s0, s1);
+        ph = vu.toString();
+        // « Si on me frappe, … » ou « … quiconque me frappe » : l'ordre de garde, et ce qu'il doit faire alors.
+        Matcher si = SI.matcher(ph), qui = QUI.matcher(ph);
+        int debut, fin;
+        String consigne;
+        if (si.find()) {
+            debut = si.start();
+            fin = ph.length();
+            consigne = AGRESSION.matcher(ph.substring(si.end())).replaceAll(" ");
+            if (!consigne.matches("[^a-z]*")) consigne = consigne + " " + ph.substring(debutOrdre(ph, debut), debut); // « défends-moi si on m'attaque »
+            else { consigne = ph.substring(debutOrdre(ph, debut), debut); debut = debutOrdre(ph, debut); }
+        } else if (qui.find()) {
+            debut = debutOrdre(ph, qui.start());
+            fin = finOrdre(ph, qui.end());
+            consigne = ph.substring(debut, qui.start());
+        } else {
+            // « Reste tranquille », « ne frappe personne » : seul, sans parler de coups reçus.
+            Matcher t = TRANQUILLE.matcher(ph);
+            if (t.find()) {
+                lu.posture = Posture.TRANQUILLE;
+                effacer(sans, s0 + t.start(), s0 + t.end());
+            }
             return;
         }
-        Matcher t = TRANQUILLE.matcher(ph);
-        if (t.find()) {
+        if (bete(ph)) return;
+        // « Ne frappe jamais Nielscutt, même s'il me frappe » : il l'épargne, rien de plus ; la condition part avec.
+        if (epargne) { effacer(sans, s0 + debut, s0 + fin); return; }
+        boolean riposte = RIPOSTE.matcher(consigne).find(), doux = DOUX.matcher(consigne).find() || TRANQUILLE.matcher(consigne).find();
+        // Une négation, un évitement, n'importe où : jamais l'attaque (« n'attaque pas quiconque me frappe », « sans le blesser »).
+        if (NEGATION.matcher(ph).find()) {
+            if (!riposte && !doux) return; // « si on me frappe, ne me préviens pas » : ce n'est pas un ordre de garde
             lu.posture = Posture.TRANQUILLE;
-            effacer(sans, s0 + t.start(), s0 + t.end());
-        }
+        } else if (doux) lu.posture = Posture.TRANQUILLE;
+        else if (riposte) lu.posture = Posture.ATTAQUE;
+        else return; // « préviens-moi si quelqu'un me frappe » : autre chose
+        effacer(sans, s0 + debut, s0 + fin);
     }
+
+    /** Avec l'IA : ce que l'interpréteur a lu de la garde, repris tel quel (l'IA ne connaît pas ces ordres). */
+    static void reprendre(Ordres.Lecture vers, Ordres.Lecture seul) {
+        if (seul.posture != null) vers.posture = seul.posture;
+        for (String n : seul.epargner) if (vers.epargner.stream().noneMatch(n::equalsIgnoreCase)) vers.epargner.add(n);
+    }
+
+    /** Il cesse de frapper un homme : « arrête », « calme-toi », « reste tranquille », « oublie tes ordres »… */
+    static boolean cesse(Ordres.Lecture l) { return l.posture == Posture.TRANQUILLE || l.annulerRegles || cesser(l.texte); }
 
     /** Il épargne ce pseudo (sans tenir compte des majuscules). */
     static boolean epargne(String noms, String pseudo) {
@@ -112,10 +176,6 @@ final class GardeChef {
         while (l.size() > 16) l.remove(0);
         return String.join(",", l);
     }
-
-    static void reprendre(Ordres.Lecture vers, Ordres.Lecture seul) {} // ANCIEN (stub)
-
-    static boolean cesse(Ordres.Lecture l) { return cesser(l.texte); } // ANCIEN (stub)
 
     /** « Arrête », « ça suffit »… */
     static boolean cesser(String texte) { return CESSER.matcher(OrdresLongs.plat(texte)).find(); }
