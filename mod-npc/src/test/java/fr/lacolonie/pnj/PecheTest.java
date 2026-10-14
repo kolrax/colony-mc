@@ -107,4 +107,15 @@ class PecheTest {
         for (String id : Peche.POISSONS) assertTrue(Peche.NOMS.containsKey(id));
         for (String id : Peche.TRESORS) assertTrue(Peche.NOMS.containsKey(id));
     }
+
+    @Test
+    void lesOrdresDuPecheur() {
+        assertEquals(List.of(new Ordres.Mission("morue", "quantite", 10)), Ordres.lire("ramène 10 morues", "pecheur").missions);
+        assertEquals(List.of(new Ordres.Mission("saumon", "quantite", 5)), Ordres.lire("Rapporte-moi cinq saumons", "pecheur").missions);
+        assertEquals("poisson", Ordres.lire("ramène 20 poissons", "pecheur").missions.get(0).id());
+        RepertoireTest.demande("va pêcher", "pecheur", "aller_pecher");
+        RepertoireTest.demande("Pêche ici", "pecheur", "pecher_la");
+        RepertoireTest.demande("va pêcher là-bas", "pecheur", "pecher_la");
+        RepertoireTest.demande("va pêcher", "mineur", "pecher"); // les autres font semblant, au bord de l'eau
+    }
 }

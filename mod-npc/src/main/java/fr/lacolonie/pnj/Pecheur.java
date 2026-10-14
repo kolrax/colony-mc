@@ -31,8 +31,8 @@ import java.util.WeakHashMap;
  * Le pêcheur (lot 6, cahier 4.2). Il prend sa canne au dépôt (cahier 3.12), cherche une eau de pêche près de son poste
  * (32 blocs au plus : une eau de source à ciel ouvert, un carré de 3 x 3 au moins, une rive sèche à côté, jamais chez un
  * voisin), la retient, et y pêche debout sur la rive : une prise toutes les 15 à 40 s (plus vite sous la pluie), tirée de
- * la table de pêche du jeu (poissons, déchets, trésors en eau libre). La canne s'use. Le sac presque plein, ou après une
- * dizaine de prises, il porte tout au dépôt. Sur ordre : « va pêcher », « pêche ici » (l'endroit regardé devient son coin).
+ * la table de pêche du jeu (poissons, déchets, trésors en eau libre). La canne s'use. Le sac presque plein, après une
+ * dizaine de prises, ou en fin de journée, il porte tout au dépôt. Sur ordre : « va pêcher », « pêche ici » (l'endroit regardé devient son coin).
  * <p>
  * Pas de grand balayage : la recherche de l'eau lit une colonne sur trois (la hauteur du sol est connue du jeu), par petits
  * morceaux à chaque appel du cerveau, et le coin trouvé est gardé avec lui. Pas de vrai flotteur (il lui faudrait un
@@ -84,7 +84,9 @@ final class Pecheur extends Metier {
         Metier.Commande c = Metier.commande(t);
         Travailleur.Mission m = t.missionActive();
         boolean finir = c != null && c.objet != null && m != null && m.quantite() && t.compter(c.objet) > 0 && m.livre + t.compter(c.objet) >= m.nombre;
-        if (Monde.libres(t) < 3 || t.memoire.getInt("prises") >= PRISES || finir) {
+        // En fin de journée (moins d'une demi-heure de service), ce qu'il a pris rentre aussi au dépôt.
+        boolean soir = t.memoire.getInt("prises") > 0 && t.heuresAvantFinService() < 0.5;
+        if (Monde.libres(t) < 3 || t.memoire.getInt("prises") >= PRISES || finir || soir) {
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
                 Cerveau.attendre(t, 30);
