@@ -46,7 +46,8 @@ class VieTest {
     void defenseSeLit() {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/defense.txt"));
         for (String cle : List.of("creeper_fuite", "creeper_alerte", "guerrier_alerte_ok", "guerrier_monstre_tue", "ronde_nuit", "nuit_camp", "nuit_cache",
-                "matin_reprise", "monstre_vu", "lettre_nuit_dehors")) {
+                "matin_reprise", "monstre_vu", "lettre_nuit_dehors", "monstre_charge", "monstre_riposte", "monstre_panique", "monstre_eclipse",
+                "monstre_pousse", "monstre_abattu", "monstre_creeper_recule")) {
             assertTrue(banque.containsKey(cle), cle);
             assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
         }

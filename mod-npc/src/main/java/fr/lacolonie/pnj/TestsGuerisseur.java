@@ -151,6 +151,7 @@ public class TestsGuerisseur {
     public static void releveAuReposQuandLeMonstreEstParti(GameTestHelper h) {
         Travailleur[] e = colonie(h, 154, UUID.randomUUID(), new BlockPos(-6, 0, 0));
         Travailleur g = e[0], b = e[1];
+        g.temperament = "calme"; // ni elle ne charge le monstre, ni elle ne le fuit (Bravoure)
         int heure = TestsJeu.heure(h);
         g.debut = (heure + 2) % 24; // hors service maintenant
         g.fin = (heure + 3) % 24;

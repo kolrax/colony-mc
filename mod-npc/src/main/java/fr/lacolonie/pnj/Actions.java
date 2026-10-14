@@ -780,9 +780,13 @@ public final class Actions {
 
         Etat tick(Travailleur t) {
             if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > portee * portee) {
-                // Un monstre qu'il vient d'abattre : le guerrier le dit (lot 9), pas plus d'une fois toutes les 20 s.
+                // Un monstre qu'il vient d'abattre : il le dit (lot 9), pas plus d'une fois toutes les 20 s.
                 if (cible.isDeadOrDying() && cible instanceof net.minecraft.world.entity.monster.Enemy && cible.getLastHurtByMob() == t
-                        && "guerrier".equals(t.metier) && Cerveau.parfois(t, "monstre_tue", 20)) Besoins.dire(t, "guerrier_monstre_tue", null);
+                        && Cerveau.parfois(t, "monstre_tue", 20)) {
+                    if ("guerrier".equals(t.metier)) Besoins.dire(t, "guerrier_monstre_tue", null);
+                    else Defense.crier(t, "monstre_abattu", null); // un ouvrier qui s'est battu (son caractère : Defense)
+                }
+                if (cible.isAlive()) oublier(t); // parti trop loin
                 return Etat.OK;
             }
             if (age > 20 * 60) return laisser(t, "trop_long");
@@ -819,7 +823,7 @@ public final class Actions {
                 }
             } else {
                 // Il tient sa place : le monstre trop loin de son poste, il le laisse (il reviendra s'il approche).
-                if (poste != null && cible.position().distanceToSqr(poste) > laisse * laisse) return Etat.OK;
+                if (poste != null && cible.position().distanceToSqr(poste) > laisse * laisse) { oublier(t); return Etat.OK; }
                 if (coince()) return laisser(t, "inaccessible");
                 marcher(t, cible.position(), 1.25);
             }
@@ -829,7 +833,13 @@ public final class Actions {
         /** Il n'arrive pas à l'atteindre : il le laisse 30 secondes au lieu de s'acharner (et de tourner autour). */
         Etat laisser(Travailleur t, String r) {
             t.inaccessibles.put(cible.getId(), t.level().getGameTime() + 600);
+            oublier(t);
             return echec(r);
+        }
+
+        /** Un ouvrier (pas un guerrier) qui laisse un monstre ne revient pas le charger avant 5 minutes (Defense.attaquer). */
+        void oublier(Travailleur t) {
+            if (!"guerrier".equals(t.metier) && Monde.hostile(cible)) t.inaccessibles.put(cible.getId(), t.level().getGameTime() + 20 * 300);
         }
     }
 

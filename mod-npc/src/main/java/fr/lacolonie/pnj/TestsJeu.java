@@ -470,6 +470,7 @@ public class TestsJeu {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
         Travailleur messager = ouvrier(h, "bucheron", 6, 2, 4, ItemStack.EMPTY);
+        t.temperament = "peureux"; // il fuit les monstres (un calme ou un colérique se défendrait : Bravoure)
         // Sa première décision vient après le coup : sinon, selon son numéro d'entité, il pouvait être déjà parti attendre
         // 20 s (mineur sans commande, il ne réagit qu'entre deux actions) et le test échouait au hasard (vu le 11/10).
         t.pauseCerveau = 8;
@@ -507,6 +508,8 @@ public class TestsJeu {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         Travailleur t = ouvrier(h, "mineur", 2, 2, 2, ItemStack.EMPTY);
         Travailleur u = ouvrier(h, "mineur", 2, 2, 7, ItemStack.EMPTY);
+        t.temperament = "peureux"; // il fuit les monstres (un calme ou un colérique se défendrait : Bravoure)
+        u.temperament = "calme"; // il voit le zombie sans le fuir ni le charger
         var chef = h.makeMockServerPlayerInLevel();
         u.chef = chef.getUUID();
         Cerveau.lancer(t, new Actions.Attendre(400));
@@ -577,6 +580,7 @@ public class TestsJeu {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         Travailleur t = ouvrier(h, "mineur", 2, 2, 4, ItemStack.EMPTY);
         t.mode = Travailleur.Mode.GREVE;
+        t.temperament = "peureux"; // il fuit les monstres (un calme ou un colérique se défendrait : Bravoure)
         var z = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 6, 2, 4);
         z.setNoAi(true);
         boolean[] fui = {false};

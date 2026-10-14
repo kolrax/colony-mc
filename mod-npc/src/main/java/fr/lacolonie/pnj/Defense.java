@@ -1,20 +1,27 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.ZombieVillager;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * La défense de la colonie vue par les ouvriers qui ne se battent pas (lot 9, cahier 14.11). Toutes les demi-secondes,
  * depuis le cerveau, une seule petite recherche autour de lui (8 blocs) : un creeper en vue, il lâche son travail, s'en
  * éloigne et prévient le guerrier de son chef le plus proche ; à portée de voix (48 blocs), le guerrier répond et vient le
  * tuer ; plus loin (96 blocs au plus), l'ouvrier court vers lui, à l'opposé du creeper, et le guerrier l'apprend en le
- * voyant arriver ({@link Guerrier#veille}). Un autre monstre près du poste : il le signale (le guerrier vient de même). Le
- * travail reprend tout seul ensuite : la fuite est une action comme une autre.
+ * voyant arriver ({@link Guerrier#veille}). Un autre monstre : son caractère décide ({@link Bravoure}) ; le colérique fonce le
+ * frapper, le calme le signale près du poste (et se défend, lui ou un collègue frappé), le peureux fuit en criant, le fourbe
+ * s'éclipse. Le travail reprend tout seul ensuite : la fuite et le combat sont des actions comme les autres.
  */
 final class Defense {
     private Defense() {}
@@ -26,55 +33,235 @@ final class Defense {
     /** Jusque-là, il sait où trouver le guerrier et court le prévenir. */
     static final double LOIN = 96;
 
-    /** Un ouvrier qui ne se bat pas voit un monstre : vrai s'il lâche ce qu'il fait (il fuit un creeper). */
+    /**
+     * Un monstre persistant est d'ordinaire gardé exprès par quelqu'un : l'ouvrier le laisse à son caractère ({@link #apprivoise}).
+     * Avec cette marque (tests, commande), il compte comme sauvage.
+     */
+    static final String SAUVAGE = "colonie_sauvage";
+
+    /** Jusque-là, un ouvrier qui se bat (colérique, riposte) poursuit le monstre ; il ne s'écarte pas de plus de 4 blocs de moins de là où il était. */
+    static final double PORTEE = 16;
+
+    /**
+     * Un ouvrier qui ne se bat pas voit un monstre : vrai s'il lâche ce qu'il fait (il fuit, ou il se bat). Un creeper, tous
+     * s'en éloignent ; un autre monstre, son caractère décide ({@link Bravoure}, réglage {@code caractere_monstres}) ; sans
+     * ça, il le signale s'il est près du poste.
+     */
     static boolean ouvrier(Travailleur t) {
         if (t.action instanceof Actions.Fuir || t.action instanceof Actions.Echapper || t.isSleeping() || t.aTerre) return false;
-        List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(VUE, 3, VUE), Monde::hostile);
-        if (autour.isEmpty()) return false;
+        // Pas en pleine consigne du chef, ni à cheval ou en barque.
+        boolean caractere = Reglages.actuel.caractere_monstres && !(t.action instanceof Consignes.Faire) && !t.isPassenger();
+        // En plein combat contre un monstre, trop blessé : même le colérique rompt et s'enfuit.
+        // Sans refuge, il ne recherche pas où fuir à chaque demi-seconde : toutes les 3 s au plus.
+        if (caractere && t.action instanceof Actions.Attaquer a && Monde.hostile(a.cible) && faible(t) && Cerveau.parfois(t, "rompre", 3))
+            return fuir(t, a.cible, DefaultRandomPos.getPosAway(t, 16, 7, a.cible.position()));
+        double vue = caractere ? Bravoure.vue(t.temperament) : VUE;
+        // Une seule recherche : les monstres, et ses collègues tout proches (pour les secourir ou les envoyer à sa place).
+        List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(vue, 3, vue),
+                e -> Monde.hostile(e) || caractere && e instanceof Travailleur w && w != t && t.chef != null && t.chef.equals(w.chef));
+        if (autour.stream().allMatch(e -> e instanceof Travailleur)) return false; // pas un monstre : ses collègues ne comptent pas
         autour.sort(Comparator.comparingDouble(t::distanceToSqr));
         Creeper creeper = null;
-        LivingEntity autre = null;
+        LivingEntity autre = null, cible = null;
+        List<LivingEntity> vus = new ArrayList<>();
+        List<Travailleur> collegues = new ArrayList<>();
         for (LivingEntity e : autour) {
+            if (e instanceof Travailleur w) { collegues.add(w); continue; }
             if (!t.getSensing().hasLineOfSight(e)) continue;
-            if (e instanceof Creeper c) { if (creeper == null) creeper = c; }
-            else if (autre == null) autre = e;
+            if (e instanceof Creeper c) { if (creeper == null) creeper = c; vus.add(e); continue; }
+            if (autre == null) autre = e;
+            // Un monstre qui est à quelqu'un, ou pas en guerre : son caractère ne joue pas (il le signale seulement).
+            if (caractere && apprivoise(e)) continue;
+            vus.add(e);
+            if (cible == null) cible = e;
         }
         if (creeper != null) {
             // Il fuit seulement s'il a où aller (sinon il ne lâcherait son travail que pour rien) ; il appelle la garde de toute façon.
             Vec3 loin = DefaultRandomPos.getPosAway(t, 16, 7, creeper.position());
             if (fuir(t, creeper, loin)) return true;
         }
+        if (t.action instanceof Actions.Attaquer) return false; // il se bat déjà
+        if (cible != null && caractere && reagir(t, cible, vus, collegues)) return true;
         LivingEntity vu = autre;
-        if (vu != null && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
+        // Le fourbe ne prévient personne, même quand il n'a pas où filer.
+        if (vu != null && !(caractere && t.temperament.equals("fourbe")) && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
             signaler(t, vu);
             Besoins.dire(t, "monstre_vu", null);
         }
         return false;
     }
 
+    /** Moins de 40 % de sa vie, ou hors de combat : il ne se bat plus. */
+    static boolean faible(Travailleur t) { return t.getHealth() < t.getMaxHealth() * Bravoure.FAIBLE || Blessures.horsDeCombat(t); }
+
     /**
-     * Il prévient la garde du creeper : de vive voix, ou en courant vers le guerrier s'il est plus loin ; et il s'en éloigne
-     * ({@code loin}, null s'il n'a pas où aller). Vrai s'il fuit.
+     * Son caractère devant le monstre {@code m}, le plus proche en vue (pas un creeper) ; {@code vus} : les monstres en vue,
+     * {@code collegues} : ceux de son chef autour de lui, du plus proche au plus loin. Vrai s'il lâche ce qu'il fait.
      */
-    static boolean fuir(Travailleur t, Creeper c, Vec3 loin) {
+    static boolean reagir(Travailleur t, LivingEntity m, List<LivingEntity> vus, List<Travailleur> collegues) {
+        LivingEntity coup = t.getLastHurtByMob();
+        boolean frappe = coup != null && vus.contains(coup) && Monde.recent(t, t.getLastHurtByMobTimestamp());
+        LivingEntity contre = frappe ? coup : null;
+        Travailleur proche = null;
+        for (Travailleur w : collegues) {
+            double d2 = w.distanceToSqr(t);
+            if (proche == null && !w.aTerre && d2 <= VUE * VUE) proche = w;
+            LivingEntity a = w.getLastHurtByMob();
+            if (contre == null && d2 <= 6 * 6 && a != null && vus.contains(a) && Monde.recent(w, w.getLastHurtByMobTimestamp())) contre = a;
+        }
+        boolean faible = faible(t);
+        // Où s'éloigner : seulement pour ceux qui peuvent fuir (quelques essais de position, pas plus d'une fois par décision).
+        boolean fuyard = t.temperament.equals("peureux") || t.temperament.equals("fourbe") || t.temperament.equals("colerique") && faible;
+        // Il l'a déjà fui et le monstre ne s'est pas approché depuis : il ne tourne pas en rond (il refuit s'il est frappé).
+        if (fuyard && !frappe && dejaFui(t, m)) return false;
+        Vec3 loin = fuyard ? refuge(t, m) : null;
+        Bravoure.Reaction r = Bravoure.face(t.temperament, faible, frappe, contre != null && !frappe, proche != null, loin != null);
+        return switch (r) {
+            case CHARGER -> attaquer(t, frappe ? coup : m, "monstre_charge");
+            case RIPOSTER -> contre != null && attaquer(t, contre, "monstre_riposte");
+            case FUIR -> loin != null && fuir(t, m, loin) && noterFuite(t, m);
+            case ECLIPSER, POUSSER -> {
+                if (loin == null) yield false;
+                // Sans prévenir la garde : il file, ou il y envoie un collègue en paroles.
+                if (Cerveau.parfois(t, "monstre_eclipse", 30)) crier(t, r == Bravoure.Reaction.POUSSER ? "monstre_pousse" : "monstre_eclipse", proche == null ? null : proche.prenom);
+                Actions.Fuir f = new Actions.Fuir(m);
+                f.refuge = loin;
+                retenirPlace(t);
+                Cerveau.lancer(t, f);
+                yield noterFuite(t, m);
+            }
+            case SIGNALER -> false;
+        };
+    }
+
+    /** Il frappe le monstre avec ce qu'il a en main, sans quitter son espace de vie ni le poursuivre loin ; pas un monstre qu'il n'a pas pu atteindre tout à l'heure. */
+    static boolean attaquer(Travailleur t, LivingEntity m, String cle) {
+        if (t.bureau != null && !t.chezLui(m.blockPosition()) || t.inaccessibles.getOrDefault(m.getId(), 0L) > t.level().getGameTime()) return false;
+        if (Cerveau.parfois(t, cle, 20)) crier(t, cle, null);
+        retenirPlace(t);
+        Cerveau.lancer(t, new Actions.Attaquer(m).portee(PORTEE).tenir(t.position(), PORTEE - 4));
+        return true;
+    }
+
+    /** Les phrases dites quand defense.txt n'a pas (encore) la section. */
+    static final Map<String, String> SECOURS = Map.of(
+            "creeper_alerte", "Un creeper ! À la garde !",
+            "creeper_fuite", "Un creeper ! À la garde !",
+            "monstre_creeper_recule", "Celui-là, je ne le frappe pas : il éclate ! Je recule.",
+            "monstre_charge", "Viens donc, sale bête ! Je vais t'apprendre !",
+            "monstre_riposte", "Puisqu'il le faut, je me défends !",
+            "monstre_panique", "Au secours ! Une bête ! Sauve qui peut !",
+            "monstre_eclipse", "Mieux vaut ne pas traîner par ici…",
+            "monstre_pousse", "{nom}, une bête rôde par là, va donc voir ! Moi, j'ai à faire.",
+            "monstre_abattu", "Et d'un ! Celui-là ne fera plus de mal.");
+
+    static String secours(String cle, String nom) { return SECOURS.get(cle).replace("{nom}", nom == null ? "" : nom); }
+
+    /** La réplique {@code cle} de defense.txt, ou sa phrase de secours. */
+    static void crier(Travailleur t, String cle, String nom) { if (!Besoins.dire(t, cle, nom)) t.dire(secours(cle, nom)); }
+
+    /** Ce tempérament, et le réglage qui laisse le caractère jouer devant les monstres. */
+    static boolean caractere(Travailleur t, String temperament) { return Reglages.actuel.caractere_monstres && temperament.equals(t.temperament); }
+
+    /**
+     * Il prévient la garde du monstre (un creeper ; ou n'importe lequel pour un peureux) : de vive voix, ou en courant vers
+     * le guerrier s'il est plus loin ; et il s'en éloigne ({@code loin}, null s'il n'a pas où aller). Vrai s'il fuit.
+     */
+    static boolean fuir(Travailleur t, LivingEntity c, Vec3 loin) {
         signaler(t, c);
         Actions.Fuir f = new Actions.Fuir(c);
         f.refuge = loin;
         Travailleur g = garde(t, LOIN);
-        boolean parle = Cerveau.parfois(t, "creeper", 20);
+        boolean creeper = c instanceof Creeper;
+        boolean parle = Cerveau.parfois(t, creeper ? "creeper" : "panique", 20);
+        // Le colérique ne crie pas à l'aide devant un creeper : il recule (la garde l'entend quand même) ; un autre monstre ne le fait fuir que blessé.
+        String seul = !creeper ? "monstre_panique" : caractere(t, "colerique") ? "monstre_creeper_recule" : "creeper_fuite";
         if (g != null && g.distanceTo(t) <= VOIX) {
-            if (parle && !Besoins.dire(t, "creeper_alerte", g.prenom)) t.dire("Un creeper ! À la garde !");
+            if (parle) crier(t, seul.equals("creeper_fuite") ? "creeper_alerte" : seul, g.prenom);
             appeler(g, c);
         } else {
-            if (parle && !Besoins.dire(t, "creeper_fuite", null)) t.dire("Un creeper ! À la garde !");
+            if (parle) crier(t, seul, null);
             if (g != null) {
-                // Le guerrier est loin, mais pas du côté du creeper : il court le prévenir.
+                // Le guerrier est loin, mais pas du côté du monstre : il court le prévenir.
                 Vec3 versG = g.position().subtract(t.position()), versC = c.position().subtract(t.position());
                 if (versG.x * versC.x + versG.z * versC.z < 0) { f.refuge = g.position(); f.duree = 20 * 40; }
             }
         }
         if (f.refuge == null) return false;
+        if (!creeper) retenirPlace(t); // après un creeper, il ne revient pas se planter à côté
         Cerveau.lancer(t, f);
+        return true;
+    }
+
+    /**
+     * Un monstre qui est à quelqu'un, ou qui n'est pas en guerre : nommé, en laisse, persistant (gardé exprès, sauf marqué
+     * {@link #SAUVAGE}), un zombie villageois qu'on soigne, un piglin qui n'attaque personne.
+     */
+    static boolean apprivoise(LivingEntity e) {
+        if (e.hasCustomName()) return true;
+        if (e instanceof Mob m && (m.isLeashed() || m.isPersistenceRequired() && !m.getTags().contains(SAUVAGE))) return true;
+        if (e instanceof ZombieVillager z && z.isConverting()) return true;
+        return e instanceof AbstractPiglin p && p.getTarget() == null;
+    }
+
+    /**
+     * Où fuir ce monstre : de préférence hors de sa vue (il ne le refuira pas sans qu'il s'approche : {@link #dejaFui}), en trois
+     * tirages au plus ; sinon le plus loin trouvé ; null s'il n'a nulle part où aller.
+     */
+    static Vec3 refuge(Travailleur t, LivingEntity m) {
+        Vec3 mieux = null;
+        double vue = Bravoure.vue(t.temperament) + 1;
+        for (int k = 0; k < 3; k++) {
+            Vec3 p = DefaultRandomPos.getPosAway(t, 16, 7, m.position());
+            if (p == null) continue;
+            if (p.distanceToSqr(m.position()) > vue * vue) return p;
+            if (mieux == null || p.distanceToSqr(m.position()) > mieux.distanceToSqr(m.position())) mieux = p;
+        }
+        return mieux;
+    }
+
+    /** Combien de temps il se souvient d'avoir fui un monstre (3 minutes). */
+    static final int SOUVENIR_FUITE = 20 * 180;
+
+    /** Il a fui ce monstre il y a peu, et il n'est pas plus près qu'alors (à un bloc et demi près). */
+    static boolean dejaFui(Travailleur t, LivingEntity m) {
+        long maintenant = t.level().getGameTime();
+        t.fuis.values().removeIf(v -> v[1] < maintenant);
+        double[] f = t.fuis.get(m.getId());
+        return f != null && t.distanceTo(m) >= f[0] - 1.5;
+    }
+
+    /** Il retient d'où il a fui ce monstre (la distance la plus courte) ; toujours vrai. */
+    static boolean noterFuite(Travailleur t, LivingEntity m) {
+        double[] avant = t.fuis.get(m.getId());
+        double d = t.distanceTo(m);
+        t.fuis.put(m.getId(), new double[]{avant == null ? d : Math.min(d, avant[0]), t.level().getGameTime() + SOUVENIR_FUITE});
+        return true;
+    }
+
+    /** « Attends ici » : avant de fuir ou de se battre, il retient sa place pour y revenir ensuite ({@link #revenir}). */
+    static void retenirPlace(Travailleur t) {
+        if (t.mode != Travailleur.Mode.ATTENDRE || t.memoire.contains("place_attente")) return;
+        CompoundTag p = new CompoundTag();
+        p.putDouble("x", t.getX());
+        p.putDouble("y", t.getY());
+        p.putDouble("z", t.getZ());
+        p.putLong("t", t.level().getGameTime());
+        t.memoire.put("place_attente", p);
+    }
+
+    /** Revenu au calme, celui qu'on a mis à attendre retourne à sa place : trois essais au plus, dans les 5 minutes. Vrai s'il y va. */
+    static boolean revenir(Travailleur t) {
+        if (!t.memoire.contains("place_attente")) return false;
+        CompoundTag p = t.memoire.getCompound("place_attente");
+        Vec3 place = new Vec3(p.getDouble("x"), p.getDouble("y"), p.getDouble("z"));
+        if (t.mode != Travailleur.Mode.ATTENDRE || p.getInt("essais") >= 3 || t.level().getGameTime() - p.getLong("t") > 20 * 300
+                || t.position().distanceToSqr(place) <= 1.5 * 1.5) {
+            t.memoire.remove("place_attente");
+            return false;
+        }
+        p.putInt("essais", p.getInt("essais") + 1);
+        Cerveau.lancer(t, new Actions.Aller(place, 1));
         return true;
     }
 
