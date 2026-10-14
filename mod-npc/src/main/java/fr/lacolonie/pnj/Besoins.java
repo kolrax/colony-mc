@@ -49,14 +49,19 @@ final class Besoins {
     static boolean dire(Travailleur t, String cle, String nom) { return dire(t, cle, nom, null); }
 
     static boolean dire(Travailleur t, String cle, String nom, String objet) {
+        String texte = texte(t, cle, nom, objet);
+        if (texte != null) t.dire(texte);
+        return texte != null;
+    }
+
+    /** La réplique {@code cle} tirée pour lui (variables remplies), sans la dire : pour une réponse au chef. Null si la section manque. */
+    static String texte(Travailleur t, String cle, String nom, String objet) {
         Map<String, String> v = new HashMap<>();
         if (objet != null) v.put("objet", objet);
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
         if (t.memoire.contains("deuil_nom")) v.put("mort", t.memoire.getString("deuil_nom")); // deuil_tristesse (Humeur.deuil)
-        String texte = Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
-        if (texte != null) t.dire(texte);
-        return texte != null;
+        return Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
     }
 
     /** Toutes les 5 s environ : ce que son corps et son humeur lui font dire. Rien à terre, endormi, en combat ou en fuite. */
