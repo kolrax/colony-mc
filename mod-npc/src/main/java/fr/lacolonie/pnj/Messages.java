@@ -73,6 +73,24 @@ final class Messages {
         m("cisailles", "Il me faut des cisailles",
                 "Nos moutons portent toute leur laine, et je n'ai pas de cisailles pour les tondre. Laisse-m'en une paire au dépôt.",
                 "Sans cisailles, la laine reste sur le dos des moutons. Il m'en faudrait une paire au dépôt.");
+        m("arc", "Il me faut un arc",
+                "Je n'ai pas d'arc : le gibier me voit venir et file avant que j'approche. Laisse-m'en un au dépôt.",
+                "Sans arc, je cours après les bêtes sans jamais les attraper. Il m'en faudrait un au dépôt.",
+                "Mon arc s'est brisé, ou je n'en ai jamais eu. Laisse-m'en un au dépôt et je reprends la chasse.");
+        t("arc", "colerique", "Chasser sans arc, c'est courir pour rien ! Mets-m'en un au dépôt.");
+
+        m("fleches", "Plus de flèches",
+                "Mon carquois est vide : plus une flèche. Laisse-m'en au dépôt.",
+                "J'ai tiré ma dernière flèche. Sans elles, mon arc ne sert plus à rien. Il m'en faudrait au dépôt.",
+                "Plus de flèches, ni sur moi ni au dépôt. Le gibier peut dormir tranquille, pour l'instant.");
+        t("fleches", "fourbe", "Plus de flèches. Certaines sont restées dans les arbres, je l'avoue. Il m'en faudrait d'autres au dépôt.");
+        t("fleches", "peureux", "Je n'ai plus une seule flèche… Je n'ose plus m'enfoncer dans les bois comme ça. Laisse-m'en au dépôt.");
+
+        m("sans_gibier", "Pas de gibier",
+                "J'ai battu les bois autour du poste : pas une bête sauvage à chasser. Il faudra chercher plus loin, ou attendre que le gibier revienne.",
+                "Le gibier a déserté les environs. Je rentre bredouille. Envoie-moi chasser ailleurs, si tu connais un meilleur coin.",
+                "Pas une trace, pas un bruit dans les bois d'ici. Je ne chasserai pas les bêtes de nos enclos, rassure-toi.");
+        t("sans_gibier", "calme", "Les bêtes se sont éloignées. Elles reviendront. En attendant, montre-moi un autre bois si tu veux de la viande.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");
