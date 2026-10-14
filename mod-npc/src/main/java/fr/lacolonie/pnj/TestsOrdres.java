@@ -344,4 +344,54 @@ public class TestsOrdres {
                 },
                 () -> fin(h, e));
     }
+
+    // --- Ce n'est pas mon métier (cahier 14.1) ----------------------------------------------------------------
+
+    /**
+     * « Odon, va me chercher 64 fers » : le bûcheron nomme Bertrand le mineur et propose d'aller le prévenir ; « oui » :
+     * il marche jusqu'à lui (10 blocs) et Bertrand, qui attendait, reçoit la mission de 64 fers et se remet au travail.
+     */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 900)
+    public static void bucheronPrevientLeMineur(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 210);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> {
+                    bertrand.mode = Travailleur.Mode.ATTENDRE;
+                    bertrand.teleportTo(bertrand.getX() + 10, bertrand.getY(), bertrand.getZ());
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                    String r = IA.echange(odon, 1);
+                    h.assertTrue(r.contains("Bertrand le mineur") && r.endsWith("?") && bertrand.missions.isEmpty(), "il propose de prévenir Bertrand (" + r + ")");
+                },
+                () -> odon.parler(chef, "Oui, vas-y."),
+                () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer") && m.quantite() && m.nombre == 64),
+                        "Bertrand a reçu la commande (" + bertrand.missions.stream().map(m -> m.id + " " + m.nombre).toList() + ", Odon à "
+                                + (int) odon.distanceTo(bertrand) + " blocs, " + IA.echange(odon, 1) + ")"),
+                () -> h.assertTrue(odon.distanceTo(bertrand) < 4 && bertrand.mode == Travailleur.Mode.TRAVAIL && odon.missions.isEmpty(),
+                        "porté à pied, Bertrand au travail (" + (int) odon.distanceTo(bertrand) + " blocs, " + bertrand.mode + ")"),
+                () -> fin(h, e));
+    }
+
+    /** Aucun mineur chez ce chef : Odon le dit (« Personne ici ne mine… »), et un « oui » ne donne la commande à personne. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void personneNeMine(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 211);
+        e[0].discard();
+        Travailleur raoul = e[1], odon = e[2];
+        Travailleur[] restent = {raoul, odon};
+        etapes(h, chef, restent,
+                () -> {
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                    String r = IA.echange(odon, 1);
+                    h.assertTrue(r.contains("ne mine") && r.contains("un mineur"), "personne ne mine (" + r + ")");
+                },
+                () -> odon.parler(chef, "Oui"),
+                attendre(h, 40),
+                () -> h.assertTrue(raoul.missions.isEmpty() && odon.missions.isEmpty(), "personne n'a la commande (" + raoul.missions.size() + ", " + odon.missions.size() + ")"),
+                () -> fin(h, restent));
+    }
 }

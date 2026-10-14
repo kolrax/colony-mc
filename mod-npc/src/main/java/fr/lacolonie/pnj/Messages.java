@@ -301,7 +301,24 @@ final class Messages {
         m("dit_merci", null, "Merci, chef !", "C'est gentil, chef.", "Ça fait plaisir.");
         m("dit_salut", null, "Bonjour, chef.", "Salut, chef !", "Chef !");
         m("dit_hors_metier", null, "Je suis {0}, chef : {1}, ce n'est pas mon travail.", "{1} ? Je suis {0}, je ne saurais pas faire ça.");
-        m("dit_missions", null, "Compris, chef : {0}.", "Entendu : {0}.", "Bien noté : {0}.");
+        // Ce que son métier ne fait pas : il propose d'aller prévenir l'ouvrier du bon métier (Relais). {0} l'objet, {1} « Bertrand le mineur ».
+        m("relais_propose", null, "C'est le travail de {1}, chef. Je vais le prévenir ?",
+                "« {0} » ? Ce n'est pas mon ouvrage, chef : c'est celui de {1}. Veux-tu que j'aille le prévenir ?",
+                "Je n'y entends rien, chef, mais {1} s'en chargera. Je cours le prévenir ?");
+        t("relais_propose", "colerique", "Est-ce que j'ai une tête à ça ? C'est l'affaire de {1}. Je vais le prévenir, si tu y tiens ?");
+        t("relais_propose", "peureux", "Oh, je ne saurais pas, chef… Mais {1}, lui, saura. Je vais le prévenir ?");
+        // {0} « ne mine », {1} le métier, {2} l'objet.
+        m("relais_personne", null, "Personne ici {0}, chef. Il faudrait embaucher un {1}.",
+                "« {2} » ? Aucun des nôtres {0}, chef. Il nous faudrait un {1}.");
+        m("relais_oui", null, "J'y cours, chef. Je préviens {0}.", "Bien, chef : je vais trouver {0}.", "Entendu. Je vais dire ça à {0}.");
+        m("relais_loin", null, "{0} est loin d'ici, chef : je lui fais porter le mot.", "Trop loin pour y courir, chef : je fais passer le mot à {0}.");
+        m("relais_non", null, "Bien, chef. Je retourne à mon ouvrage.", "Comme tu voudras, chef.", "Soit. Je reprends ma tâche.");
+        m("relais_lettre", null, "Ce n'est pas mon ouvrage, chef : j'ai fait passer ta demande à {0}.");
+        m("relais_perdu", null, "Je ne trouve plus {0}, chef. Ta demande n'a pas pu lui parvenir.");
+        // Le messager arrivé : {0} celui qu'il prévient, {1} la commande (« 64 fer »). Puis la réponse : {0} le messager.
+        m("relais_message", null, "{0} ! Le chef te fait dire : {1}.", "{0}, le chef te demande {1}.");
+        m("relais_recu", null, "Merci, {0}. Je m'y mets.", "Bien reçu, {0}. J'y vais.", "Entendu, {0}.");
+        m("dit_missions", null,"Compris, chef : {0}.", "Entendu : {0}.", "Bien noté : {0}.");
         m("dit_regle", null, "Entendu : {0}, {1}.", "Bien noté : {0}, {1}.", "C'est compris : {0}, {1}.");
         m("dit_oublie_regles", null, "Entendu, j'oublie tes consignes.", "Bien, je ne tiens plus compte de ce que tu m'avais demandé.");
         m("dit_horaires", null, "Entendu : je travaillerai de {0} h à {1} h.", "D'accord, de {0} h à {1} h.");
