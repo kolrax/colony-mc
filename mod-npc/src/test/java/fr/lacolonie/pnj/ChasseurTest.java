@@ -36,6 +36,10 @@ class ChasseurTest {
         assertEquals(List.of(5), Chasse.proies(b, null, 5));
         assertEquals(List.of(), Chasse.proies(b, Set.of("lapin"), 5));
         assertEquals(List.of(), Chasse.proies(List.of(sauvage(1, "vache", 1)), null, 5));
+        // Il laisse du gibier pour qu'il revienne : seulement quand c'est vraiment la raison.
+        assertTrue(Chasse.laisse(b, Set.of("lapin")));
+        assertFalse(Chasse.laisse(b, null), "il reste une poule à prendre");
+        assertFalse(Chasse.laisse(List.of(new Bete(1, "lapin", false, true, false, 1)), null), "rien que des petits : rien à laisser");
         // Les espèces de la commande : le cuir vient des vaches et des lapins, les plumes des poules.
         assertEquals(Set.of("vache", "lapin"), Chasse.pour("cuir"));
         assertEquals(Set.of("poule"), Chasse.pour("plumes"));
@@ -48,6 +52,9 @@ class ChasseurTest {
         assertEquals("cochon", Chasse.dite("chasse un sanglier").id());
         assertEquals("poule", Chasse.dite("va me chasser deux poulets").id());
         assertNull(Chasse.dite("va chasser"));
+        assertTrue(Chasse.monstres("Chasse les zombies"));
+        assertTrue(Chasse.monstres("chasse ce monstre"));
+        assertFalse(Chasse.monstres("Chasse des lapins"));
         assertEquals("minecraft:rabbit", Chasse.parId("lapin").type());
         assertEquals("lapin", Chasse.parType("minecraft:rabbit").id());
         assertNull(Chasse.parType("minecraft:wolf"), "jamais un loup");

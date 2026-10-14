@@ -56,6 +56,28 @@ final class Chasse {
         return null;
     }
 
+    /** Des mots qui désignent des monstres : leur chasse est l'affaire du guerrier. */
+    static final List<String> MONSTRES = List.of("monstre", "monstres", "zombie", "zombies", "squelette", "squelettes", "araignee", "araignees",
+            "creeper", "creepers", "rodeur", "rodeurs", "ennemi", "ennemis", "sorciere", "sorcieres", "noye", "noyes", "pillard", "pillards",
+            "slime", "slimes", "enderman", "endermen", "fantome", "fantomes", "mort vivant", "morts vivants");
+
+    /** La phrase parle de monstres (« chasse les zombies », « chasse ce monstre »). */
+    static boolean monstres(String phrase) {
+        String n = Ordres.normaliser(phrase == null ? "" : phrase);
+        for (String m : MONSTRES) if (n.contains(" " + m + " ")) return true;
+        return false;
+    }
+
+    /**
+     * Il y a du gibier de ces espèces, mais il le laisse pour qu'il revienne : des adultes sauvages à personne, et aucun qu'il
+     * puisse tirer ({@link #proies} vide à cause de {@link #GARDER}).
+     */
+    static boolean laisse(List<Bete> betes, Set<String> especes) {
+        boolean vu = false;
+        for (Bete b : betes) if ((especes == null || especes.contains(b.espece)) && b.adulte && b.sauvage && !b.intouchable) vu = true;
+        return vu && proies(betes, especes, 1).isEmpty();
+    }
+
     /**
      * Une bête vue par le chasseur. {@code sauvage} : hors de tout enclos ; {@code intouchable} : à quelqu'un (nom, laisse,
      * selle, maître) ou chez un voisin ; {@code distance} : au carré, depuis lui.

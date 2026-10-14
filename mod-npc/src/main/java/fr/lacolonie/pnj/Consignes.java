@@ -250,6 +250,7 @@ final class Consignes {
                     n = q > 0 ? Math.min(q, 64) : 1;
                 }
                 if (a.equals("chasser")) {
+                    if (Chasse.monstres(phrase)) return "Les monstres, c'est l'affaire du guerrier, chef. Moi, je chasse le gibier.";
                     // Le gibier dit (« chasse des lapins ») et combien (un tour de chasse, sans nombre).
                     Chasse.Espece esp = Chasse.dite(phrase);
                     texte = esp == null ? "" : esp.id();

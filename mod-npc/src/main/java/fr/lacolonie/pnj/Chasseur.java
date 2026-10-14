@@ -149,9 +149,45 @@ final class Chasseur extends Metier {
 
     /** Ce qu'il sait des prés et des enclos autour du poste (pas sauvegardé) : revu toutes les minutes. */
     static final class Pres {
-        final Set<Long> ouvertes = new HashSet<>();
+        /** Les cases d'un pré ouvert, avec leur hauteur (à 4 blocs près). */
+        final Map<Long, Integer> ouvertes = new HashMap<>();
         final List<Elevage.Enclos> enclos = new ArrayList<>();
+        /** Les bêtes dont on ne sait pas si elles sont dans un enclos (un grand pré clos, un bord pas chargé) : ni tirées ni comptées. */
+        final Set<Integer> douteuses = new HashSet<>();
         long jusqua;
+        /** À la dernière recherche : il y avait du gibier, mais il le laisse pour qu'il revienne ({@link Chasse#laisse}). */
+        boolean garde;
+    }
+
+    /** Ce point est dans un pré ouvert déjà relevé, à 4 blocs près en hauteur. */
+    static boolean ouverte(Pres p, int x, int y, int z) {
+        Integer h = p.ouvertes.get(Elevage.cle(x, z));
+        return h != null && Math.abs(h - y) <= 4;
+    }
+
+    /**
+     * La bête en (x, y, z) est-elle sauvage ? Vrai seulement si elle peut aller loin ({@link Elevage#clore} renvoie null) sans
+     * que le parcours touche une barrière, un muret, un portillon ou un bord pas chargé : sinon, on ne sait pas (null), et un
+     * enclos trouvé est retenu (faux). Seules les cases d'un vrai pré ouvert vont dans {@code p.ouvertes}.
+     */
+    static Boolean sauvage(ServerLevel l, Pres p, int x, int y, int z) {
+        boolean[] doute = {false};
+        Elevage.Terrain terrain = (i, j, k) -> {
+            if (!l.hasChunkAt(i, k)) { doute[0] = true; return Elevage.CLOTURE; }
+            net.minecraft.core.BlockPos q = new net.minecraft.core.BlockPos(i, j, k);
+            if (Eleveur.cloture(l.getBlockState(q)) || Eleveur.cloture(l.getBlockState(q.below())) || Eleveur.cloture(l.getBlockState(q.above()))) doute[0] = true;
+            return Eleveur.pas(l, i, j, k);
+        };
+        // Les cases déjà connues pour ouvertes (à cette hauteur) arrêtent le parcours ; les nouvelles restent à part tant qu'on doute.
+        Set<Long> vues = new HashSet<>() {
+            @Override
+            public boolean contains(Object o) { return super.contains(o) || o instanceof Long c && p.ouvertes.containsKey(c) && Math.abs(p.ouvertes.get(c) - y) <= 4; }
+        };
+        Elevage.Enclos e = Elevage.clore(x, y, z, terrain, Elevage.CASES_MAX, vues);
+        if (e != null) { p.enclos.add(e); return Boolean.FALSE; }
+        if (doute[0]) return null;
+        for (Long c : vues) p.ouvertes.putIfAbsent(c, y);
+        return Boolean.TRUE;
     }
 
     static final Map<Travailleur, Pres> PRES = new WeakHashMap<>();
@@ -166,7 +202,7 @@ final class Chasseur extends Metier {
         ServerLevel l = (ServerLevel) t.level();
         Pres p = PRES.computeIfAbsent(t, k -> new Pres());
         long maintenant = l.getGameTime();
-        if (p.jusqua <= maintenant) { p.ouvertes.clear(); p.enclos.clear(); p.jusqua = maintenant + REVUE; }
+        if (p.jusqua <= maintenant) { p.ouvertes.clear(); p.enclos.clear(); p.douteuses.clear(); p.jusqua = maintenant + REVUE; }
         List<Animal> betes = new ArrayList<>();
         int r = Chasse.ZONE;
         double bx = t.bureau.getX() + 0.5, bz = t.bureau.getZ() + 0.5;
@@ -180,18 +216,19 @@ final class Chasseur extends Metier {
         Map<Integer, Animal> parId = new HashMap<>();
         for (Animal a : betes) {
             int x = a.getBlockX(), y = a.getBlockY(), z = a.getBlockZ();
-            Boolean sauvage = p.ouvertes.contains(Elevage.cle(x, z)) ? Boolean.TRUE : Eleveur.enclos(p.enclos, x, y, z) != null ? Boolean.FALSE : null;
-            if (sauvage == null && releves < RELEVES) {
+            // L'enclos d'abord (une étable sous un pré), puis le pré ouvert ; une bête douteuse n'est relevée qu'une fois par minute.
+            Boolean sauvage = Eleveur.enclos(p.enclos, x, y, z) != null ? Boolean.FALSE : ouverte(p, x, y, z) ? Boolean.TRUE : null;
+            if (sauvage == null && releves < RELEVES && !p.douteuses.contains(a.getId())) {
                 releves++;
-                Elevage.Enclos e = Elevage.clore(x, y, z, (i, j, k) -> Eleveur.pas(l, i, j, k), Elevage.CASES_MAX, p.ouvertes);
-                if (e != null) p.enclos.add(e);
-                sauvage = e == null;
+                sauvage = sauvage(l, p, x, y, z);
+                if (sauvage == null) p.douteuses.add(a.getId());
             }
-            if (sauvage == null) continue; // pas encore relevé : ni tiré, ni compté
+            if (sauvage == null) continue; // pas relevé, ou douteux : ni tiré, ni compté
             boolean intouchable = Eleveur.intouchable(a) || t.inaccessibles.containsKey(a.getId()) || !Fermier.aLui(t, a.blockPosition());
             vues.add(new Chasse.Bete(a.getId(), espece(a).id(), !a.isBaby(), sauvage, intouchable, a.distanceToSqr(t)));
             parId.put(a.getId(), a);
         }
+        p.garde = Chasse.laisse(vues, especes);
         return Chasse.proies(vues, especes, voulu).stream().map(parId::get).toList();
     }
 
@@ -206,8 +243,10 @@ final class Chasseur extends Metier {
         final int voulu;
         final boolean ordre;
         Actions.Action sous;
-        int etape, tues;
-        boolean sansArme;
+        int etape, tues, ratees;
+        boolean sansArme, garde, lasse;
+        /** Au plus tant de traques ratées, et tant de temps (en ticks) par tour. */
+        static final int RATEES = 3, DUREE = 20 * 180;
         final Map<String, Integer> par = new LinkedHashMap<>();
 
         Battue(Set<String> especes, int voulu, boolean ordre) {
@@ -231,7 +270,10 @@ final class Chasseur extends Metier {
                 sous.age++;
                 if (r == Actions.Etat.EN_COURS) return r;
                 sous.fin(t);
-                if (sous instanceof Traque q && q.tue) { tues++; par.merge(q.espece.id(), 1, Integer::sum); }
+                if (sous instanceof Traque q) {
+                    if (q.tue) { tues++; par.merge(q.espece.id(), 1, Integer::sum); }
+                    else ratees++;
+                }
                 sous = null;
             }
             switch (etape) {
@@ -243,7 +285,10 @@ final class Chasseur extends Metier {
                 case 1 -> {
                     if (!arme(t)) { sansArme = true; etape = 2; return Actions.Etat.EN_COURS; }
                     if (tues >= voulu || Monde.libres(t) < 3 || !t.level().isDay() && !ordre) { etape = 2; return Actions.Etat.EN_COURS; }
+                    // Trop de bêtes manquées, ou trop longtemps : il rentre (il reprendra au tour suivant).
+                    if (ratees >= RATEES || age > DUREE) { lasse = true; etape = 2; return Actions.Etat.EN_COURS; }
                     List<Animal> p = gibier(t, especes, 1);
+                    garde = PRES.get(t).garde;
                     // Seul, pour une commande de cuir ou de plumes : faute de la bête qui en donne, une autre (la viande sert toujours).
                     if (p.isEmpty() && !ordre && especes != null) p = gibier(t, null, 1);
                     if (p.isEmpty()) { etape = 2; return Actions.Etat.EN_COURS; }
@@ -271,12 +316,16 @@ final class Chasseur extends Metier {
             if (tues == 0) {
                 if (sansArme) return "Il me faut un arc et des flèches, chef, ou au moins une lame : il n'y en a pas au dépôt.";
                 String quoi = especes != null && especes.size() == 1 ? Chasse.parId(especes.iterator().next()).noms() : "gibier";
-                return "Je ne trouve pas de " + quoi + " à prendre par ici, chef. Je ne touche ni aux bêtes des enclos, ni aux petits, et j'en laisse toujours de quoi repeupler.";
+                if (lasse) return "Le gibier m'a filé entre les doigts, chef. Je retenterai ma chance.";
+                if (garde) return "Il ne reste que quelques " + (quoi.equals("gibier") ? "bêtes" : quoi) + " par ici, chef : je les laisse, pour que le gibier revienne.";
+                return "Je ne trouve pas de " + quoi + " à prendre par ici, chef. Je ne touche ni aux bêtes des enclos, ni à celles qui ont un maître, ni aux petits.";
             }
             List<String> l = new ArrayList<>();
             par.forEach((k, v) -> { Chasse.Espece e = Chasse.parId(k); l.add(v + " " + (v > 1 ? e.noms() : e.nom())); });
             String fait = "Belle chasse, chef : " + String.join(" et ", l) + ". Le butin est au dépôt.";
-            return tues < voulu ? fait + " Je n'en ai pas pris plus : il faut en laisser pour que le gibier revienne." : fait;
+            if (tues >= voulu) return fait;
+            if (garde) return fait + " Je n'en ai pas pris plus : il faut en laisser pour que le gibier revienne.";
+            return lasse ? fait + " Le reste m'a filé entre les doigts." : fait;
         }
     }
 
@@ -289,7 +338,8 @@ final class Chasseur extends Metier {
         final Chasse.Espece espece;
         Actions.Attaquer attaque;
         AbstractArrow fleche;
-        boolean tue;
+        boolean tue, fini;
+        String rate = "";
         int ramasse;
 
         Traque(Animal cible) { super("traque"); this.cible = cible; this.espece = espece(cible); mobile = true; }
@@ -301,28 +351,37 @@ final class Chasseur extends Metier {
         }
 
         Actions.Etat tick(Travailleur t) {
-            if (!tue) {
+            if (!fini) {
                 if (attaque == null) {
                     if (!Guerrier.peutTirer(t)) Eleveur.armer(t);
                     attaque = new Actions.Attaquer(cible).portee(Chasse.ZONE + 16);
                     Besoins.parler(t, "chasse_piste", null);
                 }
-                if (age % 20 == 0 && cible.isAlive() && (Eleveur.intouchable(cible) || cible.isBaby())) return laisser(t, "intouchable");
+                // Chaque seconde : la bête a changé de main (un nom, une laisse), ou elle est passée chez un voisin ; il la laisse.
+                if (age % 20 == 0 && cible.isAlive() && (Eleveur.intouchable(cible) || cible.isBaby() || !Fermier.aLui(t, cible.blockPosition()))) {
+                    attaque.fin(t);
+                    laisser(t, "intouchable");
+                    return Actions.Etat.EN_COURS;
+                }
                 Actions.Etat r = attaque.tick(t);
                 attaque.age++;
                 if (r == Actions.Etat.EN_COURS) return r;
                 attaque.fin(t);
-                if (cible.isAlive()) { Besoins.parler(t, "chasse_rate", null); return laisser(t, r == Actions.Etat.ECHEC ? attaque.raison : "echappe"); }
-                tue = true;
+                fini = true;
+                // Prise seulement s'il l'a tuée lui-même (pas une bête tuée par un autre, ni partie avec un chunk déchargé).
+                var parti = cible.getRemovalReason();
+                tue = !cible.isAlive() && (parti == null || parti == net.minecraft.world.entity.Entity.RemovalReason.KILLED) && cible.getLastHurtByMob() == t;
+                if (cible.isAlive()) { Besoins.parler(t, "chasse_rate", null); laisser(t, r == Actions.Etat.ECHEC ? attaque.raison : "echappe"); }
+                else if (!tue) rate = "pas_lui";
             }
-            // Ses flèches plantées alentour : il les ramasse (une par une, la plus proche d'abord).
-            if (++ramasse > 20 * 10) return Actions.Etat.OK;
+            // Ses flèches plantées alentour, la bête prise ou manquée : il les ramasse (une par une, la plus proche d'abord).
+            if (++ramasse > 20 * 10) return issue();
             if (fleche == null || !fleche.isAlive() || ramasse % 20 == 1) {
                 fleche = t.level().getEntitiesOfClass(AbstractArrow.class, t.getBoundingBox().inflate(16, 6, 16), a -> a.isAlive() && a.tickCount > 20
                                 && a.pickup == AbstractArrow.Pickup.ALLOWED && a.getPersistentData().hasUUID(Guerrier.TIREUR)
                                 && a.getPersistentData().getUUID(Guerrier.TIREUR).equals(t.getUUID()))
                         .stream().min(Comparator.comparingDouble(a -> a.distanceToSqr(t))).orElse(null);
-                if (fleche == null) return Actions.Etat.OK;
+                if (fleche == null) return issue();
             }
             if (t.distanceToSqr(fleche) < 2 * 2) {
                 t.take(fleche, 1);
@@ -331,15 +390,18 @@ final class Chasseur extends Metier {
                 fleche = null;
                 return Actions.Etat.EN_COURS;
             }
-            if (coince()) return Actions.Etat.OK;
+            if (coince()) return issue();
             marcher(t, fleche.position(), 1.0);
             return Actions.Etat.EN_COURS;
         }
 
-        /** Il la laisse une minute (elle a fui, ou n'est plus du gibier). */
-        Actions.Etat laisser(Travailleur t, String r) {
+        Actions.Etat issue() { return tue ? Actions.Etat.OK : echec(rate.isEmpty() ? "echappe" : rate); }
+
+        /** Il la laisse une minute (elle a fui, ou n'est plus du gibier), puis ramasse ses flèches. */
+        void laisser(Travailleur t, String r) {
             t.inaccessibles.put(cible.getId(), t.level().getGameTime() + 1200);
-            return echec(r.isEmpty() ? "echappe" : r);
+            fini = true;
+            rate = r.isEmpty() ? "echappe" : r;
         }
     }
 
