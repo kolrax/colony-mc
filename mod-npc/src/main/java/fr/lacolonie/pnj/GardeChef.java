@@ -74,7 +74,7 @@ final class GardeChef {
             while (g < e.groupCount() && e.group(g) == null) g++;
             if (e.group(g) == null || PAS_UN_NOM.contains(e.group(g))) continue;
             int a = s0 + e.start(g), b = a;
-            while (b < texte.length() && (Character.isLetterOrDigit(texte.charAt(b)) || texte.charAt(b) == '_')) b++;
+            while (b < texte.length() && (Character.isLetterOrDigit(texte.charAt(b)) || texte.charAt(b) == '_' || texte.charAt(b) == '-')) b++;
             String nom = texte.substring(a, b);
             if (lu.epargner.stream().noneMatch(nom::equalsIgnoreCase)) lu.epargner.add(nom);
             effacer(sans, s0 + e.start(), Math.max(b, s0 + e.end()));
