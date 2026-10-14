@@ -17,7 +17,7 @@ final class Impossible {
             new Object[]{"roche", Pattern.compile(" (?:casse|cassez|casser|creuse|creusez|creuser|mine|minez|miner|perce|percez|percer|brise|brisez|briser|detruis|detruisez|"
                     + "detruire|traverse|traverser|pioche|piocher) (?:moi |nous )?(?:la |le |de la |du |dans la |dans le |a travers la |a travers le |sous la |sous le )?"
                     + "(?:bedrock|roche mere|roche du fond|fond du monde|pierre du fond|socle du monde|roche indestructible|pierre indestructible) ")},
-            new Object[]{"voler", Pattern.compile(" (?:s |t |vous |te )?envole| (?:des|tes|vos|ses|mes) ailes | (?:vole|volez|voler) (?:dans le ciel|dans les airs|dans l air|comme un oiseau|"
+            new Object[]{"voler", Pattern.compile(" (?:s |t |vous |te )?envole| (?:tes|vos) ailes | (?:te|toi|vous) (?:faire )?pousser des ailes | (?:vole|volez|voler) (?:dans le ciel|dans les airs|dans l air|comme un oiseau|"
                     + "jusqu|au dessus|par dessus|la haut|tout la haut|vers le ciel|au ciel|dans les nuages)| (?:apprends|apprenez|sais tu|savez vous|tu sais|vous savez) (?:a )?voler "
                     + "| (?:vole|volez|voler) (?:\\? )?$")},
             new Object[]{"lune", Pattern.compile(" (?:sur|decroche|decrocher|decrochez|attrape|attraper|ramene|ramener|rapporte|apporte|cueille|cherche|chercher|touche|jusqu a|"

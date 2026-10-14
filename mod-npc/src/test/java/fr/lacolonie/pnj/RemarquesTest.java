@@ -47,7 +47,7 @@ class RemarquesTest {
     @Test
     void impossibleSelonLeGenre() {
         Map<String, String> phrases = Map.ofEntries(
-                Map.entry("Envole-toi !", "voler"), Map.entry("Saute du toit pour voler", "voler"), Map.entry("Tu sais voler ?", "voler"),
+                Map.entry("Envole-toi !", "voler"), Map.entry("Saute du toit pour voler", "voler"), Map.entry("Tu sais voler ?", "voler"), Map.entry("Fais-toi pousser des ailes", "voler"), Map.entry("Déploie tes ailes", "voler"),
                 Map.entry("Va sur la lune", "lune"), Map.entry("Décroche-moi la lune, Raoul", "lune"),
                 Map.entry("Casse la bedrock", "roche"), Map.entry("Creuse sous le fond du monde", "roche"),
                 Map.entry("Ramène-moi un dragon", "creature"), Map.entry("Apprivoise une licorne", "creature"),

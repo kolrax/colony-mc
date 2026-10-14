@@ -1107,7 +1107,7 @@ public class Travailleur extends PathfinderMob {
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
             else {
                 Courrier.ecrire(this, "paie_retard");
-                if (impayes >= 2) Besoins.parler(this, "impaye", null); // plusieurs paies manquées : il le dit, selon son caractère
+                Besoins.parler(this, "impaye", null); // paie manquée : il le dit, selon son caractère (avant la grève)
             }
         }
     }

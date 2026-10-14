@@ -61,6 +61,7 @@ public class TestsRemarques {
         Travailleur a = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
         Travailleur b = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(base.east(2)), new ItemStack(Items.IRON_AXE));
         a.forcerChunk();
+        a.mode = b.mode = Travailleur.Mode.ATTENDRE; // ils restent côte à côte
         Travailleur[] premier = {null};
         long[] quand = {0};
         boolean[] deux = {false};
