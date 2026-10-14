@@ -200,6 +200,7 @@ final class Dialogue {
                 lecture.texte = dit; // on y cherche qui ou quoi est visé (l'interpréteur l'a déjà fait, sans la partie des règles)
                 Ordres.Lecture seul = Ordres.lire(dit, t.metier);
                 lecture.quotidien |= seul.quotidien; // « tous les jours » : l'IA ne le dit pas
+                if (seul.intentions.contains(Ordres.Intention.ENTERRER)) lecture.intentions.add(Ordres.Intention.ENTERRER); // l'IA ne connaît pas l'enterrement (Deuil)
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
             }
             lecture.rang = i;

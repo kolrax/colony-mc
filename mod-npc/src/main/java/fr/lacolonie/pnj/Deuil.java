@@ -103,7 +103,7 @@ final class Deuil {
 
     /** Un jour sans enterrement : un ouvrier libre, le chef près de lui, le propose (une seule fois par mort, tous ouvriers confondus). */
     static void proposer(Travailleur t) {
-        if (!Remarques.libre(t) || t.memoire.getBoolean("revolte") || !(t.level() instanceof ServerLevel sl)) return;
+        if (t.memoire.getBoolean("revolte") || !(t.level() instanceof ServerLevel sl)) return;
         ServerPlayer chef = t.chefJoueur();
         if (chef == null || chef.level() != t.level() || chef.distanceTo(t) > 24) return;
         var eff = Courrier.de(sl.getServer()).effectifs.get(t.chef);
@@ -113,6 +113,7 @@ final class Deuil {
             Courrier.Membre m = e.getValue();
             long depuis = maintenant - m.mortLe;
             if (m.tombe == null || m.enterre || m.propose || depuis < JOUR || depuis > 3 * JOUR || EN_COURS.containsKey(e.getKey())) continue;
+            if (!Remarques.libre(t)) return; // occupé, en danger : un autre (ou lui, plus tard) le proposera
             m.propose = true;
             Courrier.de(sl.getServer()).setDirty();
             dire(t, "enterrement_propose", m.nom);
