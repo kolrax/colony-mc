@@ -8,6 +8,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -28,7 +29,11 @@ public class TestsChef {
         Travailleur g = TestsJeu.ouvrier(h, "guerrier", 2, 2, 4, new ItemStack(Items.IRON_SWORD));
         Guerrier.armer(g);
         ServerPlayer chef = h.makeMockServerPlayerInLevel(), autre = h.makeMockServerPlayerInLevel();
-        for (ServerPlayer p : new ServerPlayer[]{chef, autre}) p.setGameMode(GameType.SURVIVAL);
+        for (ServerPlayer p : new ServerPlayer[]{chef, autre}) {
+            p.setGameMode(GameType.SURVIVAL);
+            // Un faux joueur n'est jamais « tické » : ses 3 s d'invulnérabilité à l'arrivée ne finiraient pas.
+            ObfuscationReflectionHelper.setPrivateValue(ServerPlayer.class, p, 0, "spawnInvulnerableTime");
+        }
         Vec3 c = h.absoluteVec(new Vec3(6.5, 2, 4.5)), a = h.absoluteVec(new Vec3(9.5, 2, 4.5));
         chef.moveTo(c.x, c.y, c.z);
         autre.moveTo(a.x, a.y, a.z);
@@ -38,7 +43,10 @@ public class TestsChef {
 
     /** L'autre frappe le chef (après que le guerrier est bien là). */
     static void frapper(GameTestHelper h, Scene s) {
-        h.runAtTickTime(h.getTick() + 10, () -> s.chef().hurt(s.chef().damageSources().playerAttack(s.autre()), 1));
+        h.runAtTickTime(h.getTick() + 10, () -> {
+            boolean touche = s.chef().hurt(s.chef().damageSources().playerAttack(s.autre()), 1);
+            h.assertTrue(touche, "le chef prend le coup");
+        });
     }
 
     /** Ce qu'on surveille à chaque tick : il a attaqué l'autre ; il s'est tenu entre eux deux. */
@@ -93,9 +101,12 @@ public class TestsChef {
     public static void ordreAttaqueFrappe(GameTestHelper h) {
         Scene s = scene(h);
         s.g().appliquer(Ordres.lire("Attaque quiconque me frappe.", "guerrier"), s.chef());
+        h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_chef")) == GardeChef.Posture.ATTAQUE, "l'ordre est retenu");
+        boolean[] vu = surveiller(h, s);
         frapper(h, s);
         h.succeedWhen(() -> {
-            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
+            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ", attaque lancée " + vu[0]
+                    + ", vie du chef " + s.chef().getHealth() + ", " + s.g().paroles + ", " + s.g().resultat + ", invuln " + s.autre().isInvulnerable() + " " + s.autre().getAbilities().invulnerable + ")");
             h.assertTrue(TestsCaractere.aDit(s.g(), "chef_riposte"), "il le dit (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
         });
