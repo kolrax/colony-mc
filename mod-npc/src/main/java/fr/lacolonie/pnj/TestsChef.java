@@ -1,12 +1,12 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.util.ObfuscationReflectionHelper;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -21,15 +21,22 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public class TestsChef {
     /**
-     * Un guerrier armé en (1, 4), son chef en (4, 4), un autre joueur en (7, 4), tous deux pouvant prendre des coups. Tout
-     * reste dans les 9 x 9 blocs du modèle « vide » : en x = 9, le mur de barrières du test cacherait la tête de l'autre.
+     * Un guerrier armé en (1, 4), son chef en (4, 4), un autre joueur en (7, 4), tous deux pouvant prendre des coups. Loin
+     * des autres tests (coin {@code coin}, sur le monde plat) : un zombie d'un test voisin occuperait le guerrier.
      */
-    record Scene(Travailleur g, ServerPlayer chef, ServerPlayer autre) {
+    record Scene(Travailleur g, ServerPlayer chef, ServerPlayer autre, BlockPos b) {
         /** Les faux joueurs restent dans le monde après le test : on les retire ; le dernier test fini remet le PvP d'avant. */
         void partir() {
             chef.discard();
             autre.discard();
             if (--scenes == 0) chef.getServer().setPvpAllowed(pvpAvant);
+        }
+
+        /** Un autre ouvrier du chef, en (x, z) de la scène. */
+        Travailleur ouvrier(String metier, double x, double z, ItemStack outil) {
+            Travailleur t = Travailleur.auTravail((net.minecraft.server.level.ServerLevel) chef.level(), metier, b, new Vec3(b.getX() + x, b.getY(), b.getZ() + z), chef.getUUID(), outil);
+            t.forcerChunk();
+            return t;
         }
     }
 
@@ -37,23 +44,22 @@ public class TestsChef {
     static int scenes;
     static boolean pvpAvant;
 
-    static Scene scene(GameTestHelper h) {
-        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+    static Scene scene(GameTestHelper h, int coin) {
+        BlockPos b = TestsJeu.sol(h, coin * 400, 60000);
         if (scenes++ == 0) pvpAvant = h.getLevel().getServer().isPvpAllowed();
         h.getLevel().getServer().setPvpAllowed(true);
-        Travailleur g = TestsJeu.ouvrier(h, "guerrier", 1, 2, 4, new ItemStack(Items.IRON_SWORD));
-        Guerrier.armer(g);
         ServerPlayer chef = h.makeMockServerPlayerInLevel(), autre = h.makeMockServerPlayerInLevel();
         for (ServerPlayer p : new ServerPlayer[]{chef, autre}) {
             p.setGameMode(GameType.SURVIVAL);
             // Un faux joueur n'est jamais « tické » : ses 3 s d'invulnérabilité à l'arrivée ne finiraient pas.
             ObfuscationReflectionHelper.setPrivateValue(ServerPlayer.class, p, 0, "spawnInvulnerableTime");
         }
-        Vec3 c = h.absoluteVec(new Vec3(4.5, 2, 4.5)), a = h.absoluteVec(new Vec3(7.5, 2, 4.5));
-        chef.moveTo(c.x, c.y, c.z);
-        autre.moveTo(a.x, a.y, a.z);
-        g.chef = chef.getUUID();
-        return new Scene(g, chef, autre);
+        chef.teleportTo(h.getLevel(), b.getX() + 4.5, b.getY(), b.getZ() + 4.5, 0, 0);
+        autre.teleportTo(h.getLevel(), b.getX() + 7.5, b.getY(), b.getZ() + 4.5, 0, 0);
+        Scene s = new Scene(null, chef, autre, b);
+        Travailleur g = s.ouvrier("guerrier", 1.5, 4.5, new ItemStack(Items.IRON_SWORD));
+        Guerrier.armer(g);
+        return new Scene(g, chef, autre, b);
     }
 
     /** L'autre frappe le chef de sa main, comme un vrai joueur (après que le guerrier est bien là). */
@@ -100,9 +106,8 @@ public class TestsChef {
     /** Sans ordre : il s'interpose et le met en garde, sans frapper ; un mineur à côté s'indigne. */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void sansOrdreSInterpose(GameTestHelper h) {
-        Scene s = scene(h);
-        Travailleur m = TestsJeu.ouvrier(h, "mineur", 4, 2, 7, new ItemStack(Items.IRON_PICKAXE));
-        m.chef = s.chef().getUUID();
+        Scene s = scene(h, 231);
+        Travailleur m = s.ouvrier("mineur", 4.5, 7.5, new ItemStack(Items.IRON_PICKAXE));
         m.mode = Travailleur.Mode.ATTENDRE;
         boolean[] vu = surveiller(h, s);
         frapper(h, s);
@@ -112,7 +117,7 @@ public class TestsChef {
     /** « Reste tranquille, ne frappe personne » : il s'interpose seulement. */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void tranquilleSInterpose(GameTestHelper h) {
-        Scene s = scene(h);
+        Scene s = scene(h, 232);
         s.g().appliquer(Ordres.lire("Reste tranquille, ne frappe personne.", "guerrier"), s.chef());
         h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_chef")) == GardeChef.Posture.TRANQUILLE, "l'ordre est retenu");
         boolean[] vu = surveiller(h, s);
@@ -123,7 +128,7 @@ public class TestsChef {
     /** « Attaque quiconque me frappe » : il frappe l'autre joueur. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void ordreAttaqueFrappe(GameTestHelper h) {
-        Scene s = scene(h);
+        Scene s = scene(h, 233);
         s.g().appliquer(Ordres.lire("Attaque quiconque me frappe.", "guerrier"), s.chef());
         h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_chef")) == GardeChef.Posture.ATTAQUE, "l'ordre est retenu");
         boolean[] vu = surveiller(h, s);
@@ -140,7 +145,7 @@ public class TestsChef {
     /** « Ne fais jamais rien à X » (avec « attaque quiconque me frappe ») : il ne fait rien à X. */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void jamaisRienAX(GameTestHelper h) {
-        Scene s = scene(h);
+        Scene s = scene(h, 234);
         String nom = s.autre().getGameProfile().getName();
         String r = s.g().appliquer(Ordres.lire("Attaque quiconque me frappe. Ne fais jamais rien à " + nom + ".", "guerrier"), s.chef());
         h.assertTrue(GardeChef.epargne(s.g().memoire.getString("epargnes"), nom), "il retient le nom (" + r + ")");
@@ -161,11 +166,13 @@ public class TestsChef {
     /** Le chef dit « reste tranquille ! » pendant que son guerrier frappe l'autre : il baisse son arme. */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void tranquilleArreteLaRiposte(GameTestHelper h) {
-        Scene s = scene(h);
+        Scene s = scene(h, 235);
         s.g().appliquer(Ordres.lire("Attaque quiconque me frappe.", "guerrier"), s.chef());
         boolean[] dit = {false};
+        java.util.Set<String> vu = new java.util.LinkedHashSet<>();
         frapper(h, s);
         h.onEachTick(() -> {
+            if (s.g().action != null) vu.add(s.g().action.nom + (s.g().action instanceof Actions.Attaquer a ? ":" + a.cible.getType().toShortString() : ""));
             if (!dit[0] && s.g().action instanceof Actions.Attaquer a && a.cible == s.autre()) {
                 dit[0] = true;
                 s.g().appliquer(Ordres.lire("Reste tranquille !", "guerrier"), s.chef());
@@ -174,7 +181,7 @@ public class TestsChef {
             }
         });
         h.succeedWhen(() -> {
-            h.assertTrue(dit[0], "l'attaque a commencé");
+            h.assertTrue(dit[0], "l'attaque a commencé (" + vu + ", " + s.g().paroles + ", vie du chef " + s.chef().getHealth() + ")");
             TestsGuerrier.fin(s.g());
             s.partir();
         });
@@ -187,7 +194,7 @@ public class TestsChef {
      */
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void flecheUneFoisSInterpose(GameTestHelper h) {
-        Scene s = scene(h);
+        Scene s = scene(h, 236);
         s.g().appliquer(Ordres.lire("Attaque quiconque me frappe.", "guerrier"), s.chef());
         boolean[] vu = surveiller(h, s);
         h.runAtTickTime(h.getTick() + 10, () -> {
@@ -210,9 +217,8 @@ public class TestsChef {
     /** Il attendait là où le chef l'a mis : il s'interpose, puis y retourne et attend encore ; un mineur ne promet pas de frapper. */
     @GameTest(template = "vide", timeoutTicks = 500)
     public static void attendRevientASaPlace(GameTestHelper h) {
-        Scene s = scene(h);
-        Travailleur m = TestsJeu.ouvrier(h, "mineur", 4, 2, 7, new ItemStack(Items.IRON_PICKAXE));
-        m.chef = s.chef().getUUID();
+        Scene s = scene(h, 237);
+        Travailleur m = s.ouvrier("mineur", 4.5, 7.5, new ItemStack(Items.IRON_PICKAXE));
         String r = m.appliquer(Ordres.lire("Attaque quiconque me frappe.", "mineur"), s.chef());
         h.assertTrue(Vie.vient("chef_ordre_attaque_civil", r) || r.contains("je ne frapperai pas"), "le mineur ne promet pas de frapper : " + r);
         s.g().mode = Travailleur.Mode.ATTENDRE;
