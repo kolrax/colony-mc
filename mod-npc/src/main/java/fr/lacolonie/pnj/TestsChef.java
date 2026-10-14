@@ -24,7 +24,10 @@ public class TestsChef {
      * Un guerrier armé en (1, 4), son chef en (4, 4), un autre joueur en (7, 4), tous deux pouvant prendre des coups. Tout
      * reste dans les 9 x 9 blocs du modèle « vide » : en x = 9, le mur de barrières du test cacherait la tête de l'autre.
      */
-    record Scene(Travailleur g, ServerPlayer chef, ServerPlayer autre) {}
+    record Scene(Travailleur g, ServerPlayer chef, ServerPlayer autre) {
+        /** Les faux joueurs restent dans le monde après le test : on les retire. */
+        void partir() { chef.discard(); autre.discard(); }
+    }
 
     static Scene scene(GameTestHelper h) {
         for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
@@ -72,6 +75,7 @@ public class TestsChef {
             for (Travailleur o : autres) h.assertTrue(TestsCaractere.aDit(o, "chef_frappe_vu"), "l'ouvrier réagit (" + o.paroles + ")");
             TestsGuerrier.fin(s.g());
             TestsGuerrier.fin(autres);
+            s.partir();
             h.succeed();
         });
     }
@@ -118,6 +122,7 @@ public class TestsChef {
                     + ", vie du chef " + s.chef().getHealth() + ", " + s.g().paroles + ", " + s.g().resultat + ", difficulté " + h.getLevel().getDifficulty() + ", frappé par " + s.autre().getLastHurtByMob() + ", suite " + suite + ")");
             h.assertTrue(TestsCaractere.aDit(s.g(), "chef_riposte"), "il le dit (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
+            s.partir();
         });
     }
 
@@ -137,6 +142,7 @@ public class TestsChef {
             h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'autre ne prend aucun coup");
             h.assertFalse(TestsCaractere.aDit(s.g(), "chef_interpose") || TestsCaractere.aDit(s.g(), "chef_riposte"), "pas un mot (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
+            s.partir();
             h.succeed();
         });
     }
