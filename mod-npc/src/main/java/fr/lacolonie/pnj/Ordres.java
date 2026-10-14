@@ -498,6 +498,8 @@ final class Ordres {
             Map.entry("pecheur", List.of(new String[]{"pecheur", "pecheurs"}, new String[]{"pecheuse", "pecheuses"})),
             Map.entry("chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
                     new String[]{"veneur", "veneurs"})),
+            Map.entry("transporteur", List.of(new String[]{"transporteur", "transporteurs"}, new String[]{"transporteuse", "transporteuses"}, new String[]{"porteur", "porteurs"},
+                    new String[]{"porteuse", "porteuses"}, new String[]{"charretier", "charretiers"})),
             Map.entry("guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"})));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");

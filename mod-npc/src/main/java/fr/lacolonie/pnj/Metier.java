@@ -214,6 +214,8 @@ public abstract class Metier {
 
     static { TOUS.put("cuisinier", new Cuisinier()); } // lot 6 (à part, comme le guérisseur)
 
+    static { TOUS.put("transporteur", new Transporteur()); } // lot 6
+
     static List<String> actifs() {
         return TOUS.keySet().stream().filter(m -> !Reglages.actuel.metiers_inactifs.contains(m)).toList();
     }

@@ -178,7 +178,7 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ", "pecher_la").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ", "pecher_la", "trajet", "trajet_prendre", "trajet_deposer").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
             if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
@@ -257,6 +257,15 @@ final class Consignes {
                     texte = esp == null ? "" : esp.id();
                     int q = Fouille.quantite(phrase);
                     n = q > 0 ? Math.min(q, 16) : Chasse.PAR_TOUR;
+                }
+                if (Trajets.TRAVAUX.contains(a)) {
+                    // Le transporteur : le sens (« du dépôt à ce coffre »), et l'objet dit (« le fer »), sinon tout.
+                    String objet = a.equals("oublier_trajets") ? null : filtre("", phrase, t);
+                    if (objet == null || objet.equals("tout")) objet = "";
+                    Trajets.Sens sens = Trajets.sens(phrase);
+                    String r = a.equals("oublier_trajets") ? null : Transporteur.verifierOrdre(t, a, sens, objet, lieu);
+                    if (r != null) return r;
+                    texte = (a.equals("trajet") ? sens.name() : "") + "|" + (objet.isEmpty() ? "" : Transporteur.nomDit(phrase)) + "|" + objet;
                 }
                 if (a.equals("planches") || a.equals("charbon")) {
                     // Le bois dit (« des planches de bouleau »), sinon n'importe quelle bûche (qui brûle, pour le charbon) ; la quantité dite.
@@ -936,6 +945,7 @@ final class Consignes {
                 }
             }
             case "soigner", "soigner_blesses" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
+            case "trajet", "trajet_prendre", "trajet_deposer", "oublier_trajets" -> { return Transporteur.refus(t, mode, vu); }
             case "torches" -> {
                 if (t.compter(Actions.Filtre.de("minecraft:torch")) == 0 && Bureau.entite(t) == null) return "Je n'ai pas de torches, chef.";
             }
@@ -1594,6 +1604,11 @@ final class Consignes {
                 case "nourrir", "tondre", "abattre_betes" -> {
                     // L'éleveur : sa tournée des enclos dit elle-même ce qu'elle a fait.
                     if (etape++ == 0) { sous = Eleveur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
+                }
+                case "trajet", "trajet_prendre", "trajet_deposer", "oublier_trajets" -> {
+                    // Le transporteur : il retient ses trajets, et dit lui-même ce qu'il a compris.
+                    if (etape++ == 0) { sous = Transporteur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
                     return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "chasser" -> {
