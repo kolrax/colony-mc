@@ -76,6 +76,12 @@ final class Moral {
 
     /** Le coup d'une mort, sachant {@code deja} (≤ 0) déjà perdu pour des morts du même jour. */
     static int deuilCoup(int deja) { return Math.min(0, Math.max(DEUIL_COUP, -DEUIL_JOUR - deja)); }
+
+    /**
+     * Ce qu'il perd en tout un même jour de deuil : la somme des coups ({@code brut}, chacun {@link #DEUIL_COUP} × son poids :
+     * 2 pour un ami, 3 pour l'être aimé), au plus le plafond du jour × le plus grand poids. Ne dépend pas de l'ordre des morts.
+     */
+    static int deuilDuJour(int brut, int poidsMax) { return Math.min(0, Math.max(-DEUIL_JOUR * Math.max(1, poidsMax), brut)); }
     /** Une colonie qui prospère : au moins tant d'ouvriers, et un dépôt d'au moins tant d'objets. */
     static final int OUVRIERS = 4, DEPOT = 256;
     /** Un bilan si mauvais que le moral ne remonte plus tout seul. */

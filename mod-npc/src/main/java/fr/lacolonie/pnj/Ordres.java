@@ -298,6 +298,11 @@ final class Ordres {
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);
         l.mortel = Obeissance.mortel(texte);
+        // « Va aider tes camarades à la mine » n'est pas une question sur ses amis : seulement une question, ou une phrase qui
+        // lui parle de lui (« tu es en couple ») sans rien d'autre à faire.
+        if (l.intentions.contains(Intention.LIENS) && !(dit(n, "?", "qui", "est ce", "est ce que")
+                || Obeissance.sansOrdre(l) && l.faire.isEmpty() && dit(n, "tu", "t", "toi")))
+            l.intentions.remove(Intention.LIENS);
         return l;
     }
 

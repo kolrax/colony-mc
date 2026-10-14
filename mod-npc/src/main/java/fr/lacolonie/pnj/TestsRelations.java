@@ -10,7 +10,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import java.util.UUID;
 
-/** Amitiés, inimitiés et couples entre ouvriers d'un même chef (lot 7, {@link Relations}, {@link Liens}). Coin 262 (le second test est dans le lot « conversations »). */
+/** Amitiés, inimitiés et couples entre ouvriers d'un même chef (lot 7, {@link Relations}, {@link Liens}). Coins 262 et 263 (le dernier test est dans le lot « conversations »). */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsRelations {
@@ -32,6 +32,7 @@ public class TestsRelations {
         Travailleur t1 = Travailleur.auTravail(h.getLevel(), "mineur", base, Vec3.atBottomCenterOf(base.west(2)), chef, ItemStack.EMPTY);
         Travailleur t2 = Travailleur.auTravail(h.getLevel(), "bucheron", base, Vec3.atBottomCenterOf(base.west(4)), chef, ItemStack.EMPTY);
         for (Travailleur t : java.util.List.of(t1, t2)) { t.mode = Travailleur.Mode.ATTENDRE; t.forcerChunk(); } // ils restent côte à côte
+        for (Travailleur t : java.util.List.of(t1, t2)) Courrier.de(h.getLevel().getServer()).inscrire(t); // à l'effectif : leurs liens ne sont pas purgés
         long jour = t1.jour();
         poser(t1, t2, 85, jour - 2);
         poser(t2, t1, 85, jour - 2);
@@ -48,6 +49,34 @@ public class TestsRelations {
             h.assertTrue(Relations.reponse(t1, true).contains(t2.prenom), "à la question, il nomme l'autre : " + Relations.reponse(t1, true));
             t1.discard();
             t2.discard();
+        });
+    }
+
+    /**
+     * Avec l'IA : le chef demande « Qui sont tes amis ? » ; l'IA répond sans action et invente des noms. C'est le mod qui
+     * répond, avec le vrai nom de son ami.
+     */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void lIANInventePasSesAmis(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        BlockPos base = TestsJeu.sol(h, 263 * 400, 60000);
+        Travailleur t = Travailleur.auTravail(h.getLevel(), "mineur", base, Vec3.atBottomCenterOf(base.west(2)), chef.getUUID(), ItemStack.EMPTY);
+        Travailleur ami = Travailleur.auTravail(h.getLevel(), "bucheron", base, Vec3.atBottomCenterOf(base.west(4)), chef.getUUID(), ItemStack.EMPTY);
+        for (Travailleur x : java.util.List.of(t, ami)) { x.mode = Travailleur.Mode.ATTENDRE; x.forcerChunk(); }
+        ami.prenom = "Gertrude";
+        poser(t, ami, 70, Liens.JAMAIS);
+        boolean[] fait = {false};
+        h.succeedWhen(() -> {
+            if (!fait[0]) {
+                fait[0] = true;
+                var d = new ReponsesIA.Decision("Mes amis ? Robert et Mahaut, bien sûr.", "calme", java.util.List.of());
+                Dialogue.repondre(chef, "Qui sont tes amis ?", java.util.List.of(t), java.util.List.of(d));
+            }
+            var conv = t.memoire.getList("conv", net.minecraft.nbt.Tag.TAG_STRING);
+            String dit = conv.isEmpty() ? "" : conv.getString(conv.size() - 1);
+            h.assertTrue(dit.startsWith("Toi : ") && dit.contains("Gertrude") && !dit.contains("Robert"), "le mod répond, avec son vrai ami : « " + dit + " »");
+            t.discard();
+            ami.discard();
         });
     }
 

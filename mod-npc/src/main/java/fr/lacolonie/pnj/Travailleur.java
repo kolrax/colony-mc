@@ -946,6 +946,7 @@ public class Travailleur extends PathfinderMob {
                 Ordres.Lecture li = d.lecture();
                 li.quotidien |= seul.quotidien;
                 Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
+                if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
                 String reponse = reponseImposee ? dit : d.reponse(); // un refus ou un marché : c'est lui qui répond, pas l'IA

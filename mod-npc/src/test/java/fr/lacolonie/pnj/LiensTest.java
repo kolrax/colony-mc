@@ -37,6 +37,9 @@ class LiensTest {
         assertEquals("c", l.conjoint(), "le couple n'est jamais oublié");
         assertNull(l.de("x0"), "le lien le plus faible est parti");
         assertNotNull(l.de("x11"), "le plus fort reste");
+        l.changer("neuf", "Tout Neuf", 1, 0);
+        assertNotNull(l.de("neuf"), "le lien qu'on vient de nouer n'est jamais celui qui part");
+        assertEquals(Liens.RETENUS, l.liens.size());
     }
 
     @Test
@@ -98,6 +101,24 @@ class LiensTest {
     }
 
     @Test
+    void lentOubliDeCeuxQuOnNeVoitPlus() {
+        Liens l = new Liens();
+        l.changer("a", "Jean", 2, 0);
+        l.changer("b", "Paul", -51, 0);
+        l.changer("v", "Vu", 10, 0);
+        l.changer("c", "Aude", 90, 0);
+        l.unir("c", "Aude", 0);
+        l.declin(java.util.Set.of("v"));
+        assertEquals(1, l.note("a"));
+        assertEquals(-50, l.note("b"), "l'inimitié aussi s'éteint peu à peu");
+        assertEquals(10, l.note("v"), "celui qu'il a vu ne baisse pas");
+        assertEquals(90, l.note("c"), "le couple ne s'use pas");
+        l.declin(java.util.Set.of());
+        assertNull(l.de("a"), "revenu à 0 : oublié");
+        assertFalse(l.ennemi("b"), "-49 : plus ennemi");
+    }
+
+    @Test
     void reponseAuChef() {
         Liens l = new Liens();
         assertNull(l.reponse(false), "aucun lien : la réplique liens_reponse_aucun");
@@ -105,12 +126,16 @@ class LiensTest {
         l.changer("m", "Marie", 70, 0);
         l.changer("b", "Paul", -60, 0);
         l.changer("n", "Neutre", 20, 0);
-        assertEquals("Je m'entends bien avec Marie et Jean. Avec Paul, ça ne passe pas.", l.reponse(false));
-        assertEquals("Je ne partage ma vie avec personne. Je m'entends bien avec Marie et Jean. Avec Paul, ça ne passe pas.", l.reponse(true));
+        assertEquals("Je m'entends bien avec Marie et Jean. Je ne m'entends guère avec Paul.", l.reponse(false));
+        assertEquals("Je ne partage ma vie avec personne. Je m'entends bien avec Marie et Jean. Je ne m'entends guère avec Paul.", l.reponse(true));
         l.changer("c", "Aude", 90, 0);
         l.unir("c", "Aude", 0);
         assertTrue(l.reponse(true).startsWith("Je partage ma vie avec Aude."), l.reponse(true));
         assertFalse(l.reponse(false).contains("bien avec Aude"), "l'être aimé n'est pas compté parmi les amis");
+        Liens brouille = new Liens();
+        brouille.changer("c", "Aude", -90, 0);
+        brouille.unir("c", "Aude", 0);
+        assertTrue(brouille.ennemis().isEmpty(), "l'être aimé n'est jamais compté parmi les ennemis");
         assertEquals("Jean, Marie et Paul", Liens.et(List.of("Jean", "Marie", "Paul")));
     }
 }

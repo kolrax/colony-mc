@@ -209,7 +209,7 @@ final class Messages {
         m("couple", "Une bonne nouvelle",
                 "{0} et moi, nous avons décidé de partager notre vie. Le travail n'en souffrira pas, chef : bien au contraire.",
                 "Je tenais à te le dire moi-même : {0} et moi, désormais, nous faisons route ensemble.",
-                "Une nouvelle au poste : {0} et moi, nous sommes ensemble. Nous t'en remercions, c'est ici que nous nous sommes trouvés.");
+                "Une nouvelle au poste : {0} et moi, nous sommes ensemble. C'est ici, à ton service, que notre histoire a commencé.");
         t("couple", "peureux", "Je n'osais pas te le dire… {0} et moi, nous sommes ensemble. J'espère que tu n'y vois pas d'objection, chef.");
         t("couple", "colerique", "Autant que tu l'apprennes de ma bouche : {0} et moi, c'est sérieux. Que personne n'y trouve à redire.");
         m("reprise_greve", "Je reprends le travail",

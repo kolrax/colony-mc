@@ -32,7 +32,7 @@ Avec {nom}, mieux vaut se taire que se fâcher.
 {nom} et moi, nous avons décidé de faire route ensemble.
 Que tout le monde le sache : je partage désormais ma vie avec {nom}.
 Avec {nom}, c'est décidé. Nous serons ensemble.
-J'ai le cœur léger : {nom} et moi, nous voilà unis.
+J'ai le cœur léger : {nom} et moi, nous voilà ensemble.
 
 [couple_tendresse]
 Prends soin de toi, {nom}. Tu es ce que j'ai de plus précieux.
@@ -47,7 +47,7 @@ Reste avec moi, {nom}. Je ne te laisse pas.
 {nom}, regarde-moi. Tout ira bien, je te le promets.
 
 [liens_reponse_aucun]
-Je ne me suis encore lié à personne ici, chef.
+Je n'ai encore de lien avec personne ici, chef.
 Des amis ? Pas encore. Je fais mon ouvrage, voilà tout.
 Je m'entends avec tout le monde, sans plus.
 Personne en particulier. Le temps le dira.

@@ -118,7 +118,6 @@ final class Blessures {
             Accourir a = new Accourir(blesse, i);
             a.inquiet = proches.get(i) == conjoint;
             Cerveau.lancer(proches.get(i), a);
-            Relations.aide(proches.get(i), blesse);
         }
     }
 
@@ -164,6 +163,7 @@ final class Blessures {
                 if (d > 6 * 6) return Actions.Etat.ECHEC; // pas de passage jusqu'à lui
                 arrive = true;
                 t.getNavigation().stop();
+                Relations.aide(t, blesse); // il est venu jusqu'à lui
                 if (inquiet) Besoins.dire(t, "couple_inquiet", blesse.prenom);
                 else if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
             }

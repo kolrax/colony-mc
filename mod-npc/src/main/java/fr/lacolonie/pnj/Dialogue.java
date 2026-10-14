@@ -201,6 +201,7 @@ final class Dialogue {
                 Ordres.Lecture seul = Ordres.lire(dit, t.metier);
                 lecture.quotidien |= seul.quotidien; // « tous les jours » : l'IA ne le dit pas
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
+                if (seul.intentions.contains(Ordres.Intention.LIENS)) lecture.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
             }
             lecture.rang = i;
             lecture.total = dest.size();

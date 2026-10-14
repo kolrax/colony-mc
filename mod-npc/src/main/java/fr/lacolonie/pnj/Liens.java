@@ -19,6 +19,8 @@ final class Liens {
     /** Ce que chaque chose fait à la note (avant le réglage de vitesse pour les gains). */
     static final int CAUSERIE = 3, VOISIN = 1, REPAS = 2, AIDE = 8, VOL = -30, LIT = -20;
     static final long JAMAIS = Long.MIN_VALUE;
+    /** Le lent oubli : un point vers 0 tous les tant de bilans du moral sans se voir (15 min de jeu par défaut). */
+    static final int DECLIN = 3;
 
     /** Un collègue : son prénom, la note, le jour (du jeu) où elle a atteint {@link #COUPLE} ({@link #JAMAIS} : pas encore), le couple. */
     record Lien(String nom, int note, long depuis, boolean couple) {}
@@ -40,17 +42,32 @@ final class Liens {
         return null;
     }
 
-    /** La note change (bornée) ; un nouveau collègue chasse le lien le plus faible au-delà de {@link #RETENUS} (jamais le couple). */
+    /**
+     * La note change (bornée) ; au-delà de {@link #RETENUS}, le lien le plus faible part (jamais le couple, jamais celui
+     * qu'on vient de changer).
+     */
     void changer(String id, String nom, int delta, long jour) {
         Lien l = liens.get(id);
         int note = Math.clamp((long) (l == null ? 0 : l.note()) + delta, MIN, MAX);
         long depuis = note < COUPLE ? JAMAIS : l != null && l.depuis() != JAMAIS ? l.depuis() : jour;
         liens.put(id, new Lien(nom == null || nom.isBlank() ? l == null ? "" : l.nom() : nom, note, depuis, l != null && l.couple()));
         while (liens.size() > RETENUS) {
-            String faible = liens.entrySet().stream().filter(e -> !e.getValue().couple())
+            String faible = liens.entrySet().stream().filter(e -> !e.getValue().couple() && !e.getKey().equals(id))
                     .min(Comparator.comparingInt(e -> Math.abs(e.getValue().note()))).map(Map.Entry::getKey).orElse(null);
             if (faible == null) break;
             liens.remove(faible);
+        }
+    }
+
+    /** Tous les {@link #DECLIN} bilans : les notes de ceux qu'il n'a pas vus reviennent d'un point vers 0 (pas le couple) ; à 0, le lien s'oublie. */
+    void declin(java.util.Set<String> vus) {
+        for (var it = liens.entrySet().iterator(); it.hasNext(); ) {
+            var e = it.next();
+            Lien l = e.getValue();
+            if (l.couple() || vus.contains(e.getKey())) continue;
+            int note = l.note() - Integer.signum(l.note());
+            if (note == 0) it.remove();
+            else e.setValue(new Lien(l.nom(), note, note < COUPLE ? JAMAIS : l.depuis(), false));
         }
     }
 
@@ -99,7 +116,7 @@ final class Liens {
 
     List<String> amis() { return noms(l -> l.note() >= AMI && !l.couple()); }
 
-    List<String> ennemis() { return noms(l -> l.note() <= ENNEMI); }
+    List<String> ennemis() { return noms(l -> l.note() <= ENNEMI && !l.couple()); }
 
     String nomConjoint() { String c = conjoint(); return c == null ? null : liens.get(c).nom(); }
 
@@ -132,7 +149,7 @@ final class Liens {
         if (c != null) r.add("Je partage ma vie avec " + c + ".");
         else if (demandeCouple) r.add("Je ne partage ma vie avec personne.");
         if (!amis().isEmpty()) r.add("Je m'entends bien avec " + et(amis()) + ".");
-        if (!ennemis().isEmpty()) r.add("Avec " + et(ennemis()) + ", ça ne passe pas.");
+        if (!ennemis().isEmpty()) r.add("Je ne m'entends guère avec " + et(ennemis()) + ".");
         if (c == null && amis().isEmpty() && ennemis().isEmpty()) return null;
         return String.join(" ", r);
     }

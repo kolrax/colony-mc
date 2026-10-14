@@ -30,6 +30,8 @@ final class Causeries {
 
     /** Par chef : le moment (temps du jeu) de la dernière conversation, et les dernières jouées. */
     static final Map<UUID, Long> DERNIERE = new HashMap<>();
+    /** Par chef : la dernière causerie entre amis lancée avant l'heure commune (Relations). */
+    static final Map<UUID, Long> DERNIERE_AMIS = new HashMap<>();
     static final Map<UUID, Deque<Integer>> RECENTES = new HashMap<>();
 
     /** Une conversation en cours, partagée par les deux ouvriers. */
@@ -117,7 +119,9 @@ final class Causeries {
         Long der = DERNIERE.get(t.chef);
         // Entre deux conversations de la colonie : deux amis n'attendent que la moitié du temps (Relations).
         boolean tot = der != null && maintenant >= der && maintenant - der < secondes * 20L;
-        if (tot && (maintenant - der < secondes * 10L || !Relations.actifs())) return false;
+        Long derAmis = DERNIERE_AMIS.get(t.chef); // au plus une causerie « tôt » entre amis par intervalle, sans toucher à l'horloge commune
+        if (tot && (maintenant - der < secondes * 10L || !Relations.actifs()
+                || derAmis != null && maintenant >= derAmis && maintenant - derAmis < secondes * 20L)) return false;
         if (!oisif(t)) return false;
         List<Travailleur> autour = sl.getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(PRES),
                 o -> o != t && t.chef.equals(o.chef) && t.distanceToSqr(o) <= PRES * PRES && oisif(o) && t.hasLineOfSight(o));
@@ -147,7 +151,7 @@ final class Causeries {
         Deque<Integer> recentes = RECENTES.computeIfAbsent(t.chef, k -> Conversations.nouvelles());
         Conversations.Choix ch = Conversations.choisir(Conversations.TOUTES, List.of(ab, ba), recentes, t.getRandom()::nextDouble);
         if (ch == null) return false;
-        DERNIERE.put(t.chef, maintenant);
+        (tot ? DERNIERE_AMIS : DERNIERE).put(t.chef, maintenant);
         Conversations.noter(recentes, ch.id());
         Travailleur a = ch.sens() == 0 ? t : o, b = ch.sens() == 0 ? o : t;
         Causerie c = new Causerie(a, b, Conversations.TOUTES.get(ch.id()));

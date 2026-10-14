@@ -84,7 +84,7 @@ final class Humeur {
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */
     static Moral.Bilan bilan(Travailleur t) {
-        Relations.bilan(t); // ceux qui travaillent près de lui, le couple s'il est temps
+        List<Travailleur> pres = Relations.bilan(t); // ceux qui travaillent près de lui, le couple s'il est temps
         Moral.Bilan b = Moral.bilan(etat(t));
         t.changerMoral(b.total());
         t.memoire.putInt("bilan", b.total());
@@ -93,7 +93,8 @@ final class Humeur {
         else t.memoire.remove("bilan_cause");
         Moral.Cause dite = b.total() < 0 ? pire : b.total() > 0 ? b.meilleure() : null;
         String cle = dite == null ? null : b.total() < 0 ? dite.plainte : dite.joie;
-        if (cle != null) Besoins.parler(t, cle, null);
+        // Rien dit sur son moral : un mot à l'ami, à l'être aimé ou à l'ennemi qui est là.
+        if (cle == null || !Besoins.parler(t, cle, null)) Relations.parler(t, pres);
         suite(t, pire);
         mefaits(t, pire);
         return b;
@@ -192,8 +193,8 @@ final class Humeur {
     static void oublier(Travailleur t) {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
-                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
-                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", Relations.CLE, "mange_t"))
+                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "deuil_brut", "deuil_poids", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
+                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", Relations.CLE, "mange_t", "liens_bilans"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
     }
@@ -222,11 +223,19 @@ final class Humeur {
         if (mort.chef == null || mort.level().getServer() == null) return;
         for (Travailleur t : ColoniePnj.pnjDe(mort.level().getServer(), mort.chef)) {
             if (t == mort) continue;
-            // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là.
-            int deja = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour() ? t.memoire.getInt("deuil_coup") : 0;
-            int coup = Moral.deuilCoup(deja) * Relations.deuil(t, mort); // un ami pèse double, l'être aimé triple
+            // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là, fois le plus grand poids (un ami pèse
+            // double, l'être aimé triple : Relations), quel que soit l'ordre des morts.
+            boolean memeJour = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour();
+            int deja = memeJour ? t.memoire.getInt("deuil_coup") : 0, brut = memeJour ? t.memoire.getInt("deuil_brut") : 0;
+            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Relations.deuil(t, mort);
+            if (memeJour && !t.memoire.contains("deuil_brut")) brut = deja; // mémoire d'avant les liens
+            brut += Moral.DEUIL_COUP * poids;
+            poidsMax = Math.max(poidsMax, poids);
+            int coup = Math.min(0, Moral.deuilDuJour(brut, poidsMax) - deja);
             t.changerMoral(coup);
             t.memoire.putInt("deuil_coup", deja + coup);
+            t.memoire.putInt("deuil_brut", brut);
+            t.memoire.putInt("deuil_poids", poidsMax);
             t.memoire.putLong("deuil_le", t.jour());
             t.memoire.putString("deuil_nom", mort.prenom);
         }

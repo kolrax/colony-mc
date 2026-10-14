@@ -135,6 +135,8 @@ class OrdresTest {
         intention("Tu es en couple ?", Intention.LIENS);
         intention("As-tu des ennemis ici ? Qui sont tes ennemis ?", Intention.LIENS);
         pasIntention("Mes amis, suivez-moi", Intention.LIENS);
+        pasIntention("Va aider tes camarades à la mine", Intention.LIENS);
+        intention("Tu es en couple", Intention.LIENS);
         pasIntention("Comment ça va ?", Intention.LIENS);
         assertTrue(Obeissance.question(lire("Qui sont tes amis ?", "mineur")), "une simple question : rien d'autre à faire");
         intention("aide", Intention.AIDE);

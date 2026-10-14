@@ -32,6 +32,19 @@ class MoralTest {
     }
 
     @Test
+    void deuilPondereSansDependreDeLOrdre() {
+        // Un inconnu (poids 1) et un ami (poids 2) le même jour, dans les deux ordres : la même perte en tout.
+        int a = Moral.deuilDuJour(Moral.DEUIL_COUP, 1), ab = Moral.deuilDuJour(Moral.DEUIL_COUP * 3, 2);
+        int b = Moral.deuilDuJour(Moral.DEUIL_COUP * 2, 2), ba = Moral.deuilDuJour(Moral.DEUIL_COUP * 3, 2);
+        assertEquals(ab, ba, "l'ordre des morts ne change rien");
+        assertEquals(-30, ab, "plafond du jour × le plus grand poids");
+        assertTrue(b < a, "un ami pèse plus qu'un inconnu");
+        assertEquals(-30, Moral.deuilDuJour(Moral.DEUIL_COUP * 3, 3), "l'être aimé : le triple");
+        assertEquals(-45, Moral.deuilDuJour(Moral.DEUIL_COUP * 8, 3), "plafonné à 15 × 3");
+        assertEquals(Moral.deuilCoup(0) + Moral.deuilCoup(-10), Moral.deuilDuJour(Moral.DEUIL_COUP * 2, 1), "sans liens : comme avant");
+    }
+
+    @Test
     void lesAmitiesComptent() {
         Moral.Etat b = bien();
         Moral.Etat ami = new Moral.Etat(b.impayes(), b.payeRecemment(), b.repas(), b.lit(), b.toit(), b.blesse(), b.blesseVu(), b.joursDeuil(), b.pluie(),

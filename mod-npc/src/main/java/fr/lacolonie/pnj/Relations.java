@@ -61,25 +61,37 @@ final class Relations {
     /** Il a trouvé l'autre dans son lit. */
     static void lit(Travailleur victime, Travailleur dormeur) { changer(victime, dormeur, Liens.LIT, false); }
 
-    /** Il mange : ceux du même chef qui ont mangé tout près dans la dernière minute ont mangé avec lui. */
+    /** Il commence un repas : ceux du même chef qui ont mangé tout près dans la dernière minute ont mangé avec lui (une fois par repas). */
     static void repas(Travailleur t) {
         if (!actifs() || t.chef == null) return;
         long maintenant = t.level().getGameTime();
+        // Une fois par repas : la deuxième bouchée du même repas ne compte plus.
+        boolean dejaATable = t.memoire.contains("mange_t") && maintenant - t.memoire.getLong("mange_t") < REPAS_ENSEMBLE;
         t.memoire.putLong("mange_t", maintenant);
+        if (dejaATable) return;
         for (Travailleur o : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(TABLE),
                 o -> collegues(t, o) && o.memoire.contains("mange_t") && maintenant - o.memoire.getLong("mange_t") < REPAS_ENSEMBLE))
             changer(t, o, Liens.REPAS, true);
     }
 
     /**
-     * Au bilan du moral : ceux qui travaillent près de lui (8 blocs). Chaque paire n'est comptée qu'une fois (par celui des
-     * deux qui a le plus petit identifiant) ; les caractères font des heurts. Puis le couple, s'il est temps, et une
-     * réplique au plus : tendresse, salut à un ami, pique à un ennemi.
+     * Au bilan du moral, avant son calcul : les liens vers qui n'est plus de la colonie (renvoyé, parti, mort) s'effacent ;
+     * puis ceux qui travaillent près de lui (8 blocs, éveillés) : chaque paire n'est comptée qu'une fois (par celui des deux
+     * qui a le plus petit identifiant), les caractères font des heurts ; tous les {@link Liens#DECLIN} bilans, les autres
+     * notes reviennent d'un point vers 0. Puis le couple, s'il est temps. Rend ceux qui sont près de lui (pour {@link #parler}).
      */
-    static void bilan(Travailleur t) {
-        if (!actifs() || t.chef == null || t.aTerre || t.mode == Travailleur.Mode.CHOMEUR) return;
+    static List<Travailleur> bilan(Travailleur t) {
+        if (!actifs() || t.chef == null || t.aTerre || t.isSleeping() || t.mode == Travailleur.Mode.CHOMEUR) return List.of();
+        Liens l = de(t);
+        purger(t, l);
         List<Travailleur> pres = t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(PRES),
-                o -> collegues(t, o) && o.isAlive() && !o.aTerre && t.distanceToSqr(o) <= PRES * PRES);
+                o -> collegues(t, o) && o.isAlive() && !o.aTerre && !o.isSleeping() && t.distanceToSqr(o) <= PRES * PRES);
+        int n = t.memoire.getInt("liens_bilans") + 1;
+        t.memoire.putInt("liens_bilans", n % Liens.DECLIN);
+        if (n >= Liens.DECLIN) {
+            l.declin(pres.stream().map(Travailleur::getStringUUID).collect(java.util.stream.Collectors.toSet()));
+        }
+        garder(t, l);
         double vitesse = Reglages.actuel.liens_vitesse;
         for (Travailleur o : pres) {
             if (t.getUUID().compareTo(o.getUUID()) > 0) continue;
@@ -87,10 +99,33 @@ final class Relations {
             noter(t, o, d);
             noter(o, t, d);
         }
-        Liens l = de(t);
+        l = de(t);
         if (Reglages.actuel.liens_couples && l.conjoint() == null)
             for (Travailleur o : pres)
-                if (Liens.couplePossible(l, o.getStringUUID(), de(o), t.getStringUUID(), t.jour())) { unir(t, o); return; }
+                if (Liens.couplePossible(l, o.getStringUUID(), de(o), t.getStringUUID(), t.jour())) { unir(t, o); return List.of(); }
+        return pres;
+    }
+
+    /** Les liens vers un ouvrier absent de l'effectif de son chef, ou mort, s'effacent (lu dans le {@link Courrier}, sans recherche). */
+    static void purger(Travailleur t, Liens l) {
+        if (l.liens.isEmpty() || t.level().getServer() == null) return;
+        var eff = Courrier.de(t.level().getServer()).effectifs.get(t.chef);
+        if (eff == null || !eff.containsKey(t.getUUID())) return; // pas encore inscrit lui-même : on ne juge pas les autres
+        l.liens.keySet().removeIf(id -> {
+            try {
+                var m = eff.get(UUID.fromString(id));
+                return m == null || !m.mort.isEmpty();
+            } catch (IllegalArgumentException e) { return true; }
+        });
+    }
+
+    /**
+     * Juste après le bilan, s'il n'a rien dit de son moral : une réplique au plus pour qui est là (éveillé, à 8 blocs) :
+     * tendresse (ou inquiétude si l'être aimé est blessé), salut à un ami, pique à un ennemi.
+     */
+    static void parler(Travailleur t, List<Travailleur> pres) {
+        if (pres.isEmpty() || t.isSleeping()) return;
+        Liens l = de(t);
         String conjoint = l.conjoint();
         for (Travailleur o : pres)
             if (o.getStringUUID().equals(conjoint)) { Besoins.parler(t, Blessures.gravite(o) != Gravite.AUCUNE ? "couple_inquiet" : "couple_tendresse", o.prenom); return; }
@@ -139,6 +174,6 @@ final class Relations {
         String r = de(t).reponse(demandeCouple);
         if (r != null) return r;
         r = Besoins.texte(t, "liens_reponse_aucun", null, null);
-        return r != null ? r : "Je ne me suis encore lié à personne ici.";
+        return r != null ? r : "Je n'ai encore de lien avec personne ici.";
     }
 }
