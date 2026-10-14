@@ -43,12 +43,12 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Besoins : faim, fatigue, moral, lit à soi, santé, loisirs (première passe 13/10, 0.9.11 : ils disent quand ils ont faim, sommeil, mal ou le moral bas ; chacun son lit ; courtes pauses ; un blessé mange pour guérir)
 - [x] Blessures à plusieurs gravités ; à terre plus longtemps selon la gravité ; les autres se rassemblent autour du blessé (première passe 13/10, 0.9.12 : légère, grave, très grave selon la vie perdue ; à terre 3, 5 ou 8 min ; les 3 compagnons les plus proches viennent)
 - [x] Guérisseur (nouveau métier) (première passe 13/10, 0.9.14 : relève un ouvrier à terre avec un pain ou une potion de soin du dépôt, panse un blessé grave ou très grave, attend que le danger s'éloigne, ne quitte jamais un ordre du chef ; « soigne Jean », « va soigner les blessés »)
-- [ ] Moral : causes (paie, nourriture variée, lit, dangers, ton du chef, deuil, météo, amitiés, réussite de la colonie) ; effets (lenteur, plaintes, grève, démission, fuite, vol, sabotage, révolte armée après avertissements)
+- [ ] Moral : causes (paie, nourriture variée, lit, dangers, ton du chef, deuil, météo, amitiés, réussite de la colonie) ; effets (lenteur, plaintes, grève, démission, fuite, vol, sabotage, révolte armée après avertissements) (première partie 14/10, 0.9.19 : causes, lenteur, plaintes, démission ; restent vol, sabotage, fuite, révolte)
 - [ ] Réactions selon le caractère : insulte, coup, impayé, diamant gardé en cachette, cadeau
 - [ ] Deuil, et enterrement possible pour adoucir le moral
 
 ## 6. Nouveaux métiers indispensables
-- [ ] Fermier, éleveur, pêcheur, chasseur, cuisinier ou boulanger, transporteur (fermier fait, 0.9.12 ; éleveur fait (0.9.13) ; chasseur fait (0.9.15) ; pêcheur fait (0.9.16) ; restent cuisinier, transporteur)
+- [x] Fermier, éleveur, pêcheur, chasseur, cuisinier ou boulanger, transporteur (première passe 13-14/10 : 0.9.12 à 0.9.18)
 - [ ] « Va me chercher du fer », dit à un bûcheron : il propose d'aller prévenir le mineur
 
 ## 7. Conversations et relations (indispensable)

@@ -79,7 +79,7 @@ final class Cerveau {
             }
         }
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
-        if ((t.tickCount + t.getId()) % 100 == 0) Besoins.veiller(t);
+        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); } // et, de loin en loin, le bilan de son moral
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
@@ -118,6 +118,9 @@ final class Cerveau {
             return;
         }
 
+        // À bout depuis des jours, après deux lettres au chef : il rend ce qu'il a pris au dépôt et s'en va (Humeur).
+        if (Humeur.demissionner(t)) return;
+
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
             long du = t.du();
@@ -133,7 +136,7 @@ final class Cerveau {
         if (t.faim <= 14 && t.manger()) return;
         if (t.faim <= 8) {
             Bureau.Entite b = Bureau.entite(t);
-            if (b != null && b.compter(Actions.Filtre.de("nourriture")) > 0) lancer(t, new Actions.Prendre(Actions.Filtre.de("nourriture"), 16));
+            if (b != null && b.compter(Actions.Filtre.de("nourriture")) > 0) lancer(t, new Actions.Prendre(Actions.Filtre.de("nourriture"), 16, 4)); // 4 de chaque sorte : des repas variés
             else lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1));
             return;
         }
@@ -234,7 +237,7 @@ final class Cerveau {
         }
 
         // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse.
-        if (mission == null && !t.missions.isEmpty()) {
+        if (mission == null && !t.missions.isEmpty() && !m.enCours(t)) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
                 mem.putBoolean("livre", true);
                 lancer(t, new Actions.Deposer(m.garder));
