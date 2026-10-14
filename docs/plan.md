@@ -59,10 +59,10 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 8. Apparence (indispensable)
 - [x] Skins médiévaux selon le métier, tenues visibles (13/10, 0.9.7, modpack 0.5.0 ; jamais vus à l'écran)
 - [x] Nom, métier et icône d'état (faim, colère, attente) au-dessus de la tête (13/10, 0.9.10, modpack 0.5.1 obligatoire, canal 8 ; jamais vu à l'écran)
-- [ ] Plus de sons (pas, travail, réactions)
+- [x] Plus de sons (pas, travail, réactions) (14/10, 0.9.27 : `Sons`, `Cadence` ; sons du jeu joués par le serveur, pas de modpack ; jamais écoutés en jeu)
 
 ## 9. Défense et guerre (indispensable)
-- [ ] Défense de la colonie contre les monstres ; les ouvriers s'éloignent d'un creeper et préviennent le guerrier ; la nuit dehors, ils campent et se cachent
+- [x] Défense de la colonie contre les monstres ; les ouvriers s'éloignent d'un creeper et préviennent le guerrier ; la nuit dehors, ils campent et se cachent (14/10, 0.9.27, première passe : `Defense`, `Abri`, `defense.txt` ; restes dans plus-tard.md)
 - [ ] Guerre entre colonies : déclaration ; un chef PNJ lève une armée (les guerriers, et des fermiers en renfort s'il le propose) ; attaque : casser, brûler, voler, mener la mission
 - [ ] Guerriers qui défendent le dépôt, sauf contre un joueur autorisé par le chef
 - [ ] Réaction quand on frappe le chef, selon les ordres donnés avant
