@@ -3,6 +3,8 @@ package fr.lacolonie.pnj;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Ce que sait le pêcheur, sans le monde (pur Java, testé seul) : où chercher l'eau (une grille de colonnes autour du poste,
@@ -23,7 +25,26 @@ final class Peche {
     /** Le côté du relevé autour d'une colonne d'eau trouvée : 7 x 7 (le centre du carré à ±1, sa rive à ±2 du centre). */
     static final int RELEVE = 7;
 
+    /** Ce que rend l'eau, dit comme on le dit (pour les répliques de vie.txt, {@code {objet}}). */
+    static final Map<String, String> NOMS = Map.ofEntries(
+            Map.entry("minecraft:cod", "une morue"), Map.entry("minecraft:salmon", "un saumon"), Map.entry("minecraft:tropical_fish", "un poisson des mers chaudes"),
+            Map.entry("minecraft:pufferfish", "un poisson-globe"), Map.entry("minecraft:leather_boots", "une vieille botte"), Map.entry("minecraft:lily_pad", "un nénuphar"),
+            Map.entry("minecraft:bowl", "un bol"), Map.entry("minecraft:leather", "un bout de cuir"), Map.entry("minecraft:rotten_flesh", "de la chair pourrie"),
+            Map.entry("minecraft:stick", "un bâton"), Map.entry("minecraft:string", "un bout de ficelle"), Map.entry("minecraft:potion", "une fiole"),
+            Map.entry("minecraft:bone", "un os"), Map.entry("minecraft:ink_sac", "une poche d'encre"), Map.entry("minecraft:tripwire_hook", "un crochet"),
+            Map.entry("minecraft:bamboo", "une tige de bambou"), Map.entry("minecraft:enchanted_book", "un vieux grimoire"), Map.entry("minecraft:bow", "un arc"),
+            Map.entry("minecraft:fishing_rod", "une canne à pêche"), Map.entry("minecraft:name_tag", "une étiquette"),
+            Map.entry("minecraft:nautilus_shell", "une coquille de nautile"), Map.entry("minecraft:saddle", "une selle"));
+    /** Les poissons, et les trésors (rares, souvent enchantés) ; le reste : des déchets. */
+    static final Set<String> POISSONS = Set.of("minecraft:cod", "minecraft:salmon", "minecraft:tropical_fish", "minecraft:pufferfish"),
+            TRESORS = Set.of("minecraft:enchanted_book", "minecraft:name_tag", "minecraft:nautilus_shell", "minecraft:saddle");
+
     private Peche() {}
+
+    /** La réplique d'une prise : « peche_prise » (un poisson), « peche_tresor » (un trésor, ou tout objet enchanté), sinon « peche_dechet ». */
+    static String genre(String id, boolean enchante) {
+        return POISSONS.contains(id) ? "peche_prise" : enchante || TRESORS.contains(id) ? "peche_tresor" : "peche_dechet";
+    }
 
     /** Les décalages (dx, dz) multiples de {@code pas} dans le disque de ce rayon, du plus proche au plus lointain. */
     static List<int[]> grille(int rayon, int pas) {

@@ -73,6 +73,17 @@ final class Messages {
         m("cisailles", "Il me faut des cisailles",
                 "Nos moutons portent toute leur laine, et je n'ai pas de cisailles pour les tondre. Laisse-m'en une paire au dépôt.",
                 "Sans cisailles, la laine reste sur le dos des moutons. Il m'en faudrait une paire au dépôt.");
+        m("canne_peche", "Il me faut une canne à pêche",
+                "Je n'ai pas de canne à pêche : je regarde les poissons sans pouvoir les prendre. Laisse-m'en une au dépôt.",
+                "Ma canne s'est cassée, ou je n'en ai jamais eu. Sans elle, pas de poisson à la table. Il m'en faudrait une au dépôt.",
+                "Je peux attendre au bord de l'eau toute la journée, mais sans canne à pêche, rien ne mordra. Laisse-m'en une au dépôt.");
+        t("canne_peche", "colerique", "Pêcher à mains nues ? Très peu pour moi ! Une canne à pêche au dépôt, et vite.");
+        t("canne_peche", "peureux", "Je n'ai plus de canne… Je n'ose pas rentrer les mains vides. Laisse-m'en une au dépôt, s'il te plaît.");
+        m("sans_eau_peche", "Où dois-je pêcher ?",
+                "Je ne trouve pas d'eau assez grande pour pêcher autour du poste. Montre-moi un étang, une rivière ou la mer, et dis-moi « pêche ici ».",
+                "Pas d'eau poissonneuse par ici : une flaque ne nourrit personne. Mène-moi au bord d'une vraie eau et dis « pêche ici ».",
+                "Je tourne autour du poste sans trouver où lancer ma ligne. Il me faut une étendue d'eau digne de ce nom.");
+        t("sans_eau_peche", "fourbe", "Je pourrais pêcher dans l'abreuvoir des vaches, mais l'éleveur n'aimerait pas. Montre-moi une vraie eau.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");

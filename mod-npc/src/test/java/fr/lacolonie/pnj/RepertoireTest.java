@@ -23,7 +23,7 @@ class RepertoireTest {
         List<String> erreurs = new ArrayList<>();
         for (Repertoire.Entree e : Repertoire.TOUTES) {
             String c = e.comportement(), a = e.arg();
-            for (String m : e.metiers()) if (!Set.of("mineur", "bucheron", "guerrier", "fermier", "eleveur", "guerisseur").contains(m)) erreurs.add(e.id() + " : métier " + m);
+            for (String m : e.metiers()) if (!Set.of("mineur", "bucheron", "guerrier", "fermier", "eleveur", "guerisseur", "pecheur").contains(m)) erreurs.add(e.id() + " : métier " + m);
             if (e.dits().isEmpty()) erreurs.add(e.id() + " : aucune formule");
             switch (c) {
                 case "geste" -> { if (!Repertoire.GESTES.contains(a)) erreurs.add(e.id() + " : geste " + a); }

@@ -97,7 +97,7 @@ final class Pecheur extends Metier {
 
         // Sans canne, rien à faire : il le dit à son chef, et attend qu'on lui en laisse une au dépôt.
         if (meilleure(t, s -> convient(s, CANNES, CANNE)) == 0) {
-            Cerveau.ecrire(t, "canne", 1800, "canne");
+            Cerveau.ecrire(t, "canne_peche", 1800, "canne_peche");
             Cerveau.attendre(t, 10);
             return;
         }
@@ -141,7 +141,7 @@ final class Pecheur extends Metier {
         if (i[0] < Peche.GRILLE.size()) return null; // la suite au prochain appel, dans une demi-seconde
         i[0] = 0;
         t.memoire.putLong("eau_revue", maintenant + 300);
-        Cerveau.ecrire(t, "sans_eau", Cerveau.UN_JOUR, "sans_eau");
+        Cerveau.ecrire(t, "sans_eau_peche", Cerveau.UN_JOUR, "sans_eau_peche");
         Cerveau.attendre(t, 20);
         return null;
     }
@@ -258,6 +258,7 @@ final class Pecheur extends Metier {
             // Les petits remous autour du flotteur, et le poisson qui approche juste avant de mordre.
             if (attendu % 30 == 0) l.sendParticles(ParticleTypes.FISHING, flotteur.x, flotteur.y, flotteur.z, 1, 0.05, 0, 0.05, 0);
             if (attente - attendu < 40 && attendu % 4 == 0) l.sendParticles(ParticleTypes.BUBBLE, flotteur.x, flotteur.y - 0.3, flotteur.z, 2, 0.2, 0.1, 0.2, 0);
+            if (attendu == attente / 2 && t.getRandom().nextInt(4) == 0) Besoins.parler(t, "peche_attente", null);
             if (attendu < attente) return Actions.Etat.EN_COURS;
             // Ça mord !
             ItemStack canne = t.getMainHandItem();
@@ -266,7 +267,14 @@ final class Pecheur extends Metier {
             l.sendParticles(ParticleTypes.SPLASH, flotteur.x, flotteur.y, flotteur.z, 12, 0.2, 0, 0.2, 0);
             l.playSound(null, t.getX(), t.getY(), t.getZ(), SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.NEUTRAL, 1, 0.4f / (t.getRandom().nextFloat() * 0.4f + 0.8f));
             t.swing(InteractionHand.MAIN_HAND);
-            for (ItemStack s : butin(t, l, flotteur, canne)) t.ranger(s);
+            List<ItemStack> prises = butin(t, l, flotteur, canne);
+            // Il en dit un mot, de temps en temps (un trésor, toujours s'il le peut ; Besoins.permis espace les répliques).
+            if (!prises.isEmpty()) {
+                ItemStack p = prises.get(0);
+                String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(p.getItem()).toString(), genre = Peche.genre(id, p.isEnchanted());
+                if (!genre.equals("peche_prise") || t.getRandom().nextInt(3) == 0) Besoins.parler(t, genre, null, Peche.NOMS.get(id));
+            }
+            for (ItemStack s : prises) t.ranger(s);
             Actions.userOutil(t, 1);
             t.memoire.putInt("prises", t.memoire.getInt("prises") + 1);
             travail = true; // du vrai travail (Coince)

@@ -94,4 +94,17 @@ class PecheTest {
         assertEquals(-1, c.get(0)[0]);
         for (int[] r : Peche.rives(lac, c.get(0)[0], c.get(0)[1])) assertEquals(-3, r[0], "la rive est la terre du bord");
     }
+
+    @Test
+    void poissonDechetOuTresor() {
+        assertEquals("peche_prise", Peche.genre("minecraft:cod", false));
+        assertEquals("peche_prise", Peche.genre("minecraft:pufferfish", false));
+        assertEquals("peche_dechet", Peche.genre("minecraft:leather_boots", false));
+        assertEquals("peche_tresor", Peche.genre("minecraft:bow", true), "un arc enchanté est un trésor");
+        assertEquals("peche_dechet", Peche.genre("minecraft:bow", false), "un vieil arc abîmé, non");
+        assertEquals("peche_tresor", Peche.genre("minecraft:name_tag", false));
+        assertEquals("une vieille botte", Peche.NOMS.get("minecraft:leather_boots"));
+        for (String id : Peche.POISSONS) assertTrue(Peche.NOMS.containsKey(id));
+        for (String id : Peche.TRESORS) assertTrue(Peche.NOMS.containsKey(id));
+    }
 }

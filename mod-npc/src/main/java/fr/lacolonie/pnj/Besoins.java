@@ -40,9 +40,17 @@ final class Besoins {
         return !t.muet() && permis(t, cle) && dire(t, cle, nom);
     }
 
+    /** Pareil, avec {@code {objet}} : ce dont il parle (une prise du pêcheur), ou null (les répliques qui le citent ne sortent pas). */
+    static boolean parler(Travailleur t, String cle, String nom, String objet) {
+        return !t.muet() && permis(t, cle) && dire(t, cle, nom, objet);
+    }
+
     /** Il dit la réplique {@code cle} tout de suite, sans délai : ce qui n'arrive qu'une fois (à terre, relevé, soigné). */
-    static boolean dire(Travailleur t, String cle, String nom) {
+    static boolean dire(Travailleur t, String cle, String nom) { return dire(t, cle, nom, null); }
+
+    static boolean dire(Travailleur t, String cle, String nom, String objet) {
         Map<String, String> v = new HashMap<>();
+        if (objet != null) v.put("objet", objet);
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
         String texte = Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
