@@ -209,4 +209,21 @@ class MoralTest {
         assertTrue(Moral.finRevolte(30, 30, 0, 0, true), "le moral remonté");
         assertTrue(Moral.finRevolte(5, 30, 2, 2, false), "le chef parti loin");
     }
+    /** Le diamant gardé en cachette (cahier 14.3) selon le caractère et le moral ; ses aveux ; les excuses rendent la moitié. */
+    @Test
+    void diamantSelonLeCaractere() {
+        assertEquals(0, Moral.gardeDiamant("calme", 5, 100), "le calme, jamais");
+        assertEquals(0, Moral.gardeDiamant("peureux", 50, 100), "le peureux, pas au moral ordinaire");
+        assertEquals(0, Moral.gardeDiamant("colerique", 70, 100), "le colérique content, non");
+        assertTrue(Moral.gardeDiamant("colerique", 20, 50) > 0, "le colérique au moral bas, parfois");
+        assertEquals(0.5, Moral.gardeDiamant("fourbe", 70, 50), 1e-9, "le fourbe, souvent");
+        assertTrue(Moral.gardeDiamant("fourbe", 20, 50) > Moral.gardeDiamant("fourbe", 70, 50), "plus encore au moral bas");
+        assertEquals(1, Moral.gardeDiamant("fourbe", 20, 100), 1e-9);
+        assertEquals(0, Moral.gardeDiamant("fourbe", 20, 0), "réglé à 0 : jamais");
+        assertEquals(1, Moral.avoueDiamant("peureux", 10), 1e-9, "le peureux avoue toujours");
+        assertTrue(Moral.avoueDiamant("fourbe", 30) < Moral.avoueDiamant("calme", 30));
+        assertEquals(8, Moral.pardon(15));
+        assertEquals(3, Moral.pardon(5));
+        assertEquals(0, Moral.pardon(0));
+    }
 }

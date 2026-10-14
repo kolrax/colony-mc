@@ -360,6 +360,8 @@ final class Messages {
         m("souv_cadeau_content", null, "Pour moi ? Merci, chef, je le garderai précieusement !", "Un présent ? Merci, chef, tu es bon.",
                 "Merci, chef ! Je n'en attendais pas tant.");
         t("souv_cadeau_content", "fourbe", "Ah, chef, tu sais parler aux hommes ! Merci bien.");
+        m("souv_excuses", null, "Bon. Excuses acceptées, chef.", "Merci de le dire, chef.");
+        m("souv_excuses_rien", null, "Il n'y a rien à pardonner, chef.", "Pardonner quoi, chef ? Tout va bien.", "Ce n'est rien, chef.");
 
         // L'obéissance (cahier 8.4) : il râle, marchande ou refuse, selon son moral et son caractère.
         m("rale", null, "Encore moi… Bon, j'y vais, chef.", "Toujours les mêmes qui triment… Soit, j'y vais.", "Hmpf. Si tu le dis, chef.");

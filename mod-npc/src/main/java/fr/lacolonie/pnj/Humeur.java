@@ -483,6 +483,88 @@ final class Humeur {
         return s == null ? "" : s;
     }
 
+    // --- Le diamant gardé en cachette (cahier 14.3) ---------------------------------------------------------------
+
+    /**
+     * Ce que le mineur vient d'extraire, avant d'aller dans son sac ({@link Actions#recolter}) : au premier diamant du
+     * jour, selon son caractère et son moral ({@link Moral#gardeDiamant}), il en garde un, un seul, dans sa cachette
+     * (le butin des vols : rendu à sa mort, emporté s'il s'en va), en marmonnant. Renvoie ce qui va dans le sac.
+     */
+    static ItemStack trouve(Travailleur t, ItemStack d) {
+        if (!d.is(net.minecraft.world.item.Items.DIAMOND) || !t.metier.equals("mineur") || t.chef == null) return d;
+        CompoundTag m = t.memoire;
+        long j = t.jour();
+        if (m.contains("diamant_jour") && m.getLong("diamant_jour") == j) return d; // tiré une fois par jour, pas à chaque diamant
+        m.putLong("diamant_jour", j);
+        if (m.getList("butin", Tag.TAG_COMPOUND).size() >= Moral.BUTIN_MAX
+                || t.getRandom().nextDouble() >= Moral.gardeDiamant(t.temperament, t.moral, Reglages.actuel.caractere_diamant)) return d;
+        m.putLong("diamant_garde", j);
+        cacher(t, d.split(1));
+        Besoins.dire(t, "caractere_diamant_cache", null); // à voix basse : qui passe tout près l'entend
+        return d;
+    }
+
+    /** Il vient de ranger des diamants au dépôt : s'il n'en a gardé aucun aujourd'hui, il s'en vante (pas à chaque fois). */
+    static void diamantsRendus(Travailleur t) {
+        if (!t.metier.equals("mineur") || t.memoire.contains("diamant_garde") && t.memoire.getLong("diamant_garde") == t.jour()) return;
+        Besoins.parler(t, "caractere_diamant_rendu", null);
+    }
+
+    /**
+     * « Tu as gardé un diamant ? » : avec des diamants cachés, selon son caractère ({@link Moral#avoueDiamant}), il avoue
+     * et les rend au dépôt (dans son sac si le poste est loin, il les y portera), ou il nie. Sans diamant caché, il nie, et
+     * c'est vrai. Le reste de son butin ne bouge pas.
+     */
+    static String questionDiamant(Travailleur t) {
+        ListTag reste = new ListTag();
+        List<ItemStack> diamants = new ArrayList<>();
+        for (Tag x : t.memoire.getList("butin", Tag.TAG_COMPOUND)) {
+            ItemStack s = ItemStack.parse(t.registryAccess(), x).orElse(ItemStack.EMPTY);
+            if (s.is(net.minecraft.world.item.Items.DIAMOND)) diamants.add(s); else reste.add(x);
+        }
+        boolean avoue = !diamants.isEmpty() && t.getRandom().nextDouble() < Moral.avoueDiamant(t.temperament, t.moral);
+        if (avoue) {
+            if (reste.isEmpty()) t.memoire.remove("butin"); else t.memoire.put("butin", reste);
+            for (ItemStack s : diamants) {
+                if (t.bureau != null && t.level().isLoaded(t.bureau) && t.level().getBlockEntity(t.bureau) instanceof Bureau.Entite b) s = b.ranger(s);
+                if (!s.isEmpty()) t.ranger(s);
+            }
+        }
+        String s = Besoins.texte(t, avoue ? "diamant_avoue" : "diamant_nie", null, null);
+        return s == null ? "" : s;
+    }
+
+    // --- Les excuses du chef --------------------------------------------------------------------------------------
+
+    /** Son chef l'insulte ou le frappe : le moral baisse, et l'offense est notée (ce qu'elle a coûté) pour d'éventuelles excuses. */
+    static void offense(Travailleur t, int delta) {
+        int avant = t.moral;
+        t.changerMoral(delta);
+        CompoundTag m = t.memoire;
+        long maintenant = t.level().getGameTime();
+        int perdu = m.contains("offense_le") && maintenant - m.getLong("offense_le") <= Moral.EXCUSES_DELAI ? m.getInt("offense_perte") : 0;
+        m.putInt("offense_perte", perdu + avant - t.moral);
+        m.putLong("offense_le", maintenant);
+    }
+
+    /**
+     * « Pardon », « excuse-moi » : après une insulte ou un coup de moins d'un jour, il répond selon son caractère
+     * ({@code caractere_excuses}) et regagne la moitié du moral perdu, une fois par offense. Null : rien à pardonner.
+     */
+    static String excuses(Travailleur t) {
+        CompoundTag m = t.memoire;
+        if (!m.contains("offense_le") || t.level().getGameTime() - m.getLong("offense_le") > Moral.EXCUSES_DELAI) {
+            m.remove("offense_le");
+            m.remove("offense_perte");
+            return null;
+        }
+        t.changerMoral(Moral.pardon(m.getInt("offense_perte")));
+        m.remove("offense_le");
+        m.remove("offense_perte");
+        String s = Besoins.texte(t, "caractere_excuses", null, null);
+        return s != null ? s : Messages.corps(t, "souv_excuses");
+    }
+
     // --- La fuite -------------------------------------------------------------------------------------------------
 
     /**

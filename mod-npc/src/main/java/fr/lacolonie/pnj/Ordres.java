@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI,
+        /** « Tu as gardé un diamant ? », « tu caches quelque chose ? » (cahier 14.3). */ DIAMANT,
+        /** « Pardon », « excuse-moi », « désolé » : le chef s'excuse (après une insulte ou un coup). */ EXCUSES }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -293,8 +295,32 @@ final class Ordres {
         // Une mission comprise le remet au travail : « escorte-moi » ou « viens avec 10 fers » ne veulent pas dire « suis-moi ».
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);
+        if (excuses(texte)) l.intentions.add(Intention.EXCUSES);
+        // « Tu as pris un diamant ? » est une question : ni mission de diamant, ni geste du répertoire.
+        if (diamantCache(texte)) { l.intentions.add(Intention.DIAMANT); l.intentions.remove(Intention.SAC); l.missions.clear(); l.horsMetier.clear(); l.pourAutres.clear(); l.faire.clear(); }
         l.mortel = Obeissance.mortel(texte);
         return l;
+    }
+
+    /** Le chef demande s'il a gardé un diamant, s'il cache quelque chose (une question, pas « garde 10 diamants »). */
+    static final Pattern DIAMANT_CACHE = Pattern.compile(" (?:tu as|t as|as tu|n as tu pas|tu n as pas|tu aurais|aurais tu)"
+            + " (?:\\w+ ){0,2}(?:garde|gardes|garder|cache|caches|cacher|pris|vole|empoche|mis de cote)(?: \\w+){0,3} diamants? "
+            + "| (?:tu (?:me |nous )?caches|caches tu)(?: \\w+){0,3} diamants? ");
+    static final Pattern CACHE_QUOI = Pattern.compile(" (?:tu (?:me |nous )?caches (?:quelque chose|quoi|un truc)|(?:me |nous )?caches tu (?:quelque chose|un truc)"
+            + "|que (?:me |nous )?caches tu|qu est ce que tu (?:me |nous )?caches) ");
+
+    static boolean diamantCache(String texte) {
+        String n = normaliser(texte);
+        return DIAMANT_CACHE.matcher(n).find() || CACHE_QUOI.matcher(n).find();
+    }
+
+    /** Le chef s'excuse (« pardon », « excuse-moi », « désolé ») ; pas « demande pardon » ni « excuse-toi », qui sont des ordres. */
+    static boolean excuses(String texte) {
+        String n = normaliser(texte);
+        if (dit(n, "demande pardon", "demander pardon", "dis pardon", "demande moi pardon", "dis moi pardon", "excuse toi", "excusez vous", "presente tes excuses")
+                && !dit(n, "je te demande pardon", "je vous demande pardon")) return false;
+        return dit(n, "pardon", "pardonne moi", "pardonnez moi", "excuse moi", "excusez moi", "je m excuse", "je te demande pardon", "mes excuses", "toutes mes excuses",
+                "desole", "desolee", "je regrette", "je suis desole", "je suis desolee");
     }
 
     /**

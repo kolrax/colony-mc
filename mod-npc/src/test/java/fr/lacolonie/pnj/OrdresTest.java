@@ -232,4 +232,21 @@ class OrdresTest {
         assertTrue(adr("Mine du fer").demande());
         assertTrue(adr("Ton sac est plein ?").deuxiemePersonne());
     }
+    /** « Tu as gardé un diamant ? » est une question (cahier 14.3), « garde 10 diamants » un ordre ; « pardon » des excuses, « demande pardon » un ordre. */
+    @Test
+    void diamantCacheEtExcuses() {
+        for (String p : List.of("Tu as gardé un diamant ?", "As-tu caché des diamants ?", "Bertrand, tu n'as pas gardé un diamant pour toi ?",
+                "Tu caches quelque chose ?", "Qu'est-ce que tu me caches ?", "Est-ce que tu as pris un diamant ?", "Tu caches un diamant ?")) {
+            assertTrue(Ordres.diamantCache(p), p);
+            Ordres.Lecture l = lire(p, "mineur");
+            assertTrue(l.intentions.contains(Intention.DIAMANT) && l.missions.isEmpty() && l.faire.isEmpty() && !l.intentions.contains(Intention.SAC), p);
+        }
+        for (String p : List.of("Garde 10 diamants en stock", "Ramène 3 diamants", "Cache-toi !", "Tu as trouvé des diamants ?", "Montre ton sac"))
+            assertFalse(Ordres.diamantCache(p), p);
+        assertFalse(lire("Garde 10 diamants en stock", "mineur").missions.isEmpty());
+        for (String p : List.of("Pardon, Bertrand.", "Excuse-moi.", "Désolé, je me suis emporté.", "Je te demande pardon.", "Toutes mes excuses, Raoul."))
+            assertTrue(Ordres.excuses(p) && lire(p, "mineur").intentions.contains(Intention.EXCUSES), p);
+        for (String p : List.of("Demande pardon !", "Excuse-toi tout de suite.", "Bonjour Raoul", "Tu es désolant"))
+            assertFalse(Ordres.excuses(p), p);
+    }
 }

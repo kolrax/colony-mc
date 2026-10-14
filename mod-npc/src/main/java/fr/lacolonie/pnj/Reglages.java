@@ -75,6 +75,8 @@ public class Reglages {
     public boolean moral_vol_autres = true;
     /** Révolte armée (cahier 5.4) : après plusieurs avertissements, les ouvriers au plus bas frappent leur chef, et lui seul. */
     public boolean moral_revolte = true;
+    /** Un mineur fourbe qui trouve des diamants en garde un en cachette, au plus un par jour du jeu : chance en pour cent (le colérique au moral bas : à peine plus de la moitié ; jamais le calme ; 0 = jamais). */
+    public int caractere_diamant = 50;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -137,6 +139,7 @@ public class Reglages {
         moral_lenteur = Math.clamp(moral_lenteur, 0, 50);
         moral_mefaits = Math.clamp(moral_mefaits, 0, 100);
         moral_vol_max = Math.max(0, moral_vol_max);
+        caractere_diamant = Math.clamp(caractere_diamant, 0, 100);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
