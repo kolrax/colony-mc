@@ -680,7 +680,6 @@ Regarde-moi ça, {chef}. De quoi nourrir la table ce soir.
 Encore un pour le panier.
 Il s'est bien débattu, celui-là.
 J'ai sorti {objet}. Pas mal du tout.
-Le cuisinier va être content.
 Une prise pareille, ça se raconte au repas.
 calme: Un de plus. L'eau est généreuse aujourd'hui.
 peureux: Il a failli m'emporter la canne… Mais je l'ai !
@@ -688,7 +687,7 @@ fourbe: Celui-là, il pesait le double. Enfin, presque.
 colerique: Ah ! Enfin ! Tu vois, quand on s'acharne ?
 
 [peche_dechet]
-Une vieille botte. Il manque juste le pied.
+Encore une chose qui n'a rien d'un poisson.
 J'ai repêché {objet}. Ce n'est pas tout à fait ce que je cherchais.
 Encore une saleté au bout de ma ligne.
 Quelqu'un jette ses affaires dans notre eau, et c'est moi qui les ramasse.
@@ -697,7 +696,7 @@ Bon. Ça fera de la place au fond de l'eau.
 calme: Tout ce que l'eau rend n'est pas à manger. C'est ainsi.
 peureux: Qu'est-ce que c'est que ça ? Ça bouge encore ? Non… Tant mieux.
 fourbe: {objet}… Je le garde. On ne sait jamais à qui ça peut se vendre.
-colerique: Des ordures ! L'eau me prend pour une décharge !
+colerique: Des ordures ! On jette donc tout dans cette eau ?
 
 [peche_tresor]
 Ça alors ! Regarde ce que l'eau m'a donné !

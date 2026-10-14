@@ -426,6 +426,7 @@ public class ColoniePnj {
                 case "guerrier" -> net.minecraft.world.item.Items.IRON_SWORD;
                 case "fermier" -> net.minecraft.world.item.Items.IRON_HOE;
                 case "eleveur" -> net.minecraft.world.item.Items.SHEARS;
+                case "pecheur" -> net.minecraft.world.item.Items.FISHING_ROD;
                 default -> net.minecraft.world.item.Items.AIR;
             });
             Travailleur t = Travailleur.auTravail(l, m, bureau, net.minecraft.world.phys.Vec3.atBottomCenterOf(p), CHEF_BANC, outil);
