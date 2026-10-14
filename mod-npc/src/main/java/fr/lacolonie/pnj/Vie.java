@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,8 @@ final class Vie {
         TOUTES.clear();
         // Comme Conversations : une section fautive est laissée de côté et notée au journal ; le test, lui, est strict.
         TOUTES.putAll(lire(Repertoire.lignes("/vie.txt"), e -> System.err.println("[colonie_pnj] Section de vie.txt ignorée : " + e.getMessage())));
+        // Les remarques spontanées, l'humour devant l'impossible et les réactions selon le caractère (lot 7) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/remarques.txt"), e -> System.err.println("[colonie_pnj] Section de remarques.txt ignorée : " + e.getMessage())));
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */
@@ -102,6 +105,8 @@ final class Vie {
     static String tirer(Map<String, List<Replique>> banque, String cle, String temperament, Map<String, String> valeurs, DoubleSupplier hasard) {
         List<Replique> toutes = banque.get(cle);
         if (toutes == null) return null;
+        // Les réactions selon le caractère (remarques.txt) complètent la section du même nom (insulte, coup, impaye, cadeau…).
+        if (banque.containsKey("caractere_" + cle)) { toutes = new ArrayList<>(toutes); toutes.addAll(banque.get("caractere_" + cle)); }
         List<Replique> propres = new ArrayList<>(), communes = new ArrayList<>();
         for (Replique r : toutes) {
             if (!remplissable(r, valeurs)) continue;
@@ -149,6 +154,41 @@ final class Vie {
 
     /** Il a envie d'une pause : moral moyen ou bas, et longtemps au travail. */
     static boolean veutPause(int moral, int travail) { return moral < PAUSE_MORAL && travail >= PAUSE_APRES; }
+
+    // --- Remarques spontanées (lot 7, cahier 7.3 : « parfois : remarques, blagues ») -----------------------------
+
+    /** Ce qu'il sait de son moment, sans rien chercher : l'heure (0 à 23), le ciel, son travail, sa colonie ({@code nouveau} : prénom du dernier embauché, ou null). */
+    record Moment(int heure, boolean pluie, boolean orage, boolean neige, boolean auTravail, String metier,
+                  boolean fini, boolean depotPlein, boolean ennui, String nouveau, boolean paie) {}
+
+    /**
+     * La remarque à faire (une clé de remarques.txt) : un événement d'abord (nouveau collègue, jour de paie, travail fini,
+     * dépôt plein), sinon une au hasard parmi le moment de la journée, le ciel, l'ennui ou son métier. Jamais une clé
+     * {@code recente}. Null : rien à dire.
+     */
+    static String remarque(Map<String, List<Replique>> banque, Moment m, Predicate<String> recente, DoubleSupplier hasard) {
+        List<String> evenements = new ArrayList<>(), autres = new ArrayList<>();
+        if (m.nouveau() != null) evenements.add("remarque_nouveau_collegue");
+        if (m.paie()) evenements.add("remarque_jour_paie");
+        if (m.fini()) evenements.add("remarque_travail_fini");
+        if (m.depotPlein()) evenements.add("remarque_depot_plein");
+        int h = m.heure();
+        boolean nuit = h >= 21 || h < 5;
+        if (h >= 5 && h < 9) autres.add("remarque_matin");
+        else if (h >= 18 && h < 21) autres.add("remarque_soir");
+        else if (nuit) autres.add("remarque_nuit");
+        if (m.orage()) autres.add("remarque_orage");
+        else if (m.pluie()) autres.add("remarque_pluie");
+        else if (m.neige()) autres.add("remarque_neige");
+        else if (!nuit) autres.add("remarque_beau_temps");
+        if (m.ennui()) autres.add("remarque_ennui");
+        else if (m.auTravail()) autres.add("remarque_" + m.metier());
+        for (List<String> l : List.of(evenements, autres)) {
+            List<String> c = l.stream().filter(k -> banque.containsKey(k) && !recente.test(k)).toList();
+            if (!c.isEmpty()) return c.get(Math.min(c.size() - 1, (int) (hasard.getAsDouble() * c.size())));
+        }
+        return null;
+    }
 
     static {
         charger();

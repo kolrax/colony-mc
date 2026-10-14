@@ -14,7 +14,7 @@ class VieTest {
     void leFichierSeLit() {
         // Strict : une seule erreur dans le fichier livré fait échouer le test (le jeu, lui, ignorerait la section).
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
-        assertEquals(Vie.TOUTES.size(), banque.size());
+        assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);

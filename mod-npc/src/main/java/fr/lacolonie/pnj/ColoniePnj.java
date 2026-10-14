@@ -122,6 +122,7 @@ public class ColoniePnj {
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
             PanneauWeb.arreter();
+            Remarques.oublier(); // elles tiennent les mondes du serveur arrêté
             Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);

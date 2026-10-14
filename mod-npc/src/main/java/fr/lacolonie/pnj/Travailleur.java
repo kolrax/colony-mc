@@ -181,6 +181,7 @@ public class Travailleur extends PathfinderMob {
             if (c == null) { it.remove(); continue; }
             if (m.quantite() && !m.quotidienne && m.livre >= m.nombre) {
                 it.remove();
+                memoire.putLong("fini_le", level().getGameTime()); // « travail fini » (Remarques)
                 Mission suivante = missionActive();
                 Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom.toLowerCase(),
                         suivante == null ? "" : Metier.nomMission(metier, suivante));
@@ -387,6 +388,8 @@ public class Travailleur extends PathfinderMob {
     ChunkPos chunkForce;
     /** Conversations entre ouvriers ({@link Causeries}) : prochain essai, et fin du dernier combat, fuite ou péril (temps du jeu). */
     long prochaineCauserie, finDanger;
+    /** Le moment (temps du jeu) de sa prochaine remarque spontanée ({@link Remarques}) ; 0 : pas encore tiré. Non sauvegardé. */
+    long prochaineRemarque;
 
     public Travailleur(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -1105,7 +1108,10 @@ public class Travailleur extends PathfinderMob {
             changerMoral(Obeissance.RETARD);
             prochainePaie = System.currentTimeMillis() + periodePaie();
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
-            else Courrier.ecrire(this, "paie_retard");
+            else {
+                Courrier.ecrire(this, "paie_retard");
+                Besoins.parler(this, impayes >= 2 ? "impaye" : "paie_retard", null); // « des jours sans paie » seulement à la 2e paie manquée
+            }
         }
     }
 
@@ -1212,6 +1218,7 @@ public class Travailleur extends PathfinderMob {
             changerMoral(Obeissance.COUP_CHEF);
             memoire.putLong("coup_chef", level().getGameTime());
             souvenirs.noter(Souvenirs.Genre.COUP, jour(), IA.heure(this), "un coup");
+            if (!aTerre && !muet() && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
         }
         return touche;
     }
@@ -1431,10 +1438,11 @@ public class Travailleur extends PathfinderMob {
             int pris = enMain.getCount() - reste.getCount();
             if (pris == 0) { dire("Mon sac est plein, chef."); return InteractionResult.CONSUME; } // rien de pris : il le garde en main
             int piece = Reglages.piece(enMain);
-            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), piece >= 0
-                    ? Reglages.texte((long) pris * Reglages.actuel.monnaie.get(piece).valeur) : Souvenirs.nombre(pris, Consignes.nom(enMain)));
+            String objet = piece >= 0 ? Reglages.texte((long) pris * Reglages.actuel.monnaie.get(piece).valeur) : Souvenirs.nombre(pris, Consignes.nom(enMain));
+            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), objet);
             enMain.setCount(reste.getCount());
-            dire(Messages.corps(this, utile ? "dit_merci_objet" : "souv_cadeau"));
+            // Un présent : il remercie selon son caractère ({objet} seulement s'il y en a plusieurs : « 3 diamants », sans article à deviner).
+            dire(utile ? Messages.corps(this, "dit_merci_objet") : selon("cadeau", piece >= 0 || pris > 1 ? objet : null, "souv_cadeau"));
             return InteractionResult.CONSUME;
         }
         getLookControl().setLookAt(player);
@@ -1548,14 +1556,20 @@ public class Travailleur extends PathfinderMob {
             if (g == Souvenirs.Genre.CADEAU && souvenirs.deja(g, j)) { /* l'objet tendu tout à l'heure est déjà noté */ }
             else souvenirs.noter(g, j, h, g == Souvenirs.Genre.CADEAU ? Souvenirs.PRESENT : l.texte);
             switch (g) {
-                case INSULTE -> { changerMoral(Obeissance.INSULTE); r.add(Messages.corps(this, "souv_insulte")); }
+                case INSULTE -> { changerMoral(Obeissance.INSULTE); r.add(selon("insulte", null, "souv_insulte")); }
                 case COMPLIMENT -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_compliment")); }
-                case CADEAU -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(Messages.corps(this, "souv_cadeau_content")); }
+                case CADEAU -> { if (souvenirs.bonus(j)) changerMoral(Obeissance.COMPLIMENT); r.add(selon("cadeau", null, "souv_cadeau_content")); }
                 case PROMESSE -> r.add(Messages.corps(this, "souv_promesse"));
                 default -> {}
             }
         }
         return String.join(" ", r);
+    }
+
+    /** Sa réplique de vie.txt selon son caractère (complétée par caractere_<cle> de remarques.txt), sinon le message {@code repli}. */
+    String selon(String cle, String objet, String repli) {
+        String s = Besoins.texte(this, cle, null, objet);
+        return s != null ? s : Messages.corps(this, repli);
     }
 
     /**
@@ -1575,6 +1589,13 @@ public class Travailleur extends PathfinderMob {
             return Messages.corps(this, "mortel_" + danger);
         }
         if (parRegle) return appliquerOrdre(l, enFace);
+        // L'impossible (voler, aller sur la lune, casser la roche du fond du monde…) : il en rit, sans rien faire (cahier 14.9).
+        String impossible = Impossible.demande(l.texte, Ordres.lire(l.texte, metier)); // seulement si rien n'y est faisable
+        String blague = impossible == null ? null : Besoins.texte(this, "impossible_" + impossible, null, null);
+        if (blague != null) {
+            reponseImposee = true;
+            return blague;
+        }
         Ordres.Lecture avant = enAttente != null && maintenant <= attenteFin ? enAttente : null;
         enAttente = null;
         Relais.Commande rel = relais;
@@ -1991,6 +2012,7 @@ public class Travailleur extends PathfinderMob {
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
+        Remarques.embauche(this); // ses nouveaux collègues en parleront
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
         dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
         signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
