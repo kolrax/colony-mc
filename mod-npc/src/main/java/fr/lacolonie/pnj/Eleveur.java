@@ -186,8 +186,10 @@ final class Eleveur extends Metier {
     }
 
     /** L'enclos connu qui contient ce point (à 4 blocs près en hauteur), ou null. */
-    static Elevage.Enclos enclos(Ferme f, int x, int y, int z) {
-        for (Elevage.Enclos e : f.enclos) if (e.contient(x, z) && Math.abs(y - e.y()) <= 4) return e;
+    static Elevage.Enclos enclos(Ferme f, int x, int y, int z) { return enclos(f.enclos, x, y, z); }
+
+    static Elevage.Enclos enclos(List<Elevage.Enclos> liste, int x, int y, int z) {
+        for (Elevage.Enclos e : liste) if (e.contient(x, z) && Math.abs(y - e.y()) <= 4) return e;
         return null;
     }
 
@@ -674,7 +676,8 @@ final class Eleveur extends Metier {
 
     /** Le butin d'une bête qu'abat un ouvrier va droit dans son sac (rien ne tombe par terre ; s'il est plein, à ses pieds). */
     static void butin(LivingDropsEvent e) {
-        if (!(e.getSource().getEntity() instanceof Travailleur t) || !"eleveur".equals(t.metier) || !(e.getEntity() instanceof Animal a) || espece(a) == null) return;
+        if (!(e.getSource().getEntity() instanceof Travailleur t) || !(e.getEntity() instanceof Animal a)) return;
+        if (!("eleveur".equals(t.metier) && espece(a) != null || "chasseur".equals(t.metier) && Chasseur.espece(a) != null)) return; // le chasseur aussi
         for (ItemEntity ie : e.getDrops()) t.ranger(ie.getItem().copy());
         e.setCanceled(true);
     }
