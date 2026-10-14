@@ -1963,6 +1963,8 @@ public class Travailleur extends PathfinderMob {
             case "attaquer" -> "Je me bats !";
             case "fuir" -> "Je fuis un danger !";
             case "poser" -> "Je pose des blocs.";
+            case "batir" -> "Je bâtis, pierre après pierre.";
+            case "approvisionner" -> "Je prends de quoi bâtir au dépôt.";
             case "ramasser" -> "Je ramasse ce qui traîne.";
             default -> "Je m'occupe.";
         };

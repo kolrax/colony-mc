@@ -216,13 +216,14 @@ final class Macon extends Metier {
 
     /**
      * Ce qu'il peut casser pour faire place : terre, herbe, pierre, sable, gravier, neige, argile, et les plantes qui se
-     * remplacent. Jamais un bloc construit, un coffre, un liquide, ni du bois ou des feuilles (un arbre, c'est l'affaire du bûcheron).
+     * remplacent. Jamais un bloc construit, un coffre, un liquide, un champ labouré ou un chemin (l'ouvrage de quelqu'un), ni du
+     * bois ou des feuilles (un arbre, c'est l'affaire du bûcheron).
      */
     static boolean naturel(Level l, BlockPos p, BlockState s) {
         if (s.isAir() || !s.getFluidState().isEmpty() || l.getBlockEntity(p) != null || s.getDestroySpeed(l, p) < 0 || Monde.construit(l, p)) return false;
         if (s.canBeReplaced()) return true;
         return s.is(BlockTags.DIRT) || s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(BlockTags.SAND) || s.is(Blocks.GRAVEL) || s.is(BlockTags.SNOW)
-                || s.is(Blocks.CLAY) || s.is(Blocks.FARMLAND) || s.is(Blocks.DIRT_PATH);
+                || s.is(Blocks.CLAY);
     }
 
     /** Il commence un chantier (il oublie celui d'avant). */
