@@ -77,6 +77,8 @@ final class Pecheur extends Metier {
 
     @Override
     void travailler(Travailleur t) {
+        // Son sac vidé (au dépôt, par lui ou le soir), le compte de ses prises repart de zéro.
+        if (t.memoire.getInt("prises") > 0 && rienAuSac(t)) t.memoire.putInt("prises", 0);
         // Sa canne, prise au dépôt.
         if (outilAuDepot(t, CANNES, CANNE, "canne à pêche")) return;
 
@@ -104,23 +106,89 @@ final class Pecheur extends Metier {
             return;
         }
 
+        // Le coin que le chef lui a donné est hors d'atteinte pour l'instant : il réessaiera.
+        if (t.memoire.getLong("peche_pause") > Cerveau.temps(t)) { Cerveau.attendre(t, 10); return; }
         Coin coin = coin(t);
         if (coin == null) coin = chercher(t);
         if (coin != null) Cerveau.lancer(t, new Pecher(coin));
     }
 
-    /** Son coin retenu, s'il est toujours bon (de l'eau, une rive où se tenir) ; sinon il l'oublie. */
+    /**
+     * Son coin retenu, s'il est toujours bon : les mêmes contrôles que {@link #trouver} (son espace de vie, 32 blocs du poste
+     * sauf sur ordre, à ciel ouvert, à lui), de l'eau, une rive où se tenir, ni écartée ni prise par un autre ; sinon il l'oublie.
+     */
     static Coin coin(Travailleur t) {
         Coin c = Coin.de(t.memoire.getCompound("peche"));
         if (c == null) return null;
         ServerLevel l = (ServerLevel) t.level();
         if (!l.isLoaded(c.eau) || !l.isLoaded(c.rive)) return c; // il verra sur place
-        if (eau(l, c.eau.getX(), c.eau.getY(), c.eau.getZ()) && debout(l, c.rive)) return c;
+        if (valable(t, l, c.eau, c.ordre) && eau(l, c.eau.getX(), c.eau.getY(), c.eau.getZ()) && debout(l, c.rive)
+                && (c.ordre || !ecartee(t, c.rive)) && !prises(t, c.rive).contains(c.rive)) return c;
         t.memoire.remove("peche");
         return null;
     }
 
+    /** Une eau où il peut pêcher : dans son espace de vie (à 32 blocs du poste, sauf sur ordre), à ciel ouvert, à lui. */
+    static boolean valable(Travailleur t, ServerLevel l, BlockPos centre, boolean ordre) {
+        if (!ordre && Fermier.distance(t.bureau, centre) > Peche.PORTEE * Peche.PORTEE) return false;
+        return t.chezLui(centre) && l.canSeeSky(centre.above()) && Fermier.aLui(t, centre);
+    }
+
     static void retenir(Travailleur t, Coin c) { t.memoire.put("peche", c.tag()); }
+
+    /** Renvoyé (ou réembauché ailleurs), il oublie tout de sa pêche. */
+    static void oublier(Travailleur t) {
+        for (String k : List.of("peche", "prises", "eau_revue", "rives_ecartees", "peche_pause", "ordre_echecs")) t.memoire.remove(k);
+        RECHERCHES.remove(t);
+    }
+
+    /** Rien au sac que ce qu'il garde (sa canne, son bateau) : ses prises sont au dépôt. */
+    boolean rienAuSac(Travailleur t) {
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+            ItemStack s = t.inventaire.getItem(i);
+            if (!s.isEmpty() && garder.stream().noneMatch(f -> f.objet(s))) return false;
+        }
+        return true;
+    }
+
+    /** Les rives que tiennent déjà les autres ouvriers de son chef, alentour (deux pêcheurs ne se marchent pas dessus). */
+    static List<BlockPos> prises(Travailleur t, BlockPos pres) {
+        List<BlockPos> r = new ArrayList<>();
+        for (Travailleur x : t.level().getEntitiesOfClass(Travailleur.class, new net.minecraft.world.phys.AABB(pres).inflate(48),
+                x -> x != t && x.isAlive() && java.util.Objects.equals(x.chef, t.chef))) {
+            Coin c = Coin.de(x.memoire.getCompound("peche"));
+            if (c != null) for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) r.add(c.rive.offset(dx, 0, dz)); // et ses voisines
+        }
+        return r;
+    }
+
+    /** Une rive qu'il n'a pas pu atteindre, écartée 10 minutes (16 au plus, souvenir gardé avec lui). */
+    static boolean ecartee(Travailleur t, BlockPos rive) {
+        CompoundTag m = t.memoire.getCompound("rives_ecartees");
+        String k = Long.toString(rive.asLong());
+        return m.contains(k) && m.getLong(k) > Cerveau.temps(t);
+    }
+
+    /**
+     * Il n'arrive pas à sa rive. Un coin à lui : la rive est écartée 10 minutes, il en cherchera une autre (toutes écartées :
+     * la recherche échoue, et il l'écrit). Le coin que lui a donné le chef : il le garde, réessaie dans 2 minutes, et le dit
+     * au chef après trois échecs.
+     */
+    static void ecarter(Travailleur t, Coin c) {
+        long maintenant = Cerveau.temps(t);
+        if (c.ordre) {
+            int n = t.memoire.getInt("ordre_echecs") + 1;
+            t.memoire.putInt("ordre_echecs", n);
+            t.memoire.putLong("peche_pause", maintenant + 120);
+            if (n >= 3) Cerveau.ecrire(t, "coin_peche", Cerveau.UN_JOUR, "coin_peche_inaccessible");
+            return;
+        }
+        CompoundTag m = t.memoire.getCompound("rives_ecartees");
+        if (m.size() >= 16) for (String k : new ArrayList<>(m.getAllKeys())) if (m.getLong(k) <= maintenant) m.remove(k);
+        if (m.size() < 16) m.putLong(Long.toString(c.rive.asLong()), maintenant + OUBLI_EAU);
+        t.memoire.put("rives_ecartees", m);
+        t.memoire.remove("peche");
+    }
 
     /**
      * Un morceau de la recherche : les {@link #PAR_APPEL} colonnes suivantes de la grille autour du poste. Le coin trouvé est
@@ -159,13 +227,15 @@ final class Pecheur extends Metier {
         if (!eau(l, x, y, z)) return null;
         boolean[][] r = new boolean[Peche.RELEVE][Peche.RELEVE];
         for (int i = -3; i <= 3; i++) for (int j = -3; j <= 3; j++) r[i + 3][j + 3] = l.hasChunkAt(x + i, z + j) && eau(l, x + i, y, z + j);
+        List<BlockPos> prises = null;
         for (int[] c : Peche.centres(r)) {
             BlockPos centre = new BlockPos(x + c[0], y, z + c[1]);
-            if (!ordre && Fermier.distance(t.bureau, centre) > Peche.PORTEE * Peche.PORTEE) continue;
-            if (!t.chezLui(centre) || laissee(t, centre) || !l.canSeeSky(centre.above()) || !Fermier.aLui(t, centre)) continue;
+            if (!valable(t, l, centre, ordre)) continue;
+            if (prises == null) prises = prises(t, centre);
+            List<BlockPos> tenues = prises;
             BlockPos rive = Peche.rives(r, c[0], c[1]).stream().map(k -> new BlockPos(x + k[0], y, z + k[1]))
                     .sorted(Comparator.comparingDouble(q -> Fermier.distance(t.bureau, q)))
-                    .map(q -> pied(l, q)).filter(q -> q != null).findFirst().orElse(null);
+                    .map(q -> pied(l, q)).filter(q -> q != null && !ecartee(t, q) && !tenues.contains(q)).findFirst().orElse(null);
             if (rive != null) return new Coin(centre, rive, ordre);
         }
         return null;
@@ -196,17 +266,39 @@ final class Pecheur extends Metier {
         return true;
     }
 
-    /** Une eau qu'il n'a pas pu atteindre, laissée 10 minutes (souvenir gardé avec lui). */
-    static boolean laissee(Travailleur t, BlockPos p) {
-        return t.memoire.getLong("eau_laissee") == p.asLong() && t.memoire.getLong("eau_laissee_t") > Cerveau.temps(t);
+    /** Le type d'un bloc autour du flotteur, comme le jeu le voit ({@code FishingHook.getOpenWaterTypeForBlock}). */
+    static int typeEau(ServerLevel l, BlockPos q) {
+        BlockState s = l.getBlockState(q);
+        if (s.isAir() || s.is(Blocks.LILY_PAD)) return Peche.DESSUS;
+        return s.getFluidState().is(net.minecraft.tags.FluidTags.WATER) && s.getFluidState().isSource() && s.getCollisionShape(l, q).isEmpty() ? Peche.DEDANS : Peche.INVALIDE;
+    }
+
+    /** L'eau libre du jeu autour du flotteur (la surface en p) : 5 x 5, de y - 1 à y + 2 ({@link Peche#eauLibre}). */
+    static boolean eauLibre(ServerLevel l, BlockPos p) {
+        int[] couches = new int[4];
+        for (int i = -1; i <= 2; i++) {
+            int type = -1;
+            for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, i, -2), p.offset(2, i, 2))) {
+                int k = l.isLoaded(q) ? typeEau(l, q) : Peche.INVALIDE;
+                if (type < 0) type = k;
+                else if (type != k) { type = Peche.INVALIDE; break; }
+            }
+            couches[i + 1] = type;
+        }
+        return Peche.eauLibre(couches);
     }
 
     /**
      * Ce que donne une prise : la table de pêche du jeu, avec l'origine (le flotteur), la canne, sa Chance de la mer, et un
-     * flotteur fictif en eau libre (les trésors ne viennent qu'en eau libre ; le carré de 3 x 3 en tient lieu).
+     * flotteur fictif (jamais ajouté au monde) qui dit si l'eau est libre comme le jeu la mesure ({@link #eauLibre}) : les
+     * trésors ne viennent qu'en eau libre ; une petite mare ne donne que poissons et déchets.
      */
     static List<ItemStack> butin(Travailleur t, ServerLevel l, Vec3 flotteur, ItemStack canne) {
-        FishingHook f = new FishingHook(EntityType.FISHING_BOBBER, l); // jamais ajouté au monde
+        boolean libre = eauLibre(l, BlockPos.containing(flotteur));
+        FishingHook f = new FishingHook(EntityType.FISHING_BOBBER, l) {
+            @Override
+            public boolean isOpenWaterFishing() { return libre; }
+        };
         f.setPos(flotteur);
         LootParams p = new LootParams.Builder(l)
                 .withParameter(LootContextParams.ORIGIN, flotteur)
@@ -233,15 +325,18 @@ final class Pecheur extends Metier {
             ServerLevel l = (ServerLevel) t.level();
             Vec3 pied = Vec3.atBottomCenterOf(coin.rive), flotteur = coin.flotteur();
             if (Monde.libres(t) < 2) return echec("sac_plein");
+            if (lance >= 0) {
+                // Poussé à l'eau ou hors de sa rive pendant l'attente : il la regagne, et relancera.
+                double ex = t.getX() - pied.x, ez = t.getZ() - pied.z;
+                if (t.isInWater() || ex * ex + ez * ez > 1.5 * 1.5) { lance = -1; marche = 0; }
+            }
             if (lance < 0) {
                 double dx = t.getX() - pied.x, dz = t.getZ() - pied.z;
                 if (dx * dx + dz * dz > 0.6 * 0.6 || Math.abs(t.getY() - pied.y) > 1.2) {
                     if (coince() || ++marche > 20 * 60) {
-                        // Il n'y arrive pas : il laisse cette eau 10 minutes et en cherchera une autre.
-                        t.memoire.putLong("eau_laissee", coin.eau.asLong());
-                        t.memoire.putLong("eau_laissee_t", Cerveau.temps(t) + OUBLI_EAU);
-                        t.memoire.remove("peche");
-                        return echec("inaccessible");
+                        // Il n'y arrive pas : cette rive est écartée (ou, donnée par le chef, réessayée plus tard).
+                        ecarter(t, coin);
+                        return echec("rive_laissee");
                     }
                     marcher(t, pied, 1.0);
                     return Actions.Etat.EN_COURS;
@@ -279,6 +374,7 @@ final class Pecheur extends Metier {
             for (ItemStack s : prises) t.ranger(s);
             Actions.userOutil(t, 1);
             t.memoire.putInt("prises", t.memoire.getInt("prises") + 1);
+            t.memoire.remove("ordre_echecs");
             travail = true; // du vrai travail (Coince)
             return Actions.Etat.OK;
         }
@@ -316,13 +412,23 @@ final class Pecheur extends Metier {
             for (int i = -5; i <= 5; i++) for (int j = -5; j <= 5; j++) if (i * i + j * j <= 25) autour.add(new int[]{i, j});
             autour.sort(Comparator.comparingInt(k -> k[0] * k[0] + k[1] * k[1]));
             Coin c = null;
-            for (int k = 0; k < autour.size() && c == null; k++) c = trouver(t, l, vu.getX() + autour.get(k)[0], vu.getZ() + autour.get(k)[1], true);
+            BlockPos vue = null; // de l'eau vue, même s'il n'y pêchera pas
+            for (int k = 0; k < autour.size() && c == null; k++) {
+                int x = vu.getX() + autour.get(k)[0], z = vu.getZ() + autour.get(k)[1];
+                if (vue == null && l.hasChunkAt(x, z)) {
+                    int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+                    if (eau(l, x, y, z)) vue = new BlockPos(x, y, z);
+                }
+                c = trouver(t, l, x, z, true);
+            }
             if (c == null) {
-                Voix.dire(t, "Je ne vois pas là d'eau où pêcher, chef : il me faut une mare d'au moins trois pas sur trois, avec une rive sèche, et près de chez nous.", "calme");
+                Voix.dire(t, vue == null ? "Je ne vois pas d'eau par là, chef."
+                        : !Fermier.aLui(t, vue) ? "Cette eau est plus près d'un autre poste que du nôtre, chef : elle n'est pas à nous, je n'y pêche pas."
+                        : "Je ne peux pas pêcher là pour l'instant, chef : il me faut une eau d'au moins trois pas sur trois, avec un bord sec où je n'aie pas déjà échoué, ni pris par un autre. Redemande-moi plus tard, ou montre-moi un autre endroit.", "calme");
                 return echec("sans_eau");
             }
             retenir(t, c);
-            t.memoire.remove("eau_revue");
+            for (String k : List.of("eau_revue", "peche_pause", "ordre_echecs")) t.memoire.remove(k);
             if (t.mode != Travailleur.Mode.GREVE) { t.mode = Travailleur.Mode.TRAVAIL; t.majNom(); }
             Voix.dire(t, "Bien, chef : c'est là que je pêcherai désormais.", "calme");
             return Actions.Etat.OK;

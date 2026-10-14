@@ -169,4 +169,41 @@ public class TestsPecheur {
                 () -> h.assertFalse(m[0], "jamais dans l'eau"),
                 () -> TestsRepertoire.fin(e));
     }
+
+    /**
+     * L'eau libre comme le jeu la mesure (les trésors n'y viennent qu'en eau libre) : une mare de 5 x 5 d'un bloc de fond n'en
+     * est pas ; creusée à deux blocs, si ; une barque de bois au-dessus de l'eau la gâche.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void eauLibreCommeLeJeu(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos b = TestsJeu.sol(h, 166 * 400, 60000);
+        mare(l, b, -2, -2, 2, 2);
+        BlockPos surface = b.below();
+        h.assertFalse(Pecheur.eauLibre(l, surface), "un bloc de fond : pas d'eau libre");
+        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) l.setBlockAndUpdate(b.offset(x, -2, z), Blocks.WATER.defaultBlockState());
+        h.assertTrue(Pecheur.eauLibre(l, surface), "deux blocs de fond, l'air au-dessus : eau libre");
+        l.setBlockAndUpdate(b.offset(1, 1, 1), Blocks.OAK_PLANKS.defaultBlockState());
+        h.assertFalse(Pecheur.eauLibre(l, surface), "une planche au-dessus de l'eau");
+        h.succeed();
+    }
+
+    /** Deux pêcheurs du même chef, une seule mare : chacun sa rive, pas l'un sur l'autre, et tous deux pêchent. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void deuxPecheursDeuxRives(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur a = seul(h, 167, b, new Vec3(-2, 0, 0), new ItemStack(Items.FISHING_ROD));
+        Travailleur c = Travailleur.auTravail(h.getLevel(), "pecheur", b[0], Vec3.atBottomCenterOf(b[0]).add(-2, 0, 2), a.chef, new ItemStack(Items.FISHING_ROD));
+        c.forcerChunk();
+        mare(h.getLevel(), b[0], 4, -2, 8, 2);
+        h.succeedWhen(() -> {
+            h.assertTrue(a.action instanceof Pecheur.Pecher p && p.lance >= 0 && c.action instanceof Pecheur.Pecher q && q.lance >= 0,
+                    "tous deux pêchent (" + TestsJeu.etat(a, a.bureau) + " / " + TestsJeu.etat(c, c.bureau) + ")");
+            Pecheur.Coin ka = Pecheur.Coin.de(a.memoire.getCompound("peche")), kc = Pecheur.Coin.de(c.memoire.getCompound("peche"));
+            h.assertTrue(ka.rive().distSqr(kc.rive()) > 2, "deux rives distinctes : " + ka.rive() + " et " + kc.rive());
+            h.assertTrue(a.distanceTo(c) > 1.2, "pas l'un sur l'autre : " + a.distanceTo(c));
+            a.discard();
+            c.discard();
+        });
+    }
 }

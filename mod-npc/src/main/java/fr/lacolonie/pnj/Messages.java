@@ -83,6 +83,9 @@ final class Messages {
                 "Je ne trouve pas d'eau assez grande pour pêcher autour du poste. Montre-moi un étang, une rivière ou la mer, et dis-moi « pêche ici ».",
                 "Pas d'eau poissonneuse par ici : une flaque ne nourrit personne. Mène-moi au bord d'une vraie eau et dis « pêche ici ».",
                 "Je tourne autour du poste sans trouver où lancer ma ligne. Il me faut une étendue d'eau digne de ce nom.");
+        m("coin_peche_inaccessible", "Je n'atteins pas mon coin de pêche",
+                "Je n'arrive pas jusqu'au bord de l'eau que tu m'as montré : le chemin est barré. J'essaie encore de temps en temps ; montre-moi un autre coin, si tu veux.",
+                "Trois fois je suis parti pour mon coin de pêche, trois fois je n'ai pas pu en approcher. Un passage à ouvrir, ou un autre coin à me montrer ?");
         t("sans_eau_peche", "fourbe", "Je pourrais pêcher dans l'abreuvoir des vaches, mais l'éleveur n'aimerait pas. Montre-moi une vraie eau.");
         m("arc", "Il me faut un arc",
                 "Je n'ai pas d'arc : le gibier me voit venir et file avant que j'approche. Laisse-m'en un au dépôt.",

@@ -39,7 +39,24 @@ final class Peche {
     static final Set<String> POISSONS = Set.of("minecraft:cod", "minecraft:salmon", "minecraft:tropical_fish", "minecraft:pufferfish"),
             TRESORS = Set.of("minecraft:enchanted_book", "minecraft:name_tag", "minecraft:nautilus_shell", "minecraft:saddle");
 
+    /** Les couches d'eau autour du flotteur, comme le jeu les voit : mêlée ou autre chose, sous l'eau, au-dessus de l'eau. */
+    static final int INVALIDE = 0, DEDANS = 1, DESSUS = 2;
+
     private Peche() {}
+
+    /**
+     * L'eau libre du jeu (celle qui donne des trésors) : les couches de 5 x 5 autour du flotteur, de y - 1 à y + 2, chacune
+     * toute d'eau de source ({@link #DEDANS}) ou toute d'air ({@link #DESSUS}) ; d'abord l'eau, puis l'air, jamais l'inverse.
+     * Une mare d'un bloc de fond n'en est pas : sous la surface, c'est la terre.
+     */
+    static boolean eauLibre(int[] couches) {
+        int avant = INVALIDE;
+        for (int c : couches) {
+            if (c == INVALIDE || c == DESSUS && avant == INVALIDE || c == DEDANS && avant == DESSUS) return false;
+            avant = c;
+        }
+        return true;
+    }
 
     /** La réplique d'une prise : « peche_prise » (un poisson), « peche_tresor » (un trésor, ou tout objet enchanté), sinon « peche_dechet ». */
     static String genre(String id, boolean enchante) {

@@ -118,4 +118,14 @@ class PecheTest {
         RepertoireTest.demande("va pêcher là-bas", "pecheur", "pecher_la");
         RepertoireTest.demande("va pêcher", "mineur", "pecher"); // les autres font semblant, au bord de l'eau
     }
+
+    @Test
+    void lEauLibreCommeLeJeu() {
+        int I = Peche.INVALIDE, D = Peche.DEDANS, A = Peche.DESSUS;
+        assertTrue(Peche.eauLibre(new int[]{D, D, A, A}), "deux couches d'eau, deux d'air");
+        assertFalse(Peche.eauLibre(new int[]{I, D, A, A}), "une mare d'un bloc de fond : la terre dessous");
+        assertFalse(Peche.eauLibre(new int[]{D, D, I, A}), "un bord, une barque ou un mur au-dessus");
+        assertFalse(Peche.eauLibre(new int[]{D, A, D, A}), "de l'eau au-dessus de l'air");
+        assertFalse(Peche.eauLibre(new int[]{A, A, A, A}), "pas d'eau");
+    }
 }
