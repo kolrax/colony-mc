@@ -258,6 +258,7 @@ final class Cuisinier extends Metier {
     }
 
     static boolean allume(BlockEntity e) {
+        if (e == null) return false;
         var s = e.getBlockState();
         if (s.hasProperty(AbstractFurnaceBlock.LIT)) return s.getValue(AbstractFurnaceBlock.LIT);
         return s.hasProperty(CampfireBlock.LIT) && s.getValue(CampfireBlock.LIT);
