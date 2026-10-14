@@ -3,8 +3,8 @@
 Mise à jour : 14/10/2026, 07 h 40 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 0.9.19** (rien installé depuis : le redémarrage `panel.py power restart` a été **refusé par le contrôle des permissions de Claude Code** le 14/10 à 04 h 12 UTC, motif « Production Deploy »). Demande `redemarrage` posée à KOLRAX dans le panneau. Ne pas contourner.
-- **`main` : 0.9.26** (14/10, 07 h 40 UTC ; 229 JUnit, 288/288 en jeu). Jar `colonie_pnj-0.9.26.jar` (1 540 223 octets, sha1 `990c4a38f3c3…`) déjà dans `/mods-off` du serveur : livrer celui-là (mv 0.9.19 → /mods-off, mv 0.9.26 → /mods, un seul jar, restart, journal jusqu’à « Done »).
+- **Serveur : 0.9.26** (livrée le 14/10 à 07 h 27 UTC, « Done » sans erreur du mod ; un seul jar dans `/mods`). Le redémarrage par la routine est autorisé par KOLRAX (demande `redemarrage`, 05 h 07 UTC).
+- **`main` : 0.9.26** (14/10, 07 h 40 UTC ; 229 JUnit, 288/288 en jeu). Installée sur le serveur (jar 1 540 223 octets, sha1 `990c4a38f3c3…`).
   - 0.9.26 = **diamant gardé en cachette et excuses** (`Humeur.trouve`, `questionDiamant`, `excuses`, `Ordres.diamantCache`/`excuses`, `TestsCaractere` coins 230-234).
   - 0.9.25 = **amitiés, inimitiés, couples** (`Liens`, `Relations`, `TestsRelations` coins 262-263).
   - 0.9.24 = **deuil et enterrement** (`Deuil`, `TestsDeuil` coins 246-251, `relations.txt`).
@@ -36,7 +36,7 @@ Mise à jour : 14/10/2026, 07 h 40 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » dans CLAUDE.md.**
-1. **Livraison bloquée** : voir la demande `redemarrage` du panneau. Si KOLRAX a répondu (ou si `power restart` passe), livrer 0.9.23 (déjà dans /mods-off). Ne jamais contourner le refus.
+1. (fait : 0.9.26 livrée le 14/10 à 07 h 27 UTC.) Si un redémarrage est de nouveau refusé par les permissions, ne pas contourner : remettre le jar en place et prévenir.
 2. (fait : remarques, 0.9.23.)
 3. Lots 5 et 7 finis en première passe (0.9.24 à 0.9.26). **D'abord : rendre `TestsMineur.mineurNeCassePasUneStructure` fiable** (échoue une passe sur deux). Puis lot 8 « plus de sons », lot 9 défense de la colonie contre les monstres.
 4. Instables encore vus (une fois chacun) : `TestsChasseur.chasseSurOrdreLEspeceDite` (2 fois cette nuit), `TestsBucheron.bucheronPresDeLaLave`, `TestsMineur.mineurNeCassePasUneStructure`, `TestsJeu.sortdelalave`. Ceux de l'éleveur sont réglés (0.9.22).

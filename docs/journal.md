@@ -353,3 +353,8 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Nouveaux tests vus échouer sur l'ancien code : oui pour les 6 tests en jeu du deuil (ajouts débranchés), les 3 de relations (crochet coupé, filtre neutralisé, recopie IA neutralisée) et les 5 du caractère (copie de l'ancien `main`) ; les JUnit des nouvelles classes échouent par construction.
 - **Instables** : `TestsMineur.mineurNeCassePasUneStructure` échoue maintenant environ une passe sur deux ; d'autres une fois chacun (voir `docs/plus-tard.md`). À traiter en priorité à la prochaine session.
 - Prochaine étape exacte : rendre `mineurNeCassePasUneStructure` fiable ; livrer dès que le redémarrage est permis (0.9.26 à construire et envoyer dans `/mods-off`) ; puis lot 8 « plus de sons », lot 9 défense contre les monstres.
+
+## 2026-10-14 07 h 27 UTC : livraison 0.9.26 (0.9.20 à 0.9.26 installées d'un coup)
+- KOLRAX a répondu à la demande `redemarrage` (05 h 07 UTC) : « Autoriser le redémarrage dans les réglages de la routine ». Le redémarrage est passé.
+- Personne connecté (`list` = 0). `colonie_pnj-0.9.19.jar` rangé dans `/mods-off`, `colonie_pnj-0.9.26.jar` (1 540 223 octets, sha1 `990c4a38f3c3…`) dans `/mods` : un seul jar du mod. `power restart`, « Done » à 07 h 27 min 51 s, « colonie_pnj (version 0.9.19 -> 0.9.26) », aucune erreur ni avertissement du mod dans le journal.
+- Le serveur a maintenant : moral 2e partie, « va me chercher du fer », éleveur fiable, remarques et humour, deuil et enterrement, amitiés et couples, diamant gardé en cachette et excuses. Modpack inchangé (0.5.1).
