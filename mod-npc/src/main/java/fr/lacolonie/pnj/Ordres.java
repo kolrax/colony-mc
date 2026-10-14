@@ -108,6 +108,11 @@ final class Ordres {
         eleveur.put("lait", List.of("lait", "seau de lait", "seaux de lait"));
         NOMS.put("eleveur", eleveur);
 
+        Map<String, List<String>> pecheur = new LinkedHashMap<>();
+        pecheur.put("morue", List.of("morue", "morues", "cabillaud", "cabillauds"));
+        pecheur.put("saumon", List.of("saumon", "saumons"));
+        pecheur.put("poisson", List.of("poisson", "poissons", "poisson cru", "poissons crus"));
+        NOMS.put("pecheur", pecheur);
         Map<String, List<String>> chasseur = new LinkedHashMap<>();
         chasseur.put("viande", List.of("viande", "viandes", "viande crue", "viandes crues", "gibier", "venaison", "lapin cru", "lapins crus", "boeuf", "porc",
                 "poulet cru", "cotelette", "cotelettes", "gigot", "gigots", "lard"));
@@ -490,6 +495,7 @@ final class Ordres {
             Map.entry("fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"})),
             Map.entry("eleveur", List.of(new String[]{"eleveur", "eleveurs"}, new String[]{"eleveuse", "eleveuses"}, new String[]{"berger", "bergers"}, new String[]{"bergere", "bergeres"},
                     new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"})),
+            Map.entry("pecheur", List.of(new String[]{"pecheur", "pecheurs"}, new String[]{"pecheuse", "pecheuses"})),
             Map.entry("chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
                     new String[]{"veneur", "veneurs"})),
             Map.entry("guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},

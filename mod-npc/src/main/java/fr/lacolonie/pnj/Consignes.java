@@ -178,7 +178,7 @@ final class Consignes {
         String quoi = f.cible().isBlank() ? phrase : f.cible();
         String a = e.arg();
         boolean regardLa = a.equals("la") || e.opt("regard", "").equals("la")
-                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
+                || Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torche_la", "abattre_la", "planter_la", "foret", "defricher_zone", "champ", "oublier_champ", "pecher_la").contains(a) || e.comportement().equals("combat") && Set.of("charge", "garder_ici").contains(a);
         if (regardLa) {
             BlockPos vu = regardBloc(chef, 48);
             if (vu == null && !a.equals("garder_ici")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
@@ -918,6 +918,10 @@ final class Consignes {
             case "planter" -> { if (t.compter(Actions.Filtre.de("#minecraft:saplings")) == 0) return "Je n'ai pas de pousses à planter, chef."; }
             case "foret", "defricher_zone" -> { if (vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef."; }
             case "nourrir", "tondre", "abattre_betes", "chasser" -> { if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef."; }
+            case "pecher", "pecher_la" -> {
+                if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
+                if (mode.equals("pecher_la") && !t.chezLui(vu)) return "C'est trop loin de mon poste, chef : je pêche près de chez nous.";
+            }
             case "champ", "recolter", "pain", "oublier_champ", "cuire", "cuisiner" -> {
                 if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
                 if (mode.equals("champ") && vu.distSqr(t.blockPosition()) > 48 * 48) return "C'est trop loin, chef.";
@@ -1580,6 +1584,11 @@ final class Consignes {
                 case "champ", "recolter", "pain", "oublier_champ" -> {
                     // Le fermier : son action dit elle-même ce qu'elle a fait.
                     if (etape++ == 0) { sous = Fermier.consigne(t, m, c); return Actions.Etat.EN_COURS; }
+                    return raisonSous.isEmpty() ? ok(t) : rate(t, null);
+                }
+                case "pecher", "pecher_la" -> {
+                    // Le pêcheur : son action dit elle-même ce qu'elle a fait.
+                    if (etape++ == 0) { sous = Pecheur.consigne(t, m, c); return Actions.Etat.EN_COURS; }
                     return raisonSous.isEmpty() ? ok(t) : rate(t, null);
                 }
                 case "nourrir", "tondre", "abattre_betes" -> {

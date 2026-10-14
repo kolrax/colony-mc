@@ -95,6 +95,20 @@ final class Messages {
                 "Je ne trouve aucun four libre près du poste : ni fourneau, ni fumoir. Bâtis-m'en un à quelques pas, et je cuirai ce qu'il y a au dépôt.",
                 "Sans four, je ne peux rien cuire. Un fourneau ou un fumoir près du poste, et je m'y mets.");
 
+        m("canne_peche", "Il me faut une canne à pêche",
+                "Je n'ai pas de canne à pêche : je regarde les poissons sans pouvoir les prendre. Laisse-m'en une au dépôt.",
+                "Ma canne s'est cassée, ou je n'en ai jamais eu. Sans elle, pas de poisson à la table. Il m'en faudrait une au dépôt.",
+                "Je peux attendre au bord de l'eau toute la journée, mais sans canne à pêche, rien ne mordra. Laisse-m'en une au dépôt.");
+        t("canne_peche", "colerique", "Pêcher à mains nues ? Très peu pour moi ! Une canne à pêche au dépôt, et vite.");
+        t("canne_peche", "peureux", "Je n'ai plus de canne… Je n'ose pas rentrer les mains vides. Laisse-m'en une au dépôt, s'il te plaît.");
+        m("sans_eau_peche", "Où dois-je pêcher ?",
+                "Je ne trouve pas d'eau assez grande pour pêcher autour du poste. Montre-moi un étang, une rivière ou la mer, et dis-moi « pêche ici ».",
+                "Pas d'eau poissonneuse par ici : une flaque ne nourrit personne. Mène-moi au bord d'une vraie eau et dis « pêche ici ».",
+                "Je tourne autour du poste sans trouver où lancer ma ligne. Il me faut une étendue d'eau digne de ce nom.");
+        m("coin_peche_inaccessible", "Je n'atteins pas mon coin de pêche",
+                "Je n'arrive pas jusqu'au bord de l'eau que tu m'as montré : le chemin est barré. J'essaie encore de temps en temps ; montre-moi un autre coin, si tu veux.",
+                "Trois fois je suis parti pour mon coin de pêche, trois fois je n'ai pas pu en approcher. Un passage à ouvrir, ou un autre coin à me montrer ?");
+        t("sans_eau_peche", "fourbe", "Je pourrais pêcher dans l'abreuvoir des vaches, mais l'éleveur n'aimerait pas. Montre-moi une vraie eau.");
         m("arc", "Il me faut un arc",
                 "Je n'ai pas d'arc : le gibier me voit venir et file avant que j'approche. Laisse-m'en un au dépôt.",
                 "Sans arc, je cours après les bêtes sans jamais les attraper. Il m'en faudrait un au dépôt.",

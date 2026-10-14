@@ -209,6 +209,7 @@ public abstract class Metier {
 
     static { TOUS.put("guerisseur", new Guerisseur()); } // lot 5 (à part : l'éleveur s'inscrit sur la ligne du haut)
 
+    static { TOUS.put("pecheur", new Pecheur()); } // lot 6
     static { TOUS.put("chasseur", new Chasseur()); } // lot 6
 
     static { TOUS.put("cuisinier", new Cuisinier()); } // lot 6 (à part, comme le guérisseur)
