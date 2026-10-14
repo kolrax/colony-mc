@@ -53,7 +53,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 7. Conversations et relations (indispensable)
 - [x] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler (première passe 13/10, 0.9.8 : 237 conversations en bulles, `Conversations`/`Causeries`)
-- [ ] Remarques spontanées de temps en temps ; humour en réponse à l'impossible
+- [x] Remarques spontanées de temps en temps ; humour en réponse à l'impossible (14/10, 0.9.23 : `Remarques`, `Impossible`, `remarques.txt` ; pas encore installée sur le serveur)
 - [ ] Amitiés et inimitiés, couples
 
 ## 8. Apparence (indispensable)

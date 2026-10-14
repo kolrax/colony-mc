@@ -1,10 +1,11 @@
 # Reprise : où on en est
 
-Mise à jour : 14/10/2026, 05 h 00 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 14/10/2026, 04 h 55 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
 - **Serveur : 0.9.19** (rien installé depuis : le redémarrage `panel.py power restart` a été **refusé par le contrôle des permissions de Claude Code** le 14/10 à 04 h 12 UTC, motif « Production Deploy »). Demande `redemarrage` posée à KOLRAX dans le panneau. Ne pas contourner.
-- **`main` : 0.9.22** (14/10, 04 h 32 UTC ; 210 JUnit et 271/271 en jeu). Jar `colonie_pnj-0.9.22.jar` (1 465 191 octets, sha1 `7430ee8e2f6c…`) déjà envoyé dans `/mods-off` du serveur ; `colonie_pnj-0.9.20.jar` aussi (inutile maintenant). Pour livrer dès que le redémarrage est permis : mv 0.9.19 → /mods-off, mv 0.9.22 → /mods, un seul jar, restart, journal jusqu'à « Done ».
+- **`main` : 0.9.23** (14/10, 04 h 51 UTC ; 217 JUnit et 274/274 en jeu). Jar `colonie_pnj-0.9.23.jar` (1 479 953 octets, sha1 `b327619976f3…`) déjà envoyé dans `/mods-off` du serveur (0.9.20 et 0.9.22 aussi, inutiles maintenant). Pour livrer dès que le redémarrage est permis : mv 0.9.19 → /mods-off, mv 0.9.23 → /mods, un seul jar, restart, journal jusqu'à « Done ». Client inchangé : pas de modpack.
+  - 0.9.23 = **remarques spontanées, humour devant l'impossible, réactions selon le caractère** (lot 7) : `Remarques` (une remarque par ouvrier toutes les 10 à 20 min, `secondes_entre_remarques`, jamais deux voisins à 16 blocs la même minute), `Impossible` (blague seulement si `Ordres.lire` ne trouve rien de faisable, sauf quantité/durée/magie impossibles ; jamais sur une question), `Vie.tirer` + `caractere_*` (insulte, coup du chef, paie manquée, cadeau) ; `TestsRemarques` coins 220-222, `RemarquesTest`. `remarque_machines`, `caractere_diamant_*`, `caractere_excuses` pas encore branchés ; blague avec l'IA non testée en jeu.
   - 0.9.22 = **éleveur fiable** : `Action.dePres` (seulement la `Corvee` de l'éleveur et son `Attaquer`) refait le chemin vers une bête qui bouge, seulement sur un chemin direct réussi (`Itineraire.surCheminDirect`) ; bête serrée dans un coin de l'enclos comptée (`Eleveur.dans(Enclos, Entity)`, `enclos`). 90 essais sans échec.
   - 0.9.21 = **« va me chercher du fer »** (lot 6, cahier 14.1) : `Relais` (pur), `Actions.Prevenir`, `Travailleur.proposerRelais`/`prevenir`/`transmettre`, `Lecture.pourAutres` ; oui/non routé seulement si l'ouvrier est visé et que personne d'autre n'attend de réponse ; refus du collègue rapporté au chef ; tests `TestsOrdres` coins 210-215, `RelaisTest`.
   - 0.9.20 = **moral, 2e partie** (lot 5) : vol, sabotage (torche/lanterne), fuite (équipement rendu au dépôt, petit butin), révolte armée contre le chef seul après 2 lettres + 3 avertissements, arrêtée par la paie à la caisse, l'éloignement (48 blocs) ou le moral ; réglages `moral_mefaits`, `moral_vol_max`, `moral_vol_autres`, `moral_revolte` ; `TestsMoral` coins 204-207.
@@ -12,9 +13,7 @@ Mise à jour : 14/10/2026, 05 h 00 UTC. Une page à lire en début de session, a
 - Modpack : **0.5.1** (13/10, obligatoire, canal 8). Inchangé : rien de client depuis.
 
 ## Branche à reprendre
-- **`remarques`** (lot 7 : remarques spontanées, humour devant l'impossible, réactions selon le caractère ; textes dans `remarques.txt`, déjà sur main mais pas lus avant cette branche). Voir « Session en cours » plus bas pour l'état exact.
-- `en-cours` sur GitHub = `main` + fusion de `remarques` d'avant relecture (commit `1e5f275`) : à jeter, refaire la fusion depuis `remarques` à jour.
-- Branches fusionnées (suppression refusée depuis le cloud) : `fer`, `moral2`, `eleveur-fix2`, `eleveur-fix`, `textes7` et les anciennes.
+- Aucune. `en-cours` sur GitHub = `main` (0.9.23). Branches fusionnées restées sur GitHub (suppression refusée depuis le cloud) : `remarques`, `fer`, `moral2`, `eleveur-fix2`, `eleveur-fix`, `textes7` et les anciennes.
 
 ## Ce que le mod sait faire aujourd'hui
 - **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
@@ -33,8 +32,8 @@ Mise à jour : 14/10/2026, 05 h 00 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » dans CLAUDE.md.**
-1. **Livraison bloquée** : voir la demande `redemarrage` du panneau. Si KOLRAX a répondu (ou si `power restart` passe), livrer 0.9.22 (déjà dans /mods-off) puis la suite. Ne jamais contourner le refus.
-2. Finir `remarques` (voir « Session en cours ») : relecture faite, bloquant « ordres normaux pris pour l'impossible » ; fusion, version 0.9.23.
+1. **Livraison bloquée** : voir la demande `redemarrage` du panneau. Si KOLRAX a répondu (ou si `power restart` passe), livrer 0.9.23 (déjà dans /mods-off). Ne jamais contourner le refus.
+2. (fait : remarques, 0.9.23.)
 3. Suite du plan : lot 5 « réactions selon le caractère » (diamant gardé en cachette : textes `caractere_diamant_*` prêts dans remarques.txt ; excuses `caractere_excuses`), « deuil et enterrement » (crochet `Humeur.deuil`, `memoire.deuil_le`/`deuil_nom`) ; lot 7 « amitiés, inimitiés, couples » ; lot 8 sons.
 4. Instables encore vus (une fois chacun) : `TestsChasseur.chasseSurOrdreLEspeceDite` (2 fois cette nuit), `TestsBucheron.bucheronPresDeLaLave`, `TestsMineur.mineurNeCassePasUneStructure`, `TestsJeu.sortdelalave`. Ceux de l'éleveur sont réglés (0.9.22).
 3. Restes : `docs/plus-tard.md` (relectures du chasseur, du pêcheur, du cuisinier, du transporteur).
