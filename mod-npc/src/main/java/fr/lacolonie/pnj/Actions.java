@@ -299,12 +299,14 @@ public final class Actions {
     static final class Fuir extends Action {
         final Entity danger;
         Vec3 refuge;
+        /** Au plus tant de ticks (plus long quand il court prévenir le guerrier : Defense). */
+        int duree = 20 * 8;
 
         Fuir(Entity danger) { super("fuir"); this.danger = danger; mobile = true; }
 
         Etat tick(Travailleur t) {
             if (refuge == null) refuge = DefaultRandomPos.getPosAway(t, 16, 7, danger.position());
-            if (refuge == null || age > 20 * 8) return Etat.OK;
+            if (refuge == null || age > duree) return Etat.OK;
             marcher(t, refuge, 1.35);
             return t.position().distanceToSqr(refuge) < 4 ? Etat.OK : Etat.EN_COURS;
         }
@@ -775,7 +777,12 @@ public final class Actions {
         }
 
         Etat tick(Travailleur t) {
-            if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > portee * portee) return Etat.OK;
+            if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > portee * portee) {
+                // Un monstre qu'il vient d'abattre : le guerrier le dit (lot 9), pas plus d'une fois toutes les 20 s.
+                if (cible.isDeadOrDying() && cible instanceof net.minecraft.world.entity.monster.Enemy && cible.getLastHurtByMob() == t
+                        && "guerrier".equals(t.metier) && Cerveau.parfois(t, "monstre_tue", 20)) Besoins.dire(t, "guerrier_monstre_tue", null);
+                return Etat.OK;
+            }
             if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;

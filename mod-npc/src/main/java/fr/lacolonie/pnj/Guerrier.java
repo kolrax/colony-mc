@@ -39,6 +39,8 @@ final class Guerrier extends Metier {
     static final Actions.Filtre MELEE = Actions.Filtre.de("#minecraft:swords|#minecraft:axes");
     static final Actions.Filtre TIR = Actions.Filtre.de("minecraft:bow|minecraft:crossbow");
     static final Actions.Filtre FLECHES = Actions.Filtre.de("#minecraft:arrows");
+    /** Un monstre à tant de blocs du poste (à l'horizontale) : il va le tuer, de jour comme de nuit, même au repos. */
+    static final int POSTE = 24;
     /** Au plus tant de points sur le parcours de sa ronde. */
     static final int POINTS_MAX = 16;
 
@@ -202,16 +204,35 @@ final class Guerrier extends Metier {
             if (a != null && Monde.hostile(a) && Monde.recent(o, o.getLastHurtByMobTimestamp())) m = a;
             if (m == null && o.memoire.getLong("alerte_t") > maintenant - 600 && t.level().getEntity(o.memoire.getInt("alerte")) instanceof LivingEntity c && Monde.hostile(c)) m = c;
             if (m == null) m = t.level().getEntitiesOfClass(LivingEntity.class, o.getBoundingBox().inflate(6, 3, 6), Monde::hostile).stream().findFirst().orElse(null);
-            if (m != null && !t.inaccessibles.containsKey(m.getId())) {
+            if (m != null && !t.inaccessibles.containsKey(m.getId()) && aSaPortee(t, m)) {
                 Cerveau.dire(t, "secours", 20, "Tiens bon, " + o.prenom + ", j'arrive !");
                 return m;
             }
         }
-        if (!nuit) return null;
-        LivingEntity m = t.level().getEntitiesOfClass(LivingEntity.class, zone, e -> Monde.hostile(e) && t.chezLui(e.blockPosition()) && Math.abs(e.getY() - t.getY()) < 12
-                && !t.inaccessibles.containsKey(e.getId())).stream().min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
-        if (m != null) Cerveau.dire(t, "chasse", 120, "Un rôdeur dans la nuit. Je m'en charge.");
+        // Le jour, les monstres qui approchent du poste (lot 9) ; la nuit, tous ceux de l'espace de vie.
+        BlockPos b = t.bureau;
+        double r = nuit ? Travailleur.ESPACE_DE_VIE : POSTE;
+        LivingEntity m = t.level().getEntitiesOfClass(LivingEntity.class, nuit ? zone : new AABB(b).inflate(POSTE, 12, POSTE),
+                e -> Monde.hostile(e) && (e.getX() - b.getX()) * (e.getX() - b.getX()) + (e.getZ() - b.getZ()) * (e.getZ() - b.getZ()) <= r * r
+                        && aSaHauteur(t, e) && aSaPortee(t, e) && !t.inaccessibles.containsKey(e.getId())).stream().min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
+        if (m != null) Cerveau.dire(t, "chasse", 120, nuit ? "Un rôdeur dans la nuit. Je m'en charge." : "Un monstre près du poste. Je m'en charge.");
         return m;
+    }
+
+    /** Un monstre qu'il peut combattre : pas un creeper sans arc (au corps à corps, il lui sauterait au visage). */
+    static boolean aSaPortee(Travailleur t, LivingEntity e) { return !(e instanceof net.minecraft.world.entity.monster.Creeper) || peutTirer(t); }
+
+    /** Comme {@link Monde#cibles} : à sa hauteur (4 blocs) ou en vue, pas un monstre au fond d'une grotte. */
+    static boolean aSaHauteur(Travailleur t, LivingEntity e) {
+        double dy = Math.abs(e.getY() - t.getY());
+        return dy <= 4 || dy < 12 && t.getSensing().hasLineOfSight(e);
+    }
+
+    /** Les cibles de {@link Monde#cibles}, sans les creepers s'il n'a pas de quoi tirer. */
+    static List<LivingEntity> cibles(Travailleur t, double rayon) {
+        List<LivingEntity> c = Monde.cibles(t, rayon);
+        if (!peutTirer(t)) c.removeIf(e -> e instanceof net.minecraft.world.entity.monster.Creeper);
+        return c;
     }
 
     // --- S'équiper au dépôt ---------------------------------------------------------------------------------
@@ -364,16 +385,28 @@ final class Guerrier extends Metier {
             }
             return;
         }
-        if (t.action instanceof Actions.Echapper || t.action instanceof Actions.Fuir || t.action instanceof Actions.Reposer && t.isSleeping()) return;
+        if (t.action instanceof Actions.Echapper || t.action instanceof Actions.Fuir) return;
+        // Au repos (la nuit, hors service), il garde l'oreille ouverte : un ouvrier en danger, un monstre près du poste, il
+        // se lève et y va (lot 9). Il reprend son repos ensuite.
+        if (t.action instanceof Actions.Reposer) {
+            LivingEntity m = t.bureau != null && t.chezLui(t.blockPosition()) ? veille(t, false) : null;
+            if (m != null) {
+                Cerveau.dire(t, "debout", 60, "Debout ! On attaque la colonie !");
+                armer(t);
+                Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE));
+                return;
+            }
+            if (t.isSleeping()) return;
+        }
         // Une consigne de combat (tenir une porte, protéger quelqu'un, se replier) mène elle-même sa lutte.
         if (t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat")) return;
-        List<LivingEntity> c = Monde.cibles(t, 10);
+        List<LivingEntity> c = cibles(t, 10);
         if (!c.isEmpty()) attaquer(t, c.get(0));
     }
 
     @Override
     boolean escorter(Travailleur t) {
-        List<LivingEntity> c = Monde.cibles(t, 12);
+        List<LivingEntity> c = cibles(t, 12);
         if (c.isEmpty()) return false;
         attaquer(t, c.get(0));
         return true;
@@ -397,12 +430,14 @@ final class Guerrier extends Metier {
         }
 
         BlockPos b = t.bureau;
-        int r = id.equals("garder") ? 12 : Travailleur.ESPACE_DE_VIE;
-        List<LivingEntity> cibles = Monde.cibles(t, Math.min(r, 32));
+        // La nuit, la garde devient une ronde autour du poste (lot 9) : huit postes à 8 et 12 blocs.
+        boolean nuitGarde = id.equals("garder") && Abri.nuit(t.level());
+        int r = nuitGarde ? 20 : id.equals("garder") ? 12 : Travailleur.ESPACE_DE_VIE;
+        List<LivingEntity> cibles = cibles(t, Math.min(r, 32));
         if (!cibles.isEmpty()) { Cerveau.lancer(t, new Actions.Attaquer(cibles.get(0))); return; }
         if (soigner(t)) return;
         // Un ouvrier de la colonie en danger ; la nuit, les rôdeurs autour de la colonie. Il revient ensuite à son poste.
-        LivingEntity m = veille(t, !t.level().isDay());
+        LivingEntity m = veille(t, Abri.nuit(t.level()));
         if (m != null) { armer(t); Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE)); return; }
         if (t.distanceToSqr(Vec3.atBottomCenterOf(b)) > r * r) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(b), 3)); return; }
 
@@ -416,8 +451,9 @@ final class Guerrier extends Metier {
 
         // Une ronde, ce n'est pas marcher au hasard : le parcours que le chef lui a montré, sinon un circuit de huit postes
         // autour du bureau, toujours le même. Pour garder le bureau : quatre postes tout près, avec une pause à chacun.
-        long[] parcours = t.memoire.getLongArray("ronde_points");
-        boolean ronde = id.equals("ronde");
+        boolean ronde = id.equals("ronde") || nuitGarde;
+        long[] parcours = id.equals("ronde") ? t.memoire.getLongArray("ronde_points") : new long[0];
+        if (nuitGarde && Cerveau.parfois(t, "ronde_nuit", 900)) Besoins.dire(t, "ronde_nuit", null);
         int postes = ronde ? parcours.length > 0 ? parcours.length : 8 : 4;
         if (t.memoire.getLong("pause") > maintenant) { Cerveau.attendre(t, 2); return; }
         int poste = (t.memoire.getInt("poste") + 1) % postes;
@@ -432,7 +468,7 @@ final class Guerrier extends Metier {
         Vec3 but;
         if (ronde && parcours.length > 0) but = Vec3.atBottomCenterOf(BlockPos.of(parcours[poste]));
         else {
-            double rayon = ronde ? (poste % 2 == 0 ? 24 : 42) : 6;
+            double rayon = nuitGarde ? (poste % 2 == 0 ? 8 : 12) : ronde ? (poste % 2 == 0 ? 24 : 42) : 6;
             double a = poste * 2 * Math.PI / postes;
             int x = b.getX() + (int) Math.round(Math.cos(a) * rayon), z = b.getZ() + (int) Math.round(Math.sin(a) * rayon);
             int y = Monde.surface(t.level(), x, z);

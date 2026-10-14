@@ -14,13 +14,30 @@ class VieTest {
     void leFichierSeLit() {
         // Strict : une seule erreur dans le fichier livré fait échouer le test (le jeu, lui, ignorerait la section).
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
-        assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size());
+        assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size()
+                + Vie.lire(Repertoire.lignes("/defense.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
         for (var e : banque.entrySet())
             for (Vie.Replique r : e.getValue())
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+    }
+
+    /** Lot 9 : les répliques de la défense, lues strictement et chargées avec les autres. */
+    @Test
+    void defenseSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/defense.txt"));
+        for (String cle : List.of("creeper_fuite", "creeper_alerte", "guerrier_alerte_ok", "guerrier_monstre_tue", "ronde_nuit", "nuit_camp", "nuit_cache",
+                "matin_reprise", "monstre_vu", "lettre_nuit_dehors")) {
+            assertTrue(banque.containsKey(cle), cle);
+            assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
+        }
+        for (var e : banque.entrySet())
+            for (Vie.Replique r : e.getValue())
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+        // Sans le prénom du guerrier, l'alerte a toujours de quoi être dite.
+        assertTrue(Vie.tirer("creeper_alerte", "calme", Map.of("chef", "Kolrax"), () -> 0.9) != null);
     }
 
     @Test

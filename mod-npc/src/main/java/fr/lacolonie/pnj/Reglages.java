@@ -87,6 +87,8 @@ public class Reglages {
     public int caractere_diamant = 50;
     /** Les sons des PNJ (lot 8) : coups d'outil, d'arme, dépôt, paie, grognements, ronflements… et des pas, chutes et blessures de joueur. */
     public boolean sons = true;
+    /** Nuit dehors (lot 9, cahier 14.12) : loin du poste, un ouvrier se creuse un trou dans la terre et s'y enferme jusqu'au matin (false : il dort à la belle étoile). */
+    public boolean abri_nuit = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
