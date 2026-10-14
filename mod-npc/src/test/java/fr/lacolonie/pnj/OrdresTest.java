@@ -128,6 +128,17 @@ class OrdresTest {
         intention("oui", Intention.OUI);
         intention("Bonjour Philippa", Intention.SALUT);
         intention("Merci, beau travail", Intention.MERCI);
+        // Ses amitiés, inimitiés, son couple (Relations).
+        intention("Qui sont tes amis ?", Intention.LIENS);
+        intention("Tu t'entends avec qui ?", Intention.LIENS);
+        intention("Avec qui t'entends-tu le mieux ?", Intention.LIENS);
+        intention("Tu es en couple ?", Intention.LIENS);
+        intention("As-tu des ennemis ici ? Qui sont tes ennemis ?", Intention.LIENS);
+        pasIntention("Mes amis, suivez-moi", Intention.LIENS);
+        pasIntention("Va aider tes camarades à la mine", Intention.LIENS);
+        intention("Tu es en couple", Intention.LIENS);
+        pasIntention("Comment ça va ?", Intention.LIENS);
+        assertTrue(Obeissance.question(lire("Qui sont tes amis ?", "mineur")), "une simple question : rien d'autre à faire");
         intention("aide", Intention.AIDE);
         assertTrue(lire("blablabla", "mineur").vide());
     }

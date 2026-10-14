@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, ENTERRER }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, ENTERRER, LIENS }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -291,6 +291,10 @@ final class Ordres {
                 "a la tombe", "sur la tombe", "vers la tombe", "devant la tombe", "pres de la tombe", "a sa tombe", "sur sa tombe", "autour de la tombe",
                 "dire adieu a", "faire nos adieux", "rendre hommage a", "rendons hommage a", "veillee funebre") && enterrement(n, l))
             l.intentions.add(Intention.ENTERRER);
+        // Ses amitiés, inimitiés, son couple (Relations) : « qui sont tes amis ? », « tu t'entends avec qui ? », « tu es en couple ? ».
+        if (dit(n, "tes amis", "ton ami", "ton amie", "tes amies", "tes copains", "ton copain", "ta copine", "tes camarades", "t entends", "tes ennemis",
+                "ton ennemi", "en couple", "ton couple", "ta moitie", "ton amoureux", "ton amoureuse", "tu aimes quelqu un", "ton coeur est pris"))
+            l.intentions.add(Intention.LIENS);
         l.ajouter = dit(n, "aussi", "en plus", "ajoute", "egalement", "de plus", "apres ca", "apres cela", "ensuite aussi");
 
         // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode (« au bois » est un lieu, pas une mission).
@@ -299,6 +303,11 @@ final class Ordres {
         if (!l.missions.isEmpty()) l.intentions.remove(Intention.SUIVRE);
         repertoire(texte, metier, l);
         l.mortel = Obeissance.mortel(texte);
+        // « Va aider tes camarades à la mine » n'est pas une question sur ses amis : seulement une question, ou une phrase qui
+        // lui parle de lui (« tu es en couple ») sans rien d'autre à faire.
+        if (l.intentions.contains(Intention.LIENS) && !(dit(n, "?", "qui", "est ce", "est ce que")
+                || Obeissance.sansOrdre(l) && l.faire.isEmpty() && dit(n, "tu", "t", "toi")))
+            l.intentions.remove(Intention.LIENS);
         return l;
     }
 

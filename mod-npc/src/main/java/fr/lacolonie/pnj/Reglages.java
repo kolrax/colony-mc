@@ -78,6 +78,11 @@ public class Reglages {
     /** Deuil (lot 5, cahier 14.13) : un enterrement dure tant de secondes autour de la tombe ; y viennent les ouvriers du chef à moins de tant de blocs. */
     public int deuil_secondes_enterrement = 30;
     public int deuil_rayon = 48;
+    /** Amitiés, inimitiés et couples entre ouvriers d'un même chef (lot 7) ; {@code liens_vitesse} : multiplie ce qui rapproche (0,1 à 10). */
+    public boolean liens_actifs = true;
+    public double liens_vitesse = 1.0;
+    /** Deux grands amis depuis deux jours peuvent se mettre en couple. */
+    public boolean liens_couples = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -142,6 +147,7 @@ public class Reglages {
         moral_vol_max = Math.max(0, moral_vol_max);
         deuil_secondes_enterrement = Math.clamp(deuil_secondes_enterrement, 1, 300);
         deuil_rayon = Math.clamp(deuil_rayon, 8, 128);
+        liens_vitesse = Double.isNaN(liens_vitesse) ? 1.0 : Math.clamp(liens_vitesse, 0.1, 10.0);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);

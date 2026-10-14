@@ -947,6 +947,7 @@ public class Travailleur extends PathfinderMob {
                 Ordres.Lecture li = d.lecture();
                 li.quotidien |= seul.quotidien;
                 Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
+                if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
                 String reponse = reponseImposee ? dit : d.reponse(); // un refus ou un marché : c'est lui qui répond, pas l'IA
@@ -1531,7 +1532,7 @@ public class Travailleur extends PathfinderMob {
         String reponse = obeir(l, enFace);
         if (!reaction.isEmpty()) reponse = reponse.isEmpty() ? reaction : reaction + " " + reponse;
         // « Tu te souviens… ? » : c'est sa mémoire qui répond, l'IA n'invente pas de promesse à sa place.
-        if (!parRegle && Souvenirs.question(l.texte)) reponseImposee = true;
+        if (!parRegle && (Souvenirs.question(l.texte) || l.intentions.contains(Ordres.Intention.LIENS))) reponseImposee = true; // ses amis aussi : l'IA n'en invente pas
         reaction = "";
         // Un ordre qui change ce qu'il fait (pas une question, pas une lettre de nouvelles) : le compte « coincé » repart de zéro.
         if (mode != avant || action != actionAvant) coince.progres(getX(), getY(), getZ());
@@ -1880,6 +1881,7 @@ public class Travailleur extends PathfinderMob {
         if (l.intentions.contains(Ordres.Intention.AVANCEMENT)) r.add(rapport());
         if (l.intentions.contains(Ordres.Intention.POURQUOI)) r.add(pourquoi());
         if (l.intentions.contains(Ordres.Intention.AIDE)) r.add(Messages.corps(this, "dit_aide"));
+        if (l.intentions.contains(Ordres.Intention.LIENS)) r.add(Relations.reponse(this, Ordres.dit(Ordres.normaliser(l.texte), "couple", "moitie", "amoureux", "amoureuse", "coeur")));
         if (r.isEmpty() && l.intentions.contains(Ordres.Intention.SALUT)) r.add(Messages.corps(this, "dit_salut"));
         if (l.intentions.contains(Ordres.Intention.MERCI) && reaction.isEmpty()) r.add(Messages.corps(this, "dit_merci"));
         majNom();

@@ -80,11 +80,12 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot);
+                !pluie && l.isDay(), coup, ouvriers, depot, Relations.actifs() ? Relations.de(t).moral() : 0);
     }
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */
     static Moral.Bilan bilan(Travailleur t) {
+        List<Travailleur> pres = Relations.bilan(t); // ceux qui travaillent près de lui, le couple s'il est temps
         Moral.Bilan b = Moral.bilan(etat(t));
         t.changerMoral(b.total());
         t.memoire.putInt("bilan", b.total());
@@ -93,7 +94,8 @@ final class Humeur {
         else t.memoire.remove("bilan_cause");
         Moral.Cause dite = b.total() < 0 ? pire : b.total() > 0 ? b.meilleure() : null;
         String cle = dite == null ? null : b.total() < 0 ? dite.plainte : dite.joie;
-        if (cle != null) Besoins.parler(t, cle, null);
+        // Rien dit sur son moral : un mot à l'ami, à l'être aimé ou à l'ennemi qui est là.
+        if (cle == null || !Besoins.parler(t, cle, null)) Relations.parler(t, pres);
         suite(t, pire);
         mefaits(t, pire);
         return b;
@@ -192,8 +194,8 @@ final class Humeur {
     static void oublier(Travailleur t) {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
-                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "deuils", "deuil_apprend", "deuil_enterre", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
-                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage"))
+                "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "deuil_brut", "deuil_poids", "deuils", "deuil_apprend", "deuil_enterre", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
+                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", Relations.CLE, "mange_t", "liens_bilans"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
     }
@@ -214,6 +216,7 @@ final class Humeur {
     /** Il vient de manger {@code s} : retenu parmi ses derniers repas. */
     static void repas(Travailleur t, ItemStack s) {
         t.memoire.putString("repas", Moral.retenir(t.memoire.getString("repas"), net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath()));
+        Relations.repas(t); // mangé avec d'autres : ils se rapprochent
     }
 
     /** Un ouvrier du même chef est mort : le deuil (moral −10 tout de suite, puis moins chaque jour). La suite (la nouvelle, les souvenirs, l'enterrement) : {@link Deuil}. */
@@ -221,11 +224,19 @@ final class Humeur {
         if (mort.chef == null || mort.level().getServer() == null) return;
         for (Travailleur t : ColoniePnj.pnjDe(mort.level().getServer(), mort.chef)) {
             if (t == mort) continue;
-            // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là.
-            int deja = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour() ? t.memoire.getInt("deuil_coup") : 0;
-            int coup = Moral.deuilCoup(deja);
+            // Plusieurs morts le même jour : au plus Moral.DEUIL_JOUR en tout ce jour-là, fois le plus grand poids (un ami pèse
+            // double, l'être aimé triple : Relations), quel que soit l'ordre des morts.
+            boolean memeJour = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour();
+            int deja = memeJour ? t.memoire.getInt("deuil_coup") : 0, brut = memeJour ? t.memoire.getInt("deuil_brut") : 0;
+            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Relations.deuil(t, mort);
+            if (memeJour && !t.memoire.contains("deuil_brut")) brut = deja; // mémoire d'avant les liens
+            brut += Moral.DEUIL_COUP * poids;
+            poidsMax = Math.max(poidsMax, poids);
+            int coup = Math.min(0, Moral.deuilDuJour(brut, poidsMax) - deja);
             t.changerMoral(coup);
             t.memoire.putInt("deuil_coup", deja + coup);
+            t.memoire.putInt("deuil_brut", brut);
+            t.memoire.putInt("deuil_poids", poidsMax);
             t.memoire.putLong("deuil_le", t.jour());
             t.memoire.putString("deuil_nom", mort.prenom);
             t.memoire.remove("deuil_enterre");
@@ -419,9 +430,12 @@ final class Humeur {
     /** Un collègue du même chef, pas au plus bas lui-même, l'a vu faire (à moins de 16 blocs, en vue) : une fois sur deux, il le dit au chef. */
     static void denoncer(Travailleur t, String quoi) {
         if (t.chef == null) return;
+        boolean dit = false;
         for (Travailleur x : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(16),
-                x -> x != t && t.chef.equals(x.chef) && x.mode != Travailleur.Mode.CHOMEUR && x.moral >= Reglages.actuel.moral_seuil_demission))
-            if (x.hasLineOfSight(t) && x.getRandom().nextBoolean()) { Courrier.ecrire(x, "denonce", t.prenom, quoi); return; }
+                x -> x != t && t.chef.equals(x.chef) && x.mode != Travailleur.Mode.CHOMEUR && x.hasLineOfSight(t))) {
+            Relations.vol(t, x); // tous ceux qui l'ont vu le voient d'un autre œil
+            if (!dit && x.moral >= Reglages.actuel.moral_seuil_demission && x.getRandom().nextBoolean()) { Courrier.ecrire(x, "denonce", t.prenom, quoi); dit = true; }
+        }
     }
 
     // --- Le sabotage ----------------------------------------------------------------------------------------------

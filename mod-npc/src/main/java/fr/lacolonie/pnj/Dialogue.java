@@ -205,6 +205,7 @@ final class Dialogue {
                         Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE, Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER, Ordres.Intention.RENVOYER).contains(x)))
                     lecture.intentions.add(Ordres.Intention.ENTERRER);
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
+                if (seul.intentions.contains(Ordres.Intention.LIENS)) lecture.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
             }
             lecture.rang = i;
             lecture.total = dest.size();

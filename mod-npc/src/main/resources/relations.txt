@@ -141,7 +141,7 @@ colerique: Adieu, vieille branche.
 colerique: Tu vas nous manquer, {mort}. Voilà, c'est dit.
 
 [enterrement_apres]
-Ça fait du bien de s'être réunis.
+Ça fait du bien d'être là, ensemble.
 Allez. {mort} n'aimerait pas nous voir traîner.
 J'ai le cœur un peu moins lourd. Un peu.
 On reprend. Pour {mort} aussi.
@@ -245,7 +245,7 @@ J'ai demandé à {nom}. {nom} a dit oui.
 Ne riez pas ! Avec {nom}, on a décidé d'être ensemble.
 {chef}, on voudrait une maison pour deux, {nom} et moi.
 Mon cœur est pris. Par {nom}.
-calme: {nom} et moi, on s'est trouvés. Ça s'est fait doucement.
+calme: {nom} et moi, ça s'est fait doucement, sans bruit.
 calme: Je voulais que tu l'apprennes de moi, {chef} : {nom} et moi, on est ensemble.
 peureux: Je… euh… {nom} et moi… enfin, voilà. Ensemble.
 peureux: Ne le dites à personne. Bon, si, dites-le. {nom} et moi, c'est sérieux.
