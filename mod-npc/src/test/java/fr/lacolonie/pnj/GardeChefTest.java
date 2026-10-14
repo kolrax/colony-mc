@@ -51,4 +51,64 @@ class GardeChefTest {
         assertTrue(GardeChef.cesser("Ça suffit, laisse-le."));
         assertFalse(GardeChef.cesser("Attaque quiconque me frappe."));
     }
+
+    // --- Relecture du 14/10 : jamais d'attaque sur une interdiction ni sur une phrase anodine -------------------------
+
+    @Test
+    void lesInterdictionsNeDonnentJamaisLAttaque() {
+        assertAll(List.of("N'attaque pas quiconque me frappe.", "N'attaque jamais ceux qui me frappent.", "Ne frappe jamais ceux qui me frappent.",
+                "Si quelqu'un me frappe, ne le frappe surtout pas.", "Je ne veux pas que tu frappes ceux qui me frappent.",
+                "Tu ne dois pas frapper ceux qui me touchent.", "Évite de frapper ceux qui me frappent.",
+                "Si on me frappe, chasse-le de mes terres sans le blesser.").stream().map(s -> (org.junit.jupiter.api.function.Executable) () -> assertEquals(Posture.TRANQUILLE, lu(s).posture, s)));
+    }
+
+    @Test
+    void epargneSansAttaquePourLesAutres() {
+        Ordres.Lecture l = lu("Ne frappe jamais Nielscutt, même s'il me frappe.");
+        assertEquals(List.of("Nielscutt"), l.epargner);
+        assertNotEquals(Posture.ATTAQUE, l.posture);
+    }
+
+    @Test
+    void lesPhrasesAnodinesNeChangentRien() {
+        assertAll(List.of("Arrête de taper sur la pierre, ce Raoul me frappe encore", "Préviens-moi si quelqu'un me frappe ou me tape.",
+                "Si un zombie m'attaque, tue-le.", "Si un creeper me menace, attaque-le à l'arc.").stream().map(s -> (org.junit.jupiter.api.function.Executable) () -> {
+            GardeChef.Lu g = GardeChef.lire(s);
+            assertTrue(g.rien(), s + " : " + g.posture + " " + g.epargner);
+            assertEquals(s, g.reste, "la phrase reste entière");
+        }));
+    }
+
+    @Test
+    void lOrdreDeGardeLaisseLeResteDeLaPhrase() {
+        assertAll(() -> {
+            Ordres.Lecture l = Ordres.lire("Va miner, et si on m'attaque, défends-moi.", "mineur");
+            assertEquals(Posture.ATTAQUE, l.posture);
+            assertFalse(l.missions.isEmpty() && l.intentions.isEmpty(), "il va miner : " + l.texte);
+        }, () -> {
+            Ordres.Lecture l = Ordres.lire("Ramène 64 bûches et si quelqu'un me frappe, tape-le.", "bucheron");
+            assertEquals(Posture.ATTAQUE, l.posture);
+            assertFalse(l.missions.isEmpty(), "les bûches : " + l.texte);
+        }, () -> {
+            Ordres.Lecture l = Ordres.lire("Suis-moi et si on me frappe, attaque.", "guerrier");
+            assertEquals(Posture.ATTAQUE, l.posture);
+            assertTrue(l.intentions.contains(Ordres.Intention.SUIVRE), "il suit : " + l.texte);
+        });
+    }
+
+    @Test
+    void laLectureSansIAEstRecopiee() {
+        Ordres.Lecture ia = new Ordres.Lecture(), seul = lu("Attaque quiconque me frappe. Ne fais jamais rien à Nielscutt.");
+        GardeChef.reprendre(ia, seul);
+        assertEquals(Posture.ATTAQUE, ia.posture);
+        assertEquals(List.of("Nielscutt"), ia.epargner);
+    }
+
+    @Test
+    void cesserLaRiposte() {
+        assertAll(List.of("Arrête !", "Reste tranquille !", "Calme-toi !", "Ne frappe plus personne.", "Range ton épée.", "Oublie tes ordres").stream()
+                .map(s -> (org.junit.jupiter.api.function.Executable) () -> assertTrue(GardeChef.cesse(lu(s)), s)));
+        for (String s : List.of("Attaque quiconque me frappe.", "Ramène 64 bûches", "Suis-moi"))
+            assertFalse(GardeChef.cesse(lu(s)), s);
+    }
 }

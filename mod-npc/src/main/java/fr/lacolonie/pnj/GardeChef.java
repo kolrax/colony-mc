@@ -113,6 +113,10 @@ final class GardeChef {
         return String.join(",", l);
     }
 
+    static void reprendre(Ordres.Lecture vers, Ordres.Lecture seul) {} // ANCIEN (stub)
+
+    static boolean cesse(Ordres.Lecture l) { return cesser(l.texte); } // ANCIEN (stub)
+
     /** « Arrête », « ça suffit »… */
     static boolean cesser(String texte) { return CESSER.matcher(OrdresLongs.plat(texte)).find(); }
 
