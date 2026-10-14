@@ -79,7 +79,7 @@ final class Cerveau {
             }
         }
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
-        if ((t.tickCount + t.getId()) % 100 == 0) Besoins.veiller(t);
+        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); } // et, de loin en loin, le bilan de son moral
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
@@ -117,6 +117,9 @@ final class Cerveau {
             attendre(t, 2);
             return;
         }
+
+        // À bout depuis des jours, après deux lettres au chef : il rend ce qu'il a pris au dépôt et s'en va (Humeur).
+        if (Humeur.demissionner(t)) return;
 
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
