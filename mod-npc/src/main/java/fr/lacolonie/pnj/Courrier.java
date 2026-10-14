@@ -357,6 +357,7 @@ final class Courrier extends SavedData {
     /** Il est au poste : il y pose ses lettres. */
     static void deposer(Travailleur t) {
         if (t.lettresADeposer.isEmpty() || !(t.level() instanceof ServerLevel sl)) return;
+        Sons.lettre(t, t.bureau != null ? t.bureau : t.blockPosition());
         Courrier c = de(sl.getServer());
         for (Lettre l : t.lettresADeposer) c.recevoir(sl.getServer(), t.chef, l);
         t.lettresADeposer.clear();

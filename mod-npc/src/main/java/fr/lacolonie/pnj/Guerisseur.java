@@ -330,6 +330,7 @@ final class Guerisseur extends Metier {
             if (!aTerre) blesse.getLookControl().setLookAt(t);
             if (++aupres < (aTerre ? Soins.RELEVER : Soins.PANSER)) return Actions.Etat.EN_COURS;
             t.swing(InteractionHand.MAIN_HAND);
+            Sons.soin(t);
             if (aTerre) {
                 ItemStack r = sortirRemede(t);
                 if (r.isEmpty()) { pret = false; aupres = 0; return Actions.Etat.EN_COURS; } // il l'a mangé en route : il en reprend

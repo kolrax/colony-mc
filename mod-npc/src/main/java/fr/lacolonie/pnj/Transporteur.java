@@ -317,6 +317,7 @@ final class Transporteur extends Metier {
                 return echec("introuvable");
             }
             t.swing(InteractionHand.MAIN_HAND);
+            Sons.coffre(t, BlockPos.of(p));
             switch (etape) {
                 case 0 -> {
                     prendre(t, h);

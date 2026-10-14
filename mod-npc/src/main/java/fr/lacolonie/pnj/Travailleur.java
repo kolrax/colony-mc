@@ -358,6 +358,8 @@ public class Travailleur extends PathfinderMob {
     public Actions.Action action;
     /** Le temps qu'il passe coincé, pour le ramener au poste en dernier recours (non sauvegardé). */
     final Coince coince = new Coince();
+    /** Ses sons : le délai entre deux d'un même genre ({@link Sons}). */
+    final Cadence sons = new Cadence();
     public String resultat = "";
     /** Sa mémoire de travail (où en est sa mine, les coins qu'il connaît…), sauvegardée avec lui. */
     public CompoundTag memoire = new CompoundTag();
@@ -773,6 +775,7 @@ public class Travailleur extends PathfinderMob {
         if ((tickCount + getId()) % 20 == 3) majTete();
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
+        if (isSleeping()) Sons.ronfle(this);
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
         if ((tickCount + getId()) % 20 == 7 && mode != Mode.CHOMEUR) tickRegles();
         if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
@@ -1142,6 +1145,7 @@ public class Travailleur extends PathfinderMob {
         impayes = 0;
         memoire.putLong("paie_le", jour()); // « paie_recue » des conversations
         changerMoral(Obeissance.PAIE);
+        Sons.paie(this);
         if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; }
         if (mode == Mode.GREVE) {
             mode = bureau != null ? Mode.TRAVAIL : Mode.SUIVRE;
@@ -1158,6 +1162,7 @@ public class Travailleur extends PathfinderMob {
             return;
         }
         if (aTerreTicks % 600 == 0) dire("À l'aide… à manger ou une potion de soin, vite !");
+        if (aTerreTicks % 200 == 100) Sons.plainte(this);
     }
 
     void tomberATerre() {
@@ -1199,6 +1204,29 @@ public class Travailleur extends PathfinderMob {
         setHealth(6);
         majNom();
         Besoins.dire(this, "releve", null);
+    }
+
+    // Les sons du corps : ceux d'un joueur (lot 8, cahier 10.7 ; le réglage « sons » rend ceux d'une créature).
+    @Override
+    protected net.minecraft.sounds.SoundEvent getHurtSound(DamageSource src) { return Sons.actifs() ? src.type().effects().sound() : super.getHurtSound(src); }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getDeathSound() { return Sons.actifs() ? net.minecraft.sounds.SoundEvents.PLAYER_DEATH : super.getDeathSound(); }
+
+    @Override
+    public Fallsounds getFallSounds() {
+        return Sons.actifs() ? new Fallsounds(net.minecraft.sounds.SoundEvents.PLAYER_SMALL_FALL, net.minecraft.sounds.SoundEvents.PLAYER_BIG_FALL) : super.getFallSounds();
+    }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getSwimSound() { return Sons.actifs() ? net.minecraft.sounds.SoundEvents.PLAYER_SWIM : super.getSwimSound(); }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getSwimSplashSound() { return Sons.actifs() ? net.minecraft.sounds.SoundEvents.PLAYER_SPLASH : super.getSwimSplashSound(); }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getSwimHighSpeedSplashSound() {
+        return Sons.actifs() ? net.minecraft.sounds.SoundEvents.PLAYER_SPLASH_HIGH_SPEED : super.getSwimHighSpeedSplashSound();
     }
 
     @Override
@@ -1392,6 +1420,7 @@ public class Travailleur extends PathfinderMob {
         Humeur.repas(this, s); // ses derniers repas : toujours le même, ça lasse (Moral)
         faim = Math.min(20, faim + fp.nutrition());
         eat(level(), s, fp);
+        Sons.rot(this);
         inventaire.setChanged();
         return true;
     }
@@ -1684,8 +1713,9 @@ public class Travailleur extends PathfinderMob {
         if (mode == Mode.GREVE) return appliquerOrdre(l, enFace);
         Obeissance.Verdict v = Obeissance.decider(moral, temperament, ordre, false);
         switch (v) {
-            case RALE -> { return Messages.corps(this, "rale") + " " + appliquerOrdre(l, enFace); } // avec l'IA, elle râle à sa façon (elle voit son moral)
+            case RALE -> { Sons.grogne(this); return Messages.corps(this, "rale") + " " + appliquerOrdre(l, enFace); } // avec l'IA, elle râle à sa façon (elle voit son moral)
             case NEGOCIE, REFUSE -> {
+                Sons.grogne(this);
                 reponseImposee = true;
                 enAttente = l;
                 attenteFin = maintenant + 1200;

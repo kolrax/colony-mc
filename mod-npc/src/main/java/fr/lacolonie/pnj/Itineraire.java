@@ -606,7 +606,7 @@ final class Itineraire {
         meilleurOutil(t, st, aCreuser);
         t.getNavigation().stop();
         t.getLookControl().setLookAt(Vec3.atCenterOf(aCreuser));
-        if ((int) progres % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
+        if ((int) progres % 5 == 0) { t.swing(InteractionHand.MAIN_HAND); Sons.coup(t, aCreuser, st); }
         progres += 1;
         l.destroyBlockProgress(t.getId(), aCreuser, Math.min(9, (int) (progres / Actions.duree(t, st, aCreuser) * 10)));
         if (progres < Actions.duree(t, st, aCreuser)) return;

@@ -392,6 +392,7 @@ final class Cuisinier extends Metier {
             t.memoire.put("fournee", f);
             t.memoire.putString("dernier_cru", BuiltInRegistries.ITEM.getKey(cru).toString());
             t.swing(InteractionHand.MAIN_HAND);
+            Sons.four(t, four);
             Besoins.parler(t, "cuisine_four", null);
             return Actions.Etat.OK;
         }

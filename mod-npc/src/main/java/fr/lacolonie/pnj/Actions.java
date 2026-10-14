@@ -352,7 +352,7 @@ public final class Actions {
             t.getLookControl().setLookAt(Vec3.atCenterOf(pos));
             progres += 1;
             float total = duree(t, st, pos);
-            if (age % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
+            if (age % 5 == 0) { t.swing(InteractionHand.MAIN_HAND); Sons.coup(t, pos, st); }
             lvl.destroyBlockProgress(t.getId(), pos, Math.min(9, (int) (progres / total * 10)));
             if (progres < total) return Etat.EN_COURS;
             recolter(t, pos);
@@ -505,7 +505,7 @@ public final class Actions {
                 if (!st.getCollisionShape(l, tete).isEmpty() && st.getDestroySpeed(l, tete) >= 0 && !Monde.construit(l, tete)) {
                     if (!tete.equals(fouille)) { fouille = tete; progres = 0; }
                     t.getLookControl().setLookAt(Vec3.atCenterOf(tete));
-                    if (age % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
+                    if (age % 5 == 0) { t.swing(InteractionHand.MAIN_HAND); Sons.coup(t, tete, st); }
                     if (++progres >= duree(t, st, tete)) { recolter(t, tete); fouille = null; }
                     return age > 200 ? echec("perdu") : Etat.EN_COURS;
                 }
@@ -581,7 +581,7 @@ public final class Actions {
             if (total == 0) for (BlockPos p : bois) total += duree(t, lvl.getBlockState(p), p);
             t.getNavigation().stop();
             t.getLookControl().setLookAt(Vec3.atCenterOf(pied));
-            if (age % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
+            if (age % 5 == 0) { t.swing(InteractionHand.MAIN_HAND); Sons.coup(t, pied, lvl.getBlockState(pied)); }
             lvl.destroyBlockProgress(t.getId(), pied, Math.min(9, (int) (++progres / total * 10)));
             if (progres < total) return Etat.EN_COURS;
             for (int i = bois.size() - 1; i >= 0; i--)
@@ -803,7 +803,9 @@ public final class Actions {
                 if (Guerrier.TIR.objet(t.getMainHandItem())) Guerrier.armer(t);
                 if (recharge == 0) {
                     t.swing(InteractionHand.MAIN_HAND);
-                    if (t.doHurtTarget(cible)) userOutil(t, 1); // l'arme s'use, comme celle d'un joueur (en plus lent)
+                    boolean touche = t.doHurtTarget(cible);
+                    Sons.frappe(t, touche);
+                    if (touche) userOutil(t, 1); // l'arme s'use, comme celle d'un joueur (en plus lent)
                     recharge = (int) Math.max(6, 14 / t.facteurTravail());
                 }
             } else {
@@ -916,6 +918,7 @@ public final class Actions {
                 if (!reste.isEmpty()) plein = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
+            Sons.depot(t, b.getBlockPos());
             t.nettoyerMissions();
             if (diamants) Humeur.diamantsRendus(t); // celui qui ne triche pas s'en vante
             return plein ? echec("depot_plein") : Etat.OK;
@@ -1085,6 +1088,7 @@ public final class Actions {
                     feuMis = feu.copy();
                     f.setChanged();
                     t.swing(InteractionHand.MAIN_HAND);
+                    Sons.four(t, f.getBlockPos());
                     etape = 2;
                 }
                 case 2 -> { // il attend près du fourneau et reprend le charbon à mesure
