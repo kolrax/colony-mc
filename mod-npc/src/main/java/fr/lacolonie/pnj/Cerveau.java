@@ -49,6 +49,9 @@ final class Cerveau {
         // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
         if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible)) && !t.memoire.getBoolean("fuite")
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
+        // Sur le chemin du retour, la nuit le prend encore loin du poste (cahier 14.12) : il s'arrête et campe (plus bas).
+        if (t.action instanceof Actions.Aller a && t.bureau != null && Abri.nuitDehors(t) && a.cible.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 25
+                && !t.memoire.getBoolean("fuite") && !t.memoire.getBoolean("rappel")) t.finirAction("interrompu");
         // En révolte, même en plein combat : payé, apaisé, ou le chef parti loin, il pose les armes aussitôt (Humeur).
         if (t.memoire.getBoolean("revolte")) Humeur.calmer(t);
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
@@ -64,22 +67,9 @@ final class Cerveau {
             t.coupVu = t.getLastHurtByMobTimestamp();
             t.finirAction("interrompu");
         }
-        // Un creeper tout près d'un ouvrier qui ne se bat pas : il s'en éloigne et appelle la garde (cahier 14.11), que le
-        // guerrier entend (Guerrier.veille). Seulement s'il a où aller : sinon il ne lâcherait son travail que pour rien.
-        if (!m.combattant && !(t.action instanceof Actions.Fuir) && !(t.action instanceof Actions.Echapper) && !t.isSleeping()) {
-            var creeper = t.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Creeper.class, t.getBoundingBox().inflate(5, 2, 5),
-                    c -> c.isAlive() && t.getSensing().hasLineOfSight(c)).stream().findFirst().orElse(null);
-            Vec3 loin = creeper == null ? null : net.minecraft.world.entity.ai.util.DefaultRandomPos.getPosAway(t, 16, 7, creeper.position());
-            if (loin != null) {
-                t.memoire.putInt("alerte", creeper.getId());
-                t.memoire.putLong("alerte_t", t.level().getGameTime());
-                dire(t, "creeper", 20, "Un creeper ! À la garde !");
-                Actions.Fuir f = new Actions.Fuir(creeper);
-                f.refuge = loin;
-                lancer(t, f);
-                return;
-            }
-        }
+        // Un monstre en vue d'un ouvrier qui ne se bat pas (lot 9, cahier 14.11) : un creeper, il s'en éloigne et prévient le
+        // guerrier, qui vient le tuer ; un autre près du poste, il le signale (Defense).
+        if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
         if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
@@ -150,6 +140,9 @@ final class Cerveau {
 
         boolean dehors = t.bureau != null && !t.chezLui(t.blockPosition());
 
+        // Au matin, il sort d'abord de son abri de la nuit, en rebouchant son trou (Abri).
+        if (Abri.sortir(t)) return;
+
         // Le courrier : lire au poste les lettres de son chef, y poser les siennes.
         boolean libre = t.mode == Travailleur.Mode.TRAVAIL && t.bureau != null && !dehors; // pas s'il te suit ou t'attend
         if (libre && !t.lettresALire.isEmpty()) { lancer(t, new Actions.LireLettres()); return; }
@@ -184,7 +177,7 @@ final class Cerveau {
         }
 
         // Rentrer à temps : le soir après une sortie, au bout de la durée maximale d'une expédition.
-        if (t.doitRentrer()) {
+        if (t.doitRentrer() && !Abri.nuitDehors(t)) {
             if ("bloque".equals(t.resultat)) ecrire(t, "perdu", 1800, "coince", t.blockPosition().toShortString());
             else if (t.expedition) ecrire(t, "rentre", 1800, "fin_expedition", (int) t.distanceAuBureau());
             else dire(t, "rentre", 600, "La journée avance : je rentre au poste.");
@@ -202,8 +195,14 @@ final class Cerveau {
                 if (Travailleur.heuresDeMarche(t.blockPosition(), t.bureau) < 1) { rentrer(t); return; }
                 if (!mem.getBoolean("camp")) {
                     mem.putBoolean("camp", true);
-                    ecrire(t, "camp", 600, "camp", (int) t.distanceAuBureau(), duree(t.heuresRestantes()));
+                    Besoins.dire(t, "nuit_camp", null);
+                    // Sorti pour la journée, la nuit l'a pris loin du poste (cahier 14.12) : il l'écrit à son chef.
+                    String lettre = t.expedition ? null : Besoins.texte(t, "lettre_nuit_dehors", null, null);
+                    if (lettre != null) Courrier.ecrireTexte(t, Messages.objet("camp"), lettre, false);
+                    else ecrire(t, "camp", 600, "camp", (int) t.distanceAuBureau(), duree(t.heuresRestantes()));
                 }
+                // La nuit, il se creuse un trou et s'y enferme jusqu'au matin (Abri) ; sinon il dort à la belle étoile.
+                if (Abri.abriter(t)) return;
                 lancer(t, new Actions.Reposer());
                 return;
             }

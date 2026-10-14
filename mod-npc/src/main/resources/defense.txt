@@ -1,0 +1,244 @@
+# Défense du chantier, rondes du guerrier, nuits dehors. Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt, remarques.txt et relations.txt (même lecteur possible : Vie.lire).
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#
+# - « [cle] » ouvre une section. Clé en minuscules, sans accent ni espace (lettres, chiffres et « _ »),
+#   unique dans ce fichier ET différente de toutes les clés de vie.txt, remarques.txt et relations.txt.
+# - Une réplique par ligne, courte (bulle en jeu, 90 caractères au plus). Préfixe facultatif « temperament: »
+#   (calme:, peureux:, fourbe:, colerique: ; aucun autre). Chaque section a au moins huit répliques sans préfixe
+#   et au moins deux par tempérament.
+# - Tirage proposé (comme vie.txt) : une fois sur deux une réplique du tempérament du PNJ, sinon une commune.
+# - Les caractères sont les quatre tempéraments du mod : calme (posé, digne), peureux (timide),
+#   fourbe (rusé, rancunier), colerique (soupe au lait, mais vite apaisé).
+#
+# VARIABLES (seulement celles-ci)
+#   {chef}   nom du chef de la colonie (partout)
+#   {nom}    prénom du guerrier prévenu, dans creeper_alerte seulement
+# Les répliques avec {nom} ne sortent que si la valeur est connue ; creeper_alerte garde au moins huit
+# répliques communes sans {nom}.
+#
+# ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle, sur {nom} ni sur le chef.
+# Aucun fait inventé : monstre_vu et guerrier_monstre_tue ne nomment pas l'espèce du monstre (le code ne la
+# donne pas) ; seules les sections creeper_ et guerrier_alerte_ok (réponse à creeper_alerte) parlent du creeper.
+#
+# CLÉS
+#   creeper_fuite          l'ouvrier voit un creeper près du chantier et s'éloigne en criant
+#   creeper_alerte         il prévient le guerrier ({nom}) qu'un creeper est là
+#   guerrier_alerte_ok     le guerrier répond qu'il s'en occupe
+#   guerrier_monstre_tue   le guerrier vient de tuer un monstre
+#   ronde_nuit             le guerrier part faire sa ronde de nuit autour du poste
+#   nuit_camp              un ouvrier loin de la colonie voit la nuit tomber et décide de camper
+#   nuit_cache             il se cache, se mure dans son abri pour la nuit
+#   matin_reprise          au matin, il sort de son abri et reprend la route ou le travail
+#   monstre_vu             un ouvrier signale un monstre près du poste
+#   lettre_nuit_dehors     corps d'une lettre au chef (une ligne, deux ou trois phrases) : « je passe la nuit
+#                          dehors, je rentre demain ». Le code ajoute la salutation, la formule et la signature
+#                          (Messages.lettre) ; si le chef est tout près, le même texte est dit en bulle.
+# ------------------------------------------------------------
+
+# ============================================================
+# CREEPER
+# ============================================================
+
+[creeper_fuite]
+Un creeper ! Tout le monde recule !
+Ça siffle ! Écartez-vous du chantier !
+Attention, un creeper ! Je m'en vais d'ici !
+Il vient vers moi ! Je file !
+Pas de ça près de mes outils ! Je recule !
+Un creeper au chantier ! Courez !
+Je pose tout et je m'éloigne. Vite !
+Gare à la chose verte ! Elle va sauter !
+calme: Un creeper. Je m'éloigne sans courir. Faites pareil.
+calme: Reculez tous. On reviendra quand il sera parti.
+peureux: Non, non, non ! Un creeper ! Laissez-moi passer !
+peureux: Il me regarde ! Au secours !
+fourbe: Un creeper ? Qu'il aille plutôt voir le chantier du voisin.
+fourbe: Je recule. Les braves, eux, peuvent rester.
+colerique: Encore un creeper ! On ne peut jamais travailler tranquille ici !
+colerique: Sale bête ! Si tu touches à mon mur, je… Bon, je recule.
+
+[creeper_alerte]
+Un creeper rôde au chantier ! Il faut le guerrier !
+Garde ! Un creeper, là-bas, près du chantier !
+À l'aide ! Un creeper tourne autour de nos murs !
+Vite, quelqu'un avec une épée ! Il y a un creeper !
+Le creeper est encore là. Qui va s'en charger ?
+Un creeper ! Je ne m'approche pas. Aux armes !
+Alerte ! Un creeper au chantier !
+Guerrier ! On a besoin de toi, un creeper approche !
+{nom} ! Un creeper au chantier ! Viens vite !
+{nom}, par ici ! Il y a un creeper près des murs !
+calme: {nom}, un creeper près du chantier. Je te laisse t'en occuper.
+calme: Un creeper au chantier. Que le guerrier vienne, sans tarder.
+peureux: {nom} ! Viens, je t'en supplie ! Un creeper !
+peureux: Un creeper ! Le guerrier, où est le guerrier ?
+fourbe: {nom}, un creeper t'attend au chantier. Ton travail, pas le mien.
+fourbe: Un creeper. Le guerrier est payé pour ça, non ?
+colerique: {nom} ! Tu dors ? Un creeper au chantier !
+colerique: Où est passé le guerrier ? Un creeper nous tourne autour !
+
+[guerrier_alerte_ok]
+J'arrive. Reculez tous.
+Je m'en occupe. Ne bougez plus.
+Laissez-le-moi.
+Compris. J'y vais.
+Restez derrière moi.
+Je le vois. Écartez-vous du chantier.
+Personne ne touche à rien. J'arrive.
+C'est mon travail. Je m'en charge.
+calme: Bien reçu. Restez à l'écart, je règle ça.
+calme: Pas de panique. J'y vais.
+peureux: Bon… J'y vais. Restez loin, surtout.
+peureux: Un creeper… D'accord. J'y vais. Doucement.
+fourbe: J'y vais. Vous me revaudrez ça, tous.
+fourbe: Je m'en charge. Retenez bien qui vous a sauvé la mise.
+colerique: Enfin un peu d'action ! J'arrive !
+colerique: Où est-il ? Montrez-le-moi !
+
+# ============================================================
+# GUERRIER
+# ============================================================
+
+[guerrier_monstre_tue]
+Un de moins.
+Celui-là ne reviendra pas.
+C'est fini. Vous pouvez reprendre.
+La voie est libre.
+Il ne fera plus peur à personne.
+Bien. Au suivant.
+Le chantier est sûr, pour l'instant.
+Rien de cassé. Retournez au travail.
+calme: C'est réglé. Tout le monde va bien ?
+calme: Fini. On peut souffler.
+peureux: Il est tombé ? Vraiment ? Ouf…
+peureux: Je tremble encore. Mais il ne bouge plus.
+fourbe: Joli coup. Tu as vu ça, {chef} ? J'espère qu'on s'en souviendra à la paie.
+fourbe: Un monstre de moins. Et un service de plus qu'on me doit.
+colerique: Et ne reviens pas !
+colerique: Trop facile. Il en reste d'autres ?
+
+[ronde_nuit]
+La nuit tombe. Je fais le tour du poste.
+C'est l'heure de ma ronde.
+Je vais voir si tout est calme autour du poste.
+Dormez. Je veille.
+Un tour du poste, et je reviens.
+Je prends une torche et je fais ma ronde.
+Rien ne passera sans que je le voie.
+Je fais le tour des murs. Fermez bien vos portes.
+calme: Une ronde, comme chaque nuit. Rien de plus.
+calme: Je marche lentement. On voit mieux comme ça.
+peureux: Bon… La ronde. Sans personne, dans le noir. D'accord.
+peureux: Je fais le tour. Vite. Et je reviens près du feu.
+fourbe: Je fais ma ronde. Et je vois aussi qui dort et qui ne dort pas.
+fourbe: La nuit, on apprend beaucoup de choses en faisant le tour.
+colerique: Je fais ma ronde. Que le premier monstre ose se montrer !
+colerique: Encore une nuit dehors. Allez, on y va.
+
+# ============================================================
+# NUITS DEHORS
+# ============================================================
+
+[nuit_camp]
+La nuit tombe. Je ne rentrerai pas à temps.
+Trop loin du poste. Je dors ici.
+Il fait déjà sombre. Je m'arrête pour la nuit.
+Je ne marche pas dans le noir. Je campe ici.
+Le soleil se couche. Il me faut un abri.
+Je ne verrai pas la colonie ce soir.
+Bon. Une nuit à la belle étoile.
+Je m'installe ici. Je repartirai à l'aube.
+calme: La nuit vient. Inutile de forcer, je m'arrête ici.
+calme: Je ferai le reste du chemin demain matin.
+peureux: Il fait noir… et la colonie est si loin…
+peureux: Je ne vais pas marcher dans le noir. Surtout pas.
+fourbe: Une nuit dehors. Personne pour me donner du travail, au moins.
+fourbe: Je campe ici. Et demain, je dirai que la route était longue.
+colerique: Déjà la nuit ? Cette route n'en finit pas !
+colerique: Je dors ici. Et tant pis pour mon dos.
+
+[nuit_cache]
+Je bouche l'entrée. On n'entre pas.
+Quatre murs et un toit. Ça suffira.
+Je me mure pour la nuit.
+Une torche, un mur, et je ne bouge plus.
+Personne ne m'aura dans mon trou.
+Je reste à l'abri jusqu'au matin.
+Bien à l'abri, je pourrai dormir un peu.
+Dernier bloc. Voilà, c'est fermé.
+calme: L'abri tiendra. Je n'ai plus qu'à attendre le jour.
+calme: Je ferme et je me repose. La nuit passera.
+peureux: Encore un bloc. Et un autre. On n'est jamais trop prudent.
+peureux: Pourvu que rien ne creuse jusqu'ici…
+fourbe: Un trou discret, bien tranquille. Les monstres chercheront ailleurs.
+fourbe: Personne ne sait que j'ai creusé ici. Tant mieux.
+colerique: Qu'ils grattent à mon mur ! Ils n'entreront pas !
+colerique: Je ferme. Et le premier qui frappe, je ne lui ouvre pas.
+
+[matin_reprise]
+Le jour est levé. Je sors.
+J'ai passé la nuit. Allez, en route.
+Je casse mon mur et je repars.
+Le soleil est là. On reprend.
+Belle matinée. Le travail m'attend.
+Personne n'est venu frapper. Tant mieux.
+En route. La colonie n'est plus très loin.
+Un peu raide, mais d'attaque. On y va.
+calme: Une nuit sans histoire. Je reprends où j'en étais.
+calme: Le jour revient. Chaque chose à sa place.
+peureux: Plus de bruits… C'est vraiment le matin ? Bon. Je sors.
+peureux: J'ai à peine dormi. Mais je suis encore là !
+fourbe: Une bonne nuit, loin de tout le monde. Je devrais faire ça plus souvent.
+fourbe: Je reprends la route. Sans me presser.
+colerique: Mon dos ! Ce sol était dur comme la pierre. Allez, debout.
+colerique: Enfin le jour ! Je ne passe pas une nuit de plus dehors.
+
+# ============================================================
+# ALERTE
+# ============================================================
+
+[monstre_vu]
+Un monstre, près du poste !
+Attention ! Quelque chose rôde par là !
+Il y a une bête, là-bas. Méfiez-vous.
+Un monstre près des murs ! Restez groupés !
+Je viens de voir bouger quelque chose. Ce n'est pas un mouton.
+Alerte ! Un monstre approche du poste !
+Fermez les portes ! Il y a un monstre dehors !
+Là-bas, dans l'ombre ! Un monstre !
+calme: Un monstre près du poste. Gardons nos distances.
+calme: Il y a une bête par là. Que le guerrier jette un œil.
+peureux: Un monstre ! Là ! Vous l'avez vu, vous aussi ?
+peureux: Je ne sors plus. Il y a un monstre dehors.
+fourbe: Un monstre près du poste. Moi, je l'ai vu en premier. Retenez-le.
+fourbe: Un monstre rôde. Un bon moment pour rester à l'intérieur.
+colerique: Un monstre ! Qui a encore laissé la porte ouverte ?
+colerique: Encore un monstre ! Qu'on m'apporte une pelle, que je le chasse !
+
+# ============================================================
+# LETTRE
+# ============================================================
+
+[lettre_nuit_dehors]
+La nuit est tombée et la colonie est loin. Je dors à l'abri ici et je rentre demain.
+Je suis trop loin pour rentrer avant la nuit. Je campe, et je reviens demain matin.
+Il fait nuit et la route est longue. Je m'abrite pour la nuit, ne t'inquiète pas.
+Je passe la nuit dehors, bien à l'abri. Je reprends la route au lever du jour.
+La nuit est tombée avant mon retour. Je me suis fait un abri. À demain.
+Je n'ai pas pu rentrer à temps. Je dors dehors cette nuit et je reviens demain.
+Je ne rentre pas ce soir. Un abri solide, une torche : tout va bien. Je rentre demain.
+Le jour baisse et le poste est loin. Je dors ici, je serai de retour demain.
+calme: La nuit tombe et je suis encore loin. Je m'abrite et je rentre demain, sans faute.
+calme: Je préfère ne pas marcher dans le noir. Je dors dehors et je reviens au matin.
+peureux: Il fait nuit et je suis loin… Je me suis muré dans un abri. Je rentre demain, promis.
+peureux: Je n'ose pas rentrer dans le noir. Je reste à l'abri. Garde-moi une place près du feu.
+fourbe: La nuit est tombée en route. Je dors dehors, à mes frais. Je rentre demain.
+fourbe: Je passe la nuit loin du poste. Rien de grave. On en reparlera à la paie.
+colerique: La nuit est tombée trop tôt. Je dors dehors. Je rentre demain, et pas de reproches.
+colerique: Encore une nuit sur la dure. Je rentre demain. Prévois un bon repas.
