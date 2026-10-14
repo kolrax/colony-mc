@@ -1,0 +1,136 @@
+# Quand on frappe le chef, et ses ordres à ce sujet (lot 9, cahier 14.6). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt et defense.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+#
+# VARIABLES
+#   {chef}   nom du chef (partout)
+#   {nom}    le ou les pseudos à épargner, dans chef_ordre_epargne seulement
+#
+# CLÉS
+#   chef_interpose          le guerrier se met entre son chef et celui qui l'a frappé, et le met en garde
+#   chef_riposte            le guerrier, sur l'ordre donné plus tôt, frappe celui qui a frappé son chef
+#   chef_frappe_vu          un autre ouvrier voit frapper son chef (indigné ou effrayé selon son caractère)
+#   chef_ordre_attaque      réponse à « attaque quiconque me frappe »
+#   chef_ordre_tranquille   réponse à « reste tranquille, ne frappe personne »
+#   chef_ordre_epargne      réponse à « ne fais jamais rien à {nom} »
+#   chef_cesse              le chef dit « arrête » : il baisse son arme
+
+[chef_interpose]
+Recule ! Ne touche plus à mon chef.
+Holà ! Qui lève la main sur mon chef me trouve sur son chemin.
+Assez ! Passe ton chemin, l'ami, ou il t'en cuira.
+Tout doux. Un pas de plus vers mon chef et nous parlerons autrement.
+Garde tes mains pour toi. Je ne bougerai pas d'ici.
+Halte-là ! Il faudra passer par moi d'abord.
+Je ne frappe pas sans ordre, mais je ne m'écarterai pas non plus.
+Arrière ! Mon chef n'est pas seul.
+calme: Calmons-nous. Personne ne frappera mon chef tant que je suis là.
+calme: Retire-toi, je te prie. Inutile d'aller plus loin.
+colerique: Encore un geste et je jure de ne plus me retenir !
+colerique: Recule, ou par ma barbe, tu le regretteras !
+peureux: Ar… arrière ! Je suis là, moi, et j'ai une épée !
+peureux: Ne… ne touchez plus au chef, s'il vous plaît !
+fourbe: Frappe encore, et je saurai m'en souvenir.
+fourbe: Je retiens ton visage, l'ami. Recule.
+
+[chef_riposte]
+Tu as levé la main sur mon chef. À toi de goûter le fer !
+Mon chef l'a dit : qui le frappe me trouve. En garde !
+Mauvaise idée, l'ami. Défends-toi !
+Tu as frappé le mien, je te rends le coup !
+Pour mon chef ! Prends garde à toi !
+On ne touche pas à mon chef impunément !
+Les ordres sont clairs. En garde, vaurien !
+Tu vas regretter ce coup-là.
+calme: Tu savais ce qu'il en coûtait. En garde.
+calme: Je t'avais laissé une chance. Plus maintenant.
+colerique: Ah, tu veux te battre ? Alors bats-toi !
+colerique: Par tous les saints, tu vas me le payer !
+peureux: Je… j'ai mes ordres ! En garde !
+peureux: Pardon d'avance, mais le chef l'a voulu !
+fourbe: Le chef me l'a permis. Tant pis pour toi.
+fourbe: J'attendais ce moment. En garde !
+
+[chef_frappe_vu]
+Hé ! On ne frappe pas le chef !
+Quelle honte, s'en prendre ainsi au chef !
+Au secours ! On frappe le chef !
+Ça ne se fait pas, ça !
+Garde ! Garde ! On s'en prend au chef !
+Mais qu'est-ce qui te prend ? Laisse le chef !
+calme: Voilà qui est bien mal venu. Laisse notre chef en paix.
+calme: Nous ne voulons pas d'ennuis ici. Retire-toi.
+colerique: Touche encore au chef et tu auras affaire à nous tous !
+colerique: Misérable ! Lever la main sur le chef !
+peureux: Oh non, non, non… Qu'on appelle la garde !
+peureux: Je… je ne veux pas d'histoires, moi !
+fourbe: Je m'en souviendrai, de celui-là.
+fourbe: Tiens, tiens. Le chef a des ennemis…
+
+[chef_ordre_attaque]
+Qu'on te touche, chef, et il aura affaire à moi.
+Entendu, chef : qui te frappe, je le frappe.
+Compris. Quiconque lève la main sur toi goûtera de mon fer.
+Bien, chef. Je ne laisserai plus passer un seul coup.
+C'est noté, chef : un coup sur toi, et je réponds.
+À tes ordres. Qu'ils s'y frottent, ils verront.
+calme: Bien, chef. Je défendrai ta personne, s'il le faut par les armes.
+calme: Entendu. J'espère n'avoir jamais à le faire.
+colerique: Avec plaisir, chef ! Qu'ils viennent !
+colerique: Enfin ! Je n'attendais que ça.
+peureux: Bi… bien, chef. Je ferai de mon mieux.
+peureux: Entendu… j'espère qu'ils ne seront pas trop grands.
+fourbe: Compris, chef. Je n'oublierai pas qui te frappe.
+fourbe: Entendu. Ça m'arrange, à vrai dire.
+
+[chef_ordre_tranquille]
+Bien, chef : je m'interposerai, sans frapper.
+Entendu, chef. Je garderai mon arme au fourreau.
+Compris : je me mettrai entre eux et toi, pas plus.
+Bien, chef. Pas de coups, seulement ma carcasse en travers.
+C'est noté. Je resterai calme, quoi qu'il arrive.
+À tes ordres, chef. Je ne frapperai personne.
+calme: Sage décision, chef. Je m'en tiendrai là.
+calme: Entendu. Mieux vaut la paix que le sang.
+colerique: Hum… Bien, chef. Je me retiendrai.
+colerique: Ça me coûte, mais soit. Pas de coups.
+peureux: Ouf. Ça me va très bien, chef.
+peureux: Entendu, chef. Je me mettrai devant toi… sans frapper.
+fourbe: Comme tu voudras. Je ne frapperai pas… devant toi.
+fourbe: Entendu, chef. Les mains dans le dos.
+
+[chef_ordre_epargne]
+Entendu, chef : je ne ferai jamais rien à {nom}.
+Compris. {nom}, je n'y toucherai pas, quoi qu'il fasse.
+Bien, chef. {nom} peut faire ce qu'il veut, je laisserai faire.
+C'est noté : pas un geste contre {nom}.
+À tes ordres. {nom} est sous ta protection, alors.
+Entendu, chef. Pour {nom}, je fermerai les yeux.
+calme: Bien, chef. {nom} n'a rien à craindre de moi.
+calme: Entendu. Je respecterai ta volonté envers {nom}.
+colerique: {nom} ? Si tu le dis, chef… mais ça me démange.
+colerique: Soit. Je ne toucherai pas à {nom}. Même s'il le mérite.
+peureux: {nom} ? Tant mieux, je n'avais pas envie de m'y frotter.
+peureux: Entendu, chef. Je laisserai {nom} tranquille.
+fourbe: {nom}, hein ? Tu dois avoir tes raisons, chef.
+fourbe: Compris. {nom} est des tiens, je suppose.
+
+[chef_cesse]
+Bien, chef. Je le laisse.
+Comme tu voudras. Je baisse mon arme.
+Entendu, chef. Il a eu son compte.
+D'accord. Va-t'en, toi, tant qu'on te le permet.
+Je m'arrête, chef.
+À tes ordres. Je range mon fer.
+calme: Bien. Cela suffit en effet.
+calme: Entendu, chef. Il a compris, je pense.
+colerique: Déjà ? Bon… comme tu veux.
+colerique: Tu as de la chance que mon chef soit clément !
+peureux: Ouf. Je m'arrête, chef.
+peureux: Tant mieux, j'avais les mains qui tremblaient.
+fourbe: Bien, chef. Mais je le garde à l'œil.
+fourbe: Pour cette fois. La prochaine, on verra.
