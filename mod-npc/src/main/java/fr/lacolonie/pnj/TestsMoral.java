@@ -12,7 +12,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Lot 5, le moral au fil des jours (cahier 5.2 et 5.3) : bilan des causes ({@link Moral}, {@link Humeur}), lettre au chef,
- * repas toujours pareils, démission après deux lettres, lenteur. Chaque test dans son coin du monde plat (coins 200 à 203).
+ * repas toujours pareils, démission après deux lettres, lenteur ; au plus bas (2e partie) : vol, sabotage, fuite avec un butin,
+ * avertissements puis révolte contre le chef seul. Chaque test dans son coin du monde plat (coins 200 à 207).
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -91,6 +92,7 @@ public class TestsMoral {
         t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE)); // sur le dos
         t.impayes = 3;
         t.moral = 5;
+        t.temperament = "calme"; // un calme démissionne toujours en règle (les autres peuvent fuir avec un butin : fuiteAvecUnButin)
         int[] bilans = {0}, avertisAuDepart = {-1}, bilansAuDepart = {-1};
         boolean[] parti = {false}, sacVideAuDepart = {false};
         h.onEachTick(() -> {
@@ -142,6 +144,185 @@ public class TestsMoral {
             triste.discard();
             content.discard();
             h.succeed();
+        });
+    }
+
+    // --- Méfaits au plus bas (2e partie) ---------------------------------------------------------------------
+
+    /** Son butin caché, sans y toucher : {objet → nombre}. */
+    static java.util.Map<net.minecraft.world.item.Item, Integer> butin(Travailleur t) {
+        java.util.Map<net.minecraft.world.item.Item, Integer> m = new java.util.HashMap<>();
+        for (var x : t.memoire.getList("butin", net.minecraft.nbt.Tag.TAG_COMPOUND))
+            ItemStack.parse(t.registryAccess(), x).ifPresent(s -> m.merge(s.getItem(), s.getCount(), Integer::sum));
+        return m;
+    }
+
+    /** Une lettre de ce type, partie vers ce chef (même s'il n'est plus son ouvrier). */
+    static boolean lettrePour(GameTestHelper h, java.util.UUID chef, String type) {
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        return c.vols.stream().anyMatch(v -> v.lettre.type.equals(type) && chef.equals(v.chef)) || c.boite(chef).stream().anyMatch(x -> x.type.equals(type));
+    }
+
+    /**
+     * Un fourbe au plus bas, après une première lettre : au fil des bilans (appelés comme le cerveau le ferait), il finit par
+     * voler au dépôt un peu de pain (au plus 3), jamais les diamants ni l'épée, et le cache (pas dans son sac, qu'il range au
+     * dépôt) ; à qui lui demande comment il va, il finit par se trahir.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void volDiscretAuDepot(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = mineur(h, 204, b, 2, new ItemStack(Items.IRON_PICKAXE));
+        t.temperament = "fourbe";
+        t.memoire.putInt("avertis", 1); // il a déjà écrit au chef que ça n'allait pas
+        Bureau.Entite d = (Bureau.Entite) h.getLevel().getBlockEntity(b[0]);
+        d.depot.addItem(new ItemStack(Items.BREAD, 10));
+        d.depot.addItem(new ItemStack(Items.DIAMOND, 5));
+        d.depot.addItem(new ItemStack(Items.IRON_SWORD));
+        int[] bilans = {0};
+        h.onEachTick(() -> {
+            if (h.getTick() % 10 != 0 || !butin(t).isEmpty() || t.memoire.contains("vol_ou") || t.action instanceof Humeur.Voler) return;
+            t.moral = 5;
+            Humeur.bilan(t);
+            bilans[0]++;
+        });
+        h.succeedWhen(() -> {
+            var pris = butin(t);
+            h.assertTrue(!pris.isEmpty(), "il a volé (" + bilans[0] + " bilans, " + TestsJeu.etat(t, b[0]) + ")");
+            int pain = pris.getOrDefault(Items.BREAD, 0);
+            h.assertTrue(pris.size() == 1 && pain >= 1 && pain <= Moral.VOL_COUP, "un peu de pain, rien d'autre : " + pris);
+            h.assertTrue(TestsBucheron.compte(d, Items.BREAD) == 10 - pain && TestsBucheron.compte(d, Items.DIAMOND) == 5
+                    && TestsBucheron.compte(d, Items.IRON_SWORD) == 1, "le reste du dépôt intact");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:bread")) == 0, "caché, pas dans son sac");
+            h.assertTrue(t.memoire.getInt("vols") == pain, "compté dans ses vols du jour");
+            boolean trahi = false;
+            for (int i = 0; i < 40 && !trahi; i++) trahi = Vie.vient("butin_cache", Humeur.aveu(t));
+            h.assertTrue(trahi, "il se trahit quand on lui demande comment il va");
+            t.discard();
+        });
+    }
+
+    /**
+     * Le sabotage : une torche près du poste, arrachée (elle tombe à terre, il suffit de la reposer) ; rien d'autre de
+     * cassé. Plus tard, il l'avoue au chef qui lui demande comment il va.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void sabotageDUneTorche(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = mineur(h, 205, b, 2, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos torche = b[0].east(3);
+        h.getLevel().setBlockAndUpdate(torche, net.minecraft.world.level.block.Blocks.TORCH.defaultBlockState());
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            BlockPos cible = Humeur.cibleSabotage(t);
+            h.assertTrue(torche.equals(cible), "il a repéré la torche : " + cible);
+            t.memoire.putLong("sabotage_ou", cible.asLong()); // décidé au bilan (Moral.mefait : SABOTAGE)
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(h.getLevel().getBlockState(torche).isAir(), "la torche arrachée (" + TestsJeu.etat(t, b[0]) + ")");
+            h.assertTrue(h.getLevel().getBlockState(b[0]).is(ColoniePnj.BUREAU.get()), "le poste intact");
+            h.assertTrue(!h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(torche).inflate(4),
+                    e -> e.getItem().is(Items.TORCH)).isEmpty(), "la torche est à terre, à reposer");
+            h.assertTrue("la torche".equals(t.memoire.getString("sabotage")), "il s'en souvient");
+            String aveu = "";
+            for (int i = 0; i < 40 && aveu.isEmpty(); i++) aveu = Humeur.aveu(t);
+            h.assertTrue(Vie.vient("sabotage_avoue", aveu) && !t.memoire.contains("sabotage"), "il l'avoue, une fois : " + aveu);
+            t.discard();
+        });
+    }
+
+    /**
+     * Décidé à partir, en douce : il rend d'abord au dépôt tout ce qu'il a sur lui (sa pioche en diamant, son plastron, son
+     * charbon), prend un peu de pain (au plus 3), dit tout bas qu'il file, marche loin du poste, écrit une lettre d'adieu au
+     * chef et redevient chercheur d'emploi avec ce seul butin.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void fuiteAvecUnButin(GameTestHelper h) {
+        BlockPos[] b = {TestsJeu.sol(h, 206 * 400, 60000)};
+        java.util.UUID chef = java.util.UUID.randomUUID();
+        Travailleur t = Travailleur.auTravail(h.getLevel(), "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(2)), chef, new ItemStack(Items.COAL, 5));
+        t.forcerChunk();
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_PICKAXE));
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+        t.temperament = "fourbe";
+        t.moral = 5;
+        Bureau.Entite d = (Bureau.Entite) h.getLevel().getBlockEntity(b[0]);
+        d.depot.addItem(new ItemStack(Items.BREAD, 10));
+        t.memoire.putBoolean("demission", true); // décidé au bilan (Humeur.suite, Moral.fuit)
+        t.memoire.putBoolean("fuite", true);
+        h.succeedWhen(() -> {
+            h.assertTrue(t.mode == Travailleur.Mode.CHOMEUR, "parti (" + TestsJeu.etat(t, b[0]) + ")");
+            var pris = butin(t); // un peu de pain, ou du charbon qu'il vient de rendre : rien d'autre
+            int pain = pris.getOrDefault(Items.BREAD, 0), charbon = pris.getOrDefault(Items.COAL, 0);
+            h.assertTrue(pain + charbon >= 1 && pain + charbon <= Moral.VOL_COUP && pris.size() == 1, "un petit butin : " + pris);
+            h.assertTrue(TestsBucheron.compte(d, Items.BREAD) == 10 - pain, "le reste du pain au dépôt");
+            h.assertTrue(Humeur.vide(t), "il ne part qu'avec son butin caché : rien en main, sur le dos ni dans le sac");
+            h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND_PICKAXE) == 1 && TestsBucheron.compte(d, Items.IRON_CHESTPLATE) == 1
+                    && TestsBucheron.compte(d, Items.COAL) == 5 - charbon, "pioche, plastron et charbon rendus au dépôt");
+            h.assertTrue(TestsJeu.distance(t, b[0]) >= 40, "loin du poste : " + TestsJeu.distance(t, b[0]));
+            h.assertTrue(TestsVie.dites(t, "fuite_nuit") == 1, "il file en douce (" + t.paroles + ")");
+            h.assertTrue(lettrePour(h, chef, "fuite"), "une lettre d'adieu au chef");
+            h.assertTrue(t.chef == null && !t.memoire.contains("fuite"), "chercheur d'emploi");
+            t.discard();
+        });
+    }
+
+    /**
+     * La révolte : deux colériques au plus bas, deux lettres de plainte, deux avertissements déjà donnés. Le troisième est
+     * dit en face au chef (« on prend les armes ») ; seulement au bilan suivant, ils se lèvent et frappent le chef, et jamais
+     * l'autre personne présente. Le chef remet dans la caisse du poste les pièces qu'il leur doit : ils lâchent le chef,
+     * vont se payer et posent les armes.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void revolteContreLeChefSeul(GameTestHelper h) {
+        var monnaie = Reglages.actuel.monnaie; // comme TestsJeu.grevePuisReprise : des pièces qui existent sans Numismatics
+        Reglages.actuel.monnaie = new java.util.ArrayList<>(java.util.List.of(
+                new Reglages.Piece("minecraft:copper_ingot", "cuivre", 1), new Reglages.Piece("minecraft:gold_ingot", "or", 8)));
+        BlockPos b = TestsJeu.sol(h, 207 * 400, 60000);
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel(), passant = h.makeMockServerPlayerInLevel();
+        for (var p : new net.minecraft.server.level.ServerPlayer[]{chef, passant}) p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        chef.teleportTo(h.getLevel(), b.getX() + 0.5, b.getY(), b.getZ() + 5.5, 0, 0); // le banc d'essai place le faux joueur
+        passant.teleportTo(h.getLevel(), b.getX() - 4.5, b.getY(), b.getZ() + 5.5, 0, 0);
+        Travailleur[] l = new Travailleur[2];
+        for (int i = 0; i < 2; i++) {
+            Travailleur t = l[i] = Travailleur.auTravail(h.getLevel(), "mineur", b, Vec3.atBottomCenterOf(b.west(2 + 2 * i)), chef.getUUID(), ItemStack.EMPTY);
+            t.forcerChunk();
+            t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+            t.temperament = "colerique";
+            t.moral = 5;
+            t.impayes = 2;
+            t.memoire.putInt("avertis", 2);
+            t.memoire.putInt("bilans_bas", 6);
+            t.memoire.putInt("menaces", 2);
+            t.memoire.putInt("menace_depuis", 5);
+        }
+        float vie = chef.getHealth();
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Humeur.mefaits(l[0], Moral.Cause.PAIE);
+            h.assertTrue(l[0].memoire.getInt("menaces") == 3 && !l[0].memoire.getBoolean("revolte"), "d'abord le dernier avertissement");
+            h.assertTrue(l[0].paroles.stream().anyMatch(p -> p.contains("on prend les armes")), "dit en face : " + l[0].paroles);
+            for (Travailleur t : l) { t.memoire.putInt("menaces", 3); Humeur.mefaits(t, Moral.Cause.PAIE); } // le bilan suivant
+            for (Travailleur t : l) h.assertTrue(t.memoire.getBoolean("revolte"), "révolte");
+        });
+        boolean[] paye = {false};
+        h.onEachTick(() -> {
+            h.assertTrue(passant.getHealth() == passant.getMaxHealth(), "personne d'autre que le chef n'est frappé");
+            if (!paye[0] && chef.getHealth() < vie - 2) { // frappé : le chef remet dans la caisse ce qu'il leur doit
+                paye[0] = true;
+                long du = l[0].du() + l[1].du();
+                ((Bureau.Entite) h.getLevel().getBlockEntity(b)).caisse.addItem(new ItemStack(Items.GOLD_INGOT, (int) Math.min(64, (du + 7) / 8)));
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(paye[0], "le chef frappé (" + chef.getHealth() + "/" + vie + ", " + TestsJeu.etat(l[0], b) + ")");
+            h.assertTrue(chef.isAlive(), "le chef a survécu : ils l'ont lâché pour aller se payer");
+            for (Travailleur t : l) {
+                h.assertTrue(t.impayes == 0, "payé à la caisse (" + TestsJeu.etat(t, b) + ")");
+                h.assertTrue(!t.memoire.getBoolean("revolte") && !(t.action instanceof Actions.Attaquer), "payé : il pose les armes (" + TestsJeu.etat(t, b) + ")");
+                h.assertTrue(TestsVie.dites(t, "revolte_fin") == 1 && !t.memoire.contains("menaces"), "il le dit, et ses avertissements repartent à zéro");
+            }
+            Reglages.actuel.monnaie = monnaie;
+            for (Travailleur t : l) t.discard();
+            chef.discard();
+            passant.discard();
         });
     }
 }

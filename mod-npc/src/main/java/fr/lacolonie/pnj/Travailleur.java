@@ -1238,6 +1238,7 @@ public class Travailleur extends PathfinderMob {
             if (!st.isEmpty()) { tout.add(st); setItemSlot(s, ItemStack.EMPTY); }
         }
         tout.removeIf(st -> st.is(Items.PAPER) && st.getCount() == 1); // la lettre qu'il tenait
+        tout.addAll(Humeur.sortirButin(this)); // ce qu'il avait volé et caché
         if (tout.isEmpty()) { lieuAffaires = "Il n'avait rien sur lui."; return; }
         BlockPos pos = blockPosition();
         for (int i = 0; i < 3 && !level.getBlockState(pos).canBeReplaced(); i++) pos = pos.above();

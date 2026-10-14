@@ -18,13 +18,13 @@ final class Messages {
     /** L'objet de la lettre, tel qu'il apparaît dans la liste du courrier. */
     static final Map<String, String> OBJETS = new HashMap<>();
     /** Les lettres qui ne peuvent pas attendre qu'il passe au poste : un corbeau part tout de suite. */
-    static final java.util.Set<String> URGENTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place");
+    static final java.util.Set<String> URGENTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place", "menace");
     /**
      * Les lettres importantes : en tête du courrier, signalées, jamais regroupées. Les autres sont de la routine : une
      * lettre du même ouvrier et de la même situation, encore non lue, compte simplement une fois de plus (voir {@link Boite}).
      */
     static final java.util.Set<String> IMPORTANTES = java.util.Set.of("a_terre", "greve", "coince", "sans_place", "ramene_attend",
-            "poste_detruit", "mission_finie");
+            "poste_detruit", "mission_finie", "menace", "fuite");
     /** Ni importantes ni regroupées : chacune répond à une lettre du chef, ou dit quelle mission est finie. */
     static final java.util.Set<String> SEULES = java.util.Set.of("nouvelles", "mission_finie_suite");
 
@@ -193,6 +193,18 @@ final class Messages {
                 "J'ai rendu au dépôt ce que j'avais pris. Je m'en vais, je n'en pouvais plus ({0}). Adieu.{1}",
                 "Je pars. J'ai laissé au dépôt mes outils et le reste. Ce qui m'a fait partir : {0}.{1}",
                 "Je t'avais écrit deux fois, et rien n'a changé : {0}. Je m'en vais chercher du travail ailleurs. Mes outils sont au dépôt.{1}");
+        // Méfaits au plus bas (Humeur, 2e partie) : l'avertissement avant la révolte, la fuite, et le collègue qui dénonce.
+        m("menace", "Prends garde", "{0} Ce qui ne va pas : {1}.{2}");
+        m("fuite", "Je suis parti",
+                "Quand tu liras ceci, je serai loin. J'ai pris de quoi faire la route. Ce qui m'a fait partir : {0}.",
+                "Je m'en vais sans prévenir. Ne me cherche pas. La raison : {0}.",
+                "Je pars, et j'emporte un peu de ce qu'on me devait. Ce qui m'a chassé : {0}.");
+        t("fuite", "fourbe", "Merci pour tout, chef. J'ai pris un petit souvenir au dépôt. Ce qui m'a fait partir : {0}.");
+        t("fuite", "peureux", "Pardon, chef… Je n'osais pas te le dire en face. Je suis parti. C'était trop dur : {0}.");
+        m("denonce", "Ce que j'ai vu",
+                "Je n'aime pas rapporter, mais tu dois le savoir : j'ai vu {0} {1}.",
+                "Un mot, chef, entre nous : j'ai vu {0} {1}. De mes yeux.");
+        t("denonce", "fourbe", "Je n'en dis rien aux autres, chef, mais j'ai vu {0} {1}. Tu t'en souviendras ?");
         m("reprise_greve", "Je reprends le travail",
                 "J'ai touché mon dû ({0}). Merci, je reprends le travail.",
                 "Paie reçue : {0}. Je retourne à l'ouvrage.");
@@ -453,6 +465,8 @@ final class Messages {
         b.append(t.moral >= 75 ? " J'ai le cœur à l'ouvrage." : t.moral < 25 ? " Mais j'ai le moral au plus bas." : t.moral < 50 ? " Le moral n'y est pas trop." : "");
         String cause = t.moral < 50 ? Humeur.cause(t) : ""; // ce qui lui pèse le plus, au dernier bilan (Moral)
         if (!cause.isEmpty()) b.append(" Ce qui me pèse le plus : ").append(cause).append('.');
+        String aveu = Humeur.aveu(t); // un sabotage avoué, ou un butin qui se trahit
+        if (!aveu.isEmpty()) b.append(' ').append(aveu);
         return b.toString();
     }
 
