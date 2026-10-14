@@ -49,6 +49,8 @@ final class Cerveau {
         // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
         if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible)) && !t.memoire.getBoolean("fuite")
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
+        // En révolte, même en plein combat : payé, apaisé, ou le chef parti loin, il pose les armes aussitôt (Humeur).
+        if (t.memoire.getBoolean("revolte")) Humeur.calmer(t);
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
         if (t.action instanceof Consignes.Faire f && Consignes.interrompre(t, f)) t.finirAction("interrompu");
         // Frappé en pleine action (il attend, il marche, il travaille) : il la lâche tout de suite, pour fuir ou riposter

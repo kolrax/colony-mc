@@ -124,4 +124,89 @@ class MoralTest {
         }
         assertTrue(moral >= 60, "bien traité, il finit content (" + moral + ")");
     }
+
+    // --- Méfaits (2e partie) ----------------------------------------------------------------------------------
+
+    /** Au plus bas depuis 2 jours, deux lettres, un compagnon au plus bas, chef connecté et présent ; tirages favorables. */
+    static Moral.Rancoeur rancoeur(java.util.function.UnaryOperator<Object[]> f) {
+        Object[] v = {5, 15, 2, 8, 4, "colerique", 1, 0, 0, true, true, true, 0, 4, 25};
+        v = f.apply(v);
+        return new Moral.Rancoeur((int) v[0], (int) v[1], (int) v[2], (int) v[3], (int) v[4], (String) v[5], (int) v[6], (int) v[7], (int) v[8],
+                (boolean) v[9], (boolean) v[10], (boolean) v[11], (int) v[12], (int) v[13], (int) v[14]);
+    }
+
+    static Moral.Rancoeur r(int i, Object x) { return rancoeur(v -> { v[i] = x; return v; }); }
+
+    @Test
+    void jamaisDeMefaitAuDessusDuSeuil() {
+        for (int moral = 15; moral <= 100; moral += 5)
+            for (String c : List.of("calme", "peureux", "fourbe", "colerique"))
+                for (double tirage : new double[]{0, 0.3, 0.99})
+                    for (int menaces : new int[]{0, 3}) {
+                        int m = moral, me = menaces;
+                        Moral.Rancoeur x = rancoeur(v -> { v[0] = m; v[5] = c; v[7] = me; v[8] = 5; return v; });
+                        assertEquals(Moral.Mefait.RIEN, Moral.mefait(x, tirage, tirage), moral + " " + c);
+                    }
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(r(2, 0), 0, 0), "sans lettre de plainte d'abord : rien");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(r(3, 1), 0, 0), "un seul bilan au plus bas : rien encore");
+        // Bien traité des semaines durant (bienTraiteNePartJamais), son moral reste ≥ 30 : au-dessus du seuil (15 par défaut), jamais de méfait.
+    }
+
+    @Test
+    void revolteSeulementApresTroisAvertissements() {
+        assertEquals(Moral.Mefait.MENACE, Moral.mefait(r(7, 0), 0.99, 0.99), "d'abord un avertissement");
+        assertEquals(Moral.Mefait.MENACE, Moral.mefait(rancoeur(v -> { v[7] = 1; v[8] = 2; return v; }), 0.99, 0.99), "le deuxième, deux bilans plus tard");
+        assertNotEquals(Moral.Mefait.MENACE, Moral.mefait(rancoeur(v -> { v[7] = 1; v[8] = 1; return v; }), 0.99, 0.99), "pas deux de suite");
+        assertNotEquals(Moral.Mefait.REVOLTE, Moral.mefait(rancoeur(v -> { v[7] = 2; v[8] = 5; return v; }), 0.99, 0.99), "deux avertissements : pas encore");
+        assertEquals(Moral.Mefait.REVOLTE, Moral.mefait(rancoeur(v -> { v[7] = 3; v[8] = 1; return v; }), 0.99, 0.99), "après le troisième, le chef présent");
+        assertNotEquals(Moral.Mefait.REVOLTE, Moral.mefait(rancoeur(v -> { v[7] = 3; v[10] = false; return v; }), 0.99, 0.99), "le chef absent : pas de révolte");
+        assertNotEquals(Moral.Mefait.MENACE, Moral.mefait(rancoeur(v -> { v[9] = false; v[10] = false; return v; }), 0.99, 0.99), "chef déconnecté : pas d'avertissement");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[7] = 3; v[11] = false; return v; }), 0.99, 0.99), "réglage coupé : jamais");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[2] = 1; return v; }), 0.99, 0.99), "une seule lettre de plainte : pas encore");
+        // Seul au plus bas : seulement après deux jours ; un peureux, jamais seul.
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 7; return v; }), 0.99, 0.99), "seul, pas encore deux jours");
+        assertEquals(Moral.Mefait.MENACE, Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 8; return v; }), 0.99, 0.99), "seul, deux jours au plus bas");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[6] = 0; v[5] = "peureux"; v[3] = 50; return v; }), 0.99, 0.99), "un peureux seul");
+        assertEquals(Moral.Mefait.MENACE, Moral.mefait(rancoeur(v -> { v[5] = "peureux"; return v; }), 0.99, 0.99), "un peureux avec d'autres");
+    }
+
+    @Test
+    void volEtSabotageSelonLeCaractere() {
+        Moral.Rancoeur seul = rancoeur(v -> { v[6] = 0; v[3] = 2; return v; }); // pas de révolte possible
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(seul, 0.99, 0), "le plus souvent, rien");
+        assertEquals(Moral.Mefait.VOL, Moral.mefait(seul, 0, 0.1), "un vol");
+        assertEquals(Moral.Mefait.SABOTAGE, Moral.mefait(seul, 0, 0.9), "un sabotage");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 2; v[12] = 4; return v; }), 0, 0.1), "quota du jour atteint");
+        assertEquals(Moral.Mefait.RIEN, Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 2; v[14] = 0; return v; }), 0, 0.1), "réglé à 0 : jamais");
+        assertTrue(Moral.penchant("fourbe") > Moral.penchant("calme") && Moral.partVol("fourbe") > Moral.partVol("colerique"));
+        // Sur 1000 bilans au plus bas, un fourbe fait bien plus de méfaits qu'un calme, mais pas à chaque fois.
+        java.util.Random rnd = new java.util.Random(1);
+        int fourbe = 0, calme = 0;
+        for (int i = 0; i < 1000; i++) {
+            if (Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 2; v[5] = "fourbe"; return v; }), rnd.nextDouble(), rnd.nextDouble()) != Moral.Mefait.RIEN) fourbe++;
+            if (Moral.mefait(rancoeur(v -> { v[6] = 0; v[3] = 2; v[5] = "calme"; return v; }), rnd.nextDouble(), rnd.nextDouble()) != Moral.Mefait.RIEN) calme++;
+        }
+        assertTrue(fourbe > 2 * calme && fourbe < 600 && calme > 50, fourbe + " contre " + calme);
+    }
+
+    @Test
+    void fuiteEtButin() {
+        assertTrue(Moral.fuit("fourbe", 0.5) && !Moral.fuit("calme", 0.5) && !Moral.fuit("calme", 0), "le calme ne fuit jamais : il démissionne");
+        assertTrue(Moral.precieux("minecraft:diamond", true) && Moral.precieux("minecraft:gold_ingot", true) && Moral.precieux("numismatics:spur", true));
+        assertTrue(Moral.precieux("minecraft:iron_pickaxe", false), "un outil ne s'empile pas : il ne le prend pas");
+        assertFalse(Moral.precieux("minecraft:bread", true));
+        assertEquals(3, Moral.prise(64, 4));
+        assertEquals(1, Moral.prise(1, 4));
+        assertEquals(2, Moral.prise(64, 2));
+        assertEquals(0, Moral.prise(64, 0));
+    }
+
+    @Test
+    void finDeLaRevolte() {
+        assertFalse(Moral.finRevolte(5, 30, 2, 2, true), "toujours en colère");
+        assertTrue(Moral.finRevolte(5, 30, 2, 0, true), "payé ce qu'il devait");
+        assertFalse(Moral.finRevolte(5, 30, 0, 0, true), "rien ne lui était dû : il faut que le moral remonte");
+        assertTrue(Moral.finRevolte(30, 30, 0, 0, true), "le moral remonté");
+        assertTrue(Moral.finRevolte(5, 30, 2, 2, false), "le chef parti loin");
+    }
 }

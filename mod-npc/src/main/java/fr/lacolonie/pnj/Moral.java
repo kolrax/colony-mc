@@ -158,8 +158,8 @@ final class Moral {
     static final int JOURS_SEUL = 2;
     /** Un vol : au plus tant d'objets d'un coup ; son butin caché : au plus tant de piles. */
     static final int VOL_COUP = 3, BUTIN_MAX = 27;
-    /** En fuite : il s'en va à tant de blocs de son poste avant de se dire libre. */
-    static final int FUITE_LOIN = 48;
+    /** En fuite : il s'en va à tant de blocs de son poste (hors de son espace de vie) avant de se dire libre. */
+    static final int FUITE_LOIN = 64;
 
     /**
      * Ce que le bilan regarde pour un méfait. {@code bas} : bilans de suite sous {@code seuilBas} ; {@code avertis} : lettres
@@ -201,7 +201,7 @@ final class Moral {
 
     /** Décidé à partir : en douce, avec un petit butin (vrai), ou en rendant tout au dépôt. */
     static boolean fuit(String temperament, double tirage) {
-        return tirage < switch (temperament) { case "fourbe" -> 0.7; case "peureux" -> 0.5; case "colerique" -> 0.3; default -> 0.1; };
+        return tirage < switch (temperament) { case "fourbe" -> 0.7; case "peureux" -> 0.5; case "colerique" -> 0.3; default -> 0; }; // le calme part en règle
     }
 
     /** Ce qu'il n'ose pas prendre : ce qui ne s'empile pas (outils, armes, armures) et ce qui a trop de valeur. */

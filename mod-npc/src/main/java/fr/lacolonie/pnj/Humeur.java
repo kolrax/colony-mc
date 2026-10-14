@@ -46,7 +46,6 @@ final class Humeur {
     /** Toutes les 5 s environ, depuis le cerveau : le bilan quand son heure est venue. */
     static void veiller(Travailleur t) {
         if (t.mode == Travailleur.Mode.CHOMEUR || t.chef == null) return;
-        if (t.memoire.getBoolean("revolte")) calmer(t); // même en plein combat : payé, apaisé ou le chef parti, il pose les armes
         long maintenant = t.level().getGameTime();
         if (!t.memoire.contains("bilan_le")) { t.memoire.putLong("bilan_le", maintenant); return; }
         if (maintenant - t.memoire.getLong("bilan_le") < Reglages.actuel.moral_minutes_bilan * 1200L) return;
@@ -338,7 +337,8 @@ final class Humeur {
         List<Integer> l = new ArrayList<>();
         for (int i = 0; i < c.getContainerSize(); i++) {
             ItemStack s = c.getItem(i);
-            if (!s.isEmpty() && !Moral.precieux(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath(), s.getMaxStackSize() > 1)) l.add(i);
+            if (!s.isEmpty() && Reglages.piece(s) < 0
+                    && !Moral.precieux(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString(), s.getMaxStackSize() > 1)) l.add(i);
         }
         return l;
     }
