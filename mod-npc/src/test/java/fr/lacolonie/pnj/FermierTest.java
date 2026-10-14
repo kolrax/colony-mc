@@ -70,6 +70,6 @@ class FermierTest {
         RepertoireTest.demande("Oublie ce champ", "fermier", "oublier_champ");
         RepertoireTest.demande("Arrête de cultiver ici", "fermier", "oublier_champ");
         RepertoireTest.demande("Laisse ce champ en friche", "fermier", "oublier_champ");
-        assertEquals(java.util.Set.of("fermier"), Repertoire.metiersConcernes("Fais du pain"));
+        assertEquals(java.util.Set.of("fermier", "cuisinier"), Repertoire.metiersConcernes("Fais du pain")); // le cuisinier aussi (lot 6)
     }
 }

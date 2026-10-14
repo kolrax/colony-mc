@@ -684,14 +684,19 @@ final class Fermier extends Metier {
      */
     static final class Pain extends Actions.AuBureau {
         final int voulu;
+        /** Le cuisinier, de lui-même : le pain va dans son sac (il le livre au dépôt ensuite, ce qui compte pour ses commandes), sans un mot. */
+        final boolean seul;
         int faits;
 
-        Pain(int voulu) { super("pain"); this.voulu = voulu; }
+        Pain(int voulu) { this(voulu, false); }
+
+        Pain(int voulu, boolean seul) { super("pain"); this.voulu = voulu; this.seul = seul; }
 
         Actions.Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Actions.Etat.EN_COURS : Actions.Etat.ECHEC;
             if (age % 10 != 0) return Actions.Etat.EN_COURS;
+            if (seul && (faits >= voulu || t.compter(BLE) + b.compter(BLE) < 3 || Monde.libres(t) == 0)) return faits == 0 ? echec("pas_de_ble") : Actions.Etat.OK;
             if (faits >= voulu || t.compter(BLE) + b.compter(BLE) < 3) return dire(t);
             List<ItemStack> ble = new ArrayList<>();
             while (ble.size() < 3) {
@@ -707,9 +712,10 @@ final class Fermier extends Metier {
                 return echec("pas_de_recette");
             }
             faits += pain.getCount();
+            t.swing(InteractionHand.MAIN_HAND);
+            if (seul) { Guerrier.garder(t, b, pain); return Actions.Etat.EN_COURS; } // ce qui n'entre pas au sac reste au dépôt
             ItemStack reste = b.ranger(pain);
             if (!reste.isEmpty()) t.ranger(reste);
-            t.swing(InteractionHand.MAIN_HAND);
             if (!reste.isEmpty()) { Voix.dire(t, faits + " pain" + (faits > 1 ? "s" : "") + " de faits, chef. Le dépôt est plein : je garde le reste sur moi.", "calme"); return echec("depot_plein"); }
             return Actions.Etat.EN_COURS;
         }

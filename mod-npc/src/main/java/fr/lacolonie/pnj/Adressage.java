@@ -351,15 +351,17 @@ final class Adressage {
     // --- L'avis de l'IA ---------------------------------------------------------------------------------------
 
     /** Ce que sait faire chaque métier, en quelques mots (pour que l'IA relie la demande au bon ouvrier). */
-    static final Map<String, String> CAPACITES = Map.of(
-            "mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre ; creuse, perce des tunnels, pose des torches",
-            "guerisseur", "relève les ouvriers à terre avec du pain ou une potion de soin, panse les blessés ; soigne quelqu'un, fait le tour des blessés",
-            "bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle ; abat les arbres, replante",
-            "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge",
-            "fermier", "cultive et rapporte blé, carottes, pommes de terre, betteraves ; récolte, laboure et sème un champ, fait du pain",
-            "pecheur", "pêche au bord de l'eau avec une canne et rapporte morues, saumons et autres poissons ; va pêcher, pêche à l'endroit montré",
-            "eleveur", "élève vaches, moutons, cochons, poules ; rapporte cuir, laine, viande, œufs, lait ; nourrit les bêtes, tond les moutons, abat les bêtes en trop",
-            "chasseur", "chasse le gibier sauvage à l'arc : lapins, cochons, vaches, moutons, poules hors des enclos ; rapporte viande, cuir, plumes");
+    static final Map<String, String> CAPACITES = Map.ofEntries(
+            Map.entry("mineur", "mine et rapporte charbon, fer, cuivre, or, diamant, redstone, lapis, pierre ; creuse, perce des tunnels, pose des torches"),
+            Map.entry("cuisinier", "cuisinier et boulanger : cuit au four la viande, le poisson et les pommes de terre du dépôt, fait le pain avec le blé ; cuisine, cuit, fait du pain"),
+            Map.entry("guerisseur", "relève les ouvriers à terre avec du pain ou une potion de soin, panse les blessés ; soigne quelqu'un, fait le tour des blessés"),
+            Map.entry("bucheron", "coupe et rapporte du bois : chêne, bouleau, sapin, acacia, cerisier, jungle ; abat les arbres, replante"),
+            Map.entry("guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge"),
+            Map.entry("fermier", "cultive et rapporte blé, carottes, pommes de terre, betteraves ; récolte, laboure et sème un champ, fait du pain"),
+            Map.entry("pecheur", "pêche au bord de l'eau avec une canne et rapporte morues, saumons et autres poissons ; va pêcher, pêche à l'endroit montré"),
+            Map.entry("eleveur", "élève vaches, moutons, cochons, poules ; rapporte cuir, laine, viande, œufs, lait ; nourrit les bêtes, tond les moutons, abat les bêtes en trop"),
+            Map.entry("chasseur", "chasse le gibier sauvage à l'arc : lapins, cochons, vaches, moutons, poules hors des enclos ; rapporte viande, cuir, plumes"),
+            Map.entry("transporteur", "porte les marchandises d'un coffre à l'autre, ou d'un coffre au dépôt, sur les trajets montrés par le chef, en boucle"));
 
     /** Une étiquette par ouvrier : son prénom (avec son métier si deux ouvriers ont le même). */
     static List<String> etiquettes(Situation s) {

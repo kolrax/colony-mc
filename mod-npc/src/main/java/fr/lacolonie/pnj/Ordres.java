@@ -131,6 +131,21 @@ final class Ordres {
         NOMS.put("guerrier", guerrier);
     }
 
+    static {
+        Map<String, List<String>> cuisinier = new LinkedHashMap<>();
+        cuisinier.put("pain", List.of("pain", "pains", "miche", "miches", "miche de pain", "miches de pain", "boule de pain", "boules de pain"));
+        cuisinier.put("viande", List.of("viande cuite", "viandes cuites", "viande", "viandes", "steak", "steaks", "roti", "rotis", "boeuf cuit",
+                "porc cuit", "cotelette cuite", "cotelettes cuites", "poulet roti", "poulets rotis", "mouton cuit", "lapin cuit"));
+        cuisinier.put("poisson", List.of("poisson cuit", "poissons cuits", "poisson grille", "poissons grilles", "poisson", "poissons",
+                "morue cuite", "saumon cuit"));
+        cuisinier.put("patate", List.of("pomme de terre cuite", "pommes de terre cuites", "patate cuite", "patates cuites",
+                "pomme de terre au four", "pommes de terre au four"));
+        NOMS.put("cuisinier", cuisinier);
+    }
+
+    /** Ce qu'un métier sait faire aussi, bien que ce soit au catalogue d'un autre : le fermier fait du pain (pas « hors de son métier »). */
+    static final Map<String, Set<String>> AUSSI = Map.of("fermier", Set.of("pain"));
+
     /** Des mots qui désignent le bois, même entourés d'autres (« des bûches de bouleau ») : ils ne comptent pas comme « n'importe quel bois ». */
     static final Set<String> MOTS_DU_BOIS = Set.of("bois", "buche", "buches", "rondin", "rondins", "tronc", "troncs");
 
@@ -364,7 +379,7 @@ final class Ordres {
                     if (metier.equals("guerrier")) md = "stock"; // garder, ronde, escorter : sans quantité
                     int nombre = combien != null && combien > 0 ? Math.min(combien, 100_000) : md.equals("stock") ? 64 : 32;
                     if (l.missions.stream().noneMatch(x -> x.id().equals(id))) l.missions.add(new Mission(id, md, nombre));
-                } else l.horsMetier.putIfAbsent(metierObjet, id);
+                } else if (!AUSSI.getOrDefault(metier, Set.of()).contains(id)) l.horsMetier.putIfAbsent(metierObjet, id);
                 enAttente = null;
                 i += longueur;
                 continue;
@@ -470,19 +485,23 @@ final class Ordres {
             "a tous", "vous autres", "la troupe", "les braves", "mes braves", "mes gaillards", "les gaillards", "tous sauf", "toutes sauf",
             "tous a part", "tous excepte", "tous hormis", "restez tous", "venez tous", "rentrez tous");
     /** Les métiers par leur nom : singulier, pluriel ; les mots marqués d'une étoile ne comptent qu'avec un article (« garde » est aussi un verbe). */
-    static final Map<String, List<String[]>> NOMS_METIERS = Map.of(
-            "mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"}),
-            "guerisseur", List.of(new String[]{"guerisseur", "guerisseurs"}, new String[]{"guerisseuse", "guerisseuses"}, new String[]{"medecin", "medecins"},
-                    new String[]{"soigneur", "soigneurs"}, new String[]{"soigneuse", "soigneuses"}),
-            "bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"}),
-            "fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"}),
-            "eleveur", List.of(new String[]{"eleveur", "eleveurs"}, new String[]{"eleveuse", "eleveuses"}, new String[]{"berger", "bergers"}, new String[]{"bergere", "bergeres"},
-                    new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"}),
-            "pecheur", List.of(new String[]{"pecheur", "pecheurs"}, new String[]{"pecheuse", "pecheuses"}),
-            "chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
-                    new String[]{"veneur", "veneurs"}),
-            "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
-                    new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
+    static final Map<String, List<String[]>> NOMS_METIERS = Map.ofEntries(
+            Map.entry("mineur", List.of(new String[]{"mineur", "mineurs"}, new String[]{"mineuse", "mineuses"})),
+            Map.entry("cuisinier", List.of(new String[]{"cuisinier", "cuisiniers"}, new String[]{"cuisiniere", "cuisinieres"}, new String[]{"boulanger", "boulangers"},
+                    new String[]{"boulangere", "boulangeres"}, new String[]{"*cuistot", "*cuistots"})),
+            Map.entry("guerisseur", List.of(new String[]{"guerisseur", "guerisseurs"}, new String[]{"guerisseuse", "guerisseuses"}, new String[]{"medecin", "medecins"},
+                    new String[]{"soigneur", "soigneurs"}, new String[]{"soigneuse", "soigneuses"})),
+            Map.entry("bucheron", List.of(new String[]{"bucheron", "bucherons"}, new String[]{"bucheronne", "bucheronnes"})),
+            Map.entry("fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"})),
+            Map.entry("eleveur", List.of(new String[]{"eleveur", "eleveurs"}, new String[]{"eleveuse", "eleveuses"}, new String[]{"berger", "bergers"}, new String[]{"bergere", "bergeres"},
+                    new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"})),
+            Map.entry("pecheur", List.of(new String[]{"pecheur", "pecheurs"}, new String[]{"pecheuse", "pecheuses"})),
+            Map.entry("chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
+                    new String[]{"veneur", "veneurs"})),
+            Map.entry("transporteur", List.of(new String[]{"transporteur", "transporteurs"}, new String[]{"transporteuse", "transporteuses"}, new String[]{"porteur", "porteurs"},
+                    new String[]{"porteuse", "porteuses"}, new String[]{"charretier", "charretiers"})),
+            Map.entry("guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
+                    new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"})));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");
     // Pas « bien » : « il bosse bien, Bertrand » parle de lui. « joué », « travail », « nuit » : « bien joué Raoul », « bon travail Raoul », « bonne nuit Raoul ».
     static final Set<String> INTERJECTIONS = Set.of("he", "eh", "oh", "ho", "ohe", "hey", "dis", "dites", "allez", "alors", "bon", "ecoute",

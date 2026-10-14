@@ -587,7 +587,7 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
-                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") ? "Sans mission"
+                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
     }
@@ -1807,6 +1807,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
     void licencier() {
+        Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
         chef = null;
         chefNom = "";
@@ -1825,6 +1826,9 @@ public class Travailleur extends PathfinderMob {
         lettresAuCalme.clear();
         Pecheur.oublier(this); // son coin de pêche était près du poste de ce chef-là
         Humeur.oublier(this); // son moral auprès de ce chef-là (lettres, démission, rancune) ; il repart à 70
+        memoire.remove("champs"); // les champs du fermier aussi
+        memoire.remove("plants_laisses");
+        Fermier.TOURS.remove(this);
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
         coince.progres(getX(), getY(), getZ());
@@ -1872,6 +1876,11 @@ public class Travailleur extends PathfinderMob {
             signaler(p, "Il te faut " + Reglages.texte(prime) + " dans ton inventaire pour la prime d'embauche.");
             return;
         }
+        // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
+        Transporteur.oublier(this);
+        memoire.remove("champs");
+        memoire.remove("plants_laisses");
+        Fermier.TOURS.remove(this);
         chef = p.getUUID();
         chefNom = p.getName().getString();
         mode = Mode.SUIVRE;

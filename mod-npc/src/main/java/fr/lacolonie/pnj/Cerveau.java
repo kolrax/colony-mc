@@ -237,7 +237,7 @@ final class Cerveau {
         }
 
         // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse.
-        if (mission == null && !t.missions.isEmpty()) {
+        if (mission == null && !t.missions.isEmpty() && !m.enCours(t)) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
                 mem.putBoolean("livre", true);
                 lancer(t, new Actions.Deposer(m.garder));

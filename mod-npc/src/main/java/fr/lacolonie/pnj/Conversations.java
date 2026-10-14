@@ -145,6 +145,9 @@ final class Conversations {
         }
         c.add("metier_a=" + a.metier());
         c.add("metier_b=" + b.metier());
+        // Le cuisinier est aussi le boulanger : les conversations « boulanger » sont les siennes.
+        if (a.metier().equals("cuisinier")) c.add("metier_a=boulanger");
+        if (b.metier().equals("cuisinier")) c.add("metier_b=boulanger");
         if (a.metier().equals(b.metier())) c.add("meme_metier");
         c.add("temperament_a=" + a.temperament());
         c.add("temperament_b=" + b.temperament());

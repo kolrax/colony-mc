@@ -73,6 +73,28 @@ final class Messages {
         m("cisailles", "Il me faut des cisailles",
                 "Nos moutons portent toute leur laine, et je n'ai pas de cisailles pour les tondre. Laisse-m'en une paire au dépôt.",
                 "Sans cisailles, la laine reste sur le dos des moutons. Il m'en faudrait une paire au dépôt.");
+        m("sans_combustible", "Plus de combustible",
+                "Mon four est froid : je n'ai plus de charbon ni de bois pour le chauffer. Laisse-m'en au dépôt.",
+                "Sans combustible, pas de cuisson. Un peu de charbon, ou du bois, au dépôt, et je rallume le four.",
+                "Le feu s'est éteint, et il n'y a plus rien à brûler, ni sur moi ni au dépôt.");
+        t("sans_combustible", "colerique", "Un four sans feu, c'est une boîte en pierre ! Du charbon au dépôt, tout de suite.");
+        m("sans_ble", "Plus de blé",
+                "Je n'ai plus de blé pour faire le pain. Laisse-m'en au dépôt, ou demande au fermier de m'en porter.",
+                "La huche est vide : plus un grain de blé. Sans lui, pas de pain demain matin.",
+                "Il me faut du blé pour pétrir. Il n'y en a plus, ni sur moi ni au dépôt.");
+        t("sans_ble", "peureux", "Plus de blé… Tout le monde va me réclamer du pain, et je n'aurai rien à leur donner. Laisse-m'en au dépôt, je t'en prie.");
+        m("rien_a_cuire", "Rien à cuire",
+                "Je n'ai rien à mettre au four : ni {0}, ni rien d'autre de cru. Laisse-m'en au dépôt.",
+                "Plus de {0} à cuire. Le four est chaud, mais la marmite est vide.",
+                "Mon four attend, et moi aussi : il me faudrait du {0} cru au dépôt.");
+        t("rien_a_cuire", "fourbe", "Plus rien à cuire. Je pourrais bien faire rôtir une poule de l'éleveur, mais il compte ses bêtes. Laisse-moi de quoi cuisiner au dépôt.");
+        m("four_inaccessible", "Je n'atteins plus mon four",
+                "Je n'arrive plus jusqu'à mon four, vers {0} : le passage est barré. Ma fournée y est restée ; prends-la, ou dégage le chemin.",
+                "Mon four, vers {0}, est hors de ma portée. J'y ai laissé une fournée : je ne peux pas aller la chercher.");
+        m("sans_four", "Il me faut un four",
+                "Je ne trouve aucun four libre près du poste : ni fourneau, ni fumoir. Bâtis-m'en un à quelques pas, et je cuirai ce qu'il y a au dépôt.",
+                "Sans four, je ne peux rien cuire. Un fourneau ou un fumoir près du poste, et je m'y mets.");
+
         m("canne_peche", "Il me faut une canne à pêche",
                 "Je n'ai pas de canne à pêche : je regarde les poissons sans pouvoir les prendre. Laisse-m'en une au dépôt.",
                 "Ma canne s'est cassée, ou je n'en ai jamais eu. Sans elle, pas de poisson à la table. Il m'en faudrait une au dépôt.",
@@ -105,6 +127,28 @@ final class Messages {
                 "Le gibier a déserté les environs. Je rentre bredouille. Envoie-moi chasser ailleurs, si tu connais un meilleur coin.",
                 "Pas une trace, pas un bruit dans les bois d'ici. Je ne chasserai pas les bêtes de nos enclos, rassure-toi.");
         t("sans_gibier", "calme", "Les bêtes se sont éloignées. Elles reviendront. En attendant, montre-moi un autre bois si tu veux de la viande.");
+        m("coffre_source_vide", "Rien à porter",
+                "Je reviens du coffre {0} : il est vide. Je n'ai rien à porter pour l'instant.",
+                "Le coffre {0} ne contient rien. J'attends qu'il se remplisse avant de refaire le chemin.",
+                "Rien à prendre au coffre {0}. Je reste au poste et j'y retourne plus tard.");
+        t("coffre_source_vide", "fourbe", "Le coffre {0} est vide. Je n'y ai pas touché, je le précise : il était vide en arrivant.");
+
+        m("coffre_plein", "Le coffre est plein",
+                "Le coffre {0} est plein à craquer : je ne peux plus rien y déposer. Il faudrait le vider, ou en poser un autre à côté.",
+                "Plus une place dans le coffre {0}. Je rapporte ma charge d'où elle vient, et je réessaierai plus tard.",
+                "Le coffre {0} déborde. Je ne pose rien par terre : je rapporte tout, et il me faudrait un autre coffre.");
+        t("coffre_plein", "colerique", "Le coffre {0} est plein ! J'ai porté cette charge pour rien. Vide-le, ou donne-m'en un autre !");
+        t("coffre_plein", "peureux", "Le coffre {0} est plein… J'ai rapporté ce que je portais. Dis-moi quoi faire, s'il te plaît.");
+
+        m("coffre_introuvable", "Je ne trouve pas le coffre",
+                "Je ne trouve plus le coffre {0}. Il a été cassé ou déplacé ? Montre-moi le nouveau.",
+                "J'ai fait le chemin jusqu'au coffre {0}, mais il n'y est plus. Je ne peux ni prendre ni déposer.");
+        m("coffre_interdit", "Un coffre que je laisse",
+                "Le coffre {0} n'est plus à nous, ou il est trop loin du poste : je n'y touche plus. Montre-m'en un autre si tu veux.",
+                "Je laisse le coffre {0} : il est chez un voisin, ou trop loin de chez nous.");
+        m("coffre_inaccessible", "Je n'arrive pas au coffre",
+                "Je n'arrive pas jusqu'au coffre {0} : le chemin est barré. Je réessaierai plus tard.",
+                "Impossible d'atteindre le coffre {0}. Un mur, un trou ? Ouvre-moi un passage, et je reprends mes trajets.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");
