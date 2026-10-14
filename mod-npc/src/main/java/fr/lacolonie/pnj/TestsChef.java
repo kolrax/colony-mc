@@ -103,10 +103,16 @@ public class TestsChef {
         s.g().appliquer(Ordres.lire("Attaque quiconque me frappe.", "guerrier"), s.chef());
         h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_chef")) == GardeChef.Posture.ATTAQUE, "l'ordre est retenu");
         boolean[] vu = surveiller(h, s);
+        StringBuilder suite = new StringBuilder();
+        String[] dernier = {""};
+        h.onEachTick(() -> {
+            String n = (s.g().action == null ? "-" : s.g().action.nom) + "/" + s.g().resultat;
+            if (!n.equals(dernier[0]) && suite.length() < 300) { suite.append(n).append(" @").append(String.format("%.1f", s.g().distanceTo(s.autre()))).append(" > "); dernier[0] = n; }
+        });
         frapper(h, s);
         h.succeedWhen(() -> {
             h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ", attaque lancée " + vu[0]
-                    + ", vie du chef " + s.chef().getHealth() + ", " + s.g().paroles + ", " + s.g().resultat + ", invuln " + s.autre().isInvulnerable() + " " + s.autre().getAbilities().invulnerable + ")");
+                    + ", vie du chef " + s.chef().getHealth() + ", " + s.g().paroles + ", " + s.g().resultat + ", difficulté " + h.getLevel().getDifficulty() + ", frappé par " + s.autre().getLastHurtByMob() + ", suite " + suite + ")");
             h.assertTrue(TestsCaractere.aDit(s.g(), "chef_riposte"), "il le dit (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
         });
