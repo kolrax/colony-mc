@@ -1816,6 +1816,7 @@ public class Travailleur extends PathfinderMob {
         lettresADeposer.clear();
         lettresALire.clear();
         lettresAuCalme.clear();
+        Pecheur.oublier(this); // son coin de pêche était près du poste de ce chef-là
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
         coince.progres(getX(), getY(), getZ());
