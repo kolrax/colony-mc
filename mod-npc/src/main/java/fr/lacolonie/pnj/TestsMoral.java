@@ -250,11 +250,13 @@ public class TestsMoral {
         t.memoire.putBoolean("fuite", true);
         h.succeedWhen(() -> {
             h.assertTrue(t.mode == Travailleur.Mode.CHOMEUR, "parti (" + TestsJeu.etat(t, b[0]) + ")");
-            int pain = butin(t).getOrDefault(Items.BREAD, 0);
-            h.assertTrue(pain >= 1 && pain <= Moral.VOL_COUP && TestsBucheron.compte(d, Items.BREAD) == 10 - pain, "un petit butin : " + pain + " pains");
+            var pris = butin(t); // un peu de pain, ou du charbon qu'il vient de rendre : rien d'autre
+            int pain = pris.getOrDefault(Items.BREAD, 0), charbon = pris.getOrDefault(Items.COAL, 0);
+            h.assertTrue(pain + charbon >= 1 && pain + charbon <= Moral.VOL_COUP && pris.size() == 1, "un petit butin : " + pris);
+            h.assertTrue(TestsBucheron.compte(d, Items.BREAD) == 10 - pain, "le reste du pain au dépôt");
             h.assertTrue(Humeur.vide(t), "il ne part qu'avec son butin caché : rien en main, sur le dos ni dans le sac");
             h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND_PICKAXE) == 1 && TestsBucheron.compte(d, Items.IRON_CHESTPLATE) == 1
-                    && TestsBucheron.compte(d, Items.COAL) == 5, "pioche, plastron et charbon rendus au dépôt");
+                    && TestsBucheron.compte(d, Items.COAL) == 5 - charbon, "pioche, plastron et charbon rendus au dépôt");
             h.assertTrue(TestsJeu.distance(t, b[0]) >= 40, "loin du poste : " + TestsJeu.distance(t, b[0]));
             h.assertTrue(TestsVie.dites(t, "fuite_nuit") == 1, "il file en douce (" + t.paroles + ")");
             h.assertTrue(lettrePour(h, chef, "fuite"), "une lettre d'adieu au chef");
