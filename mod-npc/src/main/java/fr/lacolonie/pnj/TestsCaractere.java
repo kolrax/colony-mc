@@ -112,13 +112,18 @@ public class TestsCaractere {
                     TestsIA.regarder(chef, b);
                     b.parler(chef, "Tu es un bon à rien, Bertrand !");
                     b.hurt(h.getLevel().damageSources().playerAttack(chef), 1);
-                    h.assertTrue(b.moral == 55, "insulte et coup : 15 de moins (" + b.moral + ")");
                     avant[0] = b.moral;
                     b.parler(chef, "Pardon, Bertrand.");
+                },
+                // Les vérifications à part : une étape qui échoue est rejouée à chaque tick, sans refaire l'insulte ni le coup.
+                () -> {
+                    h.assertTrue(avant[0] == 55, "insulte et coup : 15 de moins (" + avant[0] + ")");
                     String r = IA.echange(b, 1);
                     h.assertTrue(r.startsWith("Toi : ") && Vie.vient("caractere_excuses", r.substring(6)), "il accepte (" + IA.echange(b, 2) + ")");
                     h.assertTrue(b.moral == avant[0] + 8, "la moitié revient (" + avant[0] + " → " + b.moral + ")");
-                    b.parler(chef, "Pardon, Bertrand.");
+                },
+                () -> b.parler(chef, "Pardon, Bertrand."),
+                () -> {
                     h.assertTrue(b.moral == avant[0] + 8, "une seule fois par offense (" + b.moral + ")");
                     h.assertFalse(Vie.vient("caractere_excuses", IA.echange(b, 1).substring(6)), "rien de plus à pardonner (" + IA.echange(b, 1) + ")");
                 },
@@ -138,6 +143,8 @@ public class TestsCaractere {
                     Humeur.cacher(b, new ItemStack(Items.BREAD, 2));
                     TestsIA.regarder(chef, b);
                     b.parler(chef, "Tu as gardé un diamant, Bertrand ?");
+                },
+                () -> {
                     String r = IA.echange(b, 1);
                     h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_avoue", r.substring(6)), "il avoue (" + IA.echange(b, 2) + ")");
                     h.assertTrue(diamantsCaches(b) == 0 && Humeur.butin(b) == 2, "le pain reste caché, plus de diamant (" + b.memoire.get("butin") + ")");
