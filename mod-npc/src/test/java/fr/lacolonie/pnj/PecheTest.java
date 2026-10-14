@@ -112,7 +112,7 @@ class PecheTest {
     void lesOrdresDuPecheur() {
         assertEquals(List.of(new Ordres.Mission("morue", "quantite", 10)), Ordres.lire("ramène 10 morues", "pecheur").missions);
         assertEquals(List.of(new Ordres.Mission("saumon", "quantite", 5)), Ordres.lire("Rapporte-moi cinq saumons", "pecheur").missions);
-        assertEquals("poisson", Ordres.lire("ramène 20 poissons", "pecheur").missions.get(0).id());
+        assertEquals(List.of(new Ordres.Mission("poisson", "quantite", 20)), Ordres.lire("ramène 20 poissons", "pecheur").missions);
         RepertoireTest.demande("va pêcher", "pecheur", "aller_pecher");
         RepertoireTest.demande("Pêche ici", "pecheur", "pecher_la");
         RepertoireTest.demande("va pêcher là-bas", "pecheur", "pecher_la");
