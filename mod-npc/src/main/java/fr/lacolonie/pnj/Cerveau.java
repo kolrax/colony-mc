@@ -68,7 +68,8 @@ final class Cerveau {
             t.finirAction("interrompu");
         }
         // Un monstre en vue d'un ouvrier qui ne se bat pas (lot 9, cahier 14.11) : un creeper, il s'en éloigne et prévient le
-        // guerrier, qui vient le tuer ; un autre près du poste, il le signale (Defense).
+        // guerrier, qui vient le tuer ; un autre, selon son caractère (Bravoure) : il le frappe, le signale, fuit ou s'éclipse ;
+        // le calme frappé se défend ici, avant la fuite plus bas (Defense).
         if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
         if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque

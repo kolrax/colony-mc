@@ -18,13 +18,15 @@
 #
 # VARIABLES (seulement celles-ci)
 #   {chef}   nom du chef de la colonie (partout)
-#   {nom}    prénom du guerrier prévenu, dans creeper_alerte seulement
-# Les répliques avec {nom} ne sortent que si la valeur est connue ; creeper_alerte garde au moins huit
-# répliques communes sans {nom}.
+#   {nom}    prénom du guerrier prévenu, dans creeper_alerte ; prénom du collègue envoyé à sa place, dans
+#            monstre_pousse. Nulle part ailleurs.
+# Les répliques avec {nom} ne sortent que si la valeur est connue ; creeper_alerte et monstre_pousse gardent
+# au moins huit répliques communes sans {nom}.
 #
 # ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle, sur {nom} ni sur le chef.
-# Aucun fait inventé : monstre_vu et guerrier_monstre_tue ne nomment pas l'espèce du monstre (le code ne la
-# donne pas) ; seules les sections creeper_ et guerrier_alerte_ok (réponse à creeper_alerte) parlent du creeper.
+# Aucun fait inventé : monstre_vu, guerrier_monstre_tue et les sections monstre_ ne nomment pas l'espèce du
+# monstre (le code ne la donne pas) ; seules les sections creeper_, monstre_creeper_recule et guerrier_alerte_ok
+# (réponse à creeper_alerte) parlent du creeper.
 #
 # CLÉS
 #   creeper_fuite          l'ouvrier voit un creeper près du chantier et s'éloigne en criant
@@ -39,6 +41,13 @@
 #   lettre_nuit_dehors     corps d'une lettre au chef (une ligne, deux ou trois phrases) : « je passe la nuit
 #                          dehors, je rentre demain ». Le code ajoute la salutation, la formule et la signature
 #                          (Messages.lettre) ; si le chef est tout près, le même texte est dit en bulle.
+#   monstre_charge         il fonce sur un monstre pour se battre avec ce qu'il a en main (surtout colérique)
+#   monstre_riposte        attaqué (ou un collègue l'est juste à côté), il se défend (surtout calme)
+#   monstre_panique        il fuit un monstre en criant (surtout peureux)
+#   monstre_eclipse        il s'éclipse en douce, sans prévenir personne (surtout fourbe)
+#   monstre_pousse         il envoie un collègue ({nom}) se battre à sa place (surtout fourbe)
+#   monstre_abattu         un ouvrier (pas un guerrier) vient de tuer un monstre : fier ou soulagé
+#   monstre_creeper_recule il voulait se battre, voit que c'est un creeper et recule quand même (orgueil blessé)
 # ------------------------------------------------------------
 
 # ============================================================
@@ -242,3 +251,142 @@ fourbe: La nuit est tombée en route. Je dors dehors, à mes frais. Je rentre de
 fourbe: Je passe la nuit loin du poste. Rien de grave. On en reparlera à la paie.
 colerique: La nuit est tombée trop tôt. Je dors dehors. Je rentre demain, et pas de reproches.
 colerique: Encore une nuit sur la dure. Je rentre demain. Prévois un bon repas.
+
+# ============================================================
+# FACE AUX MONSTRES (selon le caractère)
+# ============================================================
+
+[monstre_charge]
+À moi, la bête !
+Personne ne touche à notre chantier !
+Je m'en charge. Reculez !
+Viens par ici, que je te règle ton compte !
+Pas chez nous, sale bête !
+Je pose l'ouvrage et j'y vais !
+Tiens bon, j'arrive avec ce que j'ai en main !
+Hors d'ici ! Ce chantier est à nous !
+calme: Bon. Il faut bien que quelqu'un s'en charge.
+calme: Restez derrière moi. Je m'en occupe.
+peureux: J'y vais ! Ne me regardez pas, sinon je change d'avis !
+peureux: Courage, courage… À l'attaque, alors !
+fourbe: J'y vais. Et qu'on s'en souvienne à la paie.
+fourbe: Je le prends par-derrière. C'est plus sûr.
+colerique: Toi ! Tu vas voir ce qu'il en coûte de déranger mon travail !
+colerique: Une pelle, ça cogne aussi bien qu'une épée ! À l'assaut !
+colerique: Viens là, que je t'apprenne la politesse !
+
+[monstre_riposte]
+Tu m'as cherché, tu m'as trouvé !
+On ne frappe pas un honnête travailleur !
+Tu veux te battre ? Soit !
+Lâche-moi ! Tiens, prends ça !
+Pas touche ! Je me défends !
+Laisse mon collègue tranquille !
+Tu frappes l'un de nous, tu nous as tous sur le dos !
+Je ne voulais pas me battre. Tant pis pour toi.
+calme: Tu as frappé le premier. Je n'ai plus le choix.
+calme: Doucement. Je me défends, rien de plus.
+calme: On ne touche pas aux gens d'ici. Recule.
+peureux: Aïe ! Il m'a mordu ! Va-t'en, va-t'en !
+peureux: Je tape les yeux fermés ! Ça compte quand même !
+fourbe: Tu m'as frappé ? Je n'oublie jamais. Jamais.
+fourbe: Un coup pour moi, deux pour toi. Voilà le juste compte.
+colerique: Tu oses me frapper, moi ? Tu vas le regretter !
+colerique: Ah, tu veux de la bagarre ? En voilà !
+
+[monstre_panique]
+Au secours ! Un monstre !
+Sauve qui peut !
+Il me suit ! Ouvrez la porte !
+Je ne reste pas là ! Je file !
+À l'aide ! Il arrive par ici !
+Courez ! Ne vous retournez pas !
+Laissez-moi passer ! Il est juste derrière !
+Mes jambes, ne me lâchez pas maintenant !
+calme: Je m'écarte. Inutile de jouer les héros.
+calme: Je recule. Qu'on prévienne le guerrier !
+peureux: Il me regarde ! Il me regarde ! Au secours !
+peureux: Ce n'est pas mon métier, ça ! Laissez-moi rentrer !
+peureux: Ne me mange pas ! Je n'ai que la peau sur les os !
+fourbe: Fuyez par là ! Moi, je prends l'autre côté.
+fourbe: Chacun pour soi ! Les plus lents serviront d'appât !
+colerique: Je reviendrai avec une vraie arme ! Tu m'entends ?
+colerique: Je ne fuis pas, je vais chercher du renfort !
+
+[monstre_eclipse]
+Tiens, j'ai oublié quelque chose là-bas.
+Je vais voir ailleurs. Très loin d'ici.
+Pas de bruit. Personne ne m'a vu.
+Un petit détour s'impose.
+Mon travail m'attend de l'autre côté. Justement.
+Sur la pointe des pieds…
+Ce n'est pas mon affaire. Je m'en vais.
+Pas un mot. Je file à l'anglaise.
+calme: Inutile de rester ici. Je m'éloigne sans bruit.
+calme: D'autres s'en chargeront mieux que moi.
+peureux: Chut… S'il ne me voit pas, il ne me mange pas.
+peureux: Tout doux… Je recule… Personne ne bouge…
+fourbe: Qu'ils se débrouillent. Moi, je n'ai rien vu.
+fourbe: Si on me demande, j'étais au puits. Depuis le matin.
+fourbe: Les braves devant, les malins derrière.
+colerique: Je m'en vais. Pas par peur ! Ce n'est pas mon jour, voilà tout.
+colerique: Bah ! Ce monstre ne mérite même pas ma pelle.
+
+[monstre_pousse]
+Vas-y, toi. Tu es plus près.
+Toi, là ! Le monstre, c'est pour toi !
+Quelqu'un d'autre ? Moi, j'ai les mains prises.
+Allez, un brave ! Qui y va ?
+Ce n'est pas mon métier. Qui veut s'en charger ?
+Toi qui as une arme, va donc voir.
+Je t'ai vu te battre. Montre-nous encore !
+Courage, toi ! Je surveille tes arrières. De loin.
+{nom}, tu es plus près. Vas-y, toi.
+{nom} ! Le monstre, là-bas ! C'est pour toi !
+Allez, {nom}, montre-nous ce que tu vaux !
+calme: {nom}, tu te bats mieux que moi. Je te laisse faire.
+calme: Que quelqu'un d'habile s'en charge. Pas moi.
+peureux: {nom}, s'il te plaît, vas-y ! Moi, je tremble trop.
+peureux: Pas moi ! Quelqu'un d'autre ! N'importe qui !
+fourbe: {nom}, vas-y. Je dirai à {chef} que tu as été brave.
+fourbe: {nom}, on dit que personne n'a ton courage. Prouve-le.
+fourbe: Un monstre ! Toi, va voir. Moi, je garde les outils.
+colerique: {nom} ! Qu'est-ce que tu attends ? Fonce !
+colerique: Toi, va le chasser ! Moi, j'ai mal au dos !
+
+[monstre_abattu]
+Il ne bouge plus. Je l'ai eu !
+Et voilà le travail !
+Un monstre de moins près du chantier.
+Avec un outil de chantier, en plus !
+Qui a dit qu'il fallait une épée ?
+Ouf. C'est fini.
+Il est tombé. Je peux reprendre l'ouvrage.
+Je n'en reviens pas. Je l'ai abattu !
+calme: Voilà. Il ne fera de mal à personne.
+calme: C'est fait. Retournons au travail.
+peureux: Je l'ai eu ? Moi ? Je l'ai vraiment eu ?
+peureux: Mes mains tremblent encore… Mais il est par terre !
+fourbe: Vous avez tous vu ? C'est moi qui l'ai eu. Retenez-le.
+fourbe: Un exploit pareil vaut bien une pièce de plus, {chef}.
+colerique: Et ne reviens pas ! Ni toi ni tes cousins !
+colerique: Ha ! Qui veut encore se frotter à moi ?
+
+[monstre_creeper_recule]
+Un creeper… Bon. Celui-là, je le laisse.
+Ah non. Pas un creeper. Je recule.
+J'allais lui régler son compte. Mais c'est un creeper.
+Un creeper ? On ne frappe pas ce qui explose.
+Je recule. Mais ce n'est que partie remise !
+Ce n'est pas de la peur. C'est de la sagesse.
+Un creeper. Ma pelle n'y peut rien. Je m'écarte.
+Tu as de la chance d'être un creeper, toi !
+calme: Un creeper. Mieux vaut laisser ça au guerrier.
+calme: J'allais m'en charger. Mais pas un creeper.
+peureux: Un creeper ! J'avais du courage, et il vient de partir !
+peureux: J'y allais… Non. Pas un creeper. Surtout pas.
+fourbe: Un creeper ? Je le laisse aux héros. Il y en a bien un par ici.
+fourbe: Reculer devant un creeper, c'est malin, pas lâche.
+colerique: Grr ! Si tu n'étais pas un creeper, je t'aurais déjà mis par terre !
+colerique: Je recule ! Mais personne ne dira que j'ai eu peur, compris ?
+colerique: Le seul monstre qui triche ! Je m'écarte, mais je n'en pense pas moins.

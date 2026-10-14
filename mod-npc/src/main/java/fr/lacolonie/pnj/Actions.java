@@ -778,9 +778,12 @@ public final class Actions {
 
         Etat tick(Travailleur t) {
             if (!cible.isAlive() || cible.level() != t.level() || t.distanceToSqr(cible) > portee * portee) {
-                // Un monstre qu'il vient d'abattre : le guerrier le dit (lot 9), pas plus d'une fois toutes les 20 s.
+                // Un monstre qu'il vient d'abattre : il le dit (lot 9), pas plus d'une fois toutes les 20 s.
                 if (cible.isDeadOrDying() && cible instanceof net.minecraft.world.entity.monster.Enemy && cible.getLastHurtByMob() == t
-                        && "guerrier".equals(t.metier) && Cerveau.parfois(t, "monstre_tue", 20)) Besoins.dire(t, "guerrier_monstre_tue", null);
+                        && Cerveau.parfois(t, "monstre_tue", 20)) {
+                    if ("guerrier".equals(t.metier)) Besoins.dire(t, "guerrier_monstre_tue", null);
+                    else Defense.crier(t, "monstre_abattu", null); // un ouvrier qui s'est battu (son caractère : Defense)
+                }
                 return Etat.OK;
             }
             if (age > 20 * 60) return laisser(t, "trop_long");
