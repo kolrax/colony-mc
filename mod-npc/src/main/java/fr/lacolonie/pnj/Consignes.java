@@ -260,7 +260,11 @@ final class Consignes {
                 if (Trajets.TRAVAUX.contains(a)) {
                     // Le transporteur : le sens (« du dépôt à ce coffre »), et l'objet dit (« le fer »), sinon tout.
                     String objet = a.equals("oublier_trajets") ? null : filtre("", phrase, t);
-                    texte = (a.equals("trajet") ? Trajets.sens(phrase).name() : "") + "|" + (objet == null || objet.equals("tout") ? "" : objet);
+                    if (objet == null || objet.equals("tout")) objet = "";
+                    Trajets.Sens sens = Trajets.sens(phrase);
+                    String r = a.equals("oublier_trajets") ? null : Transporteur.verifierOrdre(t, a, sens, objet, lieu);
+                    if (r != null) return r;
+                    texte = (a.equals("trajet") ? sens.name() : "") + "|" + (objet.isEmpty() ? "" : Transporteur.nomDit(phrase)) + "|" + objet;
                 }
                 if (a.equals("planches") || a.equals("charbon")) {
                     // Le bois dit (« des planches de bouleau »), sinon n'importe quelle bûche (qui brûle, pour le charbon) ; la quantité dite.

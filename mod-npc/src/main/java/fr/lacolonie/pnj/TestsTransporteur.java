@@ -228,4 +228,36 @@ public class TestsTransporteur {
                         "le fer est passé d'un coffre à l'autre : " + compte(cz, Items.IRON_INGOT) + " (" + TestsJeu.etat(g, g.bureau) + ")"),
                 () -> TestsRepertoire.fin(e));
     }
+
+    /**
+     * Relecture (bloquant) : renvoyé, puis réembauché par un autre chef avec un autre poste à 30 blocs, il ne garde aucun
+     * trajet de l'ancien : le coffre de l'ancien chef reste plein. Coin 194, 200 blocs plus loin.
+     */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void renvoyeOublieSesTrajets(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 194 * 400 + 200, 60000);
+        Travailleur t = TestsJeu.employe(h, "transporteur", base, Vec3.atBottomCenterOf(base.west(2)), ItemStack.EMPTY);
+        t.forcerChunk();
+        ServerLevel l = h.getLevel();
+        BlockPos a = base.offset(6, 0, 0);
+        Container c = coffre(l, a, new ItemStack(Items.IRON_INGOT, 10));
+        trajet(t, a.asLong(), Trajets.DEPOT, "");
+        t.memoire.putLong("trajet_depart", a.asLong());
+        t.licencier();
+        // Réembauché ailleurs : un autre chef, un autre poste à 30 blocs.
+        BlockPos b = TestsJeu.sol(h, 194 * 400 + 230, 60000);
+        l.setBlockAndUpdate(b, ColoniePnj.BUREAU.get().defaultBlockState());
+        t.chef = UUID.randomUUID();
+        t.mode = Travailleur.Mode.TRAVAIL;
+        t.bureau = b;
+        t.prochainePaie = Monnaie.SANS_PAIE;
+        t.debut = 0;
+        t.fin = 0;
+        h.succeedWhen(() -> {
+            h.assertTrue(Transporteur.lire(t).isEmpty() && !t.memoire.contains("trajet_depart"), "aucun trajet de l'ancien chef : " + Transporteur.lire(t));
+            h.assertTrue(t.tickCount > 500, "il a eu le temps de travailler");
+            h.assertTrue(compte(c, Items.IRON_INGOT) == 10, "le coffre de l'ancien chef reste plein : " + compte(c, Items.IRON_INGOT) + " (" + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+        });
+    }
 }

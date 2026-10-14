@@ -106,21 +106,27 @@ final class Messages {
                 "Pas une trace, pas un bruit dans les bois d'ici. Je ne chasserai pas les bêtes de nos enclos, rassure-toi.");
         t("sans_gibier", "calme", "Les bêtes se sont éloignées. Elles reviendront. En attendant, montre-moi un autre bois si tu veux de la viande.");
         m("coffre_source_vide", "Rien à porter",
-                "Je reviens du coffre de {0} : il est vide. Je n'ai rien à porter pour l'instant.",
-                "Le coffre de {0} ne contient rien. J'attends qu'il se remplisse avant de refaire le chemin.",
-                "Rien à prendre au coffre de {0}. Je reste au poste et j'y retourne plus tard.");
-        t("coffre_source_vide", "fourbe", "Le coffre de {0} est vide. Je n'y ai pas touché, je le précise : il était vide en arrivant.");
+                "Je reviens du coffre {0} : il est vide. Je n'ai rien à porter pour l'instant.",
+                "Le coffre {0} ne contient rien. J'attends qu'il se remplisse avant de refaire le chemin.",
+                "Rien à prendre au coffre {0}. Je reste au poste et j'y retourne plus tard.");
+        t("coffre_source_vide", "fourbe", "Le coffre {0} est vide. Je n'y ai pas touché, je le précise : il était vide en arrivant.");
 
         m("coffre_plein", "Le coffre est plein",
-                "Le coffre de {0} est plein à craquer : je ne peux plus rien y déposer. Il faudrait le vider, ou en poser un autre à côté.",
-                "Plus une place dans le coffre de {0}. Je garde ma charge sur moi en attendant.",
-                "Le coffre de {0} déborde. Je ne vais pas poser tout ça par terre : il me faut un autre coffre.");
-        t("coffre_plein", "colerique", "Le coffre de {0} est plein ! Je porte cette charge pour rien. Vide-le, ou donne-m'en un autre !");
-        t("coffre_plein", "peureux", "Le coffre de {0} est plein… Je ne sais pas où poser ce que je porte. Dis-moi quoi faire, s'il te plaît.");
+                "Le coffre {0} est plein à craquer : je ne peux plus rien y déposer. Il faudrait le vider, ou en poser un autre à côté.",
+                "Plus une place dans le coffre {0}. Je rapporte ma charge d'où elle vient, et je réessaierai plus tard.",
+                "Le coffre {0} déborde. Je ne pose rien par terre : je rapporte tout, et il me faudrait un autre coffre.");
+        t("coffre_plein", "colerique", "Le coffre {0} est plein ! J'ai porté cette charge pour rien. Vide-le, ou donne-m'en un autre !");
+        t("coffre_plein", "peureux", "Le coffre {0} est plein… J'ai rapporté ce que je portais. Dis-moi quoi faire, s'il te plaît.");
 
         m("coffre_introuvable", "Je ne trouve pas le coffre",
-                "Je ne trouve plus le coffre de {0}. Il a été cassé ou déplacé ? Montre-moi le nouveau.",
-                "J'ai fait le chemin jusqu'à {0}, mais le coffre n'y est plus. Je ne peux ni prendre ni déposer.");
+                "Je ne trouve plus le coffre {0}. Il a été cassé ou déplacé ? Montre-moi le nouveau.",
+                "J'ai fait le chemin jusqu'au coffre {0}, mais il n'y est plus. Je ne peux ni prendre ni déposer.");
+        m("coffre_interdit", "Un coffre que je laisse",
+                "Le coffre {0} n'est plus à nous, ou il est trop loin du poste : je n'y touche plus. Montre-m'en un autre si tu veux.",
+                "Je laisse le coffre {0} : il est chez un voisin, ou trop loin de chez nous.");
+        m("coffre_inaccessible", "Je n'arrive pas au coffre",
+                "Je n'arrive pas jusqu'au coffre {0} : le chemin est barré. Je réessaierai plus tard.",
+                "Impossible d'atteindre le coffre {0}. Un mur, un trou ? Ouvre-moi un passage, et je reprends mes trajets.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");

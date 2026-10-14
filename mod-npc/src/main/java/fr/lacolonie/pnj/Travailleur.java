@@ -1800,6 +1800,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
     void licencier() {
+        Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
         chef = null;
         chefNom = "";
@@ -1817,6 +1818,9 @@ public class Travailleur extends PathfinderMob {
         lettresALire.clear();
         lettresAuCalme.clear();
         Pecheur.oublier(this); // son coin de pêche était près du poste de ce chef-là
+        memoire.remove("champs"); // les champs du fermier aussi
+        memoire.remove("plants_laisses");
+        Fermier.TOURS.remove(this);
         arrivee = System.currentTimeMillis();
         finirAction("licencie");
         coince.progres(getX(), getY(), getZ());
@@ -1864,6 +1868,11 @@ public class Travailleur extends PathfinderMob {
             signaler(p, "Il te faut " + Reglages.texte(prime) + " dans ton inventaire pour la prime d'embauche.");
             return;
         }
+        // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
+        Transporteur.oublier(this);
+        memoire.remove("champs");
+        memoire.remove("plants_laisses");
+        Fermier.TOURS.remove(this);
         chef = p.getUUID();
         chefNom = p.getName().getString();
         mode = Mode.SUIVRE;
