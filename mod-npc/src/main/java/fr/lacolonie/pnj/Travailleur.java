@@ -942,6 +942,7 @@ public class Travailleur extends PathfinderMob {
                 if (d == null || d.reponse().isEmpty()) { lireLettreSansIA(l); return; }
                 Ordres.Lecture li = d.lecture();
                 li.quotidien |= seul.quotidien;
+                Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
                 String reponse = reponseImposee ? dit : d.reponse(); // un refus ou un marché : c'est lui qui répond, pas l'IA
@@ -1639,19 +1640,25 @@ public class Travailleur extends PathfinderMob {
      * Le chef lui demande ce que son métier ne fait pas (« va me chercher 64 fers », au bûcheron) : il nomme l'ouvrier du
      * bon métier chez le même chef, le plus proche ({@link Relais}), et propose d'aller le prévenir ; la réponse est attendue
      * 60 s comme un marché ({@link #enAttente}, {@link #relais}). Par lettre, il fait passer la demande tout de suite.
-     * Personne de ce métier chez le chef : il le dit. Une seule recherche des ouvriers, à l'ordre (pas à chaque tick).
+     * Personne de ce métier chez le chef : il le dit. Un collègue qui a entendu la même phrase ({@code l.avec}) s'en charge
+     * lui-même : rien à dire ; un collègue qui a déjà cette mission : il le dit, sans la lui faire recommencer. Ni à terre ni
+     * en grève : pas candidat. Une seule recherche des ouvriers, à l'ordre (pas à chaque tick).
      */
     private String proposerRelais(Ordres.Lecture l, String met, Ordres.Mission m, ServerPlayer enFace) {
         List<String> f = Relais.fournisseurs(met, m.id(), metier);
         List<Travailleur> autres = level().getServer() == null ? List.of() : ColoniePnj.tous(level().getServer()).stream()
                 .filter(o -> o != this && chef.equals(o.chef) && o.mode != Mode.CHOMEUR && f.contains(o.metier) && Metier.catalogue(o.metier, m.id()) != null).toList();
+        if (autres.stream().anyMatch(o -> l.avec.contains(o.getUUID()))) return "";
+        for (Travailleur o : autres)
+            if (o.missions.stream().anyMatch(x -> x.id.equals(m.id()) && !Metier.remplie(o, x))) return Messages.corps(this, "relais_deja", Relais.qui(o.prenom, Metier.nom(o.metier)));
+        autres = autres.stream().filter(o -> o.mode != Mode.GREVE && !o.aTerre).toList();
         int i = Relais.choisir(f, autres.stream().map(o -> new Relais.Candidat(o.metier, o.level() == level() ? distanceToSqr(o) : Double.MAX_VALUE)).toList());
         String objet = Relais.objet(Metier.nomCommande(met, m.id()));
         if (i < 0) return Messages.corps(this, "relais_personne", Relais.personne(met), Metier.nom(met).toLowerCase(), objet);
         Travailleur o = autres.get(i);
-        Relais.Commande c = new Relais.Commande(o.getUUID(), o.prenom, o.metier, m, l.ajouter, l.quotidien, l.texte);
+        Relais.Commande c = new Relais.Commande(o.getUUID(), o.prenom, o.metier, m, l.ajouter, l.quotidien, chef);
         String qui = Relais.qui(o.prenom, Metier.nom(o.metier));
-        if (enFace == null) { transmettre(c, false); return Messages.corps(this, "relais_lettre", qui); }
+        if (enFace == null) { transmettre(c, false); reponseImposee = true; return Messages.corps(this, "relais_lettre", qui); }
         reponseImposee = true;
         enAttente = l;
         attenteFin = level().getGameTime() + 1200;
@@ -1674,20 +1681,29 @@ public class Travailleur extends PathfinderMob {
 
     /**
      * La commande du chef remise à l'ouvrier du bon métier : il la reçoit comme si le chef la lui avait donnée par écrit
-     * (son obéissance, ses souvenirs, ses missions). {@code surPlace} : le messager est à côté de lui et le lui dit.
+     * (son obéissance, ses missions), la commande seule (pas la phrase du chef, qui pouvait viser le messager).
+     * {@code surPlace} : le messager est à côté de lui et le lui dit. Le collègue refuse ou marchande : le chef le sait
+     * (de vive voix s'il est là, sinon par une lettre), et le collègue garde la commande en suspens un jour, le temps
+     * d'une réponse par lettre. Le messager renvoyé entre-temps : la commande part quand même, pour le chef d'origine.
      */
     void transmettre(Relais.Commande c, boolean surPlace) {
         Travailleur o = level().getServer() == null ? null : Courrier.trouver(level().getServer(), c.cible());
-        if (o == null || o.chef == null || !o.chef.equals(chef)) { dire(Messages.corps(this, "relais_perdu", c.prenom())); return; }
+        if (o == null || o.chef == null || !o.chef.equals(c.chef())) { if (chef != null) dire(Messages.corps(this, "relais_perdu", c.prenom())); return; }
+        String quoi = Metier.nomMission(o.metier, new Mission(c.mission().id(), c.mission().mode(), c.mission().nombre()));
         Ordres.Lecture x = new Ordres.Lecture();
-        x.texte = c.texte();
+        x.texte = "De la part du chef : " + quoi + ".";
         x.missions.add(c.mission());
         x.ajouter = c.ajouter();
         x.quotidien = c.quotidien();
-        if (surPlace) dire(Messages.corps(this, "relais_message", o.prenom, Metier.nomMission(o.metier, new Mission(c.mission().id(), c.mission().mode(), c.mission().nombre()))));
+        if (surPlace) { o.ecouter(this, 60); dire(Messages.corps(this, "relais_message", o.prenom, quoi)); }
         String r = o.appliquer(x, null);
         if (surPlace) o.getLookControl().setLookAt(this);
-        o.dire(o.reponseImposee ? r : Messages.corps(o, "relais_recu", prenom));
+        if (o.missions.stream().anyMatch(y -> y.id.equals(c.mission().id()))) { o.dire(Messages.corps(o, "relais_recu", prenom)); return; }
+        // Il refuse ou marchande : le chef doit le savoir.
+        o.dire(r);
+        if (o.enAttente == x) o.attenteFin = Math.max(o.attenteFin, level().getGameTime() + 24000);
+        String rapport = Messages.corps(this, "relais_refuse", o.prenom, quoi, r);
+        Courrier.ecrireTexte(chef != null && chef.equals(c.chef()) ? this : o, "Ta commande : " + quoi, rapport, false);
     }
 
     /** Pourquoi il refuse : sa paie en retard, sa faim, sa fatigue, les coups de son chef (ce jour-ci), ou le cœur n'y est plus. */
@@ -1735,7 +1751,12 @@ public class Travailleur extends PathfinderMob {
         }
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.
         String relaye = null;
-        if (!parRegle && chef != null) for (var e : l.pourAutres.entrySet()) { r.add(proposerRelais(l, e.getKey(), e.getValue(), enFace)); relaye = e.getKey(); break; }
+        if (!parRegle && chef != null && mode != Mode.GREVE) for (var e : l.pourAutres.entrySet()) {
+            String dit = proposerRelais(l, e.getKey(), e.getValue(), enFace); // vide : le collègue l'a entendu lui-même
+            if (!dit.isEmpty()) r.add(dit);
+            relaye = e.getKey();
+            break;
+        }
         String dejaDit = relaye;
         l.horsMetier.forEach((met, id) -> { if (!met.equals(dejaDit)) r.add(Messages.corps(this, "dit_hors_metier", Metier.nom(metier).toLowerCase(), "« " + Metier.nomCommande(met, id) + " »")); });
 
@@ -1816,7 +1837,7 @@ public class Travailleur extends PathfinderMob {
         if (r.isEmpty() && l.intentions.contains(Ordres.Intention.SALUT)) r.add(Messages.corps(this, "dit_salut"));
         if (l.intentions.contains(Ordres.Intention.MERCI) && reaction.isEmpty()) r.add(Messages.corps(this, "dit_merci"));
         majNom();
-        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty())
+        if (r.isEmpty() && !l.intentions.contains(Ordres.Intention.SAC) && l.faire.isEmpty() && relaye == null)
             return enFace == null || !reaction.isEmpty() && reactionSuffit ? "" : Messages.corps(this, "dit_pas_compris");
         return String.join(" ", r);
     }

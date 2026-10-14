@@ -257,6 +257,7 @@ public final class Actions {
                 return Etat.OK;
             }
             if (age > 20 * 90 || coince()) return echec("trop_loin");
+            if (t.distanceToSqr(o) <= 64) o.ecouter(t, 40); // « Bertrand, attends ! » : il s'arrête pour l'écouter
             t.diag = "va prévenir " + c.prenom();
             marcher(t, o.position(), 1.0);
             return Etat.EN_COURS;

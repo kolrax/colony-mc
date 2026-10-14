@@ -45,6 +45,8 @@ final class Ordres {
         final Map<String, String> horsMetier = new LinkedHashMap<>();
         /** Les mêmes, dites comme une mission (quantité, mode), pour l'ouvrier du bon métier ({@link Relais}). Pas celles d'une règle. */
         final Map<String, Mission> pourAutres = new LinkedHashMap<>();
+        /** Ceux qui ont entendu la même phrase (rempli par Dialogue) : un collègue qui l'a entendue s'en charge lui-même. */
+        final Set<java.util.UUID> avec = new java.util.HashSet<>();
         /** Les actions du répertoire demandées (gestes, déplacements, tâches, paroles…). */
         final List<Faire> faire = new ArrayList<>();
         /** La phrase elle-même (on y cherche qui ou quoi est visé), et la place de l'ouvrier dans le groupe à qui elle est dite. */

@@ -14,8 +14,8 @@ import java.util.UUID;
 final class Relais {
     private Relais() {}
 
-    /** La commande à porter : à qui (identifiant, prénom, métier), la mission telle que le chef l'a dite, et sa phrase. */
-    record Commande(UUID cible, String prenom, String metier, Ordres.Mission mission, boolean ajouter, boolean quotidien, String texte) {}
+    /** La commande à porter : à qui (identifiant, prénom, métier), la mission telle que le chef l'a dite, et de quel chef. */
+    record Commande(UUID cible, String prenom, String metier, Ordres.Mission mission, boolean ajouter, boolean quotidien, UUID chef) {}
 
     /** Un ouvrier du même chef : son métier et sa distance au carré (très grande dans un autre monde). */
     record Candidat(String metier, double distance2) {}
@@ -43,6 +43,16 @@ final class Relais {
             if (meilleur >= 0) return meilleur;
         }
         return -1;
+    }
+
+    /**
+     * L'IA a lu la phrase à sa façon (ses missions, sans ce qui n'est pas du métier) : on y remet les commandes pour les
+     * autres métiers que l'interpréteur a lues, sauf un objet que l'IA a déjà pris pour une mission à lui.
+     */
+    static void reprendre(Ordres.Lecture ia, Ordres.Lecture seul) {
+        seul.pourAutres.forEach((met, m) -> {
+            if (ia.missions.stream().noneMatch(x -> x.id().equals(m.id()))) ia.pourAutres.putIfAbsent(met, m);
+        });
     }
 
     /** Le chef répond oui à « je vais le prévenir ? » (« oui », « vas-y », « d'accord », « file »…). */

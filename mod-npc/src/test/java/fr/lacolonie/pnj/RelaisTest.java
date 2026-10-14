@@ -28,6 +28,21 @@ class RelaisTest {
     }
 
     @Test
+    void lIANeFaitPasSauterLeRelais() {
+        // « Ramène 10 fers et 20 bûches », au bûcheron : l'IA a pris les bûches, le fer reste à relayer.
+        Ordres.Lecture ia = new Ordres.Lecture();
+        ia.missions.add(new Ordres.Mission("tout", "quantite", 20));
+        Relais.reprendre(ia, Ordres.lire("Ramène 10 fers et 20 bûches", "bucheron"));
+        assertEquals(Map.of("mineur", new Ordres.Mission("fer", "quantite", 10)), ia.pourAutres);
+        // Un objet que l'IA a pris pour une mission à lui n'est pas relayé.
+        Ordres.Lecture pris = new Ordres.Lecture(), seul = new Ordres.Lecture();
+        pris.missions.add(new Ordres.Mission("viande", "quantite", 5));
+        seul.pourAutres.put("eleveur", new Ordres.Mission("viande", "quantite", 5));
+        Relais.reprendre(pris, seul);
+        assertTrue(pris.pourAutres.isEmpty());
+    }
+
+    @Test
     void quiFournitQuoi() {
         assertEquals(List.of("mineur"), Relais.fournisseurs("mineur", "fer", "bucheron"));
         assertEquals(List.of("eleveur", "chasseur"), Relais.fournisseurs("eleveur", "viande", "mineur"));
