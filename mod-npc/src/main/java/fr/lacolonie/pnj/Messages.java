@@ -88,8 +88,11 @@ final class Messages {
                 "Plus de {0} à cuire. Le four est chaud, mais la marmite est vide.",
                 "Mon four attend, et moi aussi : il me faudrait du {0} cru au dépôt.");
         t("rien_a_cuire", "fourbe", "Plus rien à cuire. Je pourrais bien faire rôtir une poule de l'éleveur, mais il compte ses bêtes. Laisse-moi de quoi cuisiner au dépôt.");
+        m("four_inaccessible", "Je n'atteins plus mon four",
+                "Je n'arrive plus jusqu'à mon four, vers {0} : le passage est barré. Ma fournée y est restée ; prends-la, ou dégage le chemin.",
+                "Mon four, vers {0}, est hors de ma portée. J'y ai laissé une fournée : je ne peux pas aller la chercher.");
         m("sans_four", "Il me faut un four",
-                "Je ne trouve aucun four libre près du poste : ni fourneau, ni fumoir, ni feu de camp allumé. Bâtis-m'en un à quelques pas, et je cuirai ce qu'il y a au dépôt.",
+                "Je ne trouve aucun four libre près du poste : ni fourneau, ni fumoir. Bâtis-m'en un à quelques pas, et je cuirai ce qu'il y a au dépôt.",
                 "Sans four, je ne peux rien cuire. Un fourneau ou un fumoir près du poste, et je m'y mets.");
 
         m("arc", "Il me faut un arc",

@@ -60,6 +60,11 @@ class CuisineTest {
         assertEquals(10, Cuisine.aCuire(10, false));
         assertEquals("poisson", Cuisine.manque("minecraft:salmon"));
         assertEquals("gibier", Cuisine.manque(""));
+        // Ce qu'on lui demande de cuire.
+        assertEquals("poisson", Cuisine.sorte("Cuis le poisson"));
+        assertEquals("viande", Cuisine.sorte("Fais rôtir le bœuf"));
+        assertEquals("patate", Cuisine.sorte("Cuis les pommes de terre"));
+        assertEquals("", Cuisine.sorte("Enfourne"));
     }
 
     @Test
@@ -72,6 +77,8 @@ class CuisineTest {
         RepertoireTest.demande("Cuis la viande", "mineur", "-");
         assertEquals(List.of(new Ordres.Mission("pain", "quantite", 10)), Ordres.lire("Ramène 10 pains", "cuisinier").missions);
         assertEquals(List.of(new Ordres.Mission("viande", "quantite", 5)), Ordres.lire("Rapporte 5 steaks", "cuisinier").missions);
+        // Relecture : le pain est aussi l'affaire du fermier (« fais 10 pains ») : pas « hors de son métier ».
+        assertTrue(Ordres.lire("Fais 10 pains", "fermier").horsMetier.isEmpty(), "le fermier ne refuse pas le pain");
         for (String n : List.of("Le cuisinier, viens", "La cuisinière, viens", "Le boulanger, viens", "La boulangère, viens"))
             assertEquals(java.util.Set.of("cuisinier"), Ordres.adresse(n, List.of("Jean"), List.of("cuisinier")).metiersUn(), n);
     }

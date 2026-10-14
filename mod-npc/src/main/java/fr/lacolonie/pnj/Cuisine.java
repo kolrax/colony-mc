@@ -86,6 +86,18 @@ final class Cuisine {
         return new Choix(Quoi.CUIRE, Math.min(n, FOURNEE), cru, manqueBle ? "sans_ble" : null);
     }
 
+    /**
+     * Ce qu'on lui demande de cuire (« cuis le poisson ») : « poisson », « patate » ou « viande » (une entrée de son catalogue,
+     * le cuit), ou vide (tout le cru).
+     */
+    static String sorte(String phrase) {
+        String n = " " + Ordres.normaliser(phrase) + " ";
+        if (n.matches(".* (poissons?|morues?|saumons?|cabillauds?|harengs?) .*")) return "poisson";
+        if (n.matches(".* (patates?|pommes? de terre) .*")) return "patate";
+        if (n.matches(".* (viandes?|boeufs?|porcs?|cochons?|moutons?|poulets?|poules?|lapins?|gibiers?|rotis?|cotelettes?|steaks?|gigots?|lard) .*")) return "viande";
+        return "";
+    }
+
     /** Ce qui lui manque, en un mot, pour la lettre « rien à cuire » : « poisson » s'il cuisait du poisson, sinon « gibier ». */
     static String manque(String dernierCru) {
         return dernierCru != null && (dernierCru.contains("cod") || dernierCru.contains("salmon") || dernierCru.contains("fish")) ? "poisson" : "gibier";

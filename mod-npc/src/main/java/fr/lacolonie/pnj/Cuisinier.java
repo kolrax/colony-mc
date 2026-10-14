@@ -7,7 +7,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -16,14 +15,11 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
-import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.CampfireBlockEntity;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.SmokerBlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.items.IItemHandler;
 
@@ -35,7 +31,7 @@ import java.util.Map;
 
 /**
  * Le cuisinier, ou boulanger (lot 6, cahier 4.2). Il travaille près du poste, avec un vrai four posé à 16 blocs au plus
- * (un fumoir d'abord, sinon un fourneau, sinon un feu de camp allumé) : il y met ce qu'il trouve de cru au dépôt (viande,
+ * (un fumoir d'abord, sinon un fourneau ; jamais un feu de camp, qui jette le cuit par terre) : il y met ce qu'il trouve de cru au dépôt (viande,
  * poisson, pommes de terre : tout ce que les recettes de cuisson du jeu changent en nourriture), avec juste le combustible
  * qu'il faut (charbon de bois, charbon, puis planches ou bûches en dernier recours), surveille la cuisson et porte ce qui est
  * cuit au dépôt. Il fait aussi le pain avec le blé du dépôt ({@link Fermier.Pain}, 3 blés pour un pain) pour en garder toujours
@@ -47,9 +43,11 @@ import java.util.Map;
  */
 final class Cuisinier extends Metier {
     static final Actions.Filtre PAIN = Actions.Filtre.de("minecraft:bread");
-    /** Les combustibles, dans l'ordre où il les prend : charbon de bois, charbon, puis le bois (planches avant bûches). */
+    /** Les combustibles, dans l'ordre où il les prend : charbon de bois, charbon, puis des planches (jamais de bûches : elles servent ailleurs). */
     static final List<Actions.Filtre> FEUX = List.of(Actions.Filtre.de("minecraft:charcoal"), Actions.Filtre.de("minecraft:coal"),
-            Actions.Filtre.de("#minecraft:planks"), Actions.Filtre.de("#minecraft:logs_that_burn"));
+            Actions.Filtre.de("#minecraft:planks"));
+    /** Une fournée qu'il n'atteint pas : il réessaie au bout de tant de secondes, et l'oublie (lettre au chef) après {@link #ESSAIS} échecs. */
+    static final int REESSAI = 600, ESSAIS = 3;
     /** Une fournée qui ne cuit plus (le feu éteint) au bout de tant de secondes : il va la sortir. */
     static final int ETEINT = 15;
 
@@ -82,12 +80,17 @@ final class Cuisinier extends Metier {
         CompoundTag f = t.memoire.getCompound("fournee");
         if (!f.isEmpty()) {
             int e = etat(l, f);
+            boolean barre = f.getLong("reessai") > Cerveau.temps(t); // le four inaccessible : il réessaiera plus tard
             if (e < 0) t.memoire.remove("fournee"); // le four a disparu (cassé : ce qu'il contenait est tombé là)
-            else if (e > 0) { Cerveau.lancer(t, new Defourner()); return; }
+            else if (e > 0 && !barre) { Cerveau.lancer(t, new Defourner()); return; }
             else {
                 int pains = pains(t, b);
                 if (pains > 0) { Cerveau.lancer(t, new Fermier.Pain(pains, true)); return; }
                 BlockPos four = BlockPos.of(f.getLong("four"));
+                if (barre) {
+                    if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) Cerveau.rentrer(t); else Cerveau.attendre(t, 20);
+                    return;
+                }
                 if (t.distanceToSqr(Vec3.atBottomCenterOf(four)) > 4 * 4) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(four), 2.5)); return; }
                 t.getLookControl().setLookAt(Vec3.atCenterOf(four));
                 if (t.getRandom().nextInt(4) == 0) Besoins.parler(t, "cuisine_odeur", null);
@@ -112,6 +115,10 @@ final class Cuisinier extends Metier {
             }
         }
     }
+
+    /** Sa fournée au four est à sortir même si ses commandes sont remplies (sinon elle resterait au four). */
+    @Override
+    boolean enCours(Travailleur t) { return !t.memoire.getCompound("fournee").isEmpty(); }
 
     /** Il porte autre chose que ce qu'il garde (son bateau). */
     boolean aDeposer(Travailleur t) {
@@ -141,20 +148,25 @@ final class Cuisinier extends Metier {
     }
 
     /** Ce qu'il fait maintenant ({@link Cuisine#choisir}) ; {@code pain} : le pain compte (pas pour « cuis la viande »). */
-    static Plan plan(Travailleur t, Bureau.Entite b, ServerLevel l, boolean pain) {
+    static Plan plan(Travailleur t, Bureau.Entite b, ServerLevel l, boolean pain) { return plan(t, b, l, pain, ""); }
+
+    /** Pareil, en ne cuisant que la {@code sorte} demandée (« poisson », « viande », « patate » ; vide : tout le cru). */
+    static Plan plan(Travailleur t, Bureau.Entite b, ServerLevel l, boolean pain, String sorte) {
         int[] r = reserve(t);
         int ble = t.compter(Fermier.BLE) + b.compter(Fermier.BLE), auDepot = b.compter(PAIN);
         int pains = pain ? Cuisine.pains(auDepot, r[0], r[1], ble) : 0;
         boolean manqueBle = pain && auDepot < r[0] && ble < 3;
         if (pains > 0) return new Plan(Cuisine.choisir(pains, false, Map.of(), false, false), null);
-        // Le cru du dépôt (selon les recettes du fourneau : le fumoir et le feu de camp cuisent les mêmes aliments).
-        Map<String, Integer> crus = crus(t, b, l, RecipeType.SMELTING);
+        // Le cru du dépôt (selon les recettes du fourneau : le fumoir cuit les mêmes aliments).
+        Metier.Commande k = sorte.isEmpty() ? null : Metier.catalogue("cuisinier", sorte);
+        Actions.Filtre voulu = k == null ? null : k.objet;
+        Map<String, Integer> crus = crus(t, b, l, RecipeType.SMELTING, voulu);
         BlockPos four = crus.isEmpty() ? null : four(t, l);
         boolean feu = false;
         if (four != null) {
             RecipeType<?> type = type(l.getBlockEntity(four));
-            if (type != RecipeType.SMELTING) crus = crus(t, b, l, type);
-            feu = type == RecipeType.CAMPFIRE_COOKING || Cuisine.chauffe(1, feux(t, b, new ArrayList<>())) != null;
+            if (type != RecipeType.SMELTING) crus = crus(t, b, l, type, voulu);
+            feu = Cuisine.chauffe(1, feux(t, b, new ArrayList<>())) != null;
         }
         return new Plan(Cuisine.choisir(0, manqueBle, crus, four != null, feu), four);
     }
@@ -169,9 +181,13 @@ final class Cuisinier extends Metier {
     }
 
     /** Ce qu'il peut cuire, par objet (identifiant), dans l'ordre du dépôt : les semences moins celles qu'il laisse au fermier. */
-    static Map<String, Integer> crus(Travailleur t, Bureau.Entite b, ServerLevel l, RecipeType<?> type) {
+    static Map<String, Integer> crus(Travailleur t, Bureau.Entite b, ServerLevel l, RecipeType<?> type, Actions.Filtre voulu) {
         Map<Item, Integer> n = new LinkedHashMap<>();
-        for (ItemStack s : contenu(t, b)) if (!s.isEmpty() && cuit(l, type, s.getItem()) != Items.AIR) n.merge(s.getItem(), s.getCount(), Integer::sum);
+        for (ItemStack s : contenu(t, b)) {
+            if (s.isEmpty()) continue;
+            Item c = cuit(l, type, s.getItem());
+            if (c != Items.AIR && (voulu == null || voulu.objet(new ItemStack(c)))) n.merge(s.getItem(), s.getCount(), Integer::sum);
+        }
         Map<String, Integer> r = new LinkedHashMap<>();
         n.forEach((i, k) -> {
             int c = Cuisine.aCuire(k, i instanceof BlockItem);
@@ -213,19 +229,21 @@ final class Cuisinier extends Metier {
         });
     }
 
-    /** La sorte de cuisson d'un four : fumoir, fourneau, feu de camp ; null pour le reste (un haut fourneau ne cuit pas la viande). */
+    /**
+     * La sorte de cuisson d'un four : fumoir ou fourneau ; null pour le reste (un haut fourneau ne cuit pas la viande ; un feu
+     * de camp jette le cuit par terre, où il se perdrait si le cuisinier s'en allait).
+     */
     static RecipeType<?> type(BlockEntity e) {
         if (e instanceof SmokerBlockEntity) return RecipeType.SMOKING;
         if (e instanceof FurnaceBlockEntity) return RecipeType.SMELTING;
-        if (e instanceof CampfireBlockEntity) return RecipeType.CAMPFIRE_COOKING;
         return null;
     }
 
     // --- Le four ------------------------------------------------------------------------------------------------
 
     /**
-     * Un four libre à lui, à {@link Cuisine#RAYON} blocs du poste : un fumoir d'abord, puis un fourneau, puis un feu de camp
-     * allumé ; le plus proche à égalité. Il passe en revue les blocs spéciaux des tronçons voisins (pas de fouille bloc à bloc).
+     * Un four libre à lui, à {@link Cuisine#RAYON} blocs du poste : un fumoir d'abord, puis un fourneau ; le plus proche à
+     * égalité. Il passe en revue les blocs spéciaux des tronçons voisins (pas de fouille bloc à bloc).
      */
     static BlockPos four(Travailleur t, ServerLevel l) {
         BlockPos poste = t.bureau, mieux = null;
@@ -239,7 +257,7 @@ final class Cuisinier extends Metier {
                     BlockPos q = e.getBlockPos();
                     RecipeType<?> type = type(e);
                     if (type == null || Math.abs(q.getY() - poste.getY()) > 6 || Fermier.distance(q, poste) > Cuisine.RAYON * Cuisine.RAYON) continue;
-                    int r = type == RecipeType.SMOKING ? 0 : type == RecipeType.SMELTING ? 1 : 2;
+                    int r = type == RecipeType.SMOKING ? 0 : 1;
                     double dd = q.distSqr(poste);
                     if (r > rang || r == rang && dd >= d || !libre(e) || laisse && q.asLong() == t.memoire.getLong("four_laisse") || !Fermier.aLui(t, q)) continue;
                     mieux = q;
@@ -250,18 +268,15 @@ final class Cuisinier extends Metier {
         return mieux;
     }
 
-    /** Rien dedans (ni à cuire, ni combustible, ni rien de cuit) ; un feu de camp : allumé et vide. Il ne se sert jamais d'un four où un autre a mis quelque chose. */
+    /** Rien dedans (ni à cuire, ni combustible, ni rien de cuit). Il ne se sert jamais d'un four où un autre a mis quelque chose. */
     static boolean libre(BlockEntity e) {
-        if (e instanceof AbstractFurnaceBlockEntity f) return f.getItem(0).isEmpty() && f.getItem(1).isEmpty() && f.getItem(2).isEmpty();
-        if (e instanceof CampfireBlockEntity c) return allume(c) && c.getItems().stream().allMatch(ItemStack::isEmpty);
-        return false;
+        return e instanceof AbstractFurnaceBlockEntity f && f.getItem(0).isEmpty() && f.getItem(1).isEmpty() && f.getItem(2).isEmpty();
     }
 
     static boolean allume(BlockEntity e) {
         if (e == null) return false;
         var s = e.getBlockState();
-        if (s.hasProperty(AbstractFurnaceBlock.LIT)) return s.getValue(AbstractFurnaceBlock.LIT);
-        return s.hasProperty(CampfireBlock.LIT) && s.getValue(CampfireBlock.LIT);
+        return s.hasProperty(AbstractFurnaceBlock.LIT) && s.getValue(AbstractFurnaceBlock.LIT);
     }
 
     /** Sa fournée : -1 le four n'est plus là, 0 elle cuit, 1 elle est cuite (ou le feu s'est éteint) : à sortir. */
@@ -272,7 +287,6 @@ final class Cuisinier extends Metier {
         Item cru = objet(f.getString("cru"));
         boolean eteint = !allume(e) && l.getGameTime() - f.getLong("t") > ETEINT * 20L;
         if (e instanceof AbstractFurnaceBlockEntity fo) return !fo.getItem(0).is(cru) || eteint ? 1 : 0;
-        if (e instanceof CampfireBlockEntity c) return c.getItems().stream().noneMatch(s -> s.is(cru)) || eteint ? 1 : 0;
         return -1;
     }
 
@@ -306,7 +320,7 @@ final class Cuisinier extends Metier {
         final Item cru;
         final int voulu;
         Item feu;
-        int cuire, chauffe, etape;
+        int cuire, chauffe, etape, debut;
 
         Enfourner(BlockPos four, String cru, int voulu) {
             super("enfourner");
@@ -324,30 +338,28 @@ final class Cuisinier extends Metier {
                 RecipeType<?> type = type(e);
                 if (type == null || !libre(e)) return echec("four_occupe");
                 if (cuit(l, type, cru) == Items.AIR) return echec("pas_de_recette");
-                int place = e instanceof CampfireBlockEntity c ? c.getItems().size() : Cuisine.FOURNEE;
-                int n = Math.min(Math.min(voulu, place), new ItemStack(cru).getMaxStackSize());
+                int n = Math.min(Math.min(voulu, Cuisine.FOURNEE), new ItemStack(cru).getMaxStackSize());
                 int manque = n - t.compter(Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(cru).toString()));
                 if (manque > 0) b.prendre(Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(cru).toString()), manque).forEach(s -> Guerrier.garder(t, b, s));
                 cuire = Math.min(n, t.compter(Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(cru).toString())));
                 if (cuire == 0) return echec("rien_au_depot");
-                if (type != RecipeType.CAMPFIRE_COOKING) {
-                    List<Item> quoi = new ArrayList<>();
-                    Cuisine.Chauffe c = Cuisine.chauffe(cuire, feux(t, b, quoi));
-                    if (c == null) { Cerveau.ecrire(t, "sans_combustible", Cerveau.UN_JOUR, "sans_combustible"); return echec("sans_combustible"); }
-                    feu = quoi.get(c.feu());
-                    cuire = c.cuire();
-                    Actions.Filtre ff = Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(feu).toString());
-                    int k = c.nombre() - t.compter(ff);
-                    if (k > 0) b.prendre(ff, k).forEach(s -> Guerrier.garder(t, b, s));
-                    chauffe = Math.min(c.nombre(), t.compter(ff));
-                }
+                List<Item> quoi = new ArrayList<>();
+                Cuisine.Chauffe c = Cuisine.chauffe(cuire, feux(t, b, quoi));
+                if (c == null) { Cerveau.ecrire(t, "sans_combustible", Cerveau.UN_JOUR, "sans_combustible"); return echec("sans_combustible"); }
+                feu = quoi.get(c.feu());
+                cuire = c.cuire();
+                Actions.Filtre ff = Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(feu).toString());
+                int k = c.nombre() - t.compter(ff);
+                if (k > 0) b.prendre(ff, k).forEach(s -> Guerrier.garder(t, b, s));
+                chauffe = Math.min(c.nombre(), t.compter(ff));
                 t.swing(InteractionHand.MAIN_HAND);
                 etape = 1;
+                debut = age; // la marche jusqu'au poste ne compte pas dans celle jusqu'au four
                 nouveauBut();
             }
             // Au four.
             if (!aPortee(t)) {
-                if (coince() || age > 20 * 60) {
+                if (coince() || age - debut > 20 * 60) {
                     // Un four qu'il n'atteint pas (clos, en hauteur) : laissé dix minutes, sans chercher de chemin à chaque fois.
                     t.memoire.putLong("four_laisse", four.asLong());
                     t.memoire.putLong("four_laisse_t", Cerveau.temps(t) + 600);
@@ -369,16 +381,6 @@ final class Cuisinier extends Metier {
                 f.setItem(0, dedans);
                 f.setItem(1, bois);
                 f.setChanged();
-            } else if (e instanceof CampfireBlockEntity c) {
-                var r = c.getCookableRecipe(new ItemStack(cru));
-                for (int i = 0; i < cuire && r.isPresent(); i++) {
-                    ItemStack un = sortir(t, cru, 1);
-                    if (un.isEmpty()) break;
-                    if (!c.placeFood(t, un, r.get().value().getCookingTime())) { t.ranger(un); break; }
-                    if (!un.isEmpty()) t.ranger(un); // pas pris par le feu : il le garde
-                    mis++;
-                }
-                if (mis == 0) return echec("four_occupe");
             }
             CompoundTag f = new CompoundTag();
             f.putLong("four", four.asLong());
@@ -399,7 +401,8 @@ final class Cuisinier extends Metier {
 
     /**
      * Il sort sa fournée : seulement ce qu'il y a mis (le cuit, et s'il n'a pas tout cuit, le cru et le combustible qui restent),
-     * autant que son sac en prend ; le reste attend dans le four. Un feu de camp : il ramasse le cuit tombé autour.
+     * autant que son sac en prend ; le reste attend dans le four (il reviendra). Le four hors d'atteinte : il réessaie dans
+     * {@link #REESSAI} secondes (il fait le pain en attendant) ; après {@link #ESSAIS} échecs, il l'oublie et l'écrit au chef.
      */
     static final class Defourner extends Actions.Action {
         Defourner() { super("defourner"); }
@@ -410,7 +413,18 @@ final class Cuisinier extends Metier {
             if (f.isEmpty()) return Actions.Etat.OK;
             BlockPos four = BlockPos.of(f.getLong("four"));
             if (!Actions.aPortee(t, four)) {
-                if (coince() || age > 20 * 60) return echec("inaccessible");
+                if (coince() || age > 20 * 60) {
+                    int echecs = f.getInt("echecs") + 1;
+                    if (echecs >= ESSAIS) {
+                        t.memoire.remove("fournee");
+                        Courrier.ecrire(t, "four_inaccessible", four.getX() + " " + four.getY() + " " + four.getZ());
+                    } else {
+                        f.putInt("echecs", echecs);
+                        f.putLong("reessai", Cerveau.temps(t) + REESSAI);
+                        t.memoire.put("fournee", f);
+                    }
+                    return echec("inaccessible");
+                }
                 marcher(t, Vec3.atBottomCenterOf(four), 1.0);
                 return Actions.Etat.EN_COURS;
             }
@@ -418,7 +432,7 @@ final class Cuisinier extends Metier {
             t.getLookControl().setLookAt(Vec3.atCenterOf(four));
             BlockEntity e = l.getBlockEntity(four);
             Item cru = objet(f.getString("cru")), cuit = objet(f.getString("cuit")), feu = objet(f.getString("feu"));
-            int n = f.getInt("n"), sortis = 0;
+            int n = f.getInt("n");
             boolean reste = false;
             if (e instanceof AbstractFurnaceBlockEntity fo) {
                 // Fini (plus rien à cuire) ou le feu éteint : il reprend aussi son cru et son combustible qui restent.
@@ -435,40 +449,16 @@ final class Cuisinier extends Metier {
                     int pp = avant - non.getCount();
                     if (!non.isEmpty()) { s.grow(non.getCount()); reste = true; } // le sac plein : le reste attend au four
                     if (k == 1) f.putInt("nf", f.getInt("nf") - pp);
-                    else { n -= pp; if (k == 2) sortis += pp; }
+                    else n -= pp;
                 }
                 fo.setChanged();
                 if (!eteint && !fo.getItem(0).isEmpty() && fo.getItem(0).is(cru)) reste = true; // il en reste à cuire
-            } else if (e instanceof CampfireBlockEntity c) {
-                for (ItemEntity ie : l.getEntitiesOfClass(ItemEntity.class, new AABB(four).inflate(3))) {
-                    if (n <= 0 || !ie.isAlive() || !ie.getItem().is(cuit)) continue;
-                    ItemStack s = ie.getItem().copy();
-                    ItemStack pris = s.split(Math.min(n, s.getCount()));
-                    int avant = pris.getCount();
-                    ItemStack non = t.inventaire.addItem(pris);
-                    int pp = avant - non.getCount();
-                    n -= pp;
-                    sortis += pp;
-                    t.take(ie, pp);
-                    s.grow(non.getCount());
-                    if (s.isEmpty()) ie.discard(); else { ie.setItem(s); reste = true; }
-                }
-                if (!allume(c)) // éteint (la pluie) : il reprend ce qu'il y avait mis
-                    for (int i = 0; i < c.getItems().size() && n > 0; i++)
-                        if (c.getItems().get(i).is(cru) && t.inventaire.canAddItem(c.getItems().get(i))) {
-                            t.inventaire.addItem(c.getItems().get(i).copy());
-                            c.getItems().set(i, ItemStack.EMPTY);
-                            n--;
-                            c.setChanged();
-                            l.sendBlockUpdated(four, c.getBlockState(), c.getBlockState(), 3);
-                        }
-                if (c.getItems().stream().anyMatch(s -> s.is(cru))) reste = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
             f.putInt("n", n);
-            if (reste && n > 0 && e != null) t.memoire.put("fournee", f);
+            // Il reste de ses affaires au four (son sac était plein, ou ça cuit encore) : il garde la fournée et reviendra.
+            if (reste && e != null) t.memoire.put("fournee", f);
             else t.memoire.remove("fournee");
-            if (sortis > 0 && t.getRandom().nextInt(8) == 0) Besoins.parler(t, "cuisine_brule", null); // pour rire : rien n'est perdu
             return Actions.Etat.OK;
         }
     }
@@ -476,15 +466,19 @@ final class Cuisinier extends Metier {
     // --- Les ordres ---------------------------------------------------------------------------------------------
 
     /** « Cuis la viande » (cuire), « va cuisiner » (cuisiner : le pain d'abord s'il en manque). */
-    static Actions.Action consigne(Travailleur t, String mode, Consignes.Consigne c) { return new Ordre(mode.equals("cuisiner")); }
+    static Actions.Action consigne(Travailleur t, String mode, Consignes.Consigne c) {
+        return new Ordre(mode.equals("cuisiner"), mode.equals("cuire") ? c.texte : "");
+    }
 
     /** Sur ordre : il fait tout de suite ce qu'il ferait de lui-même, et dit ce qu'il en est. */
     static final class Ordre extends Actions.Action {
         final boolean pain;
+        /** « Cuis le poisson » : seulement cette sorte (une entrée du catalogue ; vide : tout le cru). */
+        final String sorte;
         Actions.Action sous;
         String fini = "";
 
-        Ordre(boolean pain) { super("cuisiner"); this.pain = pain; }
+        Ordre(boolean pain, String sorte) { super("cuisiner"); this.pain = pain; this.sorte = sorte == null ? "" : sorte; }
 
         @Override
         void fin(Travailleur t) {
@@ -516,7 +510,7 @@ final class Cuisinier extends Metier {
                 Voix.dire(t, "J'ai déjà une fournée au four, chef. Patience, ça cuit.", "calme");
                 return Actions.Etat.OK;
             }
-            Plan p = plan(t, b, l, pain);
+            Plan p = plan(t, b, l, pain, sorte);
             Cuisine.Choix c = p.choix;
             switch (c.quoi()) {
                 case PAIN -> { sous = new Fermier.Pain(c.nombre(), false); return Actions.Etat.EN_COURS; }
@@ -525,9 +519,11 @@ final class Cuisinier extends Metier {
                     fini = "C'est au four, chef. Ça sentira bon d'ici peu.";
                     return Actions.Etat.EN_COURS;
                 }
-                case SANS_FOUR -> Voix.dire(t, "Je n'ai pas de four libre près du poste, chef : un fourneau, un fumoir ou un feu de camp, et je m'y mets.", "calme");
+                case SANS_FOUR -> Voix.dire(t, "Je n'ai pas de four libre près du poste, chef : un fourneau ou un fumoir, et je m'y mets.", "calme");
                 case SANS_COMBUSTIBLE -> Voix.dire(t, "Je n'ai rien pour chauffer le four, chef : ni charbon ni bois au dépôt.", "calme");
-                default -> Voix.dire(t, !pain ? "Il n'y a rien de cru à cuire au dépôt, chef."
+                default -> Voix.dire(t, !pain ? (sorte.equals("poisson") ? "Il n'y a pas de poisson cru au dépôt, chef."
+                        : sorte.equals("viande") ? "Il n'y a pas de viande crue au dépôt, chef." : sorte.equals("patate") ? "Il n'y a pas de pommes de terre à cuire au dépôt, chef."
+                        : "Il n'y a rien de cru à cuire au dépôt, chef.")
                         : "sans_ble".equals(c.lettre()) ? "Plus de blé pour le pain, chef, et rien de cru à cuire au dépôt."
                         : "Le pain est en réserve, chef, et il n'y a rien de cru à cuire au dépôt.", "calme");
             }

@@ -138,6 +138,9 @@ final class Ordres {
         NOMS.put("cuisinier", cuisinier);
     }
 
+    /** Ce qu'un métier sait faire aussi, bien que ce soit au catalogue d'un autre : le fermier fait du pain (pas « hors de son métier »). */
+    static final Map<String, Set<String>> AUSSI = Map.of("fermier", Set.of("pain"));
+
     /** Des mots qui désignent le bois, même entourés d'autres (« des bûches de bouleau ») : ils ne comptent pas comme « n'importe quel bois ». */
     static final Set<String> MOTS_DU_BOIS = Set.of("bois", "buche", "buches", "rondin", "rondins", "tronc", "troncs");
 
@@ -371,7 +374,7 @@ final class Ordres {
                     if (metier.equals("guerrier")) md = "stock"; // garder, ronde, escorter : sans quantité
                     int nombre = combien != null && combien > 0 ? Math.min(combien, 100_000) : md.equals("stock") ? 64 : 32;
                     if (l.missions.stream().noneMatch(x -> x.id().equals(id))) l.missions.add(new Mission(id, md, nombre));
-                } else l.horsMetier.putIfAbsent(metierObjet, id);
+                } else if (!AUSSI.getOrDefault(metier, Set.of()).contains(id)) l.horsMetier.putIfAbsent(metierObjet, id);
                 enAttente = null;
                 i += longueur;
                 continue;

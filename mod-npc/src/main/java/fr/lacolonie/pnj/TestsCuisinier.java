@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -20,7 +21,7 @@ import java.util.UUID;
 /**
  * Lot 6, le cuisinier (cahier 4.2) : il cuit au fourneau le bœuf cru du dépôt et dépose les steaks, fait le pain avec le blé,
  * écrit quand il n'a rien pour chauffer le four, ne touche ni au four d'un voisin ni à un four où un autre a mis quelque
- * chose, et ne perd rien en route. Coins 180 à 184 du monde plat. Tous échouent sur l'ancien code : le métier n'existait pas.
+ * chose, ne perd rien en route, et « cuis le poisson » cuit le poisson. Coins 180 à 185 du monde plat. Tous échouent sur l'ancien code : le métier n'existait pas.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -160,5 +161,31 @@ public class TestsCuisinier {
             h.assertTrue(TestsBucheron.compte(d, Items.COBBLESTONE) == 20 * 64, "ses pierres au dépôt");
             fin(t);
         });
+    }
+
+    /**
+     * Relecture : « cuis le poisson » devant 10 bœufs et 2 morues : c'est la morue qu'il met au fumoir, pas le cru le plus
+     * abondant (échouait avant : il prenait le bœuf).
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void cuisLePoissonSurOrdre(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        BlockPos base = TestsJeu.sol(h, 185 * 400, 60000);
+        Vec3 c = Vec3.atBottomCenterOf(base);
+        chef.moveTo(c.x, c.y, c.z);
+        Travailleur t = TestsJeu.employe(h, "cuisinier", base, c.add(-0.5, 0, 2.5), ItemStack.EMPTY);
+        t.chef = chef.getUUID();
+        t.prenom = "Mahaut";
+        t.forcerChunk();
+        four(h, base.east(4), Blocks.SMOKER);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.setItem(0, new ItemStack(Items.BEEF, 10));
+        d.depot.setItem(1, new ItemStack(Items.COD, 2));
+        d.depot.setItem(2, new ItemStack(Items.COAL, 2));
+        TestsIA.etapes(h, chef, new Travailleur[]{t},
+                () -> t.parler(chef, "Cuis le poisson"),
+                () -> h.assertTrue("minecraft:cod".equals(t.memoire.getCompound("fournee").getString("cru")),
+                        "la morue au four : " + t.memoire.getCompound("fournee") + " (" + TestsRepertoire.c(t) + ", " + TestsJeu.etat(t, t.bureau) + ")"),
+                () -> t.discard());
     }
 }

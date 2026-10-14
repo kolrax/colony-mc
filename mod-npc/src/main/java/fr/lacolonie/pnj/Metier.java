@@ -58,6 +58,9 @@ public abstract class Metier {
      */
     boolean sortir(Travailleur t) { return false; }
 
+    /** Un ouvrage commencé à finir même quand ses commandes sont remplies (la fournée du cuisinier au four). */
+    boolean enCours(Travailleur t) { return false; }
+
     /** En mode « Suivre » : vrai s'il a trouvé mieux à faire que suivre (le guerrier combat). */
     boolean escorter(Travailleur t) { return false; }
 
