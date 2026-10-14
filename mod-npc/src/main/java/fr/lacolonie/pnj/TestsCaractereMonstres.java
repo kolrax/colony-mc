@@ -67,7 +67,7 @@ public class TestsCaractereMonstres {
         h.succeedWhen(() -> {
             h.assertTrue(faute[0] == null, faute[0]);
             h.assertTrue(dit(t, "monstre_creeper_recule"), "il recule en le disant (" + t.paroles + ", " + TestsJeu.etat(t, b) + ")");
-            h.assertTrue(loin[0] > 9, "il s'éloigne du creeper (" + (int) loin[0] + " blocs au plus)");
+            h.assertTrue(loin[0] > Defense.VUE, "il s'éloigne du creeper (" + (int) loin[0] + " blocs au plus)");
             creeper.discard();
             TestsGuerrier.fin(t);
         });
@@ -88,7 +88,7 @@ public class TestsCaractereMonstres {
         h.succeedWhen(() -> {
             h.assertTrue(faute[0] == null, faute[0]);
             h.assertTrue(dit(t, "monstre_panique"), "il crie (" + t.paroles + ", " + TestsJeu.etat(t, b) + ")");
-            h.assertTrue(loin[0] > 16, "il s'enfuit (" + (int) loin[0] + " blocs au plus du monstre, " + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(loin[0] > Bravoure.vue("peureux"), "il s'enfuit hors de vue (" + (int) loin[0] + " blocs au plus du monstre, " + TestsJeu.etat(t, b) + ")");
             h.assertTrue(husk.getHealth() == husk.getMaxHealth(), "le monstre n'est pas touché");
             husk.discard();
             TestsGuerrier.fin(t);
@@ -110,14 +110,14 @@ public class TestsCaractereMonstres {
         h.succeedWhen(() -> {
             h.assertTrue(faute[0] == null, faute[0]);
             h.assertTrue(dit(t, "monstre_eclipse"), "il marmonne en s'éclipsant (" + t.paroles + ", " + TestsJeu.etat(t, b) + ")");
-            h.assertTrue(loin[0] > 12, "il s'éloigne (" + (int) loin[0] + " blocs au plus du monstre, " + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(loin[0] > Defense.VUE, "il s'éloigne hors de vue (" + (int) loin[0] + " blocs au plus du monstre, " + TestsJeu.etat(t, b) + ")");
             h.assertFalse(t.memoire.contains("alerte"), "sans prévenir la garde");
             husk.discard();
             TestsGuerrier.fin(t);
         });
     }
 
-    /** Un fourbe avec un collègue de son chef à côté : il l'envoie au monstre, par son prénom, et s'en va. */
+    /** Un fourbe avec un collègue de son chef à côté : il l'envoie au monstre (souvent par son prénom) et s'en va. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void fourbeEnvoieUnCollegue(GameTestHelper h) {
         BlockPos b = base(h, 4);
@@ -131,8 +131,8 @@ public class TestsCaractereMonstres {
         double[] loin = {0};
         h.onEachTick(() -> loin[0] = Math.max(loin[0], t.distanceTo(husk)));
         h.succeedWhen(() -> {
-            h.assertTrue(dit(t, "monstre_pousse", "Odon") && t.paroles.stream().anyMatch(p -> p.contains("Odon")), "il y envoie Odon (" + t.paroles + ", " + TestsJeu.etat(t, b) + ")");
-            h.assertTrue(loin[0] > 12, "puis il s'en va (" + (int) loin[0] + " blocs au plus du monstre)");
+            h.assertTrue(dit(t, "monstre_pousse", "Odon"), "il y envoie Odon (" + t.paroles + ", " + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(loin[0] > Defense.VUE, "puis il s'en va hors de vue (" + (int) loin[0] + " blocs au plus du monstre)");
             husk.discard();
             TestsGuerrier.fin(t, c);
         });

@@ -69,7 +69,8 @@ final class Defense {
         if (t.action instanceof Actions.Attaquer) return false; // il se bat déjà
         LivingEntity vu = autre;
         if (vu != null && caractere && reagir(t, vu, vus, collegues)) return true;
-        if (vu != null && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
+        // Le fourbe ne prévient personne, même quand il n'a pas où filer.
+        if (vu != null && !(caractere && t.temperament.equals("fourbe")) && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
             signaler(t, vu);
             Besoins.dire(t, "monstre_vu", null);
         }
