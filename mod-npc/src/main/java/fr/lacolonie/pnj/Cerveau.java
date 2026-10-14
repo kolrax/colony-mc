@@ -51,7 +51,7 @@ final class Cerveau {
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
         // Sur le chemin du retour, la nuit le prend encore loin du poste (cahier 14.12) : il s'arrête et campe (plus bas).
         if (t.action instanceof Actions.Aller a && t.bureau != null && Abri.nuitDehors(t) && a.cible.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 25
-                && !t.memoire.getBoolean("fuite") && !t.memoire.getBoolean("rappel")) t.finirAction("interrompu");
+                && !t.isInWater() && !t.isPassenger() && !t.memoire.getBoolean("fuite") && !t.memoire.getBoolean("rappel")) t.finirAction("interrompu");
         // En révolte, même en plein combat : payé, apaisé, ou le chef parti loin, il pose les armes aussitôt (Humeur).
         if (t.memoire.getBoolean("revolte")) Humeur.calmer(t);
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
@@ -102,6 +102,9 @@ final class Cerveau {
             return;
         }
 
+        // Un trou à reboucher (son abri au matin, ou un creusage interrompu) : avant tout le reste (Abri).
+        if (Abri.sortir(t)) return;
+
         // Blessé (moins de la moitié de sa vie), hors combat : il mange s'il a de quoi, pour reprendre des forces (le guerrier
         // a son propre soin, avec les potions et le dépôt : Guerrier.soigner).
         if (!m.combattant && t.getHealth() < t.getMaxHealth() * 0.5 && t.faim < 17 && t.manger()) {
@@ -139,9 +142,6 @@ final class Cerveau {
         if (Consignes.executer(t)) return;
 
         boolean dehors = t.bureau != null && !t.chezLui(t.blockPosition());
-
-        // Au matin, il sort d'abord de son abri de la nuit, en rebouchant son trou (Abri).
-        if (Abri.sortir(t)) return;
 
         // Le courrier : lire au poste les lettres de son chef, y poser les siennes.
         boolean libre = t.mode == Travailleur.Mode.TRAVAIL && t.bureau != null && !dehors; // pas s'il te suit ou t'attend
@@ -193,13 +193,11 @@ final class Cerveau {
             if (dehors) {
                 // En expédition, il campe sur place ; à moins d'une heure de marche, il rentre plutôt dormir chez lui.
                 if (Travailleur.heuresDeMarche(t.blockPosition(), t.bureau) < 1) { rentrer(t); return; }
-                if (!mem.getBoolean("camp")) {
+                if (!mem.getBoolean("camp") && (t.expedition || Abri.nuit(t.level()))) {
                     mem.putBoolean("camp", true);
-                    Besoins.dire(t, "nuit_camp", null);
-                    // Sorti pour la journée, la nuit l'a pris loin du poste (cahier 14.12) : il l'écrit à son chef.
-                    String lettre = t.expedition ? null : Besoins.texte(t, "lettre_nuit_dehors", null, null);
-                    if (lettre != null) Courrier.ecrireTexte(t, Messages.objet("camp"), lettre, false);
-                    else ecrire(t, "camp", 600, "camp", (int) t.distanceAuBureau(), duree(t.heuresRestantes()));
+                    if (Abri.nuit(t.level())) Besoins.dire(t, "nuit_camp", null);
+                    // En expédition, la lettre du camp ; sorti pour la journée, il écrit une fois à l'abri (Abri.Creuser).
+                    if (t.expedition) ecrire(t, "camp", 600, "camp", (int) t.distanceAuBureau(), duree(t.heuresRestantes()));
                 }
                 // La nuit, il se creuse un trou et s'y enferme jusqu'au matin (Abri) ; sinon il dort à la belle étoile.
                 if (Abri.abriter(t)) return;

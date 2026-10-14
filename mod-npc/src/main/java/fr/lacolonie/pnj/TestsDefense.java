@@ -39,6 +39,8 @@ public class TestsDefense {
     public static void creeperAlerteLeGuerrier(GameTestHelper h) {
         BlockPos b = base(h, 0);
         Travailleur g = guerrier(h, b);
+        g.inventaire.addItem(new ItemStack(Items.BOW));
+        g.inventaire.addItem(new ItemStack(Items.ARROW, 32));
         Travailleur m = TestsJeu.employe(h, "mineur", b, Vec3.atBottomCenterOf(b.east(20)), new ItemStack(Items.IRON_PICKAXE));
         m.chef = g.chef;
         TestsBucheron.depot(g).proprietaire = g.chef;
@@ -54,6 +56,31 @@ public class TestsDefense {
             h.assertFalse(creeper.isAlive(), "le creeper est tué (" + TestsJeu.etat(g, b) + ")");
             h.assertTrue(TestsCaractere.aDit(g, "guerrier_monstre_tue"), "le guerrier le dit (" + g.paroles + ")");
             TestsGuerrier.fin(g, m);
+        });
+    }
+
+    /** Sans arc, le guerrier appelé pour un creeper ne va pas le frapper au corps à corps : il le dit et le laisse. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void sansArcPasDeCorpsACorpsAvecUnCreeper(GameTestHelper h) {
+        BlockPos b = base(h, 6);
+        Travailleur g = guerrier(h, b);
+        Travailleur m = TestsJeu.employe(h, "mineur", b, Vec3.atBottomCenterOf(b.east(20)), new ItemStack(Items.IRON_PICKAXE));
+        m.chef = g.chef;
+        TestsBucheron.depot(g).proprietaire = g.chef;
+        m.mode = Travailleur.Mode.ATTENDRE;
+        m.forcerChunk();
+        var creeper = TestsGuerrier.fige(h, EntityType.CREEPER, b.east(27));
+        String[] faute = {null};
+        h.onEachTick(() -> {
+            if (g.action instanceof Actions.Attaquer a && a.cible == creeper && faute[0] == null) faute[0] = "il part frapper le creeper au corps à corps (" + TestsJeu.etat(g, b) + ")";
+        });
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertTrue(faute[0] == null, faute[0]);
+            h.assertTrue(creeper.isAlive(), "le creeper n'est pas frappé");
+            h.assertTrue(TestsCaractere.aDit(m, "creeper_alerte"), "le mineur a bien appelé (" + m.paroles + ")");
+            creeper.discard();
+            TestsGuerrier.fin(g, m);
+            h.succeed();
         });
     }
 
@@ -127,6 +154,43 @@ public class TestsDefense {
         });
     }
 
+    @BeforeBatch(batch = "abri_rappel")
+    public static void avantRappel(ServerLevel l) { heureAvant = l.getDayTime(); l.setDayTime(14000); }
+
+    @AfterBatch(batch = "abri_rappel")
+    public static void apresRappel(ServerLevel l) { l.setDayTime(heureAvant); }
+
+    /**
+     * Rappelé par son chef au milieu du creusage de son abri : il rebouche le trou commencé avec ce qu'il en a tiré (rien
+     * de plus, rien de moins dans son sac), puis il rentre.
+     */
+    @GameTest(template = "vide", batch = "abri_rappel", timeoutTicks = 1200)
+    public static void trouInterrompuRebouche(GameTestHelper h) {
+        BlockPos bureau = base(h, 7);
+        BlockPos ici = TestsJeu.sol(h, 7 * 400 + 200, 114000);
+        Travailleur t = TestsJeu.employe(h, "mineur", bureau, Vec3.atBottomCenterOf(ici), new ItemStack(Items.IRON_PICKAXE));
+        t.debut = 6;
+        t.fin = 18;
+        t.forcerChunk();
+        BlockPos[] trou = {null};
+        int[] prof = {0};
+        h.succeedWhen(() -> {
+            if (trou[0] == null) {
+                var e = Abri.trou(t);
+                h.assertTrue(e != null && e.getInt("prof") >= 1 && t.action instanceof Abri.Creuser, "il commence son trou (" + TestsJeu.etat(t, bureau) + ")");
+                trou[0] = Abri.place(e);
+                prof[0] = e.getInt("prof");
+                t.finirAction("interrompu"); // « Rentre ! »
+                t.memoire.putBoolean("rappel", true);
+            }
+            h.assertFalse(t.memoire.contains("abri"), "il rebouche son trou (" + TestsJeu.etat(t, bureau) + ")");
+            for (int k = 1; k <= prof[0]; k++) h.assertTrue(Monde.solide(h.getLevel(), trou[0].below(k)), "le trou est rebouché (" + k + " sur " + prof[0] + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:dirt")) == 0, "il a reposé ce qu'il a tiré, ni plus ni moins (" + t.compter(Actions.Filtre.de("minecraft:dirt")) + " terre)");
+            h.assertTrue(TestsJeu.distance(t, ici) > 4, "puis il rentre (" + TestsJeu.etat(t, bureau) + ")");
+            t.discard();
+        });
+    }
+
     @BeforeBatch(batch = "abri")
     public static void avantAbri(ServerLevel l) { heureAvant = l.getDayTime(); l.setDayTime(14000); }
 
@@ -151,8 +215,9 @@ public class TestsDefense {
         h.succeedWhen(() -> {
             ServerLevel l = h.getLevel();
             if (!cache[0]) {
-                h.assertTrue(t.memoire.contains("abri"), "il se creuse un abri (" + TestsJeu.etat(t, bureau) + ")");
-                BlockPos toit = BlockPos.of(t.memoire.getLong("abri"));
+                var e = Abri.trou(t);
+                h.assertTrue(e != null && e.getBoolean("ferme"), "il se creuse un abri (" + TestsJeu.etat(t, bureau) + ")");
+                BlockPos toit = Abri.place(e).below();
                 h.assertTrue(t.blockPosition().equals(toit.below(2)) && t.action instanceof Actions.Reposer, "il s'y repose (" + TestsJeu.etat(t, bureau) + ")");
                 h.assertTrue(Monde.solide(l, toit), "le trou est fermé au-dessus de sa tête");
                 h.assertTrue(TestsCaractere.aDit(t, "nuit_cache") && TestsCaractere.aDit(t, "nuit_camp"), "il le dit (" + t.paroles + ")");

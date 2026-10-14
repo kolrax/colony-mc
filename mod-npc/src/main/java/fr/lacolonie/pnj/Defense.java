@@ -40,11 +40,11 @@ final class Defense {
             else if (autre == null) autre = e;
         }
         if (creeper != null) {
-            // Seulement s'il a où aller : sinon il ne lâcherait son travail que pour rien.
+            // Il fuit seulement s'il a où aller (sinon il ne lâcherait son travail que pour rien) ; il appelle la garde de toute façon.
             Vec3 loin = DefaultRandomPos.getPosAway(t, 16, 7, creeper.position());
-            if (loin != null) { fuir(t, creeper, loin); return true; }
+            if (fuir(t, creeper, loin)) return true;
         }
-        LivingEntity vu = autre != null ? autre : creeper;
+        LivingEntity vu = autre;
         if (vu != null && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
             signaler(t, vu);
             Besoins.dire(t, "monstre_vu", null);
@@ -52,8 +52,11 @@ final class Defense {
         return false;
     }
 
-    /** Il s'éloigne du creeper et prévient la garde : de vive voix, ou en courant vers le guerrier s'il est plus loin. */
-    static void fuir(Travailleur t, Creeper c, Vec3 loin) {
+    /**
+     * Il prévient la garde du creeper : de vive voix, ou en courant vers le guerrier s'il est plus loin ; et il s'en éloigne
+     * ({@code loin}, null s'il n'a pas où aller). Vrai s'il fuit.
+     */
+    static boolean fuir(Travailleur t, Creeper c, Vec3 loin) {
         signaler(t, c);
         Actions.Fuir f = new Actions.Fuir(c);
         f.refuge = loin;
@@ -70,7 +73,9 @@ final class Defense {
                 if (versG.x * versC.x + versG.z * versC.z < 0) { f.refuge = g.position(); f.duree = 20 * 40; }
             }
         }
+        if (f.refuge == null) return false;
         Cerveau.lancer(t, f);
+        return true;
     }
 
     /** Il retient le monstre vu, pour la garde ({@link Guerrier#veille} le lit pendant 30 s). */
@@ -93,6 +98,10 @@ final class Defense {
      */
     static void appeler(Travailleur g, LivingEntity m) {
         if (g.mode != Travailleur.Mode.TRAVAIL || g.aTerre || Blessures.horsDeCombat(g)) return;
+        // Sans arc, il ne va pas frapper un creeper au corps à corps : il le laisse s'éloigner.
+        if (!Guerrier.aSaPortee(g, m)) { Cerveau.dire(g, "creeper_sans_arc", 60, "Sans arc, je ne m'approche pas de ça. Écartez-vous, qu'il s'en aille !"); return; }
+        // Il y va déjà (sa veille l'a vu) : il répond seulement.
+        if (g.action instanceof Actions.Attaquer a && a.cible == m) { if (Cerveau.parfois(g, "alerte_ok", 10)) Besoins.dire(g, "guerrier_alerte_ok", null); return; }
         if (g.action instanceof Actions.Attaquer a && a.cible.isAlive() && Monde.hostile(a.cible) || g.action instanceof Actions.Echapper
                 || g.action instanceof Consignes.Faire f && f.e.comportement().equals("combat")) return;
         Besoins.dire(g, "guerrier_alerte_ok", null);
