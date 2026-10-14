@@ -30,6 +30,13 @@ public class TestsCaractereMonstres {
         return t;
     }
 
+    /** Un monstre figé (sans IA), persistant pour ne pas disparaître loin des joueurs, mais marqué sauvage (Defense.SAUVAGE). */
+    static <T extends net.minecraft.world.entity.Mob> T sauvage(GameTestHelper h, EntityType<T> type, BlockPos p) {
+        T m = TestsGuerrier.fige(h, type, p);
+        m.addTag(Defense.SAUVAGE);
+        return m;
+    }
+
     /** La réplique de defense.txt, ou sa phrase de secours. */
     static boolean dit(Travailleur t, String cle, String nom) { return TestsCaractere.aDit(t, cle) || t.paroles.contains(Defense.secours(cle, nom)); }
 
@@ -40,7 +47,7 @@ public class TestsCaractereMonstres {
     public static void colereFrappeLeMonstre(GameTestHelper h) {
         BlockPos b = base(h, 0);
         Travailleur t = mineur(h, b, "colerique");
-        var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(8));
+        var husk = sauvage(h, EntityType.HUSK, b.east(8));
         boolean[] frappe = {false};
         h.onEachTick(() -> { if (t.action instanceof Actions.Attaquer a && a.cible == husk) frappe[0] = true; });
         h.succeedWhen(() -> {
@@ -57,7 +64,7 @@ public class TestsCaractereMonstres {
     public static void colereNeChargePasLeCreeper(GameTestHelper h) {
         BlockPos b = base(h, 1);
         Travailleur t = mineur(h, b, "colerique");
-        var creeper = TestsGuerrier.fige(h, EntityType.CREEPER, b.east(8));
+        var creeper = sauvage(h, EntityType.CREEPER, b.east(8));
         String[] faute = {null};
         double[] loin = {0};
         h.onEachTick(() -> {
@@ -78,7 +85,7 @@ public class TestsCaractereMonstres {
     public static void peureuxFuitDeLoin(GameTestHelper h) {
         BlockPos b = base(h, 2);
         Travailleur t = mineur(h, b, "peureux");
-        var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(13));
+        var husk = sauvage(h, EntityType.HUSK, b.east(13));
         String[] faute = {null};
         double[] loin = {0};
         h.onEachTick(() -> {
@@ -100,7 +107,7 @@ public class TestsCaractereMonstres {
     public static void fourbeSEclipse(GameTestHelper h) {
         BlockPos b = base(h, 3);
         Travailleur t = mineur(h, b, "fourbe");
-        var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(8));
+        var husk = sauvage(h, EntityType.HUSK, b.east(8));
         String[] faute = {null};
         double[] loin = {0};
         h.onEachTick(() -> {
@@ -127,7 +134,7 @@ public class TestsCaractereMonstres {
         c.prenom = "Odon";
         c.temperament = "calme";
         c.mode = Travailleur.Mode.ATTENDRE;
-        var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(8));
+        var husk = sauvage(h, EntityType.HUSK, b.east(8));
         double[] loin = {0};
         h.onEachTick(() -> loin[0] = Math.max(loin[0], t.distanceTo(husk)));
         h.succeedWhen(() -> {
@@ -147,7 +154,7 @@ public class TestsCaractereMonstres {
         c.chef = t.chef;
         c.temperament = "calme";
         c.mode = Travailleur.Mode.ATTENDRE;
-        var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(6));
+        var husk = sauvage(h, EntityType.HUSK, b.east(6));
         husk.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(200);
         husk.setHealth(200); // qu'il dure assez pour que les deux s'y mettent
         boolean[] lui = {false}, collegue = {false}, fuite = {false};
@@ -165,6 +172,89 @@ public class TestsCaractereMonstres {
             h.assertTrue(husk.getHealth() < 200, "le monstre est blessé");
             husk.discard();
             TestsGuerrier.fin(t, c);
+        });
+    }
+
+    /** Un monstre qui est à quelqu'un (nommé) : le colérique ne le charge pas. */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void monstreNommeEpargne(GameTestHelper h) {
+        BlockPos b = base(h, 6);
+        Travailleur t = mineur(h, b, "colerique");
+        var husk = sauvage(h, EntityType.HUSK, b.east(8));
+        husk.setCustomName(net.minecraft.network.chat.Component.literal("Grognard"));
+        String[] faute = {null};
+        h.onEachTick(() -> { if (t.action instanceof Actions.Attaquer && faute[0] == null) faute[0] = "il charge un monstre nommé (" + TestsJeu.etat(t, b) + ")"; });
+        h.runAtTickTime(h.getTick() + 200, () -> {
+            h.assertTrue(faute[0] == null, faute[0]);
+            h.assertTrue(husk.getHealth() == husk.getMaxHealth(), "le monstre n'est pas touché");
+            husk.discard();
+            TestsGuerrier.fin(t);
+            h.succeed();
+        });
+    }
+
+    /** « Attends ici » tient : le colérique va tuer le monstre à 8 blocs, puis revient à sa place. */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void attenteReprendSaPlace(GameTestHelper h) {
+        BlockPos b = base(h, 7);
+        Travailleur t = mineur(h, b, "colerique");
+        Vec3 place = t.position();
+        var husk = sauvage(h, EntityType.HUSK, b.east(11));
+        double[] loin = {0};
+        h.onEachTick(() -> loin[0] = Math.max(loin[0], t.position().distanceTo(place)));
+        h.succeedWhen(() -> {
+            h.assertFalse(husk.isAlive(), "il tue le monstre (" + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(loin[0] > 4, "il est allé le frapper (" + (int) loin[0] + " blocs au plus de sa place)");
+            h.assertTrue(t.position().distanceTo(place) <= 2, "puis il revient à sa place (à " + String.format("%.1f", t.position().distanceTo(place)) + " blocs, " + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(t.mode == Travailleur.Mode.ATTENDRE, "et attend toujours");
+            TestsGuerrier.fin(t);
+        });
+    }
+
+    /** Un monstre perché hors d'atteinte : le colérique y va une fois, le laisse, et n'y retourne pas (ni ne recrie) avant 5 minutes. */
+    @GameTest(template = "grand", timeoutTicks = 1300, skyAccess = true)
+    public static void inaccessibleLaisse(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++) h.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+        for (int y = 7; y <= 9; y++) h.setBlock(15, y, 12, net.minecraft.world.level.block.Blocks.STONE);
+        var husk = sauvage(h, EntityType.HUSK, h.absolutePos(new BlockPos(15, 10, 12)));
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 7, 12, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 7, 9));
+        t.temperament = "colerique";
+        t.mode = Travailleur.Mode.ATTENDRE;
+        int[] charges = {0};
+        Actions.Action[] vue = {null};
+        h.onEachTick(() -> {
+            if (t.action instanceof Actions.Attaquer && t.action != vue[0]) charges[0]++;
+            vue[0] = t.action;
+        });
+        h.runAtTickTime(h.getTick() + 1200, () -> {
+            long cris = t.paroles.stream().filter(p -> Vie.vient("monstre_charge", p) || p.equals(Defense.secours("monstre_charge", null))).count();
+            h.assertTrue(charges[0] == 1, "il y va une seule fois (" + charges[0] + " charges, " + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(cris <= 1, "il ne recrie pas (" + t.paroles + ")");
+            husk.discard();
+            TestsGuerrier.fin(t);
+            h.succeed();
+        });
+    }
+
+    /** Un peureux en attente fuit un monstre qui ne bouge pas, revient à sa place, et ne refuit pas tant qu'il ne s'approche pas. */
+    @GameTest(template = "vide", timeoutTicks = 1000)
+    public static void peureuxNeTournePasEnRond(GameTestHelper h) {
+        BlockPos b = base(h, 8);
+        Travailleur t = mineur(h, b, "peureux");
+        Vec3 place = t.position();
+        var husk = sauvage(h, EntityType.HUSK, b.east(9));
+        int[] fuites = {0};
+        Actions.Action[] vue = {null};
+        h.onEachTick(() -> {
+            if (t.action instanceof Actions.Fuir && t.action != vue[0]) fuites[0]++;
+            vue[0] = t.action;
+        });
+        h.runAtTickTime(h.getTick() + 900, () -> {
+            h.assertTrue(fuites[0] == 1, "il fuit une seule fois (" + fuites[0] + " fuites, " + TestsJeu.etat(t, b) + ")");
+            h.assertTrue(t.position().distanceTo(place) <= 2, "puis il revient à sa place (à " + String.format("%.1f", t.position().distanceTo(place)) + " blocs, " + TestsJeu.etat(t, b) + ")");
+            husk.discard();
+            TestsGuerrier.fin(t);
+            h.succeed();
         });
     }
 }

@@ -98,6 +98,7 @@ final class Cerveau {
                 if (!m.combattant || Blessures.horsDeCombat(t)) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
                 else if (agresseur instanceof Player) dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
                 else dire(t, "fuite", 30, "Holà, tout doux ! Je ne lève pas mon arme sur une bête.");
+                Defense.retenirPlace(t);
                 lancer(t, new Actions.Fuir(agresseur));
             }
             return;
@@ -158,7 +159,7 @@ final class Cerveau {
             if (Blessures.horsDeCombat(t) || !m.escorter(t)) lancer(t, new Actions.SuivreChef());
             return;
         }
-        if (t.mode == Travailleur.Mode.ATTENDRE) { attendre(t, 2); return; }
+        if (t.mode == Travailleur.Mode.ATTENDRE) { if (!Defense.revenir(t)) attendre(t, 2); return; } // revenu d'une fuite ou d'un combat, il retourne à sa place
 
         // Au travail. Sans poste, pas de travail.
         if (t.bureau == null) {
