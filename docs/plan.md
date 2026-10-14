@@ -44,8 +44,8 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Blessures à plusieurs gravités ; à terre plus longtemps selon la gravité ; les autres se rassemblent autour du blessé (première passe 13/10, 0.9.12 : légère, grave, très grave selon la vie perdue ; à terre 3, 5 ou 8 min ; les 3 compagnons les plus proches viennent)
 - [x] Guérisseur (nouveau métier) (première passe 13/10, 0.9.14 : relève un ouvrier à terre avec un pain ou une potion de soin du dépôt, panse un blessé grave ou très grave, attend que le danger s'éloigne, ne quitte jamais un ordre du chef ; « soigne Jean », « va soigner les blessés »)
 - [x] Moral : causes (paie, nourriture variée, lit, dangers, ton du chef, deuil, météo, amitiés, réussite de la colonie) ; effets (lenteur, plaintes, grève, démission, fuite, vol, sabotage, révolte armée après avertissements) (première partie 14/10, 0.9.19 : causes, lenteur, plaintes, démission ; 2e partie 14/10, 0.9.20 : vol, sabotage, fuite, révolte après 2 lettres et 3 avertissements ; pas encore installée sur le serveur)
-- [ ] Réactions selon le caractère : insulte, coup, impayé, diamant gardé en cachette, cadeau
-- [ ] Deuil, et enterrement possible pour adoucir le moral
+- [x] Réactions selon le caractère : insulte, coup, impayé, diamant gardé en cachette, cadeau (14/10 : 0.9.23 insulte, coup, impayé, cadeau ; 0.9.26 diamant gardé en cachette selon le caractère, aveu ou démenti, excuses du chef ; pas encore installées sur le serveur)
+- [x] Deuil, et enterrement possible pour adoucir le moral (14/10, 0.9.24 : nouvelle annoncée ou lettre au chef absent, ils en reparlent 2 jours, « on va enterrer X » : cérémonie à la tombe, moral perdu rendu de moitié ; proposition d'un ouvrier, « oui » suffit ; pas encore installée)
 
 ## 6. Nouveaux métiers indispensables
 - [x] Fermier, éleveur, pêcheur, chasseur, cuisinier ou boulanger, transporteur (première passe 13-14/10 : 0.9.12 à 0.9.18)
@@ -54,7 +54,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 7. Conversations et relations (indispensable)
 - [x] Conversations fréquentes entre PNJ, SANS IA : une grande banque de textes, chacun son parler (première passe 13/10, 0.9.8 : 237 conversations en bulles, `Conversations`/`Causeries`)
 - [x] Remarques spontanées de temps en temps ; humour en réponse à l'impossible (14/10, 0.9.23 : `Remarques`, `Impossible`, `remarques.txt` ; pas encore installée sur le serveur)
-- [ ] Amitiés et inimitiés, couples
+- [x] Amitiés et inimitiés, couples (14/10, 0.9.25, première passe : `Liens`, `Relations` ; amis ≥ 50, ennemis ≤ −50, couple à 80 depuis 2 jours, lettre au chef, « qui sont tes amis ? » ; pas encore installée)
 
 ## 8. Apparence (indispensable)
 - [x] Skins médiévaux selon le métier, tenues visibles (13/10, 0.9.7, modpack 0.5.0 ; jamais vus à l'écran)
