@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.animal.Animal;
@@ -175,7 +176,7 @@ final class Eleveur extends Metier {
                 a -> a.isAlive() && espece(a) != null && t.chezLui(a.blockPosition()), betes, BETES_MAX);
         int releves = 0;
         for (Animal a : betes) {
-            if (releves >= RELEVES_PAR_RECHERCHE || enclos(f, a.getBlockX(), a.getBlockY(), a.getBlockZ()) != null
+            if (releves >= RELEVES_PAR_RECHERCHE || enclos(f, a) != null
                     || f.ouvertes.contains(Elevage.cle(a.getBlockX(), a.getBlockZ()))) continue;
             releves++;
             Elevage.Enclos e = Elevage.clore(a.getBlockX(), a.getBlockY(), a.getBlockZ(), (x, y, z) -> pas(l, x, y, z), Elevage.CASES_MAX, f.ouvertes);
@@ -188,6 +189,17 @@ final class Eleveur extends Metier {
     /** L'enclos connu qui contient ce point (à 4 blocs près en hauteur), ou null. */
     static Elevage.Enclos enclos(Ferme f, int x, int y, int z) { return enclos(f.enclos, x, y, z); }
 
+    /**
+     * L'enclos connu où est cette bête, ou null : la case sous elle, ou sinon une case sous son corps (un petit serré dans
+     * le coin de deux barrières a le milieu au-dessus du poteau, mais il est bien dedans).
+     */
+    static Elevage.Enclos enclos(Ferme f, Entity a) {
+        Elevage.Enclos e = enclos(f, a.getBlockX(), a.getBlockY(), a.getBlockZ());
+        if (e != null) return e;
+        for (Elevage.Enclos x : f.enclos) if (dans(x, a)) return x;
+        return null;
+    }
+
     static Elevage.Enclos enclos(List<Elevage.Enclos> liste, int x, int y, int z) {
         for (Elevage.Enclos e : liste) if (e.contient(x, z) && Math.abs(y - e.y()) <= 4) return e;
         return null;
@@ -195,9 +207,10 @@ final class Eleveur extends Metier {
 
     /**
      * Il est dans l'enclos, ne serait-ce qu'un pied : un coin de son corps au-dessus d'une case de l'enclos (arrêté contre le
-     * portillon, il est dans la colonne du portillon, mais encore du côté de l'enclos).
+     * portillon, il est dans la colonne du portillon, mais encore du côté de l'enclos). Une bête aussi : serrée dans un coin,
+     * son milieu peut être au-dessus d'un poteau ; dehors, la clôture l'écarte toujours des cases de l'enclos.
      */
-    static boolean dans(Elevage.Enclos e, Travailleur t) {
+    static boolean dans(Elevage.Enclos e, Entity t) {
         if (Math.abs(t.getBlockY() - e.y()) > 4) return false;
         AABB b = t.getBoundingBox();
         for (double x : new double[]{b.minX, b.maxX}) for (double z : new double[]{b.minZ, b.maxZ})
@@ -210,7 +223,7 @@ final class Eleveur extends Metier {
         Map<Elevage.Enclos, List<Animal>> r = new java.util.IdentityHashMap<>();
         for (Animal a : f.betes) {
             if (!a.isAlive()) continue;
-            Elevage.Enclos e = enclos(f, a.getBlockX(), a.getBlockY(), a.getBlockZ());
+            Elevage.Enclos e = enclos(f, a);
             if (e != null) r.computeIfAbsent(e, k -> new ArrayList<>()).add(a);
         }
         return r;
@@ -286,7 +299,7 @@ final class Eleveur extends Metier {
 
     /** Ce qu'il peut abattre : une bête de ferme adulte de son enclos, à personne, vivante. */
     static boolean abattable(Travailleur t, Animal a, Elevage.Enclos e) {
-        return a.isAlive() && !a.isBaby() && espece(a) != null && !intouchable(a) && e.contient(a.getBlockX(), a.getBlockZ()) && t.chezLui(a.blockPosition())
+        return a.isAlive() && !a.isBaby() && espece(a) != null && !intouchable(a) && dans(e, a) && t.chezLui(a.blockPosition())
                 && Fermier.aLui(t, a.blockPosition());
     }
 
@@ -485,7 +498,7 @@ final class Eleveur extends Metier {
         /** Les tâches, la bête la plus proche d'abord ; le sac presque plein, il s'arrête. */
         Actions.Etat soigner(Travailleur t) {
             if (cible == null) {
-                taches.removeIf(k -> !k.bete.isAlive() || !enclos.contient(k.bete.getBlockX(), k.bete.getBlockZ()));
+                taches.removeIf(k -> !k.bete.isAlive() || !dans(enclos, k.bete));
                 if (taches.isEmpty() || Monde.libres(t) < 2) { etape = 3; ramasse = 0; return Actions.Etat.EN_COURS; }
                 cible = taches.stream().min(Comparator.comparingDouble(k -> k.bete.distanceToSqr(t))).orElseThrow();
                 taches.remove(cible);
@@ -528,7 +541,7 @@ final class Eleveur extends Metier {
          * s'arrêtait sans rien faire.
          */
         void reprendre(Tache k) {
-            if (k.bete.isAlive() && enclos.contient(k.bete.getBlockX(), k.bete.getBlockZ()) && reprises.merge(k.bete.getId(), 1, Integer::sum) <= REPRISES) taches.add(k);
+            if (k.bete.isAlive() && dans(enclos, k.bete) && reprises.merge(k.bete.getId(), 1, Integer::sum) <= REPRISES) taches.add(k);
         }
 
         /**
@@ -539,7 +552,7 @@ final class Eleveur extends Metier {
             Elevage.Espece esp = espece(a);
             AABB zone = new AABB(enclos.minX(), enclos.y() - 3, enclos.minZ(), enclos.maxX() + 1, enclos.y() + 4, enclos.maxZ() + 1);
             List<Elevage.Bete> vues = new ArrayList<>();
-            for (Animal x : t.level().getEntitiesOfClass(Animal.class, zone, x -> x.isAlive() && espece(x) == esp && enclos.contient(x.getBlockX(), x.getBlockZ())))
+            for (Animal x : t.level().getEntitiesOfClass(Animal.class, zone, x -> x.isAlive() && espece(x) == esp && dans(enclos, x)))
                 vues.add(new Elevage.Bete(x.getId(), esp.id(), !x.isBaby(), intouchable(x), false));
             return !Elevage.aAbattre(vues, esp.id(), k.garder(), 1).isEmpty();
         }

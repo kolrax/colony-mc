@@ -101,10 +101,14 @@ public class TestsEleveur {
     /** Il est sorti de l'enclos (à l'ouest du portillon). */
     static boolean dehors(Travailleur t, BlockPos porte) { return t.getX() < porte.getX(); }
 
-    /** Toutes les bêtes sont restées dans l'enclos (rien ne s'est échappé par le portillon). */
-    static boolean dedans(List<? extends Animal> betes, BlockPos centre) {
-        return betes.stream().allMatch(a -> Math.abs(a.getBlockX() - centre.getX()) < 3 && Math.abs(a.getBlockZ() - centre.getZ()) < 3);
-    }
+    /**
+     * Toutes les bêtes sont restées dans l'enclos (rien ne s'est échappé par le portillon). Le milieu de la bête à moins de 3
+     * blocs du milieu de l'enclos : un petit serré dans un coin a le milieu au-dessus du poteau (à 2,65), mais il est dedans ;
+     * dehors, la barrière le tient à plus de 3,3.
+     */
+    static boolean dedans(List<? extends Animal> betes, BlockPos centre) { return betes.stream().allMatch(a -> dedans(a, centre)); }
+
+    static boolean dedans(Animal a, BlockPos centre) { return Math.abs(a.getX() - centre.getX() - 0.5) < 3 && Math.abs(a.getZ() - centre.getZ() - 0.5) < 3; }
 
     /**
      * Pour comprendre un échec : ce qu'il a fait, tick par tick (chaque changement d'action, de sous-action ou d'étape de
@@ -115,10 +119,12 @@ public class TestsEleveur {
         String[] avant = {""};
         h.onEachTick(() -> {
             String s = decrire(t.action);
-            if (!s.equals(avant[0]) && l.size() < 80) {
-                long dehors = vaches(h.getLevel(), centre).stream().filter(c -> Math.abs(c.getBlockX() - centre.getX()) >= 3 || Math.abs(c.getBlockZ() - centre.getZ()) >= 3).count();
-                l.add(h.getTick() + ":" + s + (t.resultat.isEmpty() ? "" : "=" + t.resultat) + (dehors > 0 ? " [" + dehors + " dehors]" : ""));
-                avant[0] = s;
+            List<Cow> sorties = vaches(h.getLevel(), centre).stream().filter(c -> !dedans(c, centre)).toList();
+            if (!(s + sorties.size()).equals(avant[0]) && l.size() < 80) {
+                String ou = sorties.stream().map(c -> String.format(java.util.Locale.ROOT, "(%.2f %.2f %.2f%s)", c.getX() - centre.getX() - 0.5, c.getY() - centre.getY(), c.getZ() - centre.getZ() - 0.5, c.isBaby() ? " petit" : "")).reduce("", String::concat);
+                l.add(h.getTick() + ":" + s + (t.resultat.isEmpty() ? "" : "=" + t.resultat) + (sorties.isEmpty() ? "" : " [dehors " + ou + "]")
+                        + String.format(java.util.Locale.ROOT, " @%.1f,%.1f", t.getX() - centre.getX() - 0.5, t.getZ() - centre.getZ() - 0.5));
+                avant[0] = s + sorties.size();
             }
         });
         return l;
@@ -189,9 +195,11 @@ public class TestsEleveur {
      * veau, et il reste un couple ; la viande va au dépôt (rien par terre), le portillon est refermé.
      */
     @GameTest(template = "vide", timeoutTicks = 2400, batch = "eleveur_plafond")
-    public static void abatLExcedent(GameTestHelper h) {
+    public static void abatLExcedent(GameTestHelper h) { excedent(h, 142); }
+
+    static void excedent(GameTestHelper h, int coin) {
         BlockPos[] b = new BlockPos[1];
-        Travailleur t = seul(h, 142, b);
+        Travailleur t = seul(h, coin, b);
         ServerLevel l = h.getLevel();
         BlockPos centre = b[0].offset(8, 0, 0);
         BlockPos porte = enclos(l, centre);
@@ -286,4 +294,5 @@ public class TestsEleveur {
                 () -> h.assertTrue(vaches(l, centre).size() == 4, "les vaches du voisin sont toutes là : " + vaches(l, centre).size()),
                 () -> TestsRepertoire.fin(e));
     }
+
 }
