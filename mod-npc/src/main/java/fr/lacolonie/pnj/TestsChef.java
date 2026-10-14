@@ -20,13 +20,16 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsChef {
-    /** Un guerrier armé en (2, 4), son chef en (6, 4), un autre joueur en (9, 4), tous deux pouvant prendre des coups. */
+    /**
+     * Un guerrier armé en (1, 4), son chef en (4, 4), un autre joueur en (7, 4), tous deux pouvant prendre des coups. Tout
+     * reste dans les 9 x 9 blocs du modèle « vide » : en x = 9, le mur de barrières du test cacherait la tête de l'autre.
+     */
     record Scene(Travailleur g, ServerPlayer chef, ServerPlayer autre) {}
 
     static Scene scene(GameTestHelper h) {
-        for (int x = 0; x <= 12; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
         h.getLevel().getServer().setPvpAllowed(true);
-        Travailleur g = TestsJeu.ouvrier(h, "guerrier", 2, 2, 4, new ItemStack(Items.IRON_SWORD));
+        Travailleur g = TestsJeu.ouvrier(h, "guerrier", 1, 2, 4, new ItemStack(Items.IRON_SWORD));
         Guerrier.armer(g);
         ServerPlayer chef = h.makeMockServerPlayerInLevel(), autre = h.makeMockServerPlayerInLevel();
         for (ServerPlayer p : new ServerPlayer[]{chef, autre}) {
@@ -34,7 +37,7 @@ public class TestsChef {
             // Un faux joueur n'est jamais « tické » : ses 3 s d'invulnérabilité à l'arrivée ne finiraient pas.
             ObfuscationReflectionHelper.setPrivateValue(ServerPlayer.class, p, 0, "spawnInvulnerableTime");
         }
-        Vec3 c = h.absoluteVec(new Vec3(6.5, 2, 4.5)), a = h.absoluteVec(new Vec3(9.5, 2, 4.5));
+        Vec3 c = h.absoluteVec(new Vec3(4.5, 2, 4.5)), a = h.absoluteVec(new Vec3(7.5, 2, 4.5));
         chef.moveTo(c.x, c.y, c.z);
         autre.moveTo(a.x, a.y, a.z);
         g.chef = chef.getUUID();
