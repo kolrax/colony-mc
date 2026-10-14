@@ -1,0 +1,2 @@
+# Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7). Fichier UTF-8.
+# FORMAT : exactement celui de vie.txt et remarques.txt (lecteur Vie.lire). Rempli par l'auteur.

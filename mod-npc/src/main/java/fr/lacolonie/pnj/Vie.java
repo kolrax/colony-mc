@@ -36,6 +36,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/vie.txt"), e -> System.err.println("[colonie_pnj] Section de vie.txt ignorée : " + e.getMessage())));
         // Les remarques spontanées, l'humour devant l'impossible et les réactions selon le caractère (lot 7) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/remarques.txt"), e -> System.err.println("[colonie_pnj] Section de remarques.txt ignorée : " + e.getMessage())));
+        // Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/relations.txt"), e -> System.err.println("[colonie_pnj] Section de relations.txt ignorée : " + e.getMessage())));
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */
