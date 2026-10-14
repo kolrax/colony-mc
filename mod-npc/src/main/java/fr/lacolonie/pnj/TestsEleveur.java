@@ -294,5 +294,4 @@ public class TestsEleveur {
                 () -> h.assertTrue(vaches(l, centre).size() == 4, "les vaches du voisin sont toutes là : " + vaches(l, centre).size()),
                 () -> TestsRepertoire.fin(e));
     }
-
 }
