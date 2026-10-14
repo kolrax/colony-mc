@@ -127,8 +127,8 @@ public class ColoniePnj {
             Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
-        NeoForge.EVENT_BUS.addListener(Guerrier::impact);
-        NeoForge.EVENT_BUS.addListener(Defense::chefFrappe); // on frappe le chef : ses gens réagissent selon ses ordres (GardeChef) // les flèches des guerriers ne blessent pas les passants
+        NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants
+        NeoForge.EVENT_BUS.addListener(Defense::chefFrappe); // on frappe le chef : ses gens réagissent selon ses ordres (GardeChef)
         NeoForge.EVENT_BUS.addListener(ColoniePnj::arriveeChercheurs);
         NeoForge.EVENT_BUS.addListener(Fermier::pietiner); // un ouvrier ne piétine jamais une terre labourée
         NeoForge.EVENT_BUS.addListener(Eleveur::butin); // la bête qu'abat un ouvrier : son butin va dans son sac
