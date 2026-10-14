@@ -7,7 +7,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -110,7 +109,8 @@ final class Humeur {
     static void suite(Travailleur t, Moral.Cause pire) {
         CompoundTag m = t.memoire;
         Reglages r = Reglages.actuel;
-        if (t.moral >= Moral.APAISE) for (String k : List.of("avertis", "avertis_depuis", "demission", "demission_essais", "chef_lu", "fuite", "fuite_etape", "fuite_dit", "menaces"))
+        if (t.moral >= Moral.APAISE) for (String k : List.of("avertis", "avertis_depuis", "demission", "demission_essais", "chef_lu", "fuite", "fuite_etape", "fuite_dit", "menaces",
+                "vol_ou", "sabotage_ou"))
             m.remove(k);
         if (m.getInt("avertis") >= 2 && t.chefJoueur() != null) m.putBoolean("chef_lu", true); // le chef a pu lire ses lettres
         int bas = t.moral < r.moral_seuil_demission ? m.getInt("bilans_bas") + 1 : 0;
@@ -144,7 +144,6 @@ final class Humeur {
     static boolean demissionner(Travailleur t) {
         if (!t.memoire.getBoolean("demission") || t.mode == Travailleur.Mode.CHOMEUR || t.chef == null) return false;
         if (t.enDanger()) return false;
-        if (t.memoire.getBoolean("fuite")) return fuir(t);
         desequiper(t);
         boolean laisse = false;
         if (!vide(t)) {
@@ -159,6 +158,8 @@ final class Humeur {
             for (EquipmentSlot e : PORTES) if (!t.getItemBySlot(e).isEmpty()) { t.spawnAtLocation(t.getItemBySlot(e)); t.setItemSlot(e, ItemStack.EMPTY); }
             laisse = true;
         }
+        // En fuite aussi, il a d'abord tout rendu (outils, armes, armure, sac) : il ne part qu'avec son petit butin.
+        if (t.memoire.getBoolean("fuite")) return fuir(t);
         Besoins.dire(t, "demission", null);
         Courrier.ecrire(t, "demission", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t),
                 laisse ? " Ce qui ne tenait pas au dépôt, je l'ai laissé à terre, là où j'étais." : "");
@@ -423,15 +424,20 @@ final class Humeur {
     // --- Le sabotage ----------------------------------------------------------------------------------------------
 
     /**
-     * Ce qu'il abîme : une torche, une lanterne ou un bout de clôture en bois près du poste. Un seul bloc, qui tombe à
-     * terre : il suffit de le reposer. Cherché seulement le jour où il sabote (17 × 6 × 17 blocs autour du poste).
+     * Ce qu'il abîme : une torche ou une lanterne près du poste (jamais une clôture : les bêtes d'un enclos s'enfuiraient).
+     * Un seul bloc, qui tombe à terre : il suffit de le reposer. Cherché seulement le jour où il sabote (17 × 6 × 17 blocs
+     * autour du poste), si toute la zone est chargée, et jamais chez un voisin ({@link Fermier#aLui}).
      */
     static BlockPos cibleSabotage(Travailleur t) {
-        if (t.bureau == null || !t.level().isLoaded(t.bureau)) return null;
-        List<BlockPos> l = new ArrayList<>();
-        for (BlockPos p : BlockPos.betweenClosed(t.bureau.offset(-8, -2, -8), t.bureau.offset(8, 3, 8)))
-            if (sabotable(t.level().getBlockState(p)) != null) l.add(p.immutable());
-        return l.isEmpty() ? null : l.get(t.getRandom().nextInt(l.size()));
+        if (t.bureau == null || !(t.level() instanceof ServerLevel l)) return null;
+        BlockPos a = t.bureau.offset(-8, -2, -8), z = t.bureau.offset(8, 3, 8);
+        for (int cx = a.getX() >> 4; cx <= z.getX() >> 4; cx++)
+            for (int cz = a.getZ() >> 4; cz <= z.getZ() >> 4; cz++) if (l.getChunkSource().getChunkNow(cx, cz) == null) return null;
+        List<BlockPos> c = new ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(a, z)) if (sabotable(l.getBlockState(p)) != null) c.add(p.immutable());
+        java.util.Collections.shuffle(c, new java.util.Random(t.getRandom().nextLong()));
+        for (BlockPos p : c) if (Fermier.aLui(t, p)) return p; // le coût de aLui, seulement pour les quelques torches trouvées
+        return null;
     }
 
     /** {ce qu'il avoue, ce qu'un collègue a vu}, ou null. */
@@ -439,7 +445,6 @@ final class Humeur {
         if (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(Blocks.SOUL_TORCH) || st.is(Blocks.SOUL_WALL_TORCH))
             return new String[]{"la torche", "arracher une torche près du poste"};
         if (st.is(Blocks.LANTERN) || st.is(Blocks.SOUL_LANTERN)) return new String[]{"la lanterne", "décrocher une lanterne près du poste"};
-        if (st.is(BlockTags.WOODEN_FENCES)) return new String[]{"la clôture", "casser un bout de clôture près du poste"};
         return null;
     }
 
@@ -481,9 +486,10 @@ final class Humeur {
     // --- La fuite -------------------------------------------------------------------------------------------------
 
     /**
-     * Décidé à partir en douce (au lieu de démissionner) : un petit butin pris au dépôt, puis la route, loin du poste
-     * ({@link Moral#FUITE_LOIN} blocs, en marchant), une lettre d'adieu, et il redevient chercheur d'emploi avec tout ce qu'il
-     * a sur lui. Vrai s'il s'en occupe.
+     * Décidé à partir en douce (au lieu de démissionner), après avoir rendu au dépôt tout ce qu'il avait sur lui
+     * ({@link #demissionner}) : un petit butin pris au dépôt (au plus {@link Moral#VOL_COUP} objets sans valeur), puis la
+     * route, loin du poste ({@link Moral#FUITE_LOIN} blocs, en marchant), une lettre d'adieu, et il redevient chercheur
+     * d'emploi avec ce seul butin caché. Vrai s'il s'en occupe.
      */
     static boolean fuir(Travailleur t) {
         CompoundTag m = t.memoire;
@@ -508,9 +514,16 @@ final class Humeur {
 
     // --- La révolte -----------------------------------------------------------------------------------------------
 
-    /** En révolte : il frappe son chef s'il est à portée (lui seul, jamais un autre), sinon il l'attend, les bras croisés. */
+    /**
+     * En révolte : la caisse couvre enfin ce qu'on lui doit, il va toucher sa paie (ce qui l'arrête) ; la faim, la nuit ou
+     * l'épuisement passent avant (faux : le cerveau s'en occupe comme d'habitude) ; sinon il frappe son chef s'il est à
+     * portée (lui seul, jamais un autre), ou l'attend, les bras croisés.
+     */
     static boolean revolter(Travailleur t) {
         if (calmer(t)) return false;
+        if (paieEnCaisse(t)) { Cerveau.lancer(t, new Actions.ToucherPaie()); return true; }
+        if (t.faim <= 8 || t.faim <= 14 && t.compter(Actions.Filtre.de("nourriture")) > 0) return false;
+        if (!t.enService() || t.fatigue >= 100 || t.memoire.getBoolean("epuise")) return false;
         ServerPlayer chef = t.chefJoueur();
         if (chef == null || t.distanceTo(chef) > FRAPPE) { Cerveau.attendre(t, 5); return true; }
         Besoins.parler(t, "revolte", null);
@@ -519,23 +532,30 @@ final class Humeur {
     }
 
     /**
-     * La révolte cesse : moral remonté, ce qu'on lui devait payé, chef parti loin (ou absent), ou le réglage coupé. Apaisé
-     * (le chef encore là), il le dit et ses avertissements repartent à zéro. Vrai si elle a cessé (ou n'existait pas).
+     * La révolte cesse : moral remonté, ce qu'on lui devait payé, chef parti loin (ou absent), ou le réglage coupé. Ses
+     * avertissements repartent à zéro ; le chef encore là, il le dit. Vrai si elle a cessé (ou n'existait pas).
      */
     static boolean calmer(Travailleur t) {
         CompoundTag m = t.memoire;
         if (!m.getBoolean("revolte")) return true;
+        // Les pièces sont dans la caisse : il lâche son chef pour aller se payer (revolter, au prochain passage du cerveau).
+        if (paieEnCaisse(t) && t.action instanceof Actions.Attaquer a && a.cible.getUUID().equals(t.chef)) t.finirAction("paie");
         ServerPlayer chef = t.chefJoueur();
         boolean la = chef != null && chef.isAlive() && !chef.isSpectator() && chef.level() == t.level() && t.distanceTo(chef) < LOIN;
         Reglages r = Reglages.actuel;
         if (r.moral_revolte && !Moral.finRevolte(t.moral, r.moral_seuil_lettre, m.getInt("revolte_impayes"), t.impayes, la)) return false;
         m.remove("revolte");
         m.remove("revolte_impayes");
-        if (la) {
-            m.remove("menaces");
-            Besoins.dire(t, "revolte_fin", null);
-        }
+        m.remove("menaces"); // une nouvelle révolte exigera de nouveaux avertissements
+        if (la) Besoins.dire(t, "revolte_fin", null);
         if (t.action instanceof Actions.Attaquer a && a.cible.getUUID().equals(t.chef)) t.finirAction("apaise");
         return true;
+    }
+
+    /** On lui doit quelque chose, et la caisse du poste le couvre. */
+    static boolean paieEnCaisse(Travailleur t) {
+        long du = t.du();
+        Bureau.Entite b = du > 0 ? Bureau.entite(t) : null;
+        return b != null && Reglages.valeur(b.caisse) >= du;
     }
 }

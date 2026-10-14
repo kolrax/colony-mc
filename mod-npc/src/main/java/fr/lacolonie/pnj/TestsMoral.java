@@ -230,8 +230,9 @@ public class TestsMoral {
     }
 
     /**
-     * Décidé à partir, en douce : il prend un peu de pain au dépôt (au plus 3), garde tout ce qu'il a sur lui (sa pioche, son
-     * charbon), dit tout bas qu'il file, marche loin du poste, écrit une lettre d'adieu au chef et redevient chercheur d'emploi.
+     * Décidé à partir, en douce : il rend d'abord au dépôt tout ce qu'il a sur lui (sa pioche en diamant, son plastron, son
+     * charbon), prend un peu de pain (au plus 3), dit tout bas qu'il file, marche loin du poste, écrit une lettre d'adieu au
+     * chef et redevient chercheur d'emploi avec ce seul butin.
      */
     @GameTest(template = "vide", timeoutTicks = 1600)
     public static void fuiteAvecUnButin(GameTestHelper h) {
@@ -239,7 +240,8 @@ public class TestsMoral {
         java.util.UUID chef = java.util.UUID.randomUUID();
         Travailleur t = Travailleur.auTravail(h.getLevel(), "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(2)), chef, new ItemStack(Items.COAL, 5));
         t.forcerChunk();
-        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE));
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_PICKAXE));
+        t.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
         t.temperament = "fourbe";
         t.moral = 5;
         Bureau.Entite d = (Bureau.Entite) h.getLevel().getBlockEntity(b[0]);
@@ -250,7 +252,9 @@ public class TestsMoral {
             h.assertTrue(t.mode == Travailleur.Mode.CHOMEUR, "parti (" + TestsJeu.etat(t, b[0]) + ")");
             int pain = butin(t).getOrDefault(Items.BREAD, 0);
             h.assertTrue(pain >= 1 && pain <= Moral.VOL_COUP && TestsBucheron.compte(d, Items.BREAD) == 10 - pain, "un petit butin : " + pain + " pains");
-            h.assertTrue(t.getMainHandItem().is(Items.IRON_PICKAXE) && t.compter(Actions.Filtre.de("minecraft:coal")) == 5, "il garde ce qu'il avait sur lui");
+            h.assertTrue(Humeur.vide(t), "il ne part qu'avec son butin caché : rien en main, sur le dos ni dans le sac");
+            h.assertTrue(TestsBucheron.compte(d, Items.DIAMOND_PICKAXE) == 1 && TestsBucheron.compte(d, Items.IRON_CHESTPLATE) == 1
+                    && TestsBucheron.compte(d, Items.COAL) == 5, "pioche, plastron et charbon rendus au dépôt");
             h.assertTrue(TestsJeu.distance(t, b[0]) >= 40, "loin du poste : " + TestsJeu.distance(t, b[0]));
             h.assertTrue(TestsVie.dites(t, "fuite_nuit") == 1, "il file en douce (" + t.paroles + ")");
             h.assertTrue(lettrePour(h, chef, "fuite"), "une lettre d'adieu au chef");
@@ -262,10 +266,14 @@ public class TestsMoral {
     /**
      * La révolte : deux colériques au plus bas, deux lettres de plainte, deux avertissements déjà donnés. Le troisième est
      * dit en face au chef (« on prend les armes ») ; seulement au bilan suivant, ils se lèvent et frappent le chef, et jamais
-     * l'autre personne présente. Le chef paie ce qu'il devait : ils posent les armes.
+     * l'autre personne présente. Le chef remet dans la caisse du poste les pièces qu'il leur doit : ils lâchent le chef,
+     * vont se payer et posent les armes.
      */
     @GameTest(template = "vide", timeoutTicks = 1200)
     public static void revolteContreLeChefSeul(GameTestHelper h) {
+        var monnaie = Reglages.actuel.monnaie; // comme TestsJeu.grevePuisReprise : des pièces qui existent sans Numismatics
+        Reglages.actuel.monnaie = new java.util.ArrayList<>(java.util.List.of(
+                new Reglages.Piece("minecraft:copper_ingot", "cuivre", 1), new Reglages.Piece("minecraft:gold_ingot", "or", 8)));
         BlockPos b = TestsJeu.sol(h, 207 * 400, 60000);
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel(), passant = h.makeMockServerPlayerInLevel();
         for (var p : new net.minecraft.server.level.ServerPlayer[]{chef, passant}) p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
@@ -295,14 +303,21 @@ public class TestsMoral {
         boolean[] paye = {false};
         h.onEachTick(() -> {
             h.assertTrue(passant.getHealth() == passant.getMaxHealth(), "personne d'autre que le chef n'est frappé");
-            if (!paye[0] && chef.getHealth() < vie - 2) { paye[0] = true; for (Travailleur t : l) t.paye(10, false); } // le chef paie son dû
+            if (!paye[0] && chef.getHealth() < vie - 2) { // frappé : le chef remet dans la caisse ce qu'il leur doit
+                paye[0] = true;
+                long du = l[0].du() + l[1].du();
+                ((Bureau.Entite) h.getLevel().getBlockEntity(b)).caisse.addItem(new ItemStack(Items.GOLD_INGOT, (int) Math.min(64, (du + 7) / 8)));
+            }
         });
         h.succeedWhen(() -> {
             h.assertTrue(paye[0], "le chef frappé (" + chef.getHealth() + "/" + vie + ", " + TestsJeu.etat(l[0], b) + ")");
+            h.assertTrue(chef.isAlive(), "le chef a survécu : ils l'ont lâché pour aller se payer");
             for (Travailleur t : l) {
+                h.assertTrue(t.impayes == 0, "payé à la caisse (" + TestsJeu.etat(t, b) + ")");
                 h.assertTrue(!t.memoire.getBoolean("revolte") && !(t.action instanceof Actions.Attaquer), "payé : il pose les armes (" + TestsJeu.etat(t, b) + ")");
                 h.assertTrue(TestsVie.dites(t, "revolte_fin") == 1 && !t.memoire.contains("menaces"), "il le dit, et ses avertissements repartent à zéro");
             }
+            Reglages.actuel.monnaie = monnaie;
             for (Travailleur t : l) t.discard();
             chef.discard();
             passant.discard();
