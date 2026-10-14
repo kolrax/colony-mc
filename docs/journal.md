@@ -306,3 +306,14 @@ Aucun code du mod touché, aucune action sur le serveur.
   - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant.
 - **Modpack inchangé** (0.5.1 reste valable : rien de client, canal inchangé).
 - **Lot 6 fini en première passe** (fermier, éleveur, chasseur, pêcheur, cuisinier, transporteur).
+
+## 2026-10-14 02 h 13 - 02 h 15 UTC : livraison 0.9.19 (moral, première partie)
+- **0.9.19**, commit `c1db93d` (sur `main`), livrée sur le serveur à 02 h 14 UTC (personne connecté : `list` = 0 joueur), « Done » à 02 h 14 min 25 s, sans erreur du mod ; `colonie_pnj-0.9.18.jar` rangé dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` (0.9.19, 1 410 528 octets, sha1 `ba1e02e4…`, copie figée du jar).
+  - **Moral** (lot 5, première partie) : toutes les 5 minutes, chaque ouvrier fait le point sur ce qu'il vit : paie à l'heure ou impayés, repas variés ou toujours pareils, lit à lui sous un toit, blessure ou collègue à terre, deuil d'un collègue, orage et pluie ou beau temps, coup ou insulte du chef, colonie nombreuse et dépôt bien garni.
+  - Moral bas : il marche plus lentement (−10 %, puis −20 % s'il est très bas), se plaint, et écrit au chef en disant ce qui lui pèse ; « comment ça va ? » le fait aussi dire.
+  - Démission : après 2 lettres que le chef a pu lire (chef connecté) et environ 3 jours de jeu au plus bas, il démissionne : il rend tout au dépôt (outil en main et armure compris) et redevient chercheur d'emploi. Un ouvrier bien traité ne part jamais.
+  - Il varie ses repas quand il a le choix. Tout se règle dans les réglages `moral_*`.
+  - Tests sur ce code (branche `moral` fusionnée avec `main` 0.9.18, `mod-npc` identique à la version près) : **199/199 JUnit** ; en jeu, 260/261 puis **261/261** à la relance (seul échec de la 1re passe : `TestsEleveur.nourritEtFaitNaitreUnVeau`, instable connu). Pour la livraison, seul `build` a été relancé (jar construit, 199/199 JUnit) ; les tests en jeu n'ont pas été relancés sur `main`.
+  - Journal du serveur : seules erreurs, celles des autres mods (276 tables de butin de `railways`, 6 de `create_enchantment_industry`, 1 classe client `AbstractClientPlayer` refusée au chargement), comme avant. Avant le redémarrage, le serveur avait pris 7 min de retard (« Can't keep up », 8 426 ticks : serveur probablement mis en veille par l'hébergeur).
+- **Modpack inchangé** (0.5.1 reste valable : rien de client, canal inchangé).
+- Reste pour le moral : vol, sabotage, fuite, révolte.
