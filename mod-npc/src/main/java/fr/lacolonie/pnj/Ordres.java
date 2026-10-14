@@ -475,6 +475,8 @@ final class Ordres {
                     new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"}),
             "chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
                     new String[]{"veneur", "veneurs"}),
+            "transporteur", List.of(new String[]{"transporteur", "transporteurs"}, new String[]{"transporteuse", "transporteuses"}, new String[]{"porteur", "porteurs"},
+                    new String[]{"porteuse", "porteuses"}, new String[]{"charretier", "charretiers"}),
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");

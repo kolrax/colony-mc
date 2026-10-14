@@ -358,7 +358,8 @@ final class Adressage {
             "guerrier", "garde le poste ou la base, fait la ronde, escorte son chef, tue les monstres ; se met en garde, lève son bouclier, charge",
             "fermier", "cultive et rapporte blé, carottes, pommes de terre, betteraves ; récolte, laboure et sème un champ, fait du pain",
             "eleveur", "élève vaches, moutons, cochons, poules ; rapporte cuir, laine, viande, œufs, lait ; nourrit les bêtes, tond les moutons, abat les bêtes en trop",
-            "chasseur", "chasse le gibier sauvage à l'arc : lapins, cochons, vaches, moutons, poules hors des enclos ; rapporte viande, cuir, plumes");
+            "chasseur", "chasse le gibier sauvage à l'arc : lapins, cochons, vaches, moutons, poules hors des enclos ; rapporte viande, cuir, plumes",
+            "transporteur", "porte les marchandises d'un coffre à l'autre, ou d'un coffre au dépôt, sur les trajets montrés par le chef, en boucle");
 
     /** Une étiquette par ouvrier : son prénom (avec son métier si deux ouvriers ont le même). */
     static List<String> etiquettes(Situation s) {

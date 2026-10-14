@@ -208,6 +208,8 @@ public abstract class Metier {
 
     static { TOUS.put("chasseur", new Chasseur()); } // lot 6
 
+    static { TOUS.put("transporteur", new Transporteur()); } // lot 6
+
     static List<String> actifs() {
         return TOUS.keySet().stream().filter(m -> !Reglages.actuel.metiers_inactifs.contains(m)).toList();
     }
