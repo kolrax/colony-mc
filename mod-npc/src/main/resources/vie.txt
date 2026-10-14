@@ -39,7 +39,8 @@
 #   Santé :      blessure_legere, blessure_grave, a_terre, releve, soigne, blesse_vu, guerisseur_soigne
 #   Loisirs :    envie_pause
 #   Moral bas :  plainte_douce, plainte_forte, menace_greve, greve, menace_demission, demission, fuite_nuit,
-#                vol, sabotage_avoue, avertissement_1, avertissement_2, avertissement_3, revolte
+#                vol, sabotage_avoue, avertissement_1, avertissement_2, avertissement_3, revolte, revolte_fin,
+#                butin_cache
 #   Moral haut : content, fier_colonie
 #   Causes :     paie_retard, repas_pareils, repas_varies, danger, chef_crie, chef_poli, meteo_mauvaise,
 #                meteo_belle, ami_mort
@@ -382,6 +383,27 @@ calme: Je ne voulais pas en arriver là. Tu ne m'as pas laissé le choix.
 peureux: On y va… on y va vraiment ? Bon… À l'assaut…
 fourbe: Enfin. J'attendais ce jour depuis longtemps.
 colerique: À l'attaque ! Pour tous les jours sans paie !
+
+[revolte_fin]
+Bon. On pose les armes. Pour cette fois.
+C'est assez. Je retourne à l'ouvrage.
+Soit. On en reste là, {chef}.
+Je range mon arme. Mais je n'oublierai pas.
+calme: Je préfère ça. Reprenons le travail.
+peureux: Ouf… C'est fini ? Tant mieux.
+fourbe: Sage décision, {chef}. Très sage.
+colerique: Ça ira pour aujourd'hui. Ne recommence pas.
+
+# Ce qu'il répond, l'air gêné, quand on lui demande comment il va et qu'il cache un butin.
+[butin_cache]
+Pourquoi tu regardes mon sac ? Il n'y a rien dedans.
+Moi ? Je n'ai rien pris. Rien du tout.
+Ce que je cache ? Rien. Des cailloux.
+Ne fouille pas mes affaires, {chef}. Elles sont à moi.
+calme: …Rien. Il n'y a rien à dire.
+peureux: Je… non, rien ! Je n'ai rien fait !
+fourbe: Tout est à sa place, {chef}. Enfin, presque tout.
+colerique: Qu'est-ce que tu regardes ? Occupe-toi de ton ouvrage !
 
 # ============================================================
 # MORAL HAUT

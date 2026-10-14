@@ -66,6 +66,13 @@ public class Reglages {
     public int moral_jours_avant_demission = 3;
     /** La lenteur au plus bas, en pour cent de sa vitesse (la moitié sous le seuil de lettre). */
     public int moral_lenteur = 20;
+    /** Au plus bas depuis un moment, après une lettre : chance d'un vol ou d'un sabotage à chaque bilan, en pour cent (le caractère la module ; 0 = jamais). */
+    public int moral_mefaits = 25;
+    /** Au plus tant d'objets volés par jour du jeu (rien de précieux) ; aussi dans les coffres proches d'autres que son chef. */
+    public int moral_vol_max = 4;
+    public boolean moral_vol_autres = true;
+    /** Révolte armée (cahier 5.4) : après plusieurs avertissements, les ouvriers au plus bas frappent leur chef, et lui seul. */
+    public boolean moral_revolte = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
@@ -125,6 +132,8 @@ public class Reglages {
         moral_seuil_demission = Math.clamp(moral_seuil_demission, 0, moral_seuil_lettre);
         moral_jours_avant_demission = Math.max(0, moral_jours_avant_demission);
         moral_lenteur = Math.clamp(moral_lenteur, 0, 50);
+        moral_mefaits = Math.clamp(moral_mefaits, 0, 100);
+        moral_vol_max = Math.max(0, moral_vol_max);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);

@@ -47,7 +47,7 @@ final class Cerveau {
     static void decider(Travailleur t, Metier m) {
         // Une longue marche vers plus loin dure des heures : la faim, l'épuisement, la nuit ou l'heure du retour l'arrêtent
         // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
-        if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible))
+        if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible)) && !t.memoire.getBoolean("fuite")
                 && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
         if (t.action instanceof Consignes.Faire f && Consignes.interrompre(t, f)) t.finirAction("interrompu");
@@ -120,6 +120,8 @@ final class Cerveau {
 
         // À bout depuis des jours, après deux lettres au chef : il rend ce qu'il a pris au dépôt et s'en va (Humeur).
         if (Humeur.demissionner(t)) return;
+        // Au plus bas : la révolte contre le chef (après ses avertissements), un vol ou un sabotage décidé au bilan (Humeur).
+        if (Humeur.mefaire(t)) return;
 
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
