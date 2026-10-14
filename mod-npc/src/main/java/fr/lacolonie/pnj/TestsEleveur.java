@@ -238,20 +238,6 @@ public class TestsEleveur {
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void abatSurOrdreSansToucherAuDernierCouple(GameTestHelper h) { abatSurOrdre(h, 143); }
 
-    // PROVISOIRE (mesure) : copies pour voir l'échec intermittent plusieurs fois par passe.
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre1(GameTestHelper h) { abatSurOrdre(h, 180); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre2(GameTestHelper h) { abatSurOrdre(h, 181); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre3(GameTestHelper h) { abatSurOrdre(h, 182); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre4(GameTestHelper h) { abatSurOrdre(h, 183); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre5(GameTestHelper h) { abatSurOrdre(h, 184); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre6(GameTestHelper h) { abatSurOrdre(h, 185); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre7(GameTestHelper h) { abatSurOrdre(h, 186); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieOrdre8(GameTestHelper h) { abatSurOrdre(h, 187); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau1(GameTestHelper h) { nourrit(h, 188); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau2(GameTestHelper h) { nourrit(h, 189); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau3(GameTestHelper h) { nourrit(h, 190); }
-    @GameTest(template = "vide", timeoutTicks = 2400) public static void copieVeau4(GameTestHelper h) { nourrit(h, 191); }
-
     static void abatSurOrdre(GameTestHelper h, int coin) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         BlockPos[] b = new BlockPos[1];
