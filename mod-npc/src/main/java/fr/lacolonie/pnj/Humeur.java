@@ -118,6 +118,7 @@ final class Humeur {
         }
         Besoins.dire(t, "demission", null);
         Courrier.ecrire(t, "demission", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t));
+        Courrier.deposer(t); // il est au poste : ses lettres y restent (licencier les oublierait)
         for (String k : List.of("demission", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause", "bilan_le", "deuil_le", "deuil_nom"))
             t.memoire.remove(k);
         t.licencier();
