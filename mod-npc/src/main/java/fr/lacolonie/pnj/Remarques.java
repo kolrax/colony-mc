@@ -73,7 +73,7 @@ final class Remarques {
     static boolean libre(Travailleur t) {
         long vie = t.memoire.getCompound("dits").getLong("vie");
         return !t.aTerre && !t.isSleeping() && !t.muet() && !t.reflechit && t.lettreEnMain == null && t.ecouteTicks <= 0
-                && t.mode != Travailleur.Mode.GREVE && t.mode != Travailleur.Mode.CHOMEUR && !(t.action instanceof Causeries.Bavarder)
+                && t.mode != Travailleur.Mode.GREVE && t.mode != Travailleur.Mode.CHOMEUR && !(t.action instanceof Causeries.Bavarder) && !(t.action instanceof Deuil.Enterrement)
                 && Cerveau.temps(t) - vie >= 30 && !t.enDanger();
     }
 

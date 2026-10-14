@@ -13,7 +13,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * Lot 5, deuil et enterrement (cahier 14.13, {@link Deuil}) : les compagnons apprennent la mort et en reparlent, le chef
  * absent reçoit une lettre, l'enterrement rassemble les ouvriers proches et leur rend la moitié du moral perdu, un ouvrier
- * à terre n'y vient pas. Coins 246 à 249 ; le lot « deuil » raccourcit la cérémonie à 2 s.
+ * à terre n'y vient pas. Coins 246 à 251 ; le lot « deuil » raccourcit la cérémonie à 2 s.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -49,7 +49,8 @@ public class TestsDeuil {
                     e[0].kill();
                 },
                 () -> h.assertTrue(e[1].moral <= moral[1] - 10, "le coup du deuil : " + moral[1] + " → " + e[1].moral),
-                () -> h.assertTrue(dit(e[1], "deuil_apprend") && dit(e[2], "deuil_apprend"), "ils disent la nouvelle (" + paroles(e) + ")"),
+                () -> h.assertTrue(dit(e[1], "deuil_apprend") != dit(e[2], "deuil_apprend") && !e[1].memoire.contains("deuil_apprend")
+                        && !e[2].memoire.contains("deuil_apprend"), "l'un d'eux dit la nouvelle, l'autre l'a entendue (" + paroles(e) + ")"),
                 () -> h.assertTrue(dit(e[1], Deuil.SOUVENIR) || dit(e[2], Deuil.SOUVENIR), "l'un d'eux en reparle (" + paroles(e) + ")"),
                 () -> TestsOrdres.fin(h, e));
     }
@@ -135,7 +136,60 @@ public class TestsDeuil {
                     h.assertFalse(dit(e[1], "deuil_apprend") || dit(e[2], "deuil_apprend"), "personne à qui le dire (" + paroles(e) + ")");
                     e[1].chef = e[2].chef = chef.getUUID(); // le chef revient
                 },
-                () -> h.assertTrue(dit(e[1], "deuil_apprend") && dit(e[2], "deuil_apprend"), "à son retour, ils le lui disent (" + paroles(e) + ")"),
+                () -> h.assertTrue(dit(e[1], "deuil_apprend") || dit(e[2], "deuil_apprend"), "à son retour, on le lui dit (" + paroles(e) + ")"),
+                () -> TestsOrdres.fin(h, e));
+    }
+
+    /** Odon attendait là où le chef l'a mis : il vient à l'enterrement, puis retourne à sa place et y attend. */
+    @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
+    public static void attendRetourneASaPlace(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 250);
+        Vec3[] place = {null};
+        boolean[] venu = {false};
+        h.onEachTick(() -> { if (e[2].action instanceof Deuil.Enterrement d && d.arrive) venu[0] = true; });
+        TestsIA.etapes(h, chef, e,
+                () -> {
+                    e[2].mode = Travailleur.Mode.ATTENDRE;
+                    place[0] = e[2].position();
+                    e[0].moveTo(e[0].getX() + 12, e[0].getY(), e[0].getZ());
+                },
+                () -> e[0].kill(),
+                () -> {
+                    TestsIA.regarder(chef, e[1]);
+                    e[1].parler(chef, "Raoul, on va enterrer Bertrand.");
+                    h.assertTrue(e[2].action instanceof Deuil.Enterrement, "Odon vient aussi (" + TestsRepertoire.c(e[2]) + ")");
+                },
+                () -> h.assertTrue(venu[0] && Courrier.de(h.getLevel().getServer()).effectifs.get(chef.getUUID()).get(e[0].getUUID()).enterre, "Bertrand est enterré, Odon était là"),
+                () -> h.assertTrue(!(e[2].action instanceof Deuil.Enterrement) && e[2].position().distanceToSqr(place[0]) <= 2 * 2 && e[2].mode == Travailleur.Mode.ATTENDRE,
+                        "Odon est revenu à sa place (" + Math.sqrt(e[2].position().distanceToSqr(place[0])) + " blocs, " + e[2].mode + ")"),
+                () -> TestsOrdres.fin(h, e));
+    }
+
+    /** Un jour après la mort, un ouvrier propose l'enterrement ; le chef dit « oui » : ils y vont ; « non, arrêtez » : ils s'arrêtent tous. */
+    @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
+    public static void ouiALaProposition(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = TestsIA.equipe(h, chef, 251);
+        Travailleur[] qui = {null};
+        TestsIA.etapes(h, chef, e,
+                () -> e[0].kill(),
+                () -> Courrier.de(h.getLevel().getServer()).effectifs.get(chef.getUUID()).get(e[0].getUUID()).mortLe -= Deuil.JOUR + 1, // un jour a passé
+                () -> {
+                    qui[0] = dit(e[1], "enterrement_propose") ? e[1] : dit(e[2], "enterrement_propose") ? e[2] : null;
+                    h.assertTrue(qui[0] != null, "l'un d'eux propose l'enterrement (" + paroles(e) + ")");
+                    h.assertFalse(dit(e[1], "enterrement_propose") && dit(e[2], "enterrement_propose"), "un seul le propose");
+                },
+                () -> {
+                    TestsIA.regarder(chef, qui[0]);
+                    qui[0].parler(chef, "Oui.");
+                    h.assertTrue(e[1].action instanceof Deuil.Enterrement && e[2].action instanceof Deuil.Enterrement, "ils y vont (" + paroles(e) + ")");
+                    qui[0].parler(chef, "Non, arrêtez.");
+                },
+                () -> {
+                    h.assertFalse(e[1].action instanceof Deuil.Enterrement || e[2].action instanceof Deuil.Enterrement, "ils s'arrêtent tous");
+                    h.assertFalse(Courrier.de(h.getLevel().getServer()).effectifs.get(chef.getUUID()).get(e[0].getUUID()).enterre, "pas enterré");
+                },
                 () -> TestsOrdres.fin(h, e));
     }
 }

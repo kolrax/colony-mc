@@ -200,7 +200,10 @@ final class Dialogue {
                 lecture.texte = dit; // on y cherche qui ou quoi est visé (l'interpréteur l'a déjà fait, sans la partie des règles)
                 Ordres.Lecture seul = Ordres.lire(dit, t.metier);
                 lecture.quotidien |= seul.quotidien; // « tous les jours » : l'IA ne le dit pas
-                if (seul.intentions.contains(Ordres.Intention.ENTERRER)) lecture.intentions.add(Ordres.Intention.ENTERRER); // l'IA ne connaît pas l'enterrement (Deuil)
+                // L'IA ne connaît pas l'enterrement (Deuil) : repris, sauf si elle a compris un ordre contraire (non, arrête, attends, au travail, rentre).
+                if (seul.intentions.contains(Ordres.Intention.ENTERRER) && lecture.intentions.stream().noneMatch(x -> java.util.EnumSet.of(Ordres.Intention.NON,
+                        Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE, Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER, Ordres.Intention.RENVOYER).contains(x)))
+                    lecture.intentions.add(Ordres.Intention.ENTERRER);
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
             }
             lecture.rang = i;

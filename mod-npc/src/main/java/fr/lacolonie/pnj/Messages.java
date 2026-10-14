@@ -303,7 +303,11 @@ final class Messages {
                 "{0} n'est plus. Les autres en parlent sans cesse, la tristesse pèse sur tout le monde.");
         t("deuil", "peureux", "{0} nous a quittés… Depuis, tout le monde a peur et personne n'ose en parler. Reviens vite, chef.");
         m("dit_enterrement", null, "Allons lui dire adieu.", "Nous y allons, chef.", "C'est juste. Allons à la tombe.");
-        m("dit_enterrement_seul", null, "Personne d'autre n'est assez près. J'irai seul lui dire adieu.");
+        m("dit_enterrement_seul", null, "J'irai lui dire adieu, même sans les autres.");
+        m("dit_enterrement_autres", null, "Les autres y vont, chef.", "Les autres y vont. Moi, je ne peux pas.");
+        m("dit_enterrement_annule", null, "Bien, chef. Chacun retourne à sa tâche.", "Comme tu voudras, chef. Nous reprenons.");
+        m("dit_enterrement_vivant", null, "{0} est toujours parmi nous, chef !", "{0} ? Mais {0} est bien en vie, chef !");
+        m("dit_enterrement_passage", null, "Je ne trouve pas de passage jusqu'à la tombe.", "Impossible d'arriver jusqu'à la tombe d'ici.");
         m("dit_enterrement_rien", null, "Il n'y a personne à enterrer, chef.", "Je ne connais aucune tombe à veiller, chef.");
         m("dit_enterrement_loin", null, "La tombe est trop loin d'ici, chef : personne n'y est assez près.");
         m("dit_enterrement_fait", null, "Nous avons déjà fait nos adieux, chef.", "C'est déjà fait, chef : la tombe a eu sa veillée.");

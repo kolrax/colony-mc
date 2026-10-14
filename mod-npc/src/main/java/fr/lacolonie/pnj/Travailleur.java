@@ -1600,6 +1600,12 @@ public class Travailleur extends PathfinderMob {
             reponseImposee = true;
             return Deuil.ordonner(this, l.texte);
         }
+        // « Oui » à sa proposition d'enterrement, ou « non, arrête » en pleine cérémonie (Deuil).
+        String deuil = Deuil.repondre(this, l);
+        if (deuil != null) {
+            reponseImposee = true;
+            return deuil;
+        }
         // L'impossible (voler, aller sur la lune, casser la roche du fond du monde…) : il en rit, sans rien faire (cahier 14.9).
         String impossible = Impossible.demande(l.texte, Ordres.lire(l.texte, metier)); // seulement si rien n'y est faisable
         String blague = impossible == null ? null : Besoins.texte(this, "impossible_" + impossible, null, null);

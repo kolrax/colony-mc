@@ -237,9 +237,11 @@ class OrdresTest {
     @Test
     void enterrement() {
         for (String x : List.of("On va enterrer Bertrand.", "Enterrement !", "Allez à la tombe de Raoul.", "Tous à la tombe d'Odon",
-                "Venez, on enterre Bertrand", "Les funérailles de Raoul, maintenant.", "Allons dire adieu à Bertrand", "Rendons hommage à Odon"))
+                "Venez, on enterre Bertrand", "Les funérailles de Raoul, maintenant.", "Merci, allons enterrer Bertrand", "Allons dire adieu à Bertrand", "Rendons hommage à Odon"))
             intention(x, Intention.ENTERRER);
-        for (String x : List.of("Attention, ça tombe !", "Il tombe de la pluie", "Ramène 10 fers", "Abats cet arbre", "adieu", "Va à la mine"))
+        for (String x : List.of("Attention, ça tombe !", "Il tombe de la pluie", "Ramène 10 fers", "Abats cet arbre", "adieu", "Va à la mine",
+                "Annule l'enterrement", "Pas d'enterrement pour ce traître", "Tu étais à l'enterrement ?", "Merci pour l'enterrement",
+                "Il est temps d'enterrer la hache de guerre", "Enterre ces graines", "Enterre le coffre ici", "On va enterrer le trésor"))
             pasIntention(x, Intention.ENTERRER);
         assertFalse(Obeissance.sansOrdre(lire("On va enterrer Bertrand", "mineur")), "c'est un ordre");
     }
