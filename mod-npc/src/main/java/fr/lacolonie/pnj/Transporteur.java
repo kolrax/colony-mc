@@ -100,9 +100,9 @@ final class Transporteur extends Metier {
         return l.getBlockEntity(p) instanceof Bureau.Entite || l.getCapability(Capabilities.ItemHandler.BLOCK, p, null) != null;
     }
 
-    /** Le bloc regardé comme bout de trajet : le bureau de son poste est le dépôt. */
+    /** Le bloc regardé comme bout de trajet : le bureau de son poste, et les coffres collés à lui, sont le dépôt. */
     static long point(Travailleur t, BlockPos p) {
-        return p == null || p.equals(t.bureau) || t.level().getBlockEntity(p) instanceof Bureau.Entite ? Trajets.DEPOT : p.asLong();
+        return p == null || t.bureau != null && p.distManhattan(t.bureau) <= 1 || t.level().getBlockEntity(p) instanceof Bureau.Entite ? Trajets.DEPOT : p.asLong();
     }
 
     /** Pourquoi il refuse ce coffre (null : il l'accepte). */
@@ -336,7 +336,7 @@ final class Transporteur extends Metier {
         Ordre(String mode, Consignes.Consigne c) { super("trajets"); this.mode = mode; this.c = c; }
 
         Actions.Etat tick(Travailleur t) {
-            String[] x = c.texte.split("\\|", -1);
+            String[] x = c.texte.split("\\|", 2);
             String objet = x.length > 1 ? x[1] : "";
             long vu = point(t, c.lieu);
             switch (mode) {
