@@ -80,6 +80,7 @@ class MoralTest {
     @Test
     void reposSeulementApresUnBilanCorrect() {
         assertEquals(41, Moral.repos(40, 0));
+        assertEquals(41, Moral.repos(40, -2), "un petit tracas s'efface avec le temps");
         assertEquals(40, Moral.repos(40, -3), "un mauvais bilan : il ne remonte pas tout seul");
         assertEquals(79, Moral.repos(80, -3), "au-dessus de 60, il redescend toujours");
     }

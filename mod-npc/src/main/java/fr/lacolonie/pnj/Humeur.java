@@ -44,7 +44,9 @@ final class Humeur {
         boolean pluie = l.isRaining(), orage = l.isThundering();
         int bilansPluie = pluie ? m.getInt("bilans_pluie") + 1 : 0;
         m.putInt("bilans_pluie", bilansPluie);
-        boolean coup = m.contains("coup_chef") && l.getGameTime() - m.getLong("coup_chef") < 24000;
+        // Le chef l'a frappé ou insulté ce jour-ci (le moral a déjà baissé sur le moment : ici, la rancune qui reste).
+        boolean coup = m.contains("coup_chef") && l.getGameTime() - m.getLong("coup_chef") < 24000
+                || t.souvenirs.liste.stream().anyMatch(x -> x.genre() == Souvenirs.Genre.INSULTE && x.jour() == t.jour());
         int ouvriers = 0;
         if (l.getServer() != null) {
             var eff = Courrier.de(l.getServer()).effectifs.get(t.chef);

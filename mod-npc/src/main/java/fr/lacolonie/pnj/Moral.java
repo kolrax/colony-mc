@@ -64,6 +64,8 @@ final class Moral {
     static final int[] DEUIL = {-4, -2, -1};
     /** Une colonie qui prospère : au moins tant d'ouvriers, et un dépôt d'au moins tant d'objets. */
     static final int OUVRIERS = 4, DEPOT = 256;
+    /** Un bilan si mauvais que le moral ne remonte plus tout seul. */
+    static final int MAUVAIS = -3;
 
     static Bilan bilan(Etat e) {
         Map<Cause, Integer> c = new EnumMap<>(Cause.class);
@@ -99,9 +101,12 @@ final class Moral {
 
     static List<String> lire(String liste) { return liste == null || liste.isEmpty() ? List.of() : Arrays.asList(liste.split(",")); }
 
-    /** Avec le temps, le moral revient vers 60 ({@link Obeissance#versLeRepos}) ; mais il ne remonte pas tant que le dernier bilan était mauvais. */
+    /**
+     * Avec le temps, le moral revient vers 60 ({@link Obeissance#versLeRepos}) ; mais il ne remonte pas tant que le dernier
+     * bilan était franchement mauvais ({@link #MAUVAIS} ou pire). Un petit tracas (−1, −2) s'efface ainsi tout seul.
+     */
     static int repos(int moral, int dernierBilan) {
-        return moral < Obeissance.REPOS && dernierBilan < 0 ? moral : Obeissance.versLeRepos(moral);
+        return moral < Obeissance.REPOS && dernierBilan <= MAUVAIS ? moral : Obeissance.versLeRepos(moral);
     }
 
     // --- Effets -------------------------------------------------------------------------------------
