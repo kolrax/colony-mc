@@ -409,6 +409,7 @@ final class Eleveur extends Metier {
             this.taches = taches;
             cour = t.bureau != null && enclos.contient(t.bureau.getX(), t.bureau.getZ());
             mobile = true; // il suit des bêtes qui bougent : ne pas les rattraper tout de suite n'est pas être coincé (Coince)
+            dePres = true; // dans l'enclos, son chemin suit la bête qui bouge (Actions.Action.marcher)
         }
 
         @Override
@@ -511,6 +512,7 @@ final class Eleveur extends Metier {
                     armer(t);
                     frappe = cible0;
                     sous = new Actions.Attaquer(a).portee(24);
+                    sous.dePres = true;
                     return Actions.Etat.EN_COURS;
                 }
             }

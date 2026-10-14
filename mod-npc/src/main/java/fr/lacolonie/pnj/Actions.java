@@ -112,6 +112,11 @@ public final class Actions {
         boolean mobile;
         /** Y arriver, c'est du travail (un poste de ronde) : les retours au poste ne s'enchaînent plus (Coince). */
         boolean travail;
+        /**
+         * Il suit de près une bête qui bouge dans un enclos (l'éleveur) : le chemin est revu dès qu'elle s'écarte, tant qu'il
+         * suit un chemin direct réussi (voir {@link #marcher}).
+         */
+        boolean dePres;
 
         Action(String nom) { this.nom = nom; }
 
@@ -134,11 +139,13 @@ public final class Actions {
         /** Marche vers la cible, à n'importe quelle distance, sans foncer dans un cul-de-sac (voir {@link Itineraire}). */
         void marcher(Travailleur t, Vec3 cible, double vitesse) {
             Vec3 p = t.position();
-            // Le but a bougé de plus de 4 blocs : nouveau chemin. Une cible qui bouge (une bête dans un enclos), de près : dès
-            // qu'elle s'est écartée d'un quart de la distance (un bloc au moins), revu au plus toutes les 10 ticks ; sinon il
-            // restait planté là où elle était (ou là où était la bête d'avant), et se disait coincé au bout de 15 s.
+            // Le but a bougé de plus de 4 blocs : nouveau chemin. Une bête suivie de près ({@code dePres}, dans un enclos) : dès
+            // qu'elle s'est écartée d'un quart de la distance (un bloc au moins), revu au plus toutes les 10 ticks, mais seulement
+            // s'il suit un chemin direct réussi ; sinon il restait planté là où elle était (ou là où était la bête d'avant). Un
+            // détour en cours (étapes, creusage) n'est jamais remis à zéro : une cible inaccessible reste « bloquée ».
             double ecart = route == null ? 0 : route.but.distanceToSqr(cible);
-            if (route == null || ecart > 16 || mobile && age % 10 == 0 && ecart > Math.max(1, p.distanceToSqr(cible) / 16)) route = new Itineraire(t, cible);
+            if (route == null || ecart > 16
+                    || dePres && age % 10 == 0 && ecart > Math.max(1, p.distanceToSqr(cible) / 16) && route.surCheminDirect()) route = new Itineraire(t, cible);
             // Il n'entre pas dans un coin que le monde n'a pas fini de préparer (terrain neuf en cours de génération) :
             // il s'y figerait. Il attend au bord, le temps que le serveur le termine.
             Vec3 cap = cible.subtract(p).multiply(1, 0, 1);
