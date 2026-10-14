@@ -245,7 +245,7 @@ class OrdresTest {
             assertFalse(Ordres.diamantCache(p), p);
         assertFalse(lire("Garde 10 diamants en stock", "mineur").missions.isEmpty());
         for (String p : List.of("Pardon, Bertrand.", "Excuse-moi.", "Désolé, je me suis emporté.", "Je te demande pardon.", "Toutes mes excuses, Raoul."))
-            assertTrue(Ordres.excuses(p) && lire(p, "mineur").intentions.contains(Intention.EXCUSES), p);
+            assertTrue(Ordres.excuses(p) && lire(p, "mineur").intentions.contains(Intention.EXCUSES) && lire(p, "mineur").faire.isEmpty(), p + " " + lire(p, "mineur").faire);
         for (String p : List.of("Demande pardon !", "Excuse-toi tout de suite.", "Bonjour Raoul", "Tu es désolant"))
             assertFalse(Ordres.excuses(p), p);
     }
