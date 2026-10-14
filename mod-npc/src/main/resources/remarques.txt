@@ -1,0 +1,696 @@
+# Remarques spontanées, humour devant l'impossible, réactions selon le caractère (lots 5 et 7). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt (même lecteur possible : Vie.lire).
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#
+# - « [cle] » ouvre une section. Clé en minuscules, sans accent ni espace (lettres, chiffres et « _ »),
+#   unique dans ce fichier ET différente de toutes les clés de vie.txt (préfixes remarque_, impossible_, caractere_).
+# - Une réplique par ligne. Préfixe facultatif « temperament: » (calme:, peureux:, fourbe:, colerique: ; aucun
+#   autre). Chaque section a au moins quatre répliques sans préfixe.
+# - Tirage proposé (comme vie.txt) : une fois sur deux une réplique du tempérament du PNJ, sinon une commune.
+#
+# VARIABLES (seulement celles de vie.txt)
+#   {chef}   nom du chef de la colonie (partout)
+#   {nom}    prénom du nouveau venu, dans remarque_nouveau_collegue seulement
+#   {objet}  l'objet offert, tel qu'on le dit (« une pioche »), dans caractere_cadeau seulement
+# Les répliques avec {nom} ou {objet} ne sortent que si la valeur est connue ; chaque section garde au moins
+# quatre répliques communes sans ces variables.
+#
+# ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle ni sur le chef.
+#
+# ------------------------------------------------------------
+# 1. REMARQUES SPONTANÉES (cahier 7.3 : « parfois : remarques, blagues »)
+# Dites seul, en bulle, à voix haute, sans qu'on lui parle. Conseil : rarement (une toutes les 10 à 20 minutes
+# par ouvrier au plus), et jamais deux ouvriers proches en même temps.
+#   Moment :   remarque_matin, remarque_soir, remarque_nuit
+#   Temps :    remarque_pluie, remarque_orage, remarque_neige, remarque_beau_temps
+#              (distinctes de meteo_mauvaise et meteo_belle de vie.txt, qui disent le moral au chef)
+#   Travail :  remarque_travail_fini, remarque_depot_plein (dépôt de la colonie plein ; transport_coffre_plein
+#              de vie.txt reste la réplique du transporteur devant un coffre), remarque_ennui (aucun ordre),
+#              remarque_machines (engrenages, roues à eau, moulins de la colonie, s'il y en a près de lui)
+#   Colonie :  remarque_nouveau_collegue ({nom} : le nouvel embauché), remarque_jour_paie (paie reçue)
+#   Métier :   remarque_mineur, remarque_bucheron, remarque_guerrier, remarque_fermier, remarque_eleveur,
+#              remarque_pecheur, remarque_chasseur, remarque_cuisinier (aussi boulanger), remarque_transporteur,
+#              remarque_guerisseur (dites au travail, selon le métier de l'ouvrier)
+#
+# 2. HUMOUR DEVANT L'IMPOSSIBLE (cahier 14.9 : « il en rit, fait une blague »)
+# Réponse au chef qui demande l'impossible. Il refuse en riant, sans obéir.
+#   impossible_voler     voler, sauter du toit pour voler, avoir des ailes
+#   impossible_lune      aller sur la lune, au soleil, décrocher les étoiles
+#   impossible_roche     casser la roche du fond du monde (indestructible)
+#   impossible_creature  ramener un dragon, un monstre de légende, apprivoiser une bête impossible
+#   impossible_duree     travailler 48 h, sans dormir, sans manger, toute la semaine sans arrêt
+#   impossible_vite      bâtir un château en une minute, tout finir tout de suite
+#   impossible_quantite  mille diamants, toute la forêt, toute la montagne
+#   impossible_nature    arrêter la pluie, faire lever le soleil, arrêter le temps
+#   impossible_magie     changer la pierre en or, être à deux endroits, devenir invisible
+#   impossible_general   tout le reste (filet de sécurité)
+#
+# 3. RÉACTIONS SELON LE CARACTÈRE (plan, lot 5 ; cahier 14.3, 14.5, 14.7, 14.8)
+# Complètent les sections insulte, coup, impaye, diamant_avoue, diamant_nie et cadeau de vie.txt, qui n'ont
+# qu'une réplique par tempérament : ici quatre par tempérament, sans reprendre celles de vie.txt.
+# Les caractères sont les quatre tempéraments du mod : calme (posé, digne), peureux (timide),
+# fourbe (rusé, rancunier), colerique (soupe au lait, mais vite apaisé par un geste).
+#   caractere_insulte        le chef l'insulte
+#   caractere_coup           le chef le frappe
+#   caractere_impaye         pas payé depuis des jours
+#   caractere_diamant_cache  à voix basse, au moment où il garde un diamant en cachette
+#   caractere_diamant_rendu  il rapporte tous ses diamants (celui qui ne triche pas)
+#   caractere_cadeau         le chef lui offre {objet}
+#   caractere_excuses        le chef s'excuse après une insulte ou un coup
+# ------------------------------------------------------------
+
+# ============================================================
+# 1. REMARQUES SPONTANÉES : MOMENT DE LA JOURNÉE
+# ============================================================
+
+[remarque_matin]
+Debout. La journée ne va pas se faire toute seule.
+Le soleil se lève. Au travail.
+Rien de tel qu'un matin frais pour avoir les idées claires.
+Encore une journée. Allez.
+J'ai bien dormi. Pour une fois.
+Une bonne journée commence par un bon morceau de pain.
+Le matin, tout paraît possible.
+Les poules sont déjà réveillées. Moi, presque.
+calme: Le jour se lève. Prenons les choses une par une.
+calme: Un matin tranquille. Ça ne dure jamais, alors j'en profite.
+peureux: La nuit est finie. Ouf. On a tenu encore une fois.
+peureux: Il fait jour… On peut sortir, maintenant ?
+fourbe: Le matin, personne ne regarde encore. C'est le meilleur moment.
+fourbe: Lève-toi tôt, et tu sais tout avant les autres.
+colerique: Déjà le matin ? J'avais à peine fermé l'œil !
+colerique: Qui a fait tout ce bruit cette nuit ? Qu'il se dénonce !
+
+[remarque_soir]
+La journée tire à sa fin.
+Le ciel rougit. Encore un peu, et on rentre.
+Ce soir, je mange et je dors. Rien d'autre.
+Mes bras ont bien travaillé aujourd'hui.
+Le soleil se couche. Il est temps de ranger les outils.
+Une bonne soupe, et au lit.
+Encore une journée de faite.
+Le soir, la colonie devient calme. J'aime bien ce moment.
+calme: Le soir tombe. On a bien avancé.
+calme: Chaque chose en son temps. Demain, on reprend.
+peureux: Il commence à faire sombre… Il faudrait rentrer, non ?
+peureux: Je n'aime pas être dehors quand la nuit tombe.
+fourbe: Le soir, les langues se délient. On apprend des choses.
+fourbe: Fin de journée. Les coffres sont pleins, et tout le monde a sommeil.
+colerique: Enfin ! Je croyais que ce jour ne finirait jamais !
+colerique: Si quelqu'un me dérange ce soir, gare à lui.
+
+[remarque_nuit]
+Il fait noir comme dans un four.
+La nuit, on entend des bruits bizarres.
+Il vaut mieux rester près du feu.
+Les étoiles sont belles, ce soir.
+Ce n'est pas l'heure de traîner dehors.
+La nuit, les bêtes rôdent. Restons prudents.
+Je n'arrive pas à dormir.
+Chut. Les autres dorment.
+calme: La nuit passe toujours. Il suffit d'attendre.
+calme: Une nuit calme. Pourvu que ça dure.
+peureux: Tu as entendu ? Là, derrière… Non ? Rien ?
+peureux: Je laisse une torche allumée. Juste au cas où.
+fourbe: La nuit, tout le monde dort. Presque tout le monde.
+fourbe: Dans le noir, on voit mieux qui va où. Il suffit de bien écouter.
+colerique: Qu'elles viennent, les bêtes de la nuit ! Je les attends !
+colerique: Impossible de dormir avec ce vacarme !
+
+# ============================================================
+# 1. REMARQUES SPONTANÉES : LE TEMPS QU'IL FAIT
+# ============================================================
+
+[remarque_pluie]
+Encore la pluie.
+Il pleut. Mes outils vont rouiller.
+La pluie, c'est bon pour les champs, au moins.
+Un peu d'eau n'a jamais fait de mal à personne.
+Si ça continue, il faudra apprendre à nager.
+Ça sent la terre mouillée.
+Je vais sécher près du four, ce soir.
+calme: La pluie remplit les puits. Il ne faut pas s'en plaindre.
+calme: Il pleut. Ça lavera les rues.
+peureux: L'eau monte, tu crois ? Elle ne monte pas, hein ?
+peureux: Pourvu que le toit tienne…
+fourbe: Sous la pluie, personne ne regarde où on va.
+fourbe: La pluie efface les traces de pas. Pratique.
+colerique: Ce ciel se moque de moi !
+colerique: Assez de cette pluie ! Assez !
+
+[remarque_orage]
+Tu as entendu ce tonnerre ?
+L'orage gronde. Mieux vaut rester à l'abri.
+Pas de travail en hauteur avec ce temps.
+La foudre peut tomber n'importe où. Restons à couvert.
+Ça cogne fort, là-haut.
+Un éclair ! Tout le ciel est devenu blanc.
+calme: Ça passera. Les orages ne durent jamais.
+calme: On attend que ça se calme. Rien ne presse.
+peureux: J'ai horreur de l'orage… Je reste ici.
+peureux: Chaque coup de tonnerre me fait sauter le cœur.
+fourbe: Un orage ? Personne n'entendra rien. Rien du tout.
+colerique: Tonne donc ! Tu ne me fais pas peur !
+
+[remarque_neige]
+Il neige. Les mains gèlent.
+La neige recouvre tout. C'est joli, quand même.
+Avec ce froid, il faudra du bois en plus.
+On ne voit plus les chemins.
+Un bon feu, voilà ce qu'il me faudrait.
+Mes doigts ne m'obéissent plus, tellement il fait froid.
+calme: La neige rend tout silencieux. J'aime ça.
+peureux: Et si on restait coincés par la neige tout l'hiver ?
+fourbe: Les traces dans la neige… On voit qui va où. Intéressant.
+colerique: Ce froid ! Il me mord jusqu'aux os !
+
+[remarque_beau_temps]
+Quel beau ciel.
+Avec ce soleil, le travail va tout seul.
+Il fait doux. On se croirait un jour de fête.
+Pas un nuage à l'horizon. Ça fait plaisir.
+Le soleil chauffe le dos. C'est agréable.
+Un temps pareil, ça donne du cœur à l'ouvrage.
+calme: Un ciel pareil, ça remet les idées en place.
+peureux: Beau temps… Pourvu que ça ne tourne pas à l'orage.
+fourbe: Beau temps pour une promenade. Du côté du dépôt, par exemple.
+colerique: Enfin un peu de soleil. Il était temps !
+
+# ============================================================
+# 1. REMARQUES SPONTANÉES : LE TRAVAIL
+# ============================================================
+
+[remarque_travail_fini]
+Voilà. C'est fait.
+Le travail est fini. Je peux souffler un peu.
+Et un de plus ! Au suivant.
+Pas mal, hein ? Regarde-moi ça.
+Travail terminé. J'ai bien mérité ma soupe.
+J'attends la suite des ordres.
+Encore une tâche de faite. La colonie avance.
+Quelqu'un a vu {chef} ? J'ai fini.
+calme: Le travail est fait, et bien fait.
+calme: Terminé. Je range mes outils et j'attends.
+peureux: J'ai fini… J'espère que ça ira comme ça…
+peureux: C'est bien, comme ça ? Personne ne va me gronder ?
+fourbe: Fini. Enfin… presque. Personne ne verra la différence.
+fourbe: Fini plus tôt que prévu. Inutile de le crier sur les toits.
+colerique: Fini ! Et personne pour me dire merci, bien sûr.
+colerique: Voilà ! Qu'on ne vienne pas me dire que je traîne !
+
+[remarque_depot_plein]
+Le dépôt déborde. Il faut d'autres coffres.
+Plus de place nulle part. Je pose ça où, moi ?
+On croule sous les réserves. C'est bon signe, au fond.
+{chef}, le dépôt est plein à craquer.
+Si on ne range pas, on ne trouvera plus rien.
+Un coffre de plus, ce ne serait pas du luxe.
+calme: Le dépôt est plein. Il faudra en construire un autre.
+peureux: Le coffre ne ferme plus… C'est ma faute ?
+fourbe: Tant de choses entassées… Qui remarquerait s'il en manquait un peu ?
+colerique: Qui s'occupe de ce dépôt ? On ne peut plus rien y mettre !
+
+[remarque_ennui]
+Personne n'a de travail pour moi ?
+Je tourne en rond.
+Rester les bras croisés, ce n'est pas mon genre.
+Si quelqu'un a besoin d'aide, je suis là.
+Je m'ennuie. Ça ne m'arrive pas souvent.
+Je ferais bien quelque chose, mais quoi ?
+calme: Pas d'ordres. J'en profite pour souffler.
+peureux: On ne m'a rien donné à faire… On va me renvoyer ?
+fourbe: Rien à faire, et personne ne me surveille. Voyons voir.
+colerique: J'attends ! J'attends depuis une éternité !
+
+[remarque_machines]
+Ces roues qui tournent toutes seules… On n'arrête pas le progrès.
+Avant, on faisait tout à la main. Maintenant, il y a les machines.
+Ce bruit d'engrenages, on finit par s'y habituer.
+Un jour, les machines feront tout le travail. Et nous, alors ?
+Mon grand-père n'aurait jamais cru ça.
+Une roue à eau, ça ne se fatigue jamais. Moi si.
+calme: Les machines, c'est bien. À condition de savoir les réparer.
+peureux: Je ne m'approche pas trop. Ces engrenages mangent les doigts.
+fourbe: Une machine ne bavarde pas, elle. On peut tout faire devant elle.
+colerique: Ce vacarme ! On ne s'entend plus penser !
+
+# ============================================================
+# 1. REMARQUES SPONTANÉES : LA VIE DE LA COLONIE
+# ============================================================
+
+[remarque_nouveau_collegue]
+Tiens, une nouvelle tête. Bienvenue !
+Un de plus parmi nous. Ça fait plaisir.
+On se serre un peu, et il y aura de la place pour tout le monde.
+Du renfort ! On ne sera pas de trop.
+Bienvenue dans la colonie, {nom}. Le travail ne manque pas.
+{nom} ? Enchanté. On avait besoin de bras.
+{nom}, si tu as une question, n'hésite pas.
+calme: Bienvenue, {nom}. Prends le temps de t'installer.
+calme: Une nouvelle personne. La colonie grandit.
+peureux: Bonjour, {nom}… On va bien s'entendre, hein ?
+peureux: Quelqu'un de nouveau… Pourvu qu'on ne me prenne pas mon lit.
+fourbe: Bienvenue, {nom}. Je te montrerai les coins. Les bons coins.
+fourbe: Un conseil, {nom} : méfie-toi des autres. Pas de moi, des autres.
+colerique: Encore une bouche à nourrir ! On va finir par manquer de pain !
+colerique: Toi, {nom}, tu ne touches pas à mes outils. Compris ?
+
+[remarque_jour_paie]
+Jour de paie ! Ma bourse va enfin sonner.
+Des pièces, des vraies. Ça fait du bien.
+Ce soir, je m'offre un bon repas.
+Merci, {chef}. Le travail paie, ici.
+Je mets un peu de côté. On ne sait jamais.
+Ah, le bruit des pièces. Il n'y a pas plus belle musique.
+calme: La paie est là. Tout est en ordre.
+calme: Un salaire juste pour un travail juste.
+peureux: Je compte… et je recompte. On ne sait jamais.
+peureux: Je vais cacher mes pièces sous mon oreiller.
+fourbe: Paie reçue. Et il y a toujours moyen d'arrondir.
+fourbe: Je compte mes pièces. Et celles des autres, par curiosité.
+colerique: Pas trop tôt ! J'ai cru qu'on m'avait oublié !
+colerique: C'est tout ? Bon. Ça ira, pour cette fois.
+
+# ============================================================
+# 1. REMARQUES SPONTANÉES : SELON LE MÉTIER
+# ============================================================
+
+[remarque_mineur]
+Il fait noir, là-dessous. Heureusement que j'ai ma torche.
+La pierre est dure aujourd'hui. Ou c'est mon bras qui faiblit.
+J'ai de la poussière jusque dans les oreilles.
+Chaque coup de pioche, c'est peut-être un filon.
+Le fer, ça fait les outils. Les outils, ça fait le reste.
+Sous la terre, on ne sait plus l'heure qu'il est.
+Il faudra étayer ce couloir, un jour.
+Du charbon, toujours du charbon. Les forges en réclament sans arrêt.
+calme: On creuse lentement, mais on creuse bien.
+calme: Écoute… La montagne respire.
+peureux: Pourvu que le plafond tienne…
+peureux: Il y a de l'eau qui coule, là… Ou de la lave ? Non, de l'eau. Ouf.
+fourbe: Les beaux cailloux, je les vois avant tout le monde. Bien avant.
+fourbe: Au fond de la mine, personne ne compte les coups de pioche.
+colerique: Cette roche ne veut pas céder ? Elle va voir !
+colerique: Encore une pioche usée ! On me les use rien qu'en les regardant !
+
+[remarque_bucheron]
+Ça sent bon la sève.
+Un arbre de plus. La forêt en a encore plein.
+Il faut replanter. Sinon, dans dix ans, plus de forêt.
+Attention, ça tombe !
+Le bois, c'est la vie de la colonie. Pas de bois, pas de feu.
+Mes mains sont pleines d'échardes.
+Un beau chêne, celui-là. Presque dommage de le couper.
+Les forges et les machines avalent du bois à n'en plus finir.
+calme: Un arbre met des années à pousser. Ça mérite le respect.
+peureux: Pourvu qu'il ne tombe pas de mon côté…
+fourbe: Le plus beau bois, je le garde pour la fin. Ou pour moi.
+colerique: Tombe, toi ! Tombe donc !
+
+[remarque_guerrier]
+Rien à signaler. Pour l'instant.
+Je garde l'œil ouvert.
+Une lame bien affûtée, c'est une vie sauvée.
+Tant que je suis là, personne ne touche à la colonie.
+Un garde qui dort ne garde rien. Je reste debout.
+Mon armure pèse lourd. Mais elle me protège.
+La paix, c'est bien. Mais mon épée reste à portée de main.
+J'entretiens mon épée chaque soir.
+calme: Le calme avant la tempête. Ou juste le calme.
+peureux: Tant que personne n'attaque, tout va bien. Je préfère ça.
+fourbe: Un bon garde voit tout. Et se souvient de tout.
+colerique: Qu'ils viennent ! Mon épée s'ennuie !
+colerique: Je m'entraîne. Celui qui rit s'entraîne avec moi.
+
+[remarque_fermier]
+Le blé pousse bien, cette année.
+Il faut de l'eau près des cultures, sinon tout sèche.
+Une bonne récolte, et on mangera tout l'hiver.
+La terre ne ment jamais. Elle rend ce qu'on lui donne.
+J'ai de la terre sous les ongles. C'est le métier.
+Le pain de demain, c'est le blé d'aujourd'hui.
+Des carottes, des pommes de terre, du blé… On ne manquera de rien.
+Attention où tu marches. Ce sont mes semis.
+calme: Il faut savoir attendre. Le blé ne pousse pas plus vite si on le regarde.
+peureux: Pourvu que les bêtes ne piétinent pas tout…
+fourbe: Une poignée de blé de moins, qui s'en apercevrait ?
+colerique: Qui a marché dans mon champ ? Qui ?
+
+[remarque_eleveur]
+Les vaches ont l'air en forme.
+Il faut les nourrir tous les jours. Elles ne prennent pas de congé.
+Les moutons ont besoin d'une tonte.
+Une bête bien soignée, c'est du lait, de la laine et de la viande.
+Fermez bien la barrière ! Sinon elles s'échappent.
+Je leur parle. Elles écoutent mieux que certains.
+Ça sent l'étable. On s'y fait.
+calme: Les bêtes sentent quand on est calme. Alors je reste calme.
+peureux: Cette vache me regarde de travers… Elle m'en veut ?
+fourbe: Un mouton de plus ou de moins dans l'enclos… Qui compte vraiment ?
+colerique: Arrête de pousser, toi ! Chacun son tour à la mangeoire !
+
+[remarque_pecheur]
+La patience, c'est la moitié du métier.
+Le poisson, il faut savoir l'attendre.
+Un bon fil, un bon hameçon, et beaucoup de temps.
+J'aime le bruit de l'eau.
+Un jour, j'attraperai le plus gros poisson de la région.
+Le vent ride l'eau. Ils vont se méfier.
+calme: Assis au bord de l'eau, on oublie tout.
+peureux: Il y a quelque chose de gros, là-dessous… J'espère que c'est un poisson.
+fourbe: Un pêcheur qui raconte tout ne mange pas souvent.
+colerique: Mordez, à la fin ! Je n'ai pas que ça à faire !
+
+[remarque_chasseur]
+Les traces sont fraîches.
+Le gibier se méfie. Il faut être plus malin que lui.
+Un bon arc, une bonne flèche, et beaucoup de silence.
+La forêt a ses règles. Je les respecte.
+Je ne prends que ce qu'il faut pour manger.
+Le vent tourne. Il ne faut pas qu'ils me sentent.
+calme: Le chasseur pressé rentre les mains vides.
+peureux: Et si c'était un loup, là-bas ? Un gros ?
+fourbe: Le meilleur morceau revient au chasseur. C'est la règle. Ma règle.
+colerique: Ces lapins sont trop rapides ! C'est injuste !
+
+[remarque_cuisinier]
+Une pincée de sel, et tout change.
+Le pain, c'est la base de tout.
+Ça va être bon, je le sens.
+Personne ne travaille bien le ventre vide.
+Le four doit être bien chaud. Pas trop, pas trop peu.
+Qui veut goûter ? Personne ? Tant pis pour vous.
+Un repas varié, des ouvriers heureux.
+calme: La cuisine, c'est une affaire de patience.
+peureux: Pourvu que personne ne trouve ça mauvais…
+fourbe: Le meilleur morceau ? Le cuisinier le goûte en premier. Pour vérifier.
+colerique: Qui a touché à mes casseroles ?
+
+[remarque_transporteur]
+Une charge de plus, et encore une après.
+Mes jambes connaissent ce chemin par cœur.
+Si je ne porte pas, rien ne bouge dans cette colonie.
+Le dos me tire. C'est le métier.
+Un jour, des wagons sur des rails feront mon travail. En attendant, je porte.
+Je ne m'arrête que pour boire un peu d'eau.
+calme: Pas à pas, on arrive toujours au bout.
+peureux: C'est lourd… Si je tombe, je casse tout…
+fourbe: Il manque un sac ? Tiens donc. Il a dû tomber en route.
+colerique: Qui a mis ce coffre aussi loin ? Qui ?
+
+[remarque_guerisseur]
+Une plante pour chaque mal.
+Je soigne les corps. Les cœurs, c'est plus dur.
+Lavez-vous les mains avant de manger.
+Il faut que je refasse mes réserves d'herbes.
+Un bandage propre, c'est déjà la moitié du soin.
+Personne n'a de blessure ? Tant mieux. Je préfère ça.
+calme: On ne guérit pas en un jour. Il faut du repos.
+peureux: J'ai horreur du sang… C'est embêtant, pour mon métier.
+fourbe: Mes remèdes ? Le secret, c'est de ne jamais dire ce qu'il y a dedans.
+colerique: Encore une blessure ? Faites attention, à la fin !
+
+# ============================================================
+# 2. HUMOUR DEVANT L'IMPOSSIBLE (réponse au chef)
+# ============================================================
+
+[impossible_voler]
+Voler ? Je veux bien. Tu me prêtes tes ailes ?
+Si je bats des bras assez fort… Non. Toujours au sol.
+Les oiseaux volent. Moi, je marche. Chacun son métier.
+Je vais essayer depuis le toit. Non, finalement, je tiens à mes jambes.
+Voler ? J'ai déjà du mal à monter l'escalier.
+Demande aux poules. Elles n'y arrivent pas non plus.
+Je n'ai pas de plumes, {chef}. J'ai vérifié.
+calme: Je te propose autre chose : je marche, mais vite.
+peureux: Voler ? Mais j'ai le vertige sur une échelle !
+fourbe: Voler ? Ah, dans le sens de « prendre » ? Non ? Dommage.
+colerique: Et puis quoi encore ? Pondre des œufs ?
+
+[impossible_lune]
+La lune ? Il faudrait une sacrée échelle.
+J'y vais, {chef}. Tu m'attends pour le dîner ?
+La lune, c'est loin. Même pour mes jambes.
+D'accord. Je pars dès qu'on aura construit l'escalier.
+Je te rapporte un bout de lune ? On dirait un fromage.
+Les étoiles, je veux bien. Mais je ne les décroche qu'une à la fois.
+calme: Je préfère la regarder d'ici. Elle est très bien là où elle est.
+peureux: Tout là-haut ? Et s'il n'y a rien pour me rattraper ?
+fourbe: Bien sûr. Paie-moi d'avance, et je pars ce soir.
+colerique: La lune ? Va donc la chercher toi-même !
+
+[impossible_roche]
+La roche du fond du monde ? Elle a usé plus de pioches que tu n'as de pièces.
+Je tape, je tape… Elle ne perd pas un grain.
+Certaines pierres ne se laissent pas faire. Celle-là en est.
+Même un diamant rebondirait dessus.
+Le fond du monde, c'est le fond. On ne va pas plus bas.
+Si je creuse dessous, j'arrive où ? Je préfère ne pas savoir.
+calme: Il y a des choses qu'on ne casse pas. Cette roche en fait partie.
+peureux: Et si on la cassait, et que tout tombait dans le vide ?
+fourbe: J'y passerai la journée, si tu veux. Payée, bien sûr. Ça ne changera rien à la roche.
+colerique: J'y casserais toutes mes pioches, elle ne bougerait pas !
+
+[impossible_creature]
+Un dragon ? Dans un seau, peut-être ?
+Je te le ramène. Tu le nourris, toi ?
+Les dragons, je n'en ai vu que dans les histoires.
+Avec une corde et un bout de pain ? Ça devrait suffire. Non ?
+Si j'en trouve un, je lui dis que tu l'invites.
+Un dragon ? Il faudra agrandir l'étable.
+calme: Laissons les dragons où ils sont. Ils ne nous dérangent pas.
+peureux: Un… un dragon ? Tu veux ma mort ?
+fourbe: Un dragon ? J'en connais un. Il coûte cher. Très cher.
+colerique: Un dragon ! Et pourquoi pas dix, tant que tu y es ?
+
+[impossible_duree]
+Quarante-huit heures ? Les journées n'en font que vingt-quatre, {chef}.
+Sans dormir ? Au bout d'un moment, je vais prendre ma pioche pour un oreiller.
+D'accord. Mais demain, je dormirai debout.
+Travailler sans arrêt ? Même les roues à eau s'arrêtent quand la rivière gèle.
+Je veux bien, mais mes bras ont dit non.
+Sans manger ? Mon ventre n'a pas été prévenu.
+calme: Un ouvrier qui a dormi en vaut deux. Laisse-moi dormir un peu.
+peureux: Si je ne dors pas, je vais voir des choses dans le noir…
+fourbe: Bien sûr. Et la paie est double, je suppose ?
+colerique: Quarante-huit heures ? Essaie, toi, et on en reparle !
+
+[impossible_vite]
+Un château en une minute ? Je peux te faire un tas de sable.
+Une minute ? Le temps que je trouve ma truelle, elle est passée.
+D'accord. Commence à compter… Ah, c'est déjà fini. Le temps, pas le château.
+Même les fourmis mettent plus longtemps que ça.
+Je peux poser une pierre. Le reste viendra plus tard.
+Si tu me donnes cent bras, peut-être.
+calme: On peut faire vite, ou on peut faire bien. Pas les deux.
+peureux: En une minute ? Je vais tout faire de travers, et il va s'écrouler…
+fourbe: C'est fait. Il est invisible, c'est tout. Tu ne le vois pas ?
+colerique: Une minute ! Tu crois que j'ai des ailes aux mains ?
+
+[impossible_quantite]
+Mille diamants ? Si j'en trouve un, je fais déjà la fête.
+Toute la forêt ? Et après, on se chauffe avec quoi ?
+Tout ça ? Il me faudrait deux vies.
+Je peux en porter un sac. Pas une montagne.
+Je vais commencer. Mes arrière-petits-enfants finiront.
+calme: Commençons par un peu. On verra pour le reste.
+peureux: Tout ça… et sans aide ?
+fourbe: Mille ? J'en ramène dix, et tu comptes mal. Marché conclu ?
+colerique: Et pourquoi pas le monde entier, pendant que tu y es ?
+
+[impossible_nature]
+Arrêter la pluie ? Je n'ai pas un chapeau assez grand.
+Je vais parler au ciel. Mais il n'écoute jamais.
+Faire lever le soleil ? Il se lève tout seul, normalement. Patience.
+Le temps fait ce qu'il veut. Moi aussi, j'aimerais bien.
+Si je savais commander au ciel, je ne porterais pas des sacs toute la journée.
+calme: Le ciel ne prend pas d'ordres. Même pas les tiens.
+peureux: Je n'ose pas fâcher le ciel…
+fourbe: C'est fait. Il s'arrêtera… quand il s'arrêtera.
+colerique: Je vais lui crier dessus, au ciel ! Tu vas voir !
+
+[impossible_magie]
+Changer la pierre en or ? Si je savais faire ça, je ne travaillerais plus.
+Être à deux endroits à la fois ? J'ai déjà du mal à être à un seul.
+Devenir invisible ? Facile : je me cache derrière un arbre.
+De la magie ? Je ne connais que celle du pain qui lève.
+calme: Je ne sais pas faire de miracles. Seulement du bon travail.
+peureux: De la sorcellerie ? Non, non, ça porte malheur…
+fourbe: De l'or ? J'ai un secret pour ça. Il s'appelle « vendre ».
+colerique: Je travaille de mes mains, pas avec des sortilèges !
+
+[impossible_general]
+Ça, {chef}, même le meilleur d'entre nous n'y arriverait pas.
+Je veux bien essayer. Mais ne compte pas trop dessus.
+Tu as fait un drôle de rêve, {chef} ?
+C'est une blague ? Elle est bonne.
+Impossible n'est pas… Ah si, là, c'est impossible.
+Je note. Je le ferai juste après avoir appris à voler.
+Demande-moi quelque chose de difficile, mais pas ça.
+calme: Je comprends l'idée. Mais non.
+peureux: Si je n'y arrive pas, tu ne vas pas te fâcher ?
+fourbe: Possible. Tout est possible. Avec assez de pièces.
+colerique: Tu te moques de moi ?
+
+# ============================================================
+# 3. RÉACTIONS SELON LE CARACTÈRE
+# ============================================================
+
+[caractere_insulte]
+Tu pourrais être plus poli, {chef}.
+Ce n'est pas comme ça qu'on parle aux gens.
+Un mot gentil ne coûte rien, tu sais.
+Je fais de mon mieux. Ça ne suffit pas, on dirait.
+calme: Les mots dépassent parfois la pensée. Je te laisse le temps de te reprendre.
+calme: Je ne réponds pas à la colère. Reparlons-en plus tard.
+calme: La journée a été longue pour toi, sans doute.
+calme: Ça ne change rien à mon travail. Mais ça change ce que je pense de toi.
+peureux: Je… je vais faire mieux. Promis.
+peureux: Ne crie pas, s'il te plaît… J'ai compris.
+peureux: Tout le monde a entendu… Quelle honte…
+peureux: J'ai encore tout raté, c'est ça ?
+fourbe: Bien noté. Tout est noté.
+fourbe: Oh, ça ne me vexe pas. Pas du tout.
+fourbe: Les gens qui insultent ont souvent des coffres mal fermés. Je dis ça…
+fourbe: Souris, {chef}. Moi, je souris toujours.
+colerique: Retire ça tout de suite !
+colerique: Encore un mot, et tu verras de quel bois je me chauffe !
+colerique: Tu crois que je vais me laisser faire ?
+colerique: Parle-moi encore comme ça, et je pose mes outils !
+
+[caractere_coup]
+Ça ne se fait pas, {chef}. Pas ici.
+Mon bras me lance. Merci bien.
+On peut parler, tu sais. Pas besoin de cogner.
+Tout le monde l'a vu. Tout le monde s'en souviendra.
+calme: Je ne te rendrai pas ce coup. Mais tu viens de perdre ma confiance.
+calme: Frapper ne fera pas avancer le travail plus vite.
+calme: Respire. Et explique-moi ce que tu veux.
+calme: Un chef qui frappe, c'est un chef qui ne sait plus quoi dire.
+peureux: Pas la tête ! Pas la tête !
+peureux: Je ne bouge plus… Je me cache, et je ne bouge plus…
+peureux: J'ai mal… Qu'est-ce que j'ai fait ?
+peureux: Je travaillerai plus vite, mais ne recommence pas…
+fourbe: Tu as la main lourde. J'ai la mémoire longue.
+fourbe: Ah. Je vois. Bon. Chacun son tour, un jour.
+fourbe: Frappe un ouvrier, et tu en perds dix. Les autres parlent, tu sais.
+fourbe: Merci pour la leçon. Je saurai m'en servir.
+colerique: Recommence, pour voir !
+colerique: Tu cherches la bagarre ? Tu vas la trouver !
+colerique: Personne ne me touche ! Personne !
+colerique: Ah oui ? Eh bien moi, je pose tout, et je m'en vais !
+
+[caractere_impaye]
+J'ai travaillé. Je veux ma paie. C'est tout.
+Sans pièces, je ne peux pas acheter de pain.
+Une promesse ne remplit pas une bourse.
+Je compte les jours, {chef}. Et ils sont nombreux.
+calme: Je comprends que les temps soient durs. Mais il faudra me payer.
+calme: Je patiente encore un peu. Un peu seulement.
+calme: Dis-moi quand viendra la paie, et j'attendrai.
+calme: Un accord est un accord. Je tiens ma part, tiens la tienne.
+peureux: Je n'ose pas demander… mais… ma paie ?
+peureux: Il ne me reste presque rien… Juste quelques miettes.
+peureux: Tu ne vas pas me renvoyer si je demande ma paie ?
+peureux: Le boulanger ne fait pas crédit, tu sais…
+fourbe: Pas de paie ? Alors je me paierai autrement. Discrètement.
+fourbe: Les autres colonies paient mieux, paraît-il. Je dis ça, je ne dis rien.
+fourbe: Je pourrais trouver des pièces ailleurs. Mais tu n'aimerais pas savoir où.
+fourbe: Tu me dois des pièces. Je ne l'oublie jamais. Jamais.
+colerique: Je ne travaille pas pour des prunes !
+colerique: Ma paie, {chef} ! Maintenant !
+colerique: Encore un jour sans pièces, et tu me verras en colère pour de bon !
+colerique: Tu crois que je vis d'air frais ?
+
+[caractere_diamant_cache]
+Celui-là, il brille trop pour le dépôt.
+Personne ne l'a vu. Personne.
+Un seul. Juste un. Ça ne compte pas.
+Dans ma poche, et on n'en parle plus.
+calme: Un seul, pour mes vieux jours. C'est raisonnable.
+calme: La paie est maigre. Ceci la complète.
+calme: Je réfléchis… Non. Je le garde. Doucement.
+calme: Un diamant de côté, c'est une sécurité.
+peureux: Si on me surprend… Non, personne ne regarde…
+peureux: Je le cache… mon cœur bat trop fort…
+peureux: Juste celui-là… et je ne recommence plus jamais.
+peureux: Pourvu que le chef ne fouille pas les poches…
+fourbe: Un pour la colonie, un pour moi. Le partage idéal.
+fourbe: Le chef compte mal. Ça tombe bien, moi je compte très bien.
+fourbe: Dans la doublure de ma veste. Jamais personne n'y regarde.
+fourbe: Ce qu'on ne voit pas n'existe pas.
+colerique: Je le mérite, celui-là. Avec tout ce que j'endure.
+colerique: Le chef n'a qu'à mieux payer !
+colerique: Qu'on vienne me le prendre, tiens !
+colerique: Je le garde. Et si ça ne plaît pas à quelqu'un, qu'il vienne me le dire.
+
+[caractere_diamant_rendu]
+Des diamants, {chef} ! Tout est au dépôt.
+Regarde ce que j'ai trouvé ! Je les ai tous rapportés.
+Un filon de diamants ! La colonie va être riche.
+Pas un ne manque. Tu peux compter.
+calme: Des diamants. Je les ai tous déposés, comme il se doit.
+calme: Ce qu'on trouve sur le chantier appartient à la colonie.
+calme: J'ai compté deux fois. Tout est là.
+calme: Une belle trouvaille. Elle servira à tous.
+peureux: J'ai tout rapporté ! Tout ! Tu peux vérifier !
+peureux: Je n'en ai gardé aucun, promis… Tu me crois, hein ?
+peureux: Ils brillent tellement que j'avais peur de les toucher.
+peureux: Prends-les vite. Je ne veux pas qu'on m'accuse de quoi que ce soit.
+fourbe: Tous rapportés. Enfin, tous ceux que j'ai trouvés. Ha ! Je plaisante.
+fourbe: Tu vois, je suis honnête. Tu t'en souviendras, le jour de la paie ?
+fourbe: Les voilà. Pour une fois, je n'ai rien à cacher.
+fourbe: Des diamants ! Une petite prime serait de bon goût, non ?
+colerique: Des diamants ! Et qu'on ne vienne plus dire que je ne travaille pas !
+colerique: Voilà tes diamants ! J'ai failli y laisser mes bras !
+colerique: Tous au dépôt. Et le premier qui y touche aura affaire à moi.
+colerique: Tu vois ? Je fais mon travail, moi !
+
+[caractere_cadeau]
+Personne ne m'avait jamais rien offert.
+Ça me touche, {chef}. Vraiment.
+Je le garde près de moi. Toujours.
+Rien ne t'y obligeait… Merci.
+calme: Merci. Je saurai m'en montrer digne.
+calme: Un geste comme celui-là, ça ne s'oublie pas.
+calme: {objet}. C'est exactement ce qu'il me fallait.
+calme: Merci, {chef}. Je travaillerai d'autant mieux.
+peureux: Pour moi ? Vraiment ? Il n'y a pas d'erreur ?
+peureux: Je… merci… Je ne sais pas quoi dire…
+peureux: Je vais le cacher, pour ne pas le perdre.
+peureux: Personne ne va me le reprendre, hein ?
+fourbe: Un cadeau ? Qu'est-ce que tu attends de moi en échange ?
+fourbe: {objet} ! Tu as bon goût. Presque aussi bon que le mien.
+fourbe: Très aimable. Je m'en souviendrai… en bien, cette fois.
+fourbe: Un cadeau. Bon. Je retire la moitié de ce que j'ai dit sur toi.
+colerique: Bon. Bon, bon. Merci. Ne le répète à personne.
+colerique: Ah ! Enfin un chef qui sait reconnaître le travail !
+colerique: Un cadeau ? Hmm. Ça ne veut pas dire que je ne râlerai plus.
+colerique: Merci. Et ne me regarde pas comme ça. Ça arrive à tout le monde d'avoir le cœur qui fond.
+
+[caractere_excuses]
+Bon. Excuses acceptées.
+Merci de le dire. Ça compte.
+On repart du bon pied, alors.
+Ça arrive à tout le monde de s'emporter.
+calme: C'est oublié. On a du travail.
+calme: Merci. Un chef qui s'excuse, c'est rare. Et précieux.
+calme: Je te pardonne. Faisons mieux, tous les deux.
+calme: Reconnaître ses torts, c'est sage.
+peureux: Alors… la dispute est finie ?
+peureux: Ouf. J'ai eu si peur…
+peureux: Merci… Je vais pouvoir dormir, ce soir.
+peureux: Tu le penses vraiment ? Alors d'accord.
+fourbe: Des excuses ? Ça ne coûte rien. Une petite prime, en revanche…
+fourbe: J'accepte. Mais je n'efface rien de mon carnet.
+fourbe: Très bien. On fait comme si rien ne s'était passé. Pour l'instant.
+fourbe: Les excuses, c'est bien. Les pièces, c'est mieux.
+colerique: Bon… Ça va. Mais ne recommence pas.
+colerique: Hmpf. D'accord. Je ne suis plus en colère. Presque.
+colerique: Il était temps !
+colerique: C'est bon. On n'en parle plus. Jamais.
