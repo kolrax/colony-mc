@@ -34,4 +34,24 @@ class CadenceTest {
                 assertTrue(h >= 0.72f && h <= 0.88f, "à 10 % près : " + h);
             }
     }
+
+    @Test
+    void unSeulRonfleurParPiece() {
+        Cadence.Ronfleurs.oublier();
+        assertTrue(Cadence.Ronfleurs.prendre(0, 64, 0, 1000));
+        assertFalse(Cadence.Ronfleurs.prendre(3, 64, 4, 1010), "à 5 blocs, juste après : il se tait");
+        assertTrue(Cadence.Ronfleurs.prendre(20, 64, 0, 1010), "dans une autre pièce, à 20 blocs : il ronfle");
+        assertTrue(Cadence.Ronfleurs.prendre(3, 64, 4, 1000 + Cadence.Ronfleurs.FENETRE + 1), "plus tard : à son tour");
+        Cadence.Ronfleurs.oublier();
+    }
+
+    @Test
+    void retarderRepousseSansAvancer() {
+        Cadence c = new Cadence();
+        c.retarder(Cadence.Genre.RONFLE, 0, 200);
+        assertFalse(c.pret(Cadence.Genre.RONFLE, 199));
+        c.retarder(Cadence.Genre.RONFLE, 0, 50); // ne raccourcit jamais l'attente
+        assertFalse(c.pret(Cadence.Genre.RONFLE, 199));
+        assertTrue(c.pret(Cadence.Genre.RONFLE, 200));
+    }
 }

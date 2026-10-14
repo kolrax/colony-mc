@@ -775,7 +775,7 @@ public class Travailleur extends PathfinderMob {
         if ((tickCount + getId()) % 20 == 3) majTete();
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
-        if (isSleeping()) Sons.ronfle(this);
+        Sons.sommeil(this);
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
         if ((tickCount + getId()) % 20 == 7 && mode != Mode.CHOMEUR) tickRegles();
         if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
@@ -1162,7 +1162,7 @@ public class Travailleur extends PathfinderMob {
             return;
         }
         if (aTerreTicks % 600 == 0) dire("À l'aide… à manger ou une potion de soin, vite !");
-        if (aTerreTicks % 200 == 100) Sons.plainte(this);
+        if (aTerreTicks % 20 == 0) Sons.plainte(this);
     }
 
     void tomberATerre() {
@@ -1173,6 +1173,7 @@ public class Travailleur extends PathfinderMob {
         Blessures.noter(this, g);
         aTerre = true;
         aTerreTicks = g.ticksATerre();
+        sons.retarder(Cadence.Genre.PLAINTE, level().getGameTime(), 100); // le cri de la chute d'abord, la plainte ensuite
         setHealth(1);
         setPose(Pose.SLEEPING);
         finirAction("a_terre");
@@ -1692,7 +1693,7 @@ public class Travailleur extends PathfinderMob {
             if (seule && Obeissance.abandonne(l.texte)) { reponseImposee = true; return Messages.corps(this, "abandon"); }
             if (attenteMarche && seule && !insiste && l.intentions.contains(Ordres.Intention.NON)) {
                 reponseImposee = true;
-                if (temperament.equals("colerique") || temperament.equals("fourbe")) return Messages.corps(this, "pas_de_marche");
+                if (temperament.equals("colerique") || temperament.equals("fourbe")) { Sons.grogne(this); return Messages.corps(this, "pas_de_marche"); }
                 changerMoral(Obeissance.FORCE);
                 return Messages.corps(this, "sans_marche") + " " + appliquerOrdre(avant, enFace);
             }
@@ -1700,8 +1701,9 @@ public class Travailleur extends PathfinderMob {
                 Obeissance.Ordre o = Obeissance.peine(avant, metier, !enService());
                 Obeissance.Verdict premier = Obeissance.premier(moral, temperament, o);
                 if (premier == Obeissance.Verdict.OBEIT) return appliquerOrdre(avant, enFace); // son moral est remonté entre-temps
-                if (premier == Obeissance.Verdict.RALE) return Messages.corps(this, "rale") + " " + appliquerOrdre(avant, enFace);
+                if (premier == Obeissance.Verdict.RALE) { Sons.grogne(this); return Messages.corps(this, "rale") + " " + appliquerOrdre(avant, enFace); }
                 reponseImposee = true;
+                Sons.grogne(this); // il refuse encore, ou obéit de force
                 if (Obeissance.decider(moral, temperament, o, true) == Obeissance.Verdict.REFUSE)
                     return Messages.corps(this, "refus_ferme", Messages.remede(raisonDuRefus(maintenant)));
                 changerMoral(Obeissance.FORCE);

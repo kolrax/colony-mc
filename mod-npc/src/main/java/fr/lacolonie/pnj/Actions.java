@@ -895,7 +895,7 @@ public final class Actions {
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
-            boolean plein = false, diamants = false;
+            boolean plein = false, diamants = false, depose = false;
             boolean[] garde = new boolean[garder.size()];
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
@@ -914,11 +914,12 @@ public final class Actions {
                 ItemStack reste = b.ranger(s);
                 t.inventaire.setItem(i, reste);
                 if (diamant && reste.getCount() < avant) diamants = true;
+                if (reste.getCount() < avant) depose = true;
                 if (credit != null) credit.livre += avant - reste.getCount();
                 if (!reste.isEmpty()) plein = true;
             }
             t.swing(InteractionHand.MAIN_HAND);
-            Sons.depot(t, b.getBlockPos());
+            if (depose) Sons.depot(t, b.getBlockPos()); // le sac vidé ne sonne que s'il a vraiment laissé quelque chose
             t.nettoyerMissions();
             if (diamants) Humeur.diamantsRendus(t); // celui qui ne triche pas s'en vante
             return plein ? echec("depot_plein") : Etat.OK;

@@ -70,10 +70,9 @@ final class Sons {
 
     // --- Réactions --------------------------------------------------------------------------------------------
 
-    /** Sa paie touchée : les pièces tintent dans sa bourse, et il est content. */
+    /** Sa paie touchée : les pièces tintent dans sa bourse. */
     static void paie(Travailleur t) {
-        if (jouer(t, Cadence.Genre.PAIE, t.getX(), t.getY() + 1, t.getZ(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.NEUTRAL, 0.6f, 1.5f))
-            t.level().playSound(null, t.getX(), t.getY() + 1, t.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.25f, 0.9f);
+        jouer(t, Cadence.Genre.PAIE, t.getX(), t.getY() + 1, t.getZ(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.NEUTRAL, 0.5f, 1.6f);
     }
 
     /** Il râle ou refuse un ordre : un grognement. */
@@ -86,11 +85,31 @@ final class Sons {
         if (t.getRandom().nextInt(3) == 0) jouer(t, Cadence.Genre.ROT, SoundEvents.PLAYER_BURP, 0.5f, 0.95f);
     }
 
-    /** Endormi : il ronfle doucement. */
-    static void ronfle(Travailleur t) { jouer(t, Cadence.Genre.RONFLE, t.getX(), t.getY() + 0.3, t.getZ(), BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.FOX_SLEEP), SoundSource.NEUTRAL, 0.35f, 0.55f); }
+    /**
+     * À chaque tick : endormi depuis 10 s, il ronfle tout bas, toutes les 20 à 30 s, et seulement si personne n'a ronflé
+     * tout près ({@link Cadence.Ronfleurs} : un ronfleur par pièce).
+     */
+    static void sommeil(Travailleur t) {
+        boolean dort = t.isSleeping();
+        long maintenant = t.level().getGameTime();
+        if (dort != t.sons.dort) {
+            t.sons.dort = dort;
+            if (dort) t.sons.retarder(Cadence.Genre.RONFLE, maintenant, Cadence.ENDORMI);
+            return;
+        }
+        if (!dort || !actifs()) return;
+        if (!t.sons.pret(Cadence.Genre.RONFLE, maintenant)) return;
+        if (!Cadence.Ronfleurs.prendre(t.getX(), t.getY(), t.getZ(), maintenant)) {
+            t.sons.retarder(Cadence.Genre.RONFLE, maintenant, Cadence.Ronfleurs.FENETRE + t.getRandom().nextInt(100));
+            return;
+        }
+        if (jouer(t, Cadence.Genre.RONFLE, t.getX(), t.getY() + 0.3, t.getZ(), BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.FOX_SLEEP), SoundSource.NEUTRAL, 0.15f, 0.5f))
+            t.sons.retarder(Cadence.Genre.RONFLE, maintenant, Cadence.Genre.RONFLE.delai + t.getRandom().nextInt(200));
+    }
 
-    /** À terre : une plainte sourde. */
+    /** À terre : un gémissement sourd, toutes les 20 à 30 s (pas le cri d'un coup : on ne croit pas l'avoir touché). */
     static void plainte(Travailleur t) {
-        jouer(t, Cadence.Genre.PLAINTE, t.getX(), t.getY() + 0.3, t.getZ(), BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.PLAYER_HURT), SoundSource.NEUTRAL, 0.5f, 0.7f);
+        if (jouer(t, Cadence.Genre.PLAINTE, SoundEvents.VILLAGER_AMBIENT, 0.4f, 0.65f))
+            t.sons.retarder(Cadence.Genre.PLAINTE, t.level().getGameTime(), Cadence.Genre.PLAINTE.delai + t.getRandom().nextInt(200));
     }
 }

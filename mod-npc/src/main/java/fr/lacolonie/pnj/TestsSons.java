@@ -105,24 +105,41 @@ public class TestsSons {
         h.succeed();
     }
 
-    /** Endormi dans son lit, il ronfle ; à terre, il gémit (pas à chaque tick). */
-    @GameTest(template = "vide", timeoutTicks = 400)
+    /**
+     * Deux dormeurs dans la même pièce : rien les 10 premières secondes, puis un seul ronfle (l'autre se tait au moins
+     * 5 s) ; à terre, il gémit une fois, pas tout de suite (pas à chaque tick).
+     */
+    @GameTest(template = "vide", timeoutTicks = 500)
     public static void ronfleEtGemit(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = ouvrier(h, "mineur", 295, b, ItemStack.EMPTY);
-        BlockPos lit = t.blockPosition().south(3); // loin du poste, posé en b[0]
+        Travailleur u = TestsJeu.employe(h, "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(4)), ItemStack.EMPTY);
+        u.mode = Travailleur.Mode.ATTENDRE;
+        BlockPos lit = t.blockPosition().south(3), lit2 = lit.west(2); // loin du poste, posé en b[0]
         TestsJeu.lit(h.getLevel(), lit);
+        TestsJeu.lit(h.getLevel(), lit2);
+        long[] couche = {-1};
         h.runAtTickTime(h.getTick() + 5, () -> { // un PNJ tout juste apparu : on le couche un peu après
             t.startSleeping(lit);
+            u.startSleeping(lit2);
             Cerveau.lancer(t, new Actions.Reposer()); // couché, il se repose (sinon, en attente, il se relève)
+            Cerveau.lancer(u, new Actions.Reposer());
+            couche[0] = h.getLevel().getGameTime();
         });
-        Travailleur blesse = TestsJeu.employe(h, "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(6)), ItemStack.EMPTY);
+        Travailleur blesse = TestsJeu.employe(h, "mineur", b[0], Vec3.atBottomCenterOf(b[0].west(10)), ItemStack.EMPTY);
         blesse.mode = Travailleur.Mode.ATTENDRE;
         blesse.tomberATerre();
+        h.runAtTickTime(h.getTick() + 60, () -> h.assertTrue(blesse.sons.joues(Cadence.Genre.PLAINTE) == 0, "pas de plainte aussitôt tombé"));
+        h.runAtTickTime(h.getTick() + 150, () -> h.assertTrue(t.sons.joues(Cadence.Genre.RONFLE) + u.sons.joues(Cadence.Genre.RONFLE) == 0,
+                "pas de ronflement les 10 premières secondes"));
         h.succeedWhen(() -> {
-            h.assertTrue(t.isSleeping() && t.sons.joues(Cadence.Genre.RONFLE) >= 1, "il ronfle (dort " + t.isSleeping() + ", " + t.sons.joues(Cadence.Genre.RONFLE) + " ronflements, " + TestsJeu.etat(t, b[0]) + ")");
+            int n = t.sons.joues(Cadence.Genre.RONFLE) + u.sons.joues(Cadence.Genre.RONFLE);
+            h.assertTrue(t.isSleeping() && u.isSleeping() && n >= 1, "l'un ronfle (dort " + t.isSleeping() + "/" + u.isSleeping() + ", " + n + " ronflements, " + TestsJeu.etat(t, b[0]) + ")");
+            h.assertTrue(h.getLevel().getGameTime() - couche[0] >= Cadence.ENDORMI, "pas avant 10 s de sommeil");
+            h.assertTrue(n == 1, "un seul ronfleur dans la pièce : " + n);
             h.assertTrue(blesse.sons.joues(Cadence.Genre.PLAINTE) == 1, "il gémit, une fois : " + blesse.sons.joues(Cadence.Genre.PLAINTE));
             t.discard();
+            u.discard();
             blesse.mortDefinitive = true;
             blesse.discard();
         });
