@@ -581,6 +581,7 @@ public class Travailleur extends PathfinderMob {
     /** Ce qu'on voit au bureau : à terre, en grève, en expédition, se repose, au travail… */
     public String statut() {
         if (aTerre) return "À terre";
+        if (action instanceof Deuil.Enterrement) return "À un enterrement";
         return switch (mode) {
             case CHOMEUR -> "Cherche du travail";
             case GREVE -> "En grève";
@@ -1233,10 +1234,14 @@ public class Travailleur extends PathfinderMob {
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
             Humeur.deuil(this); // ses compagnons du même chef en deuil
+            Deuil.mort(this, tombe != null ? tombe : blockPosition()); // sa tombe, et la lettre au chef absent
             Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
                     + ") est mort en " + blockPosition().toShortString() + ", " + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
         }
     }
+
+    /** Le coffre de ses affaires, posé à sa mort : sa tombe ({@link Deuil}). */
+    BlockPos tombe;
 
     /** Mort définitive : ses affaires vont dans un coffre à son nom. */
     @Override
@@ -1264,6 +1269,7 @@ public class Travailleur extends PathfinderMob {
                 if (!reste.isEmpty()) spawnAtLocation(reste);
             }
             coffre.setChanged();
+            tombe = pos;
             lieuAffaires = "Ses affaires sont dans le coffre « Affaires de " + prenom + " », en " + pos.toShortString() + ".";
         } else {
             tout.forEach(this::spawnAtLocation);
@@ -1589,6 +1595,17 @@ public class Travailleur extends PathfinderMob {
             return Messages.corps(this, "mortel_" + danger);
         }
         if (parRegle) return appliquerOrdre(l, enFace);
+        // « On va enterrer Bertrand » : ses compagnons proches vont à sa tombe ; nul ne refuse un dernier adieu (Deuil).
+        if (l.intentions.contains(Ordres.Intention.ENTERRER)) {
+            reponseImposee = true;
+            return Deuil.ordonner(this, l.texte);
+        }
+        // « Oui » à sa proposition d'enterrement, ou « non, arrête » en pleine cérémonie (Deuil).
+        String deuil = Deuil.repondre(this, l);
+        if (deuil != null) {
+            reponseImposee = true;
+            return deuil;
+        }
         // L'impossible (voler, aller sur la lune, casser la roche du fond du monde…) : il en rit, sans rien faire (cahier 14.9).
         String impossible = Impossible.demande(l.texte, Ordres.lire(l.texte, metier)); // seulement si rien n'y est faisable
         String blague = impossible == null ? null : Besoins.texte(this, "impossible_" + impossible, null, null);

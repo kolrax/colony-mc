@@ -102,6 +102,11 @@ final class Courrier extends SavedData {
     static final class Membre {
         String nom = "", metier = "", mort = "";
         int niveau;
+        /** Mort : sa tombe (le coffre de ses affaires, sinon le lieu de sa mort), le moment (temps du jeu), enterré, enterrement proposé ({@link Deuil}). */
+        String tombeMonde = "";
+        BlockPos tombe;
+        long mortLe;
+        boolean enterre, propose;
     }
 
     /** Un corbeau en vol : la lettre, d'où il part, et à quel moment (temps du jeu) il arrive. */
@@ -159,6 +164,13 @@ final class Courrier extends SavedData {
             x.putString("metier", mb.metier);
             x.putInt("niveau", mb.niveau);
             x.putString("mort", mb.mort);
+            if (mb.tombe != null) {
+                x.putString("tombe_monde", mb.tombeMonde);
+                x.put("tombe", NbtUtils.writeBlockPos(mb.tombe));
+                x.putLong("mort_le", mb.mortLe);
+                x.putBoolean("enterre", mb.enterre);
+                x.putBoolean("propose", mb.propose);
+            }
             e.add(x);
         }));
         t.put("Effectifs", e);
@@ -200,6 +212,11 @@ final class Courrier extends SavedData {
             m.metier = e.getString("metier");
             m.niveau = e.getInt("niveau");
             m.mort = e.getString("mort");
+            m.tombe = NbtUtils.readBlockPos(e, "tombe").orElse(null);
+            m.tombeMonde = e.getString("tombe_monde");
+            m.mortLe = e.getLong("mort_le");
+            m.enterre = e.getBoolean("enterre");
+            m.propose = e.getBoolean("propose");
             c.effectifs.computeIfAbsent(e.getUUID("chef"), k -> new LinkedHashMap<>()).put(e.getUUID("id"), m);
         }
         for (Tag x : t.getList("Vols", Tag.TAG_COMPOUND)) {

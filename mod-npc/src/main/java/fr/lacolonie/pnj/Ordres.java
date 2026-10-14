@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class Ordres {
     private Ordres() {}
 
-    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI }
+    enum Intention { SUIVRE, ARRETER_SUIVRE, ATTENDRE, TRAVAIL, RENTRER, SAC, RENVOYER, OUI, NON, ETAT, AVANCEMENT, POURQUOI, AIDE, SALUT, MERCI, ENTERRER }
 
     /** Une mission comprise : un identifiant du catalogue du métier, « stock » ou « quantite », un nombre. */
     record Mission(String id, String mode, int nombre) {}
@@ -286,6 +286,11 @@ final class Ordres {
             l.intentions.add(Intention.SALUT);
         if (dit(n, "merci", "bravo", "bien joue", "beau travail", "bon travail", "excellent", "parfait"))
             l.intentions.add(Intention.MERCI);
+        // Un enterrement (lot 5, cahier 14.13) : « on va enterrer Bertrand », « allez à la tombe de Raoul », « les funérailles ».
+        if (dit(n, "enterrement", "enterrer", "enterrons", "enterrez", "on enterre", "funerailles", "obseques", "mise en terre",
+                "a la tombe", "sur la tombe", "vers la tombe", "devant la tombe", "pres de la tombe", "a sa tombe", "sur sa tombe", "autour de la tombe",
+                "dire adieu a", "faire nos adieux", "rendre hommage a", "rendons hommage a", "veillee funebre") && enterrement(n, l))
+            l.intentions.add(Intention.ENTERRER);
         l.ajouter = dit(n, "aussi", "en plus", "ajoute", "egalement", "de plus", "apres ca", "apres cela", "ensuite aussi");
 
         // Les missions : phrase par phrase, chaque objet cité avec sa quantité et son mode (« au bois » est un lieu, pas une mission).
@@ -326,6 +331,20 @@ final class Ordres {
                 }
             }
         }
+    }
+
+    /**
+     * Les mots de l'enterrement sont bien un ordre : ni refus ni arrêt (« annule l'enterrement », « pas d'enterrement »), ni
+     * question (« tu étais à l'enterrement ? »), ni remerciement seul (« merci pour l'enterrement »), ni autre chose qu'on
+     * enterre (la hache de guerre, des graines, un coffre, un trésor).
+     */
+    static boolean enterrement(String n, Lecture l) {
+        if (l.intentions.contains(Intention.NON) || l.intentions.contains(Intention.ARRETER_SUIVRE) || l.intentions.contains(Intention.ATTENDRE)) return false;
+        if (n.contains("?") || dit(n, "pas", "ne", "n", "annule", "annulez", "jamais", "plus d", "sans")) return false;
+        if (dit(n, "hache de guerre", "graine", "graines", "semis", "semence", "semences", "coffre", "coffres", "tresor", "tresors", "bulbe", "bulbes", "butin"))
+            return false;
+        return !l.intentions.contains(Intention.MERCI) || dit(n, "enterrer", "enterrons", "enterrez", "on enterre", "allez", "allons", "venez", "va", "viens",
+                "rendre hommage", "rendons hommage", "dire adieu", "faire nos adieux");
     }
 
     static final Set<String> STOCK = Set.of("stock", "stocks", "garde", "gardes", "garder", "maintiens", "maintenir", "maintient", "toujours",

@@ -68,6 +68,10 @@ final class Moral {
 
     /** Le coup d'une mort, sachant {@code deja} (≤ 0) déjà perdu pour des morts du même jour. */
     static int deuilCoup(int deja) { return Math.min(0, Math.max(DEUIL_COUP, -DEUIL_JOUR - deja)); }
+    /** Les jours après une mort où ses compagnons en reparlent d'eux-mêmes ({@link Remarques}). */
+    static final int DEUIL_RECENT = 2;
+    /** Un enterrement : le moral perdu par cette mort ({@code coup} ≤ 0) remonte de moitié (arrondi au point supérieur). */
+    static int apaisement(int coup) { return (-coup + 1) / 2; }
     /** Une colonie qui prospère : au moins tant d'ouvriers, et un dépôt d'au moins tant d'objets. */
     static final int OUVRIERS = 4, DEPOT = 256;
     /** Un bilan si mauvais que le moral ne remonte plus tout seul. */
