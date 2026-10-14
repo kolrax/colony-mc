@@ -1,20 +1,20 @@
 # Reprise : où on en est
 
-Mise à jour : 14/10/2026, 02 h 20 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 14/10/2026, 05 h 00 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- Mod `colonie_pnj` : **0.9.19** (14/10, 02 h 14 UTC ; 199 JUnit et 261 en jeu verts). Session 00 h - 02 h 30 UTC : 5 versions livrées (0.9.15 à 0.9.19), toutes sans erreur du mod.
-  - 0.9.19 = **moral, première partie** (lot 5 : `Moral` (pur), `Humeur` (jeu), bilan toutes les 5 min, lenteur, lettres `moral_bas`/`moral_avertit`, démission après 2 lettres lues par un chef connecté et 3 jours très bas, `Humeur.oublier` au renvoi, deuil plafonné −15/jour, repas variés (`Actions.Prendre(filtre, 16, 4)`), réglages `moral_*` ; `TestsMoral` coins 200-203). Restent : test de démission non relancé sur l'ancien code ; pas de test « reste laissé à terre » ni « chef absent » ; réglages du moral pas au panneau web.
-  - 0.9.18 = **transporteur** (lot 6 : `Transporteur`, `Trajets` (pur), 6 trajets d'un coffre à l'autre, capacité NeoForge (Create compatible), prend par DOWN / dépose par UP, double coffre ramené à une moitié, revérification voisin et 64 blocs à chaque tour, `Transporteur.oublier` au renvoi (et champs du fermier), lettres avec `Messages.direction` ; `TestsTransporteur` coins 190-195). **Lot 6 coché.**
-  - 0.9.17 = **cuisinier** (lot 6 : `Cuisinier`, `Cuisine` (pur), fumoir/fourneau seulement (feu de camp retiré), combustible charbon de bois > charbon > planches, jamais de bûches ; `Fermier.Pain(int, boolean seul)` ; `Ordres.AUSSI` (pain = fermier aussi) ; `Metier.enCours` ; alias `boulanger` dans `Conversations` ; `TestsCuisinier` coins 180-185). Tests : 185 JUnit ; en jeu 3 passes de 249 à 248/247/248 (**aucune passe entièrement verte** : seuls des instables connus de l'éleveur et du mineur).
-  - 0.9.16 = **pêcheur** (`Pecheur`, `Peche` (pur), vraie table de pêche, trésors seulement en eau libre 5 x 5 sur 2 de fond, rives écartées, deux pêcheurs deux rives, `Pecheur.oublier` au renvoi ; `TestsPecheur` coins 160-167). 181 JUnit, 243/243 en jeu.
-  - 0.9.15 = **chasseur** (`Chasseur`, `Chasse` (pur), gibier sauvage seulement, `Chasseur.sauvage` (doute = pas tiré : clôture, chunk non chargé, pré clos > 1024 cases), tour borné, `Eleveur.butin` élargi ; `TestsChasseur` coins 170-176). 173 JUnit, 235/235 en jeu.
-- Modpack : **0.5.1** (13/10, obligatoire, canal 8). Inchangé : aucun des nouveaux métiers ne touche le client.
-- Avant : 0.9.14 (guérisseur), 0.9.13 (éleveur), 0.9.12 (fermier, blessures), 0.9.11 (besoins), 0.9.10 (outils, noms au-dessus des têtes, canal 8).
+- **Serveur : 0.9.19** (rien installé depuis : le redémarrage `panel.py power restart` a été **refusé par le contrôle des permissions de Claude Code** le 14/10 à 04 h 12 UTC, motif « Production Deploy »). Demande `redemarrage` posée à KOLRAX dans le panneau. Ne pas contourner.
+- **`main` : 0.9.22** (14/10, 04 h 32 UTC ; 210 JUnit et 271/271 en jeu). Jar `colonie_pnj-0.9.22.jar` (1 465 191 octets, sha1 `7430ee8e2f6c…`) déjà envoyé dans `/mods-off` du serveur ; `colonie_pnj-0.9.20.jar` aussi (inutile maintenant). Pour livrer dès que le redémarrage est permis : mv 0.9.19 → /mods-off, mv 0.9.22 → /mods, un seul jar, restart, journal jusqu'à « Done ».
+  - 0.9.22 = **éleveur fiable** : `Action.dePres` (seulement la `Corvee` de l'éleveur et son `Attaquer`) refait le chemin vers une bête qui bouge, seulement sur un chemin direct réussi (`Itineraire.surCheminDirect`) ; bête serrée dans un coin de l'enclos comptée (`Eleveur.dans(Enclos, Entity)`, `enclos`). 90 essais sans échec.
+  - 0.9.21 = **« va me chercher du fer »** (lot 6, cahier 14.1) : `Relais` (pur), `Actions.Prevenir`, `Travailleur.proposerRelais`/`prevenir`/`transmettre`, `Lecture.pourAutres` ; oui/non routé seulement si l'ouvrier est visé et que personne d'autre n'attend de réponse ; refus du collègue rapporté au chef ; tests `TestsOrdres` coins 210-215, `RelaisTest`.
+  - 0.9.20 = **moral, 2e partie** (lot 5) : vol, sabotage (torche/lanterne), fuite (équipement rendu au dépôt, petit butin), révolte armée contre le chef seul après 2 lettres + 3 avertissements, arrêtée par la paie à la caisse, l'éloignement (48 blocs) ou le moral ; réglages `moral_mefaits`, `moral_vol_max`, `moral_vol_autres`, `moral_revolte` ; `TestsMoral` coins 204-207.
+  - 0.9.19 = moral 1re partie ; 0.9.18 transporteur ; 0.9.17 cuisinier ; 0.9.16 pêcheur ; 0.9.15 chasseur.
+- Modpack : **0.5.1** (13/10, obligatoire, canal 8). Inchangé : rien de client depuis.
 
 ## Branche à reprendre
-- **`eleveur-fix`** (enquête sur les tests instables de l'éleveur) : correctif partiel (`Eleveur.Corvee.reprendre`, 3 reprises d'une bête manquée) + journal des actions dans les messages d'échec. **Cause pas trouvée** : l'éleveur ne rejoint parfois pas une bête dans un enclos 5 x 5 en 15 s (règle `coince()` d'`Actions.Attaquer`) ; une vache sort parfois de l'enclos (`abatLExcedent`). À finir avant de fusionner (base 0.9.16 : fusionner main d'abord).
-- `chasseur`, `pecheur`, `cuisinier`, `transporteur`, `moral`, `textes6` : toutes fusionnées dans main, rien à reprendre.
+- **`remarques`** (lot 7 : remarques spontanées, humour devant l'impossible, réactions selon le caractère ; textes dans `remarques.txt`, déjà sur main mais pas lus avant cette branche). Voir « Session en cours » plus bas pour l'état exact.
+- `en-cours` sur GitHub = `main` + fusion de `remarques` d'avant relecture (commit `1e5f275`) : à jeter, refaire la fusion depuis `remarques` à jour.
+- Branches fusionnées (suppression refusée depuis le cloud) : `fer`, `moral2`, `eleveur-fix2`, `eleveur-fix`, `textes7` et les anciennes.
 
 ## Ce que le mod sait faire aujourd'hui
 - **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
@@ -33,11 +33,13 @@ Mise à jour : 14/10/2026, 02 h 20 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » dans CLAUDE.md.**
-1. Tests instables de l'éleveur (`nourritEtFaitNaitreUnVeau`, `abatSurOrdreSansToucherAuDernierCouple`, `abatLExcedent`, ~1 passe sur 2) : finir l'enquête de `eleveur-fix`. Autres instables vus : `TestsMineur.mineurNeCassePasUneStructure`, `TestsIA.iavoix`, `TestsCharge.cheminsSobres`, `TestsJeu.litasoipasprisparunautre`, `sortdelalave`, `tondUnMouton` (une fois chacun).
-2. Lot 6 : « va me chercher du fer », dit à un bûcheron. Lot 5 : moral 2e partie (vol, sabotage, fuite, révolte après avertissements : point d'entrée `Moral.effet`/`Moral.suite`), réactions selon le caractère, deuil et enterrement (crochet `Humeur.deuil`, `memoire.deuil_le`/`deuil_nom`).
+1. **Livraison bloquée** : voir la demande `redemarrage` du panneau. Si KOLRAX a répondu (ou si `power restart` passe), livrer 0.9.22 (déjà dans /mods-off) puis la suite. Ne jamais contourner le refus.
+2. Finir `remarques` (voir « Session en cours ») : relecture faite, bloquant « ordres normaux pris pour l'impossible » ; fusion, version 0.9.23.
+3. Suite du plan : lot 5 « réactions selon le caractère » (diamant gardé en cachette : textes `caractere_diamant_*` prêts dans remarques.txt ; excuses `caractere_excuses`), « deuil et enterrement » (crochet `Humeur.deuil`, `memoire.deuil_le`/`deuil_nom`) ; lot 7 « amitiés, inimitiés, couples » ; lot 8 sons.
+4. Instables encore vus (une fois chacun) : `TestsChasseur.chasseSurOrdreLEspeceDite` (2 fois cette nuit), `TestsBucheron.bucheronPresDeLaLave`, `TestsMineur.mineurNeCassePasUneStructure`, `TestsJeu.sortdelalave`. Ceux de l'éleveur sont réglés (0.9.22).
 3. Restes : `docs/plus-tard.md` (relectures du chasseur, du pêcheur, du cuisinier, du transporteur).
 4. Méthode qui a marché : un worktree par case (`git worktree add /home/user/wt-<case> -b <case> main`), jusqu'à 3 développeurs en parallèle, et **tests en jeu toujours par `flock /tmp/gametest.lock ./gradlew runGameTestServer`** (un seul serveur de test à la fois). Le livreur reste sur `main` dans /home/user/colony-mc. Chaque fusion de deux métiers donne des conflits simples (Metier, Ordres.NOMS_METIERS, Adressage.CAPACITES, Consignes, Messages, RepertoireTest, carte) : garder les deux côtés.
-5. Branches restées sur GitHub (suppression refusée depuis le cloud) : toutes fusionnées dans `main` sauf `eleveur-fix`.
+5. Branches restées sur GitHub (suppression refusée depuis le cloud) : voir « Branche à reprendre ».
 
 ## Envoi du jar depuis le cloud
 `panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.
