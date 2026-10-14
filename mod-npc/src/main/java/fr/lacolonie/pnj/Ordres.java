@@ -108,6 +108,13 @@ final class Ordres {
         eleveur.put("lait", List.of("lait", "seau de lait", "seaux de lait"));
         NOMS.put("eleveur", eleveur);
 
+        Map<String, List<String>> chasseur = new LinkedHashMap<>();
+        chasseur.put("viande", List.of("viande", "viandes", "viande crue", "viandes crues", "gibier", "venaison", "lapin cru", "lapins crus", "boeuf", "porc",
+                "poulet cru", "cotelette", "cotelettes", "gigot", "gigots", "lard"));
+        chasseur.put("cuir", List.of("cuir", "cuirs", "peau", "peaux", "peau de lapin", "peaux de lapin", "peau de vache", "peaux de vache"));
+        chasseur.put("plumes", List.of("plume", "plumes"));
+        NOMS.put("chasseur", chasseur);
+
         Map<String, List<String>> guerrier = new LinkedHashMap<>();
         guerrier.put("escorter", List.of("escorte moi", "escorte", "escorter", "protege moi", "garde du corps"));
         guerrier.put("ronde", List.of("fais la ronde", "la ronde", "ronde", "patrouille", "patrouiller", "patrouilles"));
@@ -466,6 +473,8 @@ final class Ordres {
             "fermier", List.of(new String[]{"fermier", "fermiers"}, new String[]{"fermiere", "fermieres"}, new String[]{"paysan", "paysans"}, new String[]{"paysanne", "paysannes"}),
             "eleveur", List.of(new String[]{"eleveur", "eleveurs"}, new String[]{"eleveuse", "eleveuses"}, new String[]{"berger", "bergers"}, new String[]{"bergere", "bergeres"},
                     new String[]{"vacher", "vachers"}, new String[]{"porcher", "porchers"}),
+            "chasseur", List.of(new String[]{"chasseur", "chasseurs"}, new String[]{"chasseuse", "chasseuses"}, new String[]{"chasseresse", "chasseresses"},
+                    new String[]{"veneur", "veneurs"}),
             "guerrier", List.of(new String[]{"guerrier", "guerriers"}, new String[]{"guerriere", "guerrieres"}, new String[]{"soldat", "soldats"},
                     new String[]{"*garde", "*gardes"}, new String[]{"*garde du corps", "*gardes du corps"}));
     static final Set<String> ARTICLES = Set.of("le", "la", "les", "l", "mon", "ma", "mes", "notre", "nos", "un", "une");
