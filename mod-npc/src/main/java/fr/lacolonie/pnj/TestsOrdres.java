@@ -344,4 +344,146 @@ public class TestsOrdres {
                 },
                 () -> fin(h, e));
     }
+
+    // --- Ce n'est pas mon métier (cahier 14.1) ----------------------------------------------------------------
+
+    /**
+     * « Odon, va me chercher 64 fers » : le bûcheron nomme Bertrand le mineur et propose d'aller le prévenir ; « oui » :
+     * il marche jusqu'à lui (10 blocs) et Bertrand, qui attendait, reçoit la mission de 64 fers et se remet au travail.
+     */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 900)
+    public static void bucheronPrevientLeMineur(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 210);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> {
+                    bertrand.mode = Travailleur.Mode.ATTENDRE;
+                    bertrand.teleportTo(bertrand.getX() + 10, bertrand.getY(), bertrand.getZ());
+                    bertrand.forcerChunk();
+                },
+                // Arrivé dans un tronçon pas encore chargé, il n'est visible qu'un peu plus tard.
+                () -> h.assertTrue(ColoniePnj.tous(h.getLevel().getServer()).contains(bertrand), "Bertrand pas encore visible"),
+                () -> {
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> { // à part : une étape qui échoue est rejouée, la phrase ne doit être dite qu'une fois
+                    String r = IA.echange(odon, 1);
+                    h.assertTrue(r.contains("Bertrand le mineur") && r.endsWith("?") && bertrand.missions.isEmpty(), "il propose de prévenir Bertrand (" + r + ")");
+                },
+                () -> odon.parler(chef, "Oui, vas-y."),
+                () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer") && m.quantite() && m.nombre == 64),
+                        "Bertrand a reçu la commande (" + bertrand.missions.stream().map(m -> m.id + " " + m.nombre).toList() + ", Odon à "
+                                + (int) odon.distanceTo(bertrand) + " blocs, " + IA.echange(odon, 1) + ")"),
+                () -> h.assertTrue(odon.distanceTo(bertrand) < 4 && bertrand.mode == Travailleur.Mode.TRAVAIL && odon.missions.isEmpty(),
+                        "porté à pied, Bertrand au travail (" + (int) odon.distanceTo(bertrand) + " blocs, " + bertrand.mode + ")"),
+                () -> fin(h, e));
+    }
+
+    /** Aucun mineur chez ce chef : Odon le dit (« Personne ici ne mine… »), et un « oui » ne donne la commande à personne. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void personneNeMine(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 211);
+        e[0].discard();
+        Travailleur raoul = e[1], odon = e[2];
+        Travailleur[] restent = {raoul, odon};
+        etapes(h, chef, restent,
+                () -> {
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> {
+                    String r = IA.echange(odon, 1);
+                    h.assertTrue(r.contains("ne mine") && r.contains("un mineur"), "personne ne mine (" + r + ")");
+                },
+                () -> odon.parler(chef, "Oui"),
+                attendre(h, 40),
+                () -> h.assertTrue(raoul.missions.isEmpty() && odon.missions.isEmpty(), "personne n'a la commande (" + raoul.missions.size() + ", " + odon.missions.size() + ")"),
+                () -> fin(h, restent));
+    }
+
+    /**
+     * Odon attend un « oui » pour aller prévenir Bertrand, Raoul marchande une expédition : le « d'accord » que le chef dit
+     * à Raoul conclut le marché de Raoul, et Odon ne part pas.
+     */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
+    public static void ouiPourRaoulPasPourOdon(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 212);
+        Travailleur bertrand = e[0], raoul = e[1], odon = e[2];
+        etapes(h, chef, e,
+                () -> {
+                    bertrand.mode = Travailleur.Mode.ATTENDRE;
+                    raoul.temperament = "fourbe";
+                    raoul.moral = 40;
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                    regarder(chef, raoul);
+                    raoul.parler(chef, "Raoul, pars en expédition 7 jours.");
+                },
+                () -> h.assertTrue(odon.relais != null && raoul.enAttente != null && raoul.attenteMarche,
+                        "Odon propose, Raoul marchande (" + IA.echange(odon, 1) + " / " + IA.echange(raoul, 1) + ")"),
+                () -> raoul.parler(chef, "D'accord, marché conclu."),
+                () -> h.assertTrue(raoul.joursExpedition == 7 && raoul.prime > 0, "le marché de Raoul est conclu (" + raoul.joursExpedition + " jours, prime "
+                        + raoul.prime + ", " + IA.echange(raoul, 1) + ")"),
+                attendre(h, 60),
+                () -> h.assertTrue(bertrand.missions.isEmpty() && !(odon.action instanceof Actions.Prevenir),
+                        "Odon n'est pas parti (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
+                () -> fin(h, e));
+    }
+
+    /** « Les gars, ramenez 64 fers ! » : Bertrand l'a entendu et s'en charge ; Odon ne propose rien. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void pasDeRelaisSiLeMineurAEntendu(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 213);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> Dialogue.parler(chef, "Les gars, ramenez 64 fers !", null, true),
+                () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer")) && odon.relais == null,
+                        "Bertrand l'a, Odon se tait (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
+                () -> fin(h, e));
+    }
+
+    /** Bertrand cherche déjà du fer (10 livrés) : Odon le dit, ne propose rien, et la mission de Bertrand ne repart pas de zéro. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
+    public static void mineurDejaSurLeFer(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 214);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> {
+                    bertrand.mission("fer", "quantite", 64);
+                    bertrand.missions.get(0).livre = 10;
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> h.assertTrue(odon.relais == null && IA.echange(odon, 1).contains("Bertrand") && bertrand.missions.get(0).livre == 10,
+                        "déjà en route (" + IA.echange(odon, 1) + ", livré " + bertrand.missions.get(0).livre + ")"),
+                () -> fin(h, e));
+    }
+
+    /** Bertrand, à bout, refuse la commande qu'Odon lui porte : Odon le rapporte au chef, et Bertrand la garde en suspens un jour. */
+    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 600)
+    public static void refusDuMineurRapporte(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = equipe(h, chef, 215);
+        Travailleur bertrand = e[0], odon = e[2];
+        etapes(h, chef, e,
+                () -> {
+                    bertrand.mode = Travailleur.Mode.ATTENDRE;
+                    bertrand.temperament = "colerique";
+                    bertrand.moral = 10;
+                    regarder(chef, odon);
+                    odon.parler(chef, "Odon, va me chercher 64 fers.");
+                },
+                () -> odon.parler(chef, "Oui"),
+                () -> h.assertTrue(bertrand.enAttente != null, "Bertrand a reçu la commande et refuse (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
+                () -> h.assertTrue(bertrand.missions.isEmpty() && bertrand.attenteFin > h.getLevel().getGameTime() + 20000
+                                && odon.paroles.stream().anyMatch(x -> x.contains("Bertrand") && (x.contains("ne veut pas") || x.contains("n'a pas pris"))),
+                        "le chef le sait, la commande reste en suspens (" + odon.paroles + ", fin " + (bertrand.attenteFin - h.getLevel().getGameTime()) + ")"),
+                () -> fin(h, e));
+    }
 }

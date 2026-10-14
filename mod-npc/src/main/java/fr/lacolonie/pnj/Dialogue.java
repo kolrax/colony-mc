@@ -92,6 +92,20 @@ final class Dialogue {
                 }
             }
 
+        // « Je vais prévenir Bertrand ? » : le « oui » ou le « non » qui suit est pour celui qui l'a proposé (Relais), s'il est
+        // celui de la fenêtre (ou qu'il n'y en a pas) et que personne d'autre autour n'attend une réponse (un marché, une
+        // question) ; sinon, c'est l'adressage qui tranche.
+        for (Travailleur t : autour)
+            if (t.relais != null && attend(t) && (vise == null || vise == t) && autour.stream().noneMatch(x -> x != t && (attend(x) || questionRecente(x)))
+                    && (Relais.accepte(dit) || Relais.refuse(dit)) && Obeissance.sansOrdre(Ordres.lire(dit, t.metier))) {
+                t.getLookControl().setLookAt(p);
+                String r = t.appliquer(Ordres.lire(dit, t.metier), p);
+                IA.noter(t, "Chef", dit);
+                IA.noter(t, "Toi", r);
+                Voix.dire(t, r, "calme");
+                return;
+            }
+
         Adressage.Situation s = situation(p, dit, autour, vise, auMicro);
         Adressage.Parametres pa = Adressage.P;
         double[] pc = Adressage.code(s);
@@ -122,6 +136,12 @@ final class Dialogue {
             repondreAvec(p, dit, indices(autour, choisis), vise, auMicro, true);
         }));
     }
+
+    /** Il attend la réponse du chef à un ordre refusé, marchandé, ou à une proposition (encore dans les 60 s). */
+    static boolean attend(Travailleur t) { return t.enAttente != null && t.attenteFin >= t.level().getGameTime(); }
+
+    /** Il vient de poser une question au chef (dans la minute). */
+    static boolean questionRecente(Travailleur t) { return t.memoire.getLong("question_t") > System.currentTimeMillis() - 60_000; }
 
     static List<Travailleur> indices(List<Travailleur> autour, List<Integer> l) {
         List<Travailleur> r = new ArrayList<>();
@@ -178,10 +198,13 @@ final class Dialogue {
             Ordres.Lecture lecture = d == null ? Ordres.lire(dit, t.metier) : d.lecture();
             if (d != null) {
                 lecture.texte = dit; // on y cherche qui ou quoi est visé (l'interpréteur l'a déjà fait, sans la partie des règles)
-                lecture.quotidien |= Ordres.lire(dit, t.metier).quotidien; // « tous les jours » : l'IA ne le dit pas
+                Ordres.Lecture seul = Ordres.lire(dit, t.metier);
+                lecture.quotidien |= seul.quotidien; // « tous les jours » : l'IA ne le dit pas
+                Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
             }
             lecture.rang = i;
             lecture.total = dest.size();
+            for (Travailleur x : dest) lecture.avec.add(x.getUUID());
             if (d == null) r = t.appliquer(lecture, enFace);
             else {
                 long renvoiAvant = t.memoire.getLong("renvoi");

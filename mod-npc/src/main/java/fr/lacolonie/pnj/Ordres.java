@@ -43,6 +43,10 @@ final class Ordres {
         int jours = -1;
         /** Ce qu'on lui demande et qui n'est pas de son métier (« du bois » à un mineur), par métier. */
         final Map<String, String> horsMetier = new LinkedHashMap<>();
+        /** Les mêmes, dites comme une mission (quantité, mode), pour l'ouvrier du bon métier ({@link Relais}). Pas celles d'une règle. */
+        final Map<String, Mission> pourAutres = new LinkedHashMap<>();
+        /** Ceux qui ont entendu la même phrase (rempli par Dialogue) : un collègue qui l'a entendue s'en charge lui-même. */
+        final Set<java.util.UUID> avec = new java.util.HashSet<>();
         /** Les actions du répertoire demandées (gestes, déplacements, tâches, paroles…). */
         final List<Faire> faire = new ArrayList<>();
         /** La phrase elle-même (on y cherche qui ou quoi est visé), et la place de l'ouvrier dans le groupe à qui elle est dite. */
@@ -308,12 +312,12 @@ final class Ordres {
                 l.intentions.remove(Intention.SUIVRE);
             for (String x : t.e().remplace()) {
                 switch (x) {
-                    case "missions" -> { l.missions.clear(); l.horsMetier.clear(); }
+                    case "missions" -> { l.missions.clear(); l.horsMetier.clear(); l.pourAutres.clear(); }
                     case "missions_sans_nombre" -> {
                         String[] mots = normaliser(texte).strip().split(" ");
                         boolean nombre = false;
                         for (int i = 0; i < mots.length && !nombre; i++) nombre = !mots[i].equals("un") && !mots[i].equals("une") && nombre(mots, i) != null;
-                        if (!nombre) { l.missions.clear(); l.horsMetier.clear(); }
+                        if (!nombre) { l.missions.clear(); l.horsMetier.clear(); l.pourAutres.clear(); }
                     }
                     default -> {
                         try { l.intentions.remove(Intention.valueOf(x.toUpperCase(java.util.Locale.ROOT))); }
@@ -374,12 +378,15 @@ final class Ordres {
                     if (nb2 != null) { apres = nb2[0]; pris = k; prisLong = nb2[1]; break; }
                 }
                 Integer combien = enAttente != null ? enAttente : apres;
+                String md = mode != null ? mode : combien != null ? "quantite" : "stock";
+                if (metierObjet.equals("guerrier")) md = "stock"; // garder, ronde, escorter : sans quantité
+                int nombre = combien != null && combien > 0 ? Math.min(combien, 100_000) : md.equals("stock") ? 64 : 32;
                 if (metierObjet.equals(metier)) {
-                    String md = mode != null ? mode : combien != null ? "quantite" : "stock";
-                    if (metier.equals("guerrier")) md = "stock"; // garder, ronde, escorter : sans quantité
-                    int nombre = combien != null && combien > 0 ? Math.min(combien, 100_000) : md.equals("stock") ? 64 : 32;
                     if (l.missions.stream().noneMatch(x -> x.id().equals(id))) l.missions.add(new Mission(id, md, nombre));
-                } else if (!AUSSI.getOrDefault(metier, Set.of()).contains(id)) l.horsMetier.putIfAbsent(metierObjet, id);
+                } else if (!AUSSI.getOrDefault(metier, Set.of()).contains(id)) {
+                    l.horsMetier.putIfAbsent(metierObjet, id);
+                    l.pourAutres.putIfAbsent(metierObjet, new Mission(id, md, nombre));
+                }
                 enAttente = null;
                 i += longueur;
                 continue;

@@ -235,6 +235,41 @@ public final class Actions {
         }
     }
 
+    /**
+     * Il va prévenir un autre ouvrier de son chef d'une commande qui n'est pas de son métier ({@link Relais}) : arrivé à
+     * 3 blocs, il la lui dit. S'il n'y arrive pas (1 min 30, coincé, interrompu par un danger), il la lui fait passer
+     * quand même ({@code fin}) : la commande n'est jamais perdue.
+     */
+    static final class Prevenir extends Action {
+        final Relais.Commande c;
+        boolean fait;
+
+        Prevenir(Relais.Commande c) { super("prevenir"); this.c = c; mobile = true; }
+
+        Etat tick(Travailleur t) {
+            Travailleur o = ((ServerLevel) t.level()).getEntity(c.cible()) instanceof Travailleur x && x.isAlive() ? x : null;
+            if (o == null) return echec("perdu");
+            if (t.distanceToSqr(o) <= 9) {
+                t.getNavigation().stop();
+                t.getLookControl().setLookAt(o);
+                fait = true;
+                t.transmettre(c, true);
+                return Etat.OK;
+            }
+            if (age > 20 * 90 || coince()) return echec("trop_loin");
+            if (t.distanceToSqr(o) <= 64) o.ecouter(t, 40); // « Bertrand, attends ! » : il s'arrête pour l'écouter
+            t.diag = "va prévenir " + c.prenom();
+            marcher(t, o.position(), 1.0);
+            return Etat.EN_COURS;
+        }
+
+        @Override
+        void fin(Travailleur t) {
+            super.fin(t);
+            if (!fait) { fait = true; t.transmettre(c, false); }
+        }
+    }
+
     static final class SuivreChef extends Action {
         SuivreChef() { super("suivre"); mobile = true; }
 
