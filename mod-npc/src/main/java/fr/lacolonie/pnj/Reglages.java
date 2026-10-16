@@ -59,7 +59,11 @@ public class Reglages {
             "minecraft:cooked_cod", 2, "minecraft:cooked_salmon", 2));
     /** Un ouvrier qui a faim et rien au dépôt cherche à acheter à manger à un producteur à moins de N blocs (0 = jamais). */
     public int achat_distance = 32;
-    public int pnj_max_par_joueur = 5;
+    /** Au plus tant d'ouvriers par chef (cahier 9.2 : un très riche en a une trentaine). */
+    public int pnj_max_par_joueur = 30;
+    /** Le salaire croît avec la colonie (Cout) : les N premiers ouvriers d'un chef au prix de leur niveau, puis tant de plus par ouvrier au-delà (0,15 : +15 %). */
+    public int ouvriers_sans_surcout = 3;
+    public double surcout_par_ouvrier = 0.15;
     public Chercheurs chercheurs = new Chercheurs();
     public List<String> metiers_inactifs = new ArrayList<>();
     /** Une conversation entre deux ouvriers d'un même chef au plus toutes les N secondes, par colonie (0 = jamais). */
@@ -157,6 +161,8 @@ public class Reglages {
         minutes_entre_paies = Math.max(1, minutes_entre_paies);
         paies_impayees_avant_greve = Math.max(1, paies_impayees_avant_greve);
         pnj_max_par_joueur = Math.max(0, pnj_max_par_joueur);
+        ouvriers_sans_surcout = Math.clamp(ouvriers_sans_surcout, 0, 1000);
+        surcout_par_ouvrier = Double.isNaN(surcout_par_ouvrier) ? 0.15 : Math.clamp(surcout_par_ouvrier, 0.0, 1.0);
         secondes_entre_conversations = Math.max(0, secondes_entre_conversations);
         secondes_entre_remarques = Math.max(0, secondes_entre_remarques);
         usure_outils = Math.max(1, usure_outils);
@@ -181,6 +187,8 @@ public class Reglages {
 
     public static long salaire(int niveau) { return actuel.salaire_par_niveau[Math.clamp(niveau, 1, 5) - 1]; }
     public static long prime(int niveau) { return actuel.prime_par_niveau[Math.clamp(niveau, 1, 5) - 1]; }
+    /** Le facteur du salaire de la {@code rang}-ième embauche chez un chef ({@link Cout}). */
+    public static double surcout(int rang) { return Cout.facteur(rang, actuel.ouvriers_sans_surcout, actuel.surcout_par_ouvrier); }
 
     static int[] valeurs() { return actuel.monnaie.stream().mapToInt(p -> p.valeur).toArray(); }
 
