@@ -22,7 +22,7 @@ Rien côté client : pas de nouveau modpack. `mod_version` inchangée.
 ## Tests
 - JUnit : `EconomieTest` (5 : prix, marchandage, singulier, paiement exact sans perte, répliques). `./gradlew build` vert.
 - En jeu : `TestsEconomie` (lot `economie`, coins 370 à 373) : achat même chef, sans pièces, entre deux chefs, paie dans
-  le sac. Résultat : voir la fin de ce fichier.
+  le sac. Résultat : voir « Mesures » plus bas.
 
 ## Ce qui manque (aussi dans `docs/plus-tard.md`)
 - Achat d'**équipement** (outil cassé, rien au dépôt → l'acheter à un ouvrier ou guerrier qui en a en trop au dépôt de
@@ -30,3 +30,18 @@ Rien côté client : pas de nouveau modpack. `mod_version` inchangée.
   il faudra un point d'appel par métier, ou un point commun avant `Demander`.
 - Répliques écrites mais pas encore dites : boutiques, `vente_propose`, `vente_faite`, `paie_depensee`,
   `paie_economise`, `prix_monte`, `riche_fier`, `achat_refuse_cher`, `lettre_boutique_vide`.
+
+## Mesures (16/10, 19 h UTC)
+- JUnit : 274/274 (dont 5 `EconomieTest`), `./gradlew build` vert.
+- `TestsEconomie` : **4/4 verts** sur les passes 2, 3 et 4 (la passe 1 : « sans pièces » échouait car le test ne
+  reconnaissait pas « 1 pièce » au singulier ; corrigé dans le test).
+- **Échec sur l'ancien code vérifié** : copie de `main` (8d56f7f) + `TestsEconomie` seul (les autres classes de test
+  désactivées) : les 4 échouent (pas d'achat, pas de réplique « pas assez », paie 0 dans le sac).
+- **Suite complète pas encore verte en une passe** (335 tests) : passe 2 : 1 échec (`TestsChasseur.laisseLesBetesDUnEnclos`,
+  tombé la nuit) ; passe 3 : `TestsJeu.iavoix` (instable connu) et `TestsCaractereMonstres.fourbeSEclipse` (tombé la nuit) ;
+  ajouté alors `TestsJeu.auMatin` (`@BeforeBatch` « defaultBatch » : chaque lot par défaut commence au matin, l'ordre des
+  lots ayant changé avec le lot « economie ») ; passe 4 : `TestsEleveur.nourritEtFaitNaitreUnVeau` (éleveur resté dehors
+  au portillon) et `TestsChasseur.tueUnCochonSauvageEtDeposeLaViande` (3 cochons tués au lieu de 2, déjà vu instable).
+  Aucun de ces échecs ne touche à l'achat ni aux pièces, mais **il faut une passe complète verte avant la fusion sur main**.
+- À faire en premier par la session suivante : relancer la suite ; si l'éleveur ou le chasseur échouent encore, comparer
+  avec `main` (et retirer `TestsJeu.auMatin` si c'est lui qui gêne).
