@@ -45,14 +45,23 @@ final class Trajets {
      * « verse le minerai dans ce broyeur » : du dépôt ; « vide le bassin », « ramène ce qui sort de la machine » : vers le
      * dépôt. « Le dépôt de Create », « ce dépôt-là » sont la machine regardée, pas notre dépôt ({@link Machines#sansDepotDeCreate}).
      */
-    static Sens sens(String phrase) {
+    static Sens sens(String phrase) { return sens(phrase, false); }
+
+    /**
+     * Pareil, le bout regardé étant une machine ({@code machine}) : sans verbe qui la vide (« vide », « ramène », « sors »,
+     * « prends »…), on la remplit (« porte le blé dans le moulin », « le blé dans le moulin »). « Vide le moulin et mets la
+     * farine dans le coffre » : « vide » l'emporte.
+     */
+    static Sens sens(String phrase, boolean machine) {
         String n = Machines.sansDepotDeCreate(Ordres.normaliser(phrase));
         if (Ordres.dit(n, "du depot", "depuis le depot", "de notre depot", "du poste", "depuis le poste", "hors du depot", "pris au depot",
                 "prends au depot", "prise au depot")) return Sens.DU_DEPOT;
         if (Ordres.dit(n, "au depot", "vers le depot", "jusqu au depot", "au poste", "dans le depot")) return Sens.VERS_DEPOT;
+        if (Ordres.dit(n, "vide", "vider", "videz", "ramene", "ramener", "ramenez", "rapporte", "rapporter", "sors", "sortir", "sortez", "prends", "prendre",
+                "prenez", "recupere", "recuperer", "recuperez", "retire", "retirer", "ce qui sort", "ce qui en sort", "decharge", "decharger")) return Sens.VERS_DEPOT;
         if (Ordres.dit(n, "remplis", "remplir", "remplissez", "approvisionne", "approvisionner", "ravitaille", "garnis", "alimente",
-                "mets", "met", "mettez", "mettre", "verse", "versez", "verser", "nourris", "nourrir", "enfourne", "enfourner", "charge le", "charge la")) return Sens.DU_DEPOT;
-        return Sens.VERS_DEPOT;
+                "mets", "met", "mettez", "mettre", "verse", "versez", "verser", "nourris", "nourrir", "enfourne", "enfourner")) return Sens.DU_DEPOT;
+        return machine ? Sens.DU_DEPOT : Sens.VERS_DEPOT;
     }
 
     /**
@@ -75,6 +84,23 @@ final class Trajets {
             if (l.get(i).pret(maintenant)) return i;
         }
         return -1;
+    }
+
+    /** Tant de secondes après avoir posé dans une machine, il n'y reprend rien (elle n'a pas encore travaillé). */
+    static final int ATTENTE_POSE = 20;
+
+    /** Un autre de ses trajets pose dans ce bout {@code p} (une machine qu'il remplit et qu'il vide). */
+    static boolean alimente(List<Trajet> l, long p) {
+        for (Trajet x : l) if (x.dest() == p && p != DEPOT) return true;
+        return false;
+    }
+
+    /**
+     * Ce qu'il peut prendre dans une machine qu'il remplit aussi (une presse, un tapis, qui ne séparent pas l'entrée de la
+     * sortie) : jamais ce qu'il y a posé lui-même ({@code poses} : les objets posés), et rien juste après une pose.
+     */
+    static boolean prenable(String objet, boolean alimentee, Set<String> poses, long posee, long maintenant) {
+        return !alimentee || maintenant >= posee + ATTENTE_POSE && !poses.contains(objet);
     }
 
     /** Combien en prendre : ce qu'il y a, sans dépasser la place dans son sac. */

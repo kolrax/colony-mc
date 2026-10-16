@@ -127,10 +127,10 @@ colerique: Elle grince encore ! Qui va la graisser, cette maudite roue ?
 [machine_introuvable]
 Je ne vois plus {machine}. C'était pourtant là.
 Je cherche {machine}. Quelqu'un a tout démonté ?
-J'arrive avec ma charge, et plus de machine. Ça commence bien.
+J'arrive, et plus de machine. Ça commence bien.
 {chef}, je ne trouve plus {machine}.
 Une machine pareille ne s'envole pas. Pourtant, plus rien.
-Je garde ma charge sur moi en attendant.
+J'attends qu'on me dise quoi faire.
 calme: Plus de machine ici. J'attends qu'on m'en montre une autre.
 peureux: {machine} a disparu… Pourvu que personne ne se soit blessé.
 fourbe: Je n'y ai pas touché, je le précise.

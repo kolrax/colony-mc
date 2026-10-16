@@ -199,12 +199,12 @@ final class Messages {
         t("machine_pleine", "fourbe", "Plus de place dans {0}, {1}. Je n'y suis pour rien, je le précise.");
         t("machine_pleine", "colerique", "Encore plein à ras bord, {1} ! Qu'on vide {0}, enfin !");
         m("machine_introuvable", "Je ne trouve plus la machine",
-                "Je venais charger {0}, {1}. Il n'y a plus rien.",
+                "Je suis passé voir {0}, {1}. Il n'y a plus rien.",
                 "Je ne vois plus {0}, {1}. Quelqu'un a tout démonté ?",
                 "J'ai cherché {0}, {1}, sans rien trouver. Dis-moi où c'est passé.",
                 "Une machine pareille ne s'envole pas. Pourtant, {0} a disparu, {1}.",
-                "Je garde ma charge sur moi : {0} a disparu, {1}.",
-                "Je ne trouve plus {0}, {1}. Montre-moi où charger, et j'y retourne.");
+                "Plus de trace : {0} a disparu, {1}.",
+                "Je ne trouve plus {0}, {1}. Montre-moi où aller, et j'y retourne.");
         t("machine_introuvable", "calme", "Je n'ai pas trouvé {0}, {1}. J'attends que tu m'indiques où aller.");
         t("machine_introuvable", "peureux", "Je ne vois plus {0}, {1}… Ça n'est pas parti tout seul, j'espère ?");
         t("machine_introuvable", "fourbe", "Je ne trouve plus {0}, {1}. Je n'y ai pas touché, je le précise.");

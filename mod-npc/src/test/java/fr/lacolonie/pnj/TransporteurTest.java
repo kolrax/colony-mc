@@ -77,18 +77,18 @@ class TransporteurTest {
 
     @Test
     void machinesDansLesOrdres() {
-        RepertoireTest.demande("Remplis le moulin avec le blé", "transporteur", "trajet");
-        RepertoireTest.demande("Mets le minerai dans ce broyeur", "transporteur", "trajet");
-        RepertoireTest.demande("Mets le fer sur le tapis", "transporteur", "trajet");
-        RepertoireTest.demande("Mets le blé sur ce présentoir", "transporteur", "trajet");
-        RepertoireTest.demande("Mets le fer sous la presse", "transporteur", "trajet");
-        RepertoireTest.demande("Vide cette machine", "transporteur", "trajet");
-        RepertoireTest.demande("Vide ce bassin", "transporteur", "trajet");
-        RepertoireTest.demande("Vide ce moulin", "transporteur", "trajet");
-        RepertoireTest.demande("Ramène ce qui sort de la machine au dépôt", "transporteur", "trajet");
-        RepertoireTest.demande("Prends dans ce bassin", "transporteur", "trajet_prendre");
-        RepertoireTest.demande("Dépose dans ce moulin", "transporteur", "trajet_deposer");
-        RepertoireTest.demande("Dépose-le sur ce tapis", "transporteur", "trajet_deposer");
+        RepertoireTest.demande("Remplis le moulin avec le blé", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Mets le minerai dans ce broyeur", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Mets le fer sur le tapis", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Mets le blé sur ce présentoir", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Mets le fer sous la presse", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Vide cette machine", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Vide ce bassin", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Vide ce moulin", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Ramène ce qui sort de la machine au dépôt", "transporteur", "trajet_machine");
+        RepertoireTest.demande("Prends dans ce bassin", "transporteur", "trajet_prendre_machine");
+        RepertoireTest.demande("Dépose dans ce moulin", "transporteur", "trajet_deposer_machine");
+        RepertoireTest.demande("Dépose-le sur ce tapis", "transporteur", "trajet_deposer_machine");
     }
 
     @Test
@@ -141,5 +141,56 @@ class TransporteurTest {
                     assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
         String s = Vie.tirer(banque, "machine_pleine", "", java.util.Map.of("machine", "le moulin", "chef", "chef"), () -> 0.0);
         assertFalse(s.contains("{"), s);
+    }
+
+    // --- Relecture du 16/10 ---------------------------------------------------------------------------------------
+
+    /** Une machine regardée, sans verbe qui la vide : on la remplit. « Vide » l'emporte ; « charge » garde son sens pour un coffre. */
+    @Test
+    void uneMachineSeRemplitParDefaut() {
+        for (String p : List.of("Porte le blé dans le moulin", "Apporte du charbon dans le four", "Amène le minerai dans le broyeur", "Porte le fer sous la presse", "Le blé dans le moulin"))
+            assertEquals(Sens.DU_DEPOT, Trajets.sens(p, true), p);
+        assertEquals(Sens.VERS_DEPOT, Trajets.sens("Vide le moulin et mets la farine dans le coffre", true));
+        assertEquals(Sens.VERS_DEPOT, Trajets.sens("Ramène ce qui sort du moulin", true));
+        assertEquals(Sens.VERS_DEPOT, Trajets.sens("Charge le fer de ce coffre"), "un coffre : vers le dépôt, comme avant");
+        assertEquals(Sens.VERS_DEPOT, Trajets.sens("Porte le contenu de ce coffre"), "un coffre sans verbe : vers le dépôt, comme avant");
+        // « Le dépôt là-bas » reste notre dépôt.
+        assertEquals(Sens.DU_DEPOT, Trajets.sens("Porte le fer du dépôt là-bas à ce coffre"));
+        for (String p : List.of("Porte le blé dans le moulin", "Apporte du charbon dans le four", "Le blé dans le moulin", "Porte le fer sous la presse"))
+            RepertoireTest.demande(p, "transporteur", "trajet_machine");
+    }
+
+    /** Les formules des machines ne prennent pas les ordres des autres métiers : la phrase va au même métier qu'avant. */
+    @Test
+    void lesMachinesNeVolentPasLesOrdres() {
+        java.util.Map<String, java.util.Set<String>> avant = new java.util.LinkedHashMap<>();
+        avant.put("Mets la viande dans le four", java.util.Set.of("cuisinier"));
+        avant.put("Cuis du poisson dans le four", java.util.Set.of());
+        avant.put("Cuis les patates dans ce four", java.util.Set.of());
+        avant.put("va cuire dans le four", java.util.Set.of());
+        avant.put("Mets du bois dans le four", java.util.Set.of());
+        avant.put("Fais du charbon dans le four", java.util.Set.of());
+        avant.put("nourris les vaches", java.util.Set.of("eleveur"));
+        avant.put("vends le pain à 2 pièces", java.util.Set.of());
+        avant.put("Mets-toi dans la machine", java.util.Set.of());
+        avant.put("Fais du pain dans le four", java.util.Set.of("fermier", "cuisinier"));
+        avant.forEach((p, m) -> assertEquals(m, Repertoire.metiersConcernes(p), p));
+        // Au transporteur lui-même : « mets-toi dans la machine », « fais du pain dans le four » ne sont pas des trajets.
+        for (String p : List.of("Mets-toi dans la machine", "Fais du pain dans le four", "Cuis le poisson dans ce four"))
+            assertFalse(RepertoireTest.action(p, "transporteur").startsWith("trajet"), p + " : " + RepertoireTest.action(p, "transporteur"));
+    }
+
+    /** Une machine qu'il remplit et qu'il vide : il n'y reprend pas ce qu'il a posé, ni rien juste après une pose. */
+    @Test
+    void neReprendPasCeQuIlAPose() {
+        List<Trajet> l = List.of(new Trajet(Trajets.DEPOT, 5, "minecraft:iron_ingot"), new Trajet(5, Trajets.DEPOT, ""));
+        assertTrue(Trajets.alimente(l, 5));
+        assertFalse(Trajets.alimente(l, 6));
+        java.util.Set<String> poses = java.util.Set.of("minecraft:iron_ingot");
+        assertFalse(Trajets.prenable("minecraft:iron_ingot", true, poses, 0, 1000), "ce qu'il a posé");
+        assertTrue(Trajets.prenable("minecraft:iron_nugget", true, poses, 0, 1000), "le produit");
+        assertFalse(Trajets.prenable("minecraft:iron_nugget", true, poses, 990, 1000), "juste après une pose : rien");
+        assertTrue(Trajets.prenable("minecraft:iron_ingot", false, poses, 990, 1000), "une machine qu'il ne remplit pas : tout");
+        assertTrue(Machines.four("minecraft:blast_furnace") && !Machines.four("create:millstone"));
     }
 }

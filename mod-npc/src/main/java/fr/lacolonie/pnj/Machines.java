@@ -53,10 +53,29 @@ final class Machines {
 
     private Machines() {}
 
-    static Machine de(String id) { return PAR_ID.get(id); }
+    /** Des blocs inscrits le temps d'un essai en jeu (des blocs vanilla qui imitent une machine de Create), retirés à la fin. */
+    static final Map<String, Machine> ESSAIS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static Machine de(String id) {
+        Machine m = PAR_ID.get(id);
+        return m != null ? m : ESSAIS.get(id);
+    }
 
     /** Une machine connue (pas un coffre, un tonneau, une caisse). */
-    static boolean machine(String id) { return PAR_ID.containsKey(id); }
+    static boolean machine(String id) { return de(id) != null; }
+
+    /** Un four (four, haut fourneau, fumoir) : le combustible se pose par le côté, ce qu'on cuit par le dessus. */
+    static boolean four(String id) { return id.equals("minecraft:furnace") || id.equals("minecraft:blast_furnace") || id.equals("minecraft:smoker"); }
+
+    /**
+     * La phrase (normalisée) demande de porter quelque chose à une machine, pas d'y aller soi-même (« mets-toi dans la
+     * machine »), ni d'y cuire ou d'y faire quelque chose (« fais du pain dans le four », « cuis le poisson dans ce four ») :
+     * ces phrases-là sont pour le cuisinier, le fermier, le bûcheron, ou un ordre de déplacement.
+     */
+    static boolean ordreDePorter(String n) {
+        return !Ordres.dit(n, "mets toi", "met toi", "mettez vous", "entre", "entre dans", "rentre", "va", "vas", "allez", "monte", "grimpe", "cuis", "cuire", "cuit",
+                "cuisez", "fais", "faites", "fait", "faire", "cuisine", "cuisiner", "grille", "griller", "allume", "allumer", "rotis", "fume", "fumer");
+    }
 
     /** Une pièce de Create (même inconnue d'ici) : sans capacité d'objets, on dit quoi viser plutôt que « ce n'est pas un coffre ». */
     static boolean deCreate(String id) { return id.startsWith("create:"); }
@@ -64,7 +83,8 @@ final class Machines {
     /** Son nom, article compris : « le moulin », « le coffre » pour tout le reste. */
     static String nom(String id) {
         Machine m = PAR_ID.get(id);
-        return m == null ? "le coffre" : m.nom();
+        Machine m2 = m != null ? m : ESSAIS.get(id);
+        return m2 == null ? "le coffre" : m2.nom();
     }
 
     /** « Le moulin » en tête de phrase. */
@@ -79,6 +99,6 @@ final class Machines {
      */
     static String sansDepotDeCreate(String n) {
         return n.replace(" depot de create ", " presentoir ").replace(" ce depot la ", " ce presentoir ").replace(" ce depot ci ", " ce presentoir ")
-                .replace(" ce depot ", " ce presentoir ").replace(" depot la ", " presentoir ");
+                .replace(" ce depot ", " ce presentoir ");
     }
 }
