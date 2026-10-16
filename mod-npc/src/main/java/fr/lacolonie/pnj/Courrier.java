@@ -123,6 +123,8 @@ final class Courrier extends SavedData {
 
     final Map<UUID, List<Lettre>> boites = new HashMap<>();
     final Map<UUID, Poste> postes = new HashMap<>();
+    /** La réserve d'un poste cassé (cahier 14.4), gardée pour son chef et rendue à son prochain poste (format de `Bureau.Entite.reserveTag`). */
+    final Map<UUID, ListTag> reserves = new HashMap<>();
     final Map<UUID, LinkedHashMap<UUID, Membre>> effectifs = new HashMap<>();
     final List<Vol> vols = new ArrayList<>();
     long prochainId = 1;
@@ -159,6 +161,14 @@ final class Courrier extends SavedData {
             p.add(x);
         });
         t.put("Postes", p);
+        ListTag rs = new ListTag();
+        reserves.forEach((chef, l) -> {
+            CompoundTag x = new CompoundTag();
+            x.putUUID("chef", chef);
+            x.put("reserve", l);
+            rs.add(x);
+        });
+        t.put("Reserves", rs);
         ListTag e = new ListTag();
         effectifs.forEach((chef, m) -> m.forEach((id, mb) -> {
             CompoundTag x = new CompoundTag();
@@ -225,6 +235,11 @@ final class Courrier extends SavedData {
             ResourceLocation monde = ResourceLocation.tryParse(p.getString("monde"));
             BlockPos pos = NbtUtils.readBlockPos(p, "pos").orElse(null);
             if (monde != null && pos != null) c.postes.put(p.getUUID("chef"), new Poste(ResourceKey.create(Registries.DIMENSION, monde), pos));
+        }
+        for (Tag x : t.getList("Reserves", Tag.TAG_COMPOUND)) {
+            CompoundTag r = (CompoundTag) x;
+            ListTag l = r.getList("reserve", Tag.TAG_COMPOUND);
+            if (!l.isEmpty()) c.reserves.put(r.getUUID("chef"), l);
         }
         for (Tag x : t.getList("Effectifs", Tag.TAG_COMPOUND)) {
             CompoundTag e = (CompoundTag) x;

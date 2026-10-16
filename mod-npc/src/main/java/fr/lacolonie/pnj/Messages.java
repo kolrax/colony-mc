@@ -285,6 +285,9 @@ final class Messages {
         m("depot_plein", "Le dépôt est plein",
                 "Le dépôt du poste est plein : vide-le, ou colle un coffre au bureau. Je ne peux plus rien ranger.",
                 "Plus une place au dépôt ! Il faut le vider ou y coller un coffre.");
+        m("depot_reserve", "Le dépôt est plein",
+                "Le dépôt est plein : je range le surplus dans la réserve. Il reviendra au dépôt dès qu'une place s'y libère.",
+                "Plus de place au dépôt : je mets le reste dans la réserve, rien ne se perd.");
         m("mission_finie", "Mission terminée",
                 "Mission terminée : {0}. Je n'ai plus rien à faire : écris-moi ma prochaine mission.",
                 "C'est fait : {0}, au dépôt. Quelle est la suite ?",

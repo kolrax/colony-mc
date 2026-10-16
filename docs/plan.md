@@ -70,13 +70,13 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 10. Construction (indispensable)
 - [x] Maçon ou bâtisseur : construit un schéma placé par le joueur, avec les matériaux du dépôt
-- [ ] KOLRAX importe ses propres schémas
+- [x] KOLRAX importe ses propres schémas (déjà couvert par le maçon : `.nbt` dans `config/colonie_pnj/schemas/` ou envoi par la table à schémas de Create)
 
 ## 11. Économie (indispensable selon ses notes)
 - [ ] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux
 - [ ] Boutiques ; argent physique = pièces Numismatics existantes
 - [ ] Coût : un débutant peut payer 2 ou 3 PNJ, un joueur très riche une trentaine
-- [ ] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
+- [x] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
 
 ## 12. Create (indispensable)
 - [ ] Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ; ils sont la main-d'œuvre de l'industrie
