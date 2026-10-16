@@ -208,6 +208,7 @@ final class Dialogue {
                 GardeChef.reprendre(lecture, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 GardeDepot.reprendre(lecture, seul); // le dépôt du poste non plus
                 Guerre.reprendre(lecture, seul); // ni la guerre
+                if (seul.boutique != null) lecture.boutique = seul.boutique; // ni la boutique (Boutique)
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) lecture.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
             }
             lecture.rang = i;

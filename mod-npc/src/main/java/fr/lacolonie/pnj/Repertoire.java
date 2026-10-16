@@ -63,7 +63,7 @@ final class Repertoire {
     static final Set<String> PARTICULES = Set.of("coeur", "note", "colere", "content", "sueur", "larmes", "magie", "eclaboussure", "fumee");
     static final Set<String> OBJETS = Set.of("objet", "nourriture", "tout", "arme", "outil", "torche", "bouclier");
     static final Set<String> INFOS = Set.of("heure", "meteo", "jour", "lune", "poste", "lit", "cible", "position", "nord", "altitude", "biome",
-            "monstres", "animaux", "joueurs", "lumiere", "eau", "sac", "sante", "outil", "armure", "salaire", "bourse", "achats", "anciennete", "caractere", "niveau",
+            "monstres", "animaux", "joueurs", "lumiere", "eau", "sac", "sante", "outil", "armure", "salaire", "bourse", "achats", "ventes", "boutique", "anciennete", "caractere", "niveau",
             "distance", "ouvriers", "minerai", "arbre", "schemas", "chantier", "reserve");
     static final Set<String> TRAVAUX = Set.of("miner_la", "tunnel", "trou", "salle", "carriere", "torches", "torche_la", "ramasser", "abattre_la", "abattre_autour",
             "planter", "planter_la", "defricher", "foret", "defricher_zone", "planches", "charbon", "champ", "recolter", "pain", "oublier_champ",

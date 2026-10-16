@@ -958,6 +958,7 @@ public class Travailleur extends PathfinderMob {
                 GardeChef.reprendre(li, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 GardeDepot.reprendre(li, seul); // le dépôt du poste non plus
                 Guerre.reprendre(li, seul); // ni la guerre
+                if (seul.boutique != null) li.boutique = seul.boutique; // ni la boutique
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
@@ -1474,6 +1475,13 @@ public class Travailleur extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         if (!player.getUUID().equals(chef)) {
+            // Il tient la boutique de son chef : un client peut lui parler (« qu'est-ce que tu vends ? », « je t'achète 2 pains »).
+            if (Boutiquier.tient(this)) {
+                getLookControl().setLookAt(player);
+                Boutiquier.accueillir(this, sp);
+                PacketDistributor.sendToPlayer(sp, new Reseau.Conversation(getId(), fiche(false)));
+                return InteractionResult.CONSUME;
+            }
             signaler(sp, prenom + " travaille pour " + chefNom + ".");
             return InteractionResult.CONSUME;
         }
@@ -1556,7 +1564,10 @@ public class Travailleur extends PathfinderMob {
      * Son chef lui écrit dans la fenêtre de conversation. C'est {@link Dialogue} qui trouve à qui il parle vraiment
      * (« Raoul, viens » s'adresse à Raoul, « les gars » à tous ceux qui l'entendent) et qui fait répondre chacun.
      */
-    void parler(ServerPlayer p, String texte) { Dialogue.parler(p, texte, this, false); }
+    void parler(ServerPlayer p, String texte) {
+        if (!p.getUUID().equals(chef) && Boutiquier.client(this, p, texte)) return; // un client à sa boutique (Boutiquier)
+        Dialogue.parler(p, texte, this, false);
+    }
 
     /**
      * Applique ce qu'il a compris (de vive voix si {@code enFace} n'est pas nul, sinon par lettre) et renvoie sa réponse.
@@ -1867,6 +1878,8 @@ public class Travailleur extends PathfinderMob {
             Armee.ordre(this, g, r, true);
         }
         if (l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
+        // La boutique (Boutique, Boutiquier) : l'ouvrir, la fermer, ses prix ; c'est le mod qui répond.
+        if (!parRegle && l.boutique != null) { Boutiquier.ordre(this, l.boutique, r); reponseImposee = true; }
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.
         String relaye = null;
         if (!parRegle && chef != null && mode != Mode.GREVE) for (var e : l.pourAutres.entrySet()) {
@@ -2094,6 +2107,7 @@ public class Travailleur extends PathfinderMob {
         memoire.remove("garde_chef"); // « attaque quiconque me frappe » : l'ordre de ce chef-là, pas du suivant (GardeChef)
         memoire.remove("epargnes");
         memoire.remove("garde_depot");
+        memoire.remove("boutique"); // sa boutique et ses prix : ceux de ce chef-là (Boutiquier)
         souvenirs.liste.clear(); // ses souvenirs parlent de ce chef-là
         lettresADeposer.clear();
         lettresALire.clear();

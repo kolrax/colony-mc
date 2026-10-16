@@ -407,6 +407,8 @@ armure | tous | dire quelle armure il porte | info armure geste=fier | tu as une
 salaire | tous | dire son salaire et sa prochaine paie | info salaire | combien tu gagnes ; ton salaire ; quand est ta paie ; je te dois combien ; ta paie ; tu es bien payé |
 bourse | tous | dire combien il a de pièces dans sa bourse | info bourse geste=montrer | combien as tu de pièces ; combien tu as de pièces ; ta bourse ; combien d'argent as tu ; tu as des sous ; il te reste combien de pièces ; tu es riche |
 achats | tous | dire ce qu'il a acheté dernièrement, à qui et pour combien | info achats | qu'as tu acheté ; qu'est ce que tu as acheté ; tu as acheté quoi ; tes achats ; tu as dépensé quoi ; à qui as tu acheté |
+ventes | tous | dire ce qu'il a vendu aujourd'hui à sa boutique, et pour combien | info ventes | qu'as tu vendu ; qu'est ce que tu as vendu ; tu as vendu quoi ; tes ventes ; combien as tu vendu ; la boutique a rapporté combien ; combien a rapporté la boutique ; tu as fait des ventes |
+etal | tous | dire ce qu'il vend à sa boutique, et à quel prix | info boutique | qu'est ce que tu vends ; que vends tu ; tu vends quoi ; qu'as tu à vendre ; tes prix ; ton étal ; qu'y a t il à l'étal ; quels sont tes prix |
 anciennete | tous | dire depuis quand il travaille pour le chef | info anciennete | depuis quand travailles tu pour moi ; depuis combien de temps ; ton ancienneté ; tu es là depuis quand |
 temperament | tous | dire quel est son caractère | info caractere | quel est ton caractère ; tu es comment ; ton tempérament ; décris toi ; quel genre d'homme es tu |
 niveau | tous | dire son niveau de compétence | info niveau | quel est ton niveau ; tu es bon ; combien d'étoiles ; tu es doué ; ton expérience |

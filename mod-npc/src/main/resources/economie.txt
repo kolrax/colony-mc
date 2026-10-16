@@ -32,6 +32,17 @@
 #   pauvre_plainte       il a la bourse vide et s'en plaint
 #   chef_achat_info      réponse au chef qui demande ce qu'il a acheté ({objet}, {nom}, {prix})
 #   lettre_boutique_vide ligne courte d'une lettre : la boutique de {nom} n'a plus rien
+#   boutique_ordre_ouvrir  le chef lui dit de tenir la boutique : il accepte
+#   boutique_ordre_fermer  le chef lui dit de la fermer
+#   boutique_ordre_prix    le chef fixe un prix : {objet} (son nom, sans article), {prix} pièces l'unité
+#   boutique_ordre_exclu   le chef lui dit de ne pas vendre {objet} (son nom, sans article)
+#   boutique_ordre_permis  {objet} est de nouveau à vendre (son nom, sans article)
+#   boutique_inconnu       le chef parle d'une marchandise qu'il ne connaît pas : {objet}, le mot dit
+#   vente_etal             il dit ce qu'il vend : {objet} est la liste (« pain à 1 pièce et steak à 3 pièces »)
+#   vente_absent           le client demande ce qu'il ne vend pas
+#   vente_conclue          il vend {objet} (« 2 pains ») au client {nom} pour {prix} pièces en tout
+#   vente_pas_assez        le client {nom} n'a pas les {prix} pièces
+#   vente_sans_monnaie     la caisse ne peut pas rendre la monnaie : il faut le compte juste
 
 [achat_demande]
 Bonjour, {nom}. Tu me vendrais {objet} ?
@@ -305,3 +316,75 @@ peureux: La boutique de {nom} est vide… Qu'est-ce qu'on va faire ?
 peureux: Plus rien chez {nom}. J'ai peur qu'on manque.
 fourbe: Plus rien chez {nom}. Bizarre, non ?
 fourbe: La boutique de {nom} est vide. Quelqu'un a tout raflé.
+
+# --- La boutique : les ordres du chef et les clients (Boutiquier) -------------------------------------------
+
+[boutique_ordre_ouvrir]
+Entendu, {chef} : je tiens la boutique au poste, de jour.
+Bien, {chef}. J'ouvre l'étal au poste et je vends ce qu'il y a au dépôt.
+calme: Entendu. Je serai au poste, derrière l'étal, tant qu'il fera jour.
+colerique: Marchand, maintenant ? Soit. J'ouvre la boutique au poste.
+peureux: Vendre, moi ? Bon… je ferai de mon mieux, {chef}.
+fourbe: Une boutique ? Excellente idée, {chef}. Je saurai vendre, crois-moi.
+
+[boutique_ordre_fermer]
+Bien, {chef} : je ferme la boutique et je reprends l'ouvrage.
+Entendu. L'étal est fermé.
+calme: C'est fermé, {chef}. Je retourne à mon travail.
+colerique: Fermé ! Enfin, du vrai travail.
+peureux: Je ferme… J'ai mal fait quelque chose ?
+fourbe: Fermé. Dommage, les affaires commençaient bien.
+
+[boutique_ordre_prix]
+Entendu, {chef} : {objet}, {prix} pièces l'unité.
+C'est noté : {objet}, {prix} pièces.
+colerique: {prix} pièces pour {objet}, et pas une de moins !
+fourbe: {objet} à {prix} pièces ? On pourrait en demander plus, tu sais.
+
+[boutique_ordre_exclu]
+Compris, {chef} : {objet}, ce n'est plus à vendre.
+Entendu : {objet}, ça reste au dépôt.
+fourbe: Dommage : {objet}, ça se vendait bien. Je n'y touche plus.
+
+[boutique_ordre_permis]
+Bien, {chef} : {objet}, de nouveau à vendre.
+Entendu : {objet}, je le remets à l'étal.
+
+[boutique_inconnu]
+Je ne sais pas ce que c'est, « {objet} », {chef}.
+« {objet} » ? Je ne connais pas cette marchandise.
+
+[vente_etal]
+J'ai {objet}. Que te faut-il, et combien ?
+Voici mon étal : {objet}. Dis-moi ce qu'il te faut.
+calme: Regarde : {objet}. Prends ton temps.
+colerique: J'ai {objet}. Alors, tu prends quoi ?
+peureux: J'ai… {objet}. Si ça te plaît ?
+fourbe: Rien que du bon : {objet}. Fais ton choix.
+
+[vente_absent]
+Ça, je n'en vends pas.
+Je n'en ai pas à vendre.
+Pas de ça à mon étal.
+
+[vente_conclue]
+Voilà {objet}. Ça fait {prix} pièces.
+Tiens : {objet}, pour {prix} pièces.
+calme: {objet}, {prix} pièces. Compte bien ta monnaie.
+colerique: {objet}, {prix} pièces. Allez, au suivant.
+peureux: Voilà {objet}… {prix} pièces, si ça te va.
+fourbe: {objet} pour {prix} pièces. Une affaire, crois-moi.
+
+[vente_pas_assez]
+Il te manque des pièces : ça fait {prix} pièces.
+Pas assez, {nom} : il faut {prix} pièces.
+calme: Ça fait {prix} pièces. Reviens quand tu les auras.
+colerique: {prix} pièces, et pas une de moins ! Reviens avec ta bourse pleine.
+peureux: Euh… il faut {prix} pièces. Tu n'en as pas assez…
+fourbe: Pour {prix} pièces, c'est à toi. Pas une de moins.
+
+[vente_sans_monnaie]
+Je n'ai pas de quoi te rendre la monnaie. Apporte le compte juste.
+Ma caisse ne peut pas te rendre la monnaie. Le compte juste, s'il te plaît.
+calme: Il me faudrait le compte juste : je n'ai pas la monnaie.
+colerique: Pas de monnaie ! Le compte juste, ou rien.
