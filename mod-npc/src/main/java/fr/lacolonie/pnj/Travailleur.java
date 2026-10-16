@@ -956,6 +956,7 @@ public class Travailleur extends PathfinderMob {
                 li.quotidien |= seul.quotidien;
                 Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
                 GardeChef.reprendre(li, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
+                GardeDepot.reprendre(li, seul); // le dépôt du poste non plus
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
@@ -1872,6 +1873,7 @@ public class Travailleur extends PathfinderMob {
             regles.clear();
             memoire.remove("garde_chef");
             memoire.remove("epargnes");
+            memoire.remove("garde_depot");
             r.add(Messages.corps(this, "dit_oublie_regles"));
         }
         if (!parRegle) for (OrdresLongs.Regle x : l.regles) {
@@ -1898,6 +1900,30 @@ public class Travailleur extends PathfinderMob {
             String noms = String.join(" ni à ", l.epargner);
             String dit = Besoins.texte(this, "chef_ordre_epargne", noms, null);
             r.add(dit != null ? dit : "Entendu, chef : je ne ferai jamais rien à " + noms + ".");
+        }
+        // Le dépôt du poste (GardeDepot, cahier 6.4) : sa garde, comme celle du chef ; c'est le mod qui répond.
+        if (!parRegle && l.depot != null) {
+            memoire.putString("garde_depot", l.depot.name());
+            Metier mt = Metier.de(metier);
+            boolean arme = mt != null && mt.combattant;
+            String cle = l.depot != GardeChef.Posture.ATTAQUE ? "depot_ordre_tranquille" : arme ? "depot_ordre_attaque" : "depot_ordre_attaque_civil";
+            String dit = Besoins.texte(this, cle, null, null);
+            r.add(dit != null ? dit : l.depot != GardeChef.Posture.ATTAQUE ? "Compris : qui se sert au dépôt me trouvera devant lui, sans coup donné."
+                    : arme ? "Compris : qui pille le dépôt goûtera de mon fer." : "Je ne porte pas les armes, chef : je crierai, mais je ne frapperai pas.");
+            reponseImposee = true;
+        }
+        // Qui peut se servir au dépôt : dit à un seul, il le répète aux autres (retenu pour toute la colonie, dans le Courrier).
+        if (!parRegle && chef != null && (!l.permis.isEmpty() || !l.retires.isEmpty()) && level() instanceof ServerLevel sl) {
+            Courrier.de(sl.getServer()).permettre(chef, l.permis, l.retires);
+            reponseImposee = true;
+            if (!l.permis.isEmpty()) {
+                String noms = String.join(" et ", l.permis), dit = Besoins.texte(this, "depot_ordre_permis", noms, null);
+                r.add(dit != null ? dit : "Entendu, chef : " + noms + " pourra se servir au dépôt. Je le dirai aux autres.");
+            }
+            if (!l.retires.isEmpty()) {
+                String noms = String.join(" ni ", l.retires), dit = Besoins.texte(this, "depot_ordre_retire", noms, null);
+                r.add(dit != null ? dit : "Entendu, chef : plus de dépôt pour " + noms + ". Je préviendrai les autres.");
+            }
         }
         // « Arrête ! » pendant qu'il frappe un homme sur son ordre : il baisse son arme.
         if (!parRegle && enFace != null && action instanceof Actions.Attaquer a && a.cible instanceof Player && a.cible != enFace && GardeChef.cesse(l)) {
@@ -2054,6 +2080,7 @@ public class Travailleur extends PathfinderMob {
         regles.clear();
         memoire.remove("garde_chef"); // « attaque quiconque me frappe » : l'ordre de ce chef-là, pas du suivant (GardeChef)
         memoire.remove("epargnes");
+        memoire.remove("garde_depot");
         souvenirs.liste.clear(); // ses souvenirs parlent de ce chef-là
         lettresADeposer.clear();
         lettresALire.clear();

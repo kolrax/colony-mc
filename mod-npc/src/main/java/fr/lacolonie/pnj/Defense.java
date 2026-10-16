@@ -377,22 +377,105 @@ final class Defense {
         if (Cerveau.parfois(t, "chef_interpose", 5) && !Besoins.dire(t, "chef_interpose", null)) t.dire("Recule ! Ne touche plus à mon chef.");
     }
 
-    /** Il se tient entre son chef et celui qui l'a frappé, face à lui, quelques secondes, sans frapper. */
+    // --- On se sert au dépôt du poste (cahier 6.4) -----------------------------------------------------
+
+    /** Jusque-là, les gens du chef voient qu'on se sert au dépôt ; le guerrier qui frappe le voleur le laisse à {@link #LAISSE} blocs du dépôt. */
+    static final double DEPOT_VUE = 20, LAISSE = 12;
+    /** Le chef prévenu, par voleur : au plus une fois toutes les 5 minutes (temps du jeu). */
+    static final long PREVENIR = 20 * 300;
+    private static final Map<String, Long> PREVENUS = new java.util.HashMap<>();
+
+    /**
+     * Un joueur ouvre le dépôt d'un poste (le bureau ou un coffre collé à lui) : ni le chef, ni un faux joueur (machine), ni
+     * un joueur qu'il a autorisé ({@link Courrier#permis}). On ne l'empêche pas d'ouvrir : ses gens réagissent seulement.
+     */
+    static void depotOuvert(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) {
+        if (e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND || !(e.getEntity() instanceof ServerPlayer v) || v instanceof FakePlayer || v.isSpectator()
+                || v.isSecondaryUseActive() && !v.getMainHandItem().isEmpty()) return; // accroupi, objet en main : il pose, il n'ouvre rien
+        Bureau.Entite b = Bureau.depotDe(v.level(), e.getPos());
+        if (b == null || v.getUUID().equals(b.proprietaire) || Courrier.de(v.server).permis(b.proprietaire, v.getGameProfile().getName())) return;
+        depotVole(b, v);
+    }
+
+    /**
+     * Les gens du chef à {@link #DEPOT_VUE} blocs qui voient {@code v} (une seule recherche) : les guerriers s'interposent
+     * et l'avertissent, ou le frappent sur l'ordre du chef (« attaque ceux qui volent le dépôt ») ; sans guerrier, un
+     * ouvrier le signale. Le chef est prévenu, de vive voix s'il est là, sinon par une lettre.
+     */
+    static void depotVole(Bureau.Entite b, ServerPlayer v) {
+        java.util.UUID chef = b.proprietaire;
+        Vec3 lieu = Vec3.atBottomCenterOf(b.getBlockPos());
+        String nom = v.getGameProfile().getName();
+        Travailleur garde = null, temoin = null;
+        for (Travailleur t : v.level().getEntitiesOfClass(Travailleur.class, v.getBoundingBox().inflate(DEPOT_VUE, 8, DEPOT_VUE),
+                x -> x.isAlive() && chef.equals(x.chef) && x.distanceTo(v) <= DEPOT_VUE)) {
+            if (t.aTerre || t.isSleeping() || t.mode == Travailleur.Mode.GREVE || t.memoire.getBoolean("revolte") || !t.getSensing().hasLineOfSight(v)) continue;
+            Metier m = Metier.de(t.metier);
+            boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && x.cible != v && Monde.hostile(x.cible)
+                    || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
+            if (m != null && m.combattant && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v); if (garde == null) garde = t; }
+            else if (temoin == null) temoin = t;
+        }
+        // Sans guerrier : un ouvrier le signale, d'un mot, pas plus.
+        if (garde == null && temoin != null && Cerveau.parfois(temoin, "depot_vu", 30) && !Besoins.dire(temoin, "depot_vu", nom)) temoin.dire("Hé ! Ce dépôt n'est pas à toi !");
+        Travailleur qui = garde != null ? garde : temoin;
+        if (qui == null) return;
+        long maintenant = v.level().getGameTime();
+        String cle = chef + "/" + v.getUUID();
+        Long avant = PREVENUS.get(cle);
+        if (avant != null && maintenant - avant < PREVENIR && maintenant >= avant) return;
+        if (PREVENUS.size() > 64) PREVENUS.values().removeIf(x -> maintenant - x >= PREVENIR || maintenant < x);
+        PREVENUS.put(cle, maintenant);
+        String dit = Besoins.texte(qui, "depot_prevenir", nom, null);
+        Courrier.ecrireTexte(qui, "On se sert au dépôt", dit != null ? dit : "Chef, " + nom + " s'est servi dans notre dépôt. Je l'ai vu de mes yeux.", false);
+    }
+
+    /** Le guerrier qui voit {@code v} au dépôt : il le frappe sur l'ordre du chef (jamais un joueur épargné), sinon il s'interpose. */
+    static void garderDepot(Travailleur t, Vec3 lieu, ServerPlayer v) {
+        Actions.Action ensuite = t.action instanceof Interposer i && i.agresseur == v ? i.ensuite
+                : t.mode == Travailleur.Mode.ATTENDRE ? new Actions.Aller(t.position(), 1) : null;
+        boolean epargne = GardeChef.epargne(t.memoire.getString("epargnes"), v.getGameProfile().getName());
+        if (!epargne && GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE) {
+            if (t.action instanceof Actions.Attaquer a && a.cible == v) return;
+            if (!Besoins.dire(t, "depot_riposte", v.getGameProfile().getName())) t.dire("Pas un pas de plus avec notre bien. En garde !");
+            Guerrier.armer(t);
+            Actions.Attaquer x = new Actions.Attaquer(v).portee(DEPOT_VUE).tenir(lieu, LAISSE);
+            x.ensuite = ensuite;
+            Cerveau.lancer(t, x);
+            return;
+        }
+        if (!(t.action instanceof Interposer i && i.agresseur == v)) {
+            Interposer x = new Interposer(lieu, v);
+            x.ensuite = ensuite;
+            Cerveau.lancer(t, x);
+        }
+        if (Cerveau.parfois(t, "depot_interpose", 5) && !Besoins.dire(t, "depot_interpose", v.getGameProfile().getName())) t.dire("Holà ! Ce dépôt n'est pas le tien.");
+    }
+
+    /**
+     * Il se tient entre son chef (ou le dépôt du poste, {@code lieu}) et celui qui l'a frappé (ou s'y sert), face à lui,
+     * quelques secondes, sans frapper.
+     */
     static final class Interposer extends Actions.Action {
         final ServerPlayer chef;
+        final Vec3 lieu;
         final Player agresseur;
         Vec3 place;
 
-        Interposer(ServerPlayer chef, Player agresseur) { super("s_interposer"); this.chef = chef; this.agresseur = agresseur; mobile = true; }
+        Interposer(ServerPlayer chef, Player agresseur) { super("s_interposer"); this.chef = chef; this.lieu = null; this.agresseur = agresseur; mobile = true; }
+
+        Interposer(Vec3 lieu, Player agresseur) { super("s_interposer"); this.chef = null; this.lieu = lieu; this.agresseur = agresseur; mobile = true; }
+
+        Vec3 centre() { return chef != null ? chef.position() : lieu; }
 
         @Override
         Actions.Etat tick(Travailleur t) {
-            if (age > 20 * 10 || !agresseur.isAlive() || !chef.isAlive() || chef.isRemoved() || agresseur.level() != t.level() || chef.level() != t.level()
-                    || agresseur.distanceTo(chef) > SCENE) return Actions.Etat.OK;
+            if (age > 20 * 10 || !agresseur.isAlive() || agresseur.level() != t.level()
+                    || chef != null && (!chef.isAlive() || chef.isRemoved() || chef.level() != t.level()) || agresseur.position().distanceTo(centre()) > SCENE) return Actions.Etat.OK;
             t.getLookControl().setLookAt(agresseur);
             if (place == null || age % 10 == 0) {
-                // À un pas et demi du chef, du côté de l'agresseur (au milieu s'ils sont tout près).
-                Vec3 c = chef.position(), d = agresseur.position().subtract(c).multiply(1, 0, 1);
+                // À un pas et demi du chef (du dépôt), du côté de l'agresseur (au milieu s'ils sont tout près).
+                Vec3 c = centre(), d = agresseur.position().subtract(c).multiply(1, 0, 1);
                 double l = d.length();
                 place = l < 0.1 ? c : c.add(d.scale(Math.min(1.5, l / 2) / l));
             }

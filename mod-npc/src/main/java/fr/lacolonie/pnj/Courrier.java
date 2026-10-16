@@ -126,6 +126,8 @@ final class Courrier extends SavedData {
     final Map<UUID, LinkedHashMap<UUID, Membre>> effectifs = new HashMap<>();
     final List<Vol> vols = new ArrayList<>();
     long prochainId = 1;
+    /** Ceux que chaque chef autorise à se servir au dépôt de son poste (« Nielscutt,Raoul ») : toute sa colonie le sait (GardeDepot). */
+    final Map<UUID, String> permis = new HashMap<>();
 
     static Courrier de(MinecraftServer s) {
         return s.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(Courrier::new, Courrier::charger), NOM);
@@ -187,6 +189,14 @@ final class Courrier extends SavedData {
             v.add(x);
         }
         t.put("Vols", v);
+        ListTag pe = new ListTag();
+        permis.forEach((chef, noms) -> {
+            CompoundTag x = new CompoundTag();
+            x.putUUID("chef", chef);
+            x.putString("noms", noms);
+            pe.add(x);
+        });
+        t.put("Permis", pe);
         return t;
     }
 
@@ -231,7 +241,19 @@ final class Courrier extends SavedData {
             vo.limite = v.getLong("limite");
             c.vols.add(vo);
         }
+        for (Tag x : t.getList("Permis", Tag.TAG_COMPOUND)) c.permis.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
         return c;
+    }
+
+    // --- Le dépôt : qui peut s'y servir (GardeDepot, cahier 6.4) ----------------------------------------
+
+    boolean permis(UUID chef, String pseudo) { return chef != null && GardeChef.epargne(permis.get(chef), pseudo); }
+
+    void permettre(UUID chef, List<String> oui, List<String> non) {
+        String l = GardeDepot.changer(permis.get(chef), oui, non);
+        if (l.isEmpty()) permis.remove(chef);
+        else permis.put(chef, l);
+        setDirty();
     }
 
     // --- Postes de travail ------------------------------------------------------------------------
