@@ -1,6 +1,7 @@
 """Données du panneau « Chantier des PNJ » (artefact), tirées du dépôt.
 
   python tools/suivi.py plan [sortie.json]     docs/plan.md -> {"maj", "lots": [{"num", "titre", "items": [{"texte", "fait"}]}]}
+  python tools/suivi.py reste                  nombre de cases non cochées du plan (0 = mod terminé, la routine s'arrête)
 
 Ensuite : ArtifactData set, collection « plan », doc_id « lots », file_path = la sortie (avec if_version).
 """
@@ -28,6 +29,8 @@ def plan():
 
 if __name__ == "__main__":
     cmd, *a = sys.argv[1:] or ["help"]
+    if cmd == "reste":
+        sys.exit(print(sum(not i["fait"] for l in plan()["lots"] for i in l["items"])))
     if cmd != "plan":
         sys.exit(__doc__)
     texte = json.dumps(plan(), ensure_ascii=False, indent=1)

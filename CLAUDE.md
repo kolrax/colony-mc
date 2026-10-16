@@ -147,6 +147,13 @@ Quand écrire :
 ## Rythme : travail en continu (décidé le 13/10 au soir)
 KOLRAX veut que le chantier avance **le plus possible**, quitte à épuiser le quota de la semaine avant vendredi. La routine se lance **toutes les heures** ; le verrou empêche deux sessions en même temps. Quand le quota est épuisé, les sessions échouent jusqu'à la remise à zéro (vendredi 16/10, 16 h UTC), puis reprennent seules.
 
+**Fin du chantier : la routine s'arrête seule** (décidé le 17/10)
+- `python3 tools/suivi.py reste` compte les cases non cochées de `docs/plan.md`. À **0**, le mod est terminé.
+- C'est la **première commande** de chaque session (après `git pull`). À 0 : désactiver la routine (ToolSearch `select:RemoteTrigger`, puis `update` de `trig_0183uwCLQp7tTc8cxSxdvTx2` avec `{"enabled": false}`), puis s'arrêter sans rien lire ni lancer d'autre.
+- Si la désactivation échoue et que `docs/TERMINE` n'existe pas : créer `docs/TERMINE` (date UTC), commit, push, et un seul message privé à KOLRAX pour qu'il désactive la routine lui-même. Si `docs/TERMINE` existe déjà : s'arrêter tout de suite, sans message.
+- La session qui coche la dernière case fait la même chose après sa fin de session.
+- Pour relancer le chantier : ajouter des cases au plan, supprimer `docs/TERMINE`, réactiver la routine.
+
 **Travailler**
 - Une session travaille jusqu'à **2 h 45**, en enchaînant les cases : après chaque livraison, case suivante tout de suite. Elle s'arrête proprement vers 2 h 45 (fin de session, voir plus bas), pour que la suivante prenne le relais dans l'heure.
 - Une seule relecture par case (une deuxième seulement sur un bloquant). Première passe de chaque lot avant d'approfondir. Restes mineurs dans `docs/plus-tard.md`. Un test par comportement nouveau.
