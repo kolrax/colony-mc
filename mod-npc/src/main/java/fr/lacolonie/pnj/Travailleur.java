@@ -1906,6 +1906,9 @@ public class Travailleur extends PathfinderMob {
             r.add(dit != null ? dit : "Entendu, chef : je ne ferai jamais rien à " + noms + ".");
         }
         // Le dépôt du poste (GardeDepot, cahier 6.4) : sa garde, comme celle du chef ; c'est le mod qui répond.
+        // « Reste tranquille », « ne frappe personne » la calment aussi, sans un mot de plus.
+        if (!parRegle && l.depot == null && memoire.contains("garde_depot"))
+            memoire.putString("garde_depot", GardeDepot.garde(GardeChef.posture(memoire.getString("garde_depot")), l).name());
         if (!parRegle && l.depot != null) {
             memoire.putString("garde_depot", l.depot.name());
             Metier mt = Metier.de(metier);

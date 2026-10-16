@@ -63,7 +63,7 @@ class VieTest {
     @Test
     void depotSeLit() {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/depot.txt"));
-        for (String cle : List.of("depot_interpose", "depot_riposte", "depot_vu", "depot_prevenir", "depot_ordre_attaque", "depot_ordre_attaque_civil",
+        for (String cle : List.of("depot_interpose", "depot_sommation", "depot_riposte", "depot_vu", "depot_prevenir", "depot_ordre_attaque", "depot_ordre_attaque_civil",
                 "depot_ordre_tranquille", "depot_ordre_permis", "depot_ordre_retire")) {
             assertTrue(banque.containsKey(cle), cle);
             assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");

@@ -16,7 +16,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Lot 9, cahier 6.4 : un autre joueur ouvre le dépôt du poste (ici un coffre collé au bureau) devant le guerrier du chef.
- * Sans ordre, il s'interpose et l'avertit, sans frapper ; sur « attaque ceux qui volent le dépôt », il frappe ; un joueur
+ * Sans ordre, il s'interpose et l'avertit, sans frapper ; sur « attaque ceux qui volent le dépôt », il le somme, puis le
+ * frappe s'il rouvre ; un joueur
  * autorisé (dit à un autre ouvrier : toute la colonie le sait) ou le chef lui-même, rien. Sans guerrier, un ouvrier le
  * signale et le chef reçoit une lettre (une seule). Voir {@link GardeDepot} et {@link Defense#depotOuvert}. Coins 238 à 242.
  */
@@ -79,7 +80,10 @@ public class TestsDepot {
         });
     }
 
-    /** « Attaque ceux qui volent le dépôt » : il frappe celui qui l'ouvre. */
+    /**
+     * « Attaque ceux qui volent le dépôt » : à la première ouverture, il s'interpose et le somme, sans frapper ; l'autre
+     * rouvre : il le frappe. Puis « reste tranquille » calme aussi la garde du dépôt.
+     */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void ordreAttaqueFrappe(GameTestHelper h) {
         TestsChef.Scene s = scene(h, 239);
@@ -88,16 +92,25 @@ public class TestsDepot {
         h.assertTrue(Vie.vient("depot_ordre_attaque", r), "il le redit : " + r);
         boolean[] vu = surveiller(h, s);
         h.runAtTickTime(h.getTick() + 10, () -> ouvrir(h, s, s.autre()));
+        h.runAtTickTime(h.getTick() + 50, () -> {
+            h.assertFalse(vu[0], "première fois : pas d'attaque");
+            h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "première fois : aucun coup");
+            h.assertTrue(vu[1], "il s'interpose (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
+            h.assertTrue(TestsCaractere.aDit(s.g(), "depot_sommation"), "il le somme (" + s.g().paroles + ")");
+            ouvrir(h, s, s.autre());
+        });
         h.succeedWhen(() -> {
-            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'autre (attaque lancée " + vu[0] + ", " + s.g().paroles + ")");
+            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il rouvre : il le frappe (attaque lancée " + vu[0] + ", " + s.g().paroles + ")");
             h.assertTrue(TestsCaractere.aDit(s.g(), "depot_riposte"), "il le dit (" + s.g().paroles + ")");
+            s.g().appliquer(Ordres.lire("Reste tranquille.", "guerrier"), s.chef());
+            h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_depot")) == GardeChef.Posture.TRANQUILLE, "« reste tranquille » calme aussi le dépôt");
             finir(s);
         });
     }
 
     /**
      * « X peut se servir dans le dépôt », dit au mineur : le guerrier, qui a l'ordre de frapper, laisse X ouvrir (la colonie
-     * le sait). Puis « X n'a plus le droit », dit au mineur : X rouvre, le guerrier le frappe.
+     * le sait). Puis « X n'a plus le droit », dit au mineur : X rouvre, le guerrier réagit.
      */
     @GameTest(template = "vide", timeoutTicks = 500)
     public static void autoriseRienPuisRetire(GameTestHelper h) {
@@ -120,13 +133,13 @@ public class TestsDepot {
             ouvrir(h, s, s.autre());
         });
         h.runAtTickTime(h.getTick() + 300, () -> {
-            h.assertTrue(vu[0], "retiré : il l'attaque (" + s.g().paroles + ")");
+            h.assertTrue(vu[0] || vu[1], "retiré : il réagit (" + s.g().paroles + ")");
             finir(s, m);
             h.succeed();
         });
     }
 
-    /** Le chef ouvre son propre dépôt : rien, même avec l'ordre de frapper ; l'autre ouvre ensuite : il le frappe. */
+    /** Le chef ouvre son propre dépôt : rien, même avec l'ordre de frapper ; l'autre ouvre ensuite : il réagit. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void chefLuiMemeRien(GameTestHelper h) {
         TestsChef.Scene s = scene(h, 241);
@@ -141,7 +154,7 @@ public class TestsDepot {
             ouvrir(h, s, s.autre());
         });
         h.runAtTickTime(h.getTick() + 300, () -> {
-            h.assertTrue(vu[0], "l'autre ouvre : il l'attaque (" + s.g().paroles + ")");
+            h.assertTrue(vu[0] || vu[1], "l'autre ouvre : il réagit (" + s.g().paroles + ")");
             finir(s);
             h.succeed();
         });

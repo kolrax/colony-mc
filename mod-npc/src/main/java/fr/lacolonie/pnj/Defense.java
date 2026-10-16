@@ -386,6 +386,9 @@ final class Defense {
     /** Le chef prévenu, par voleur : au plus une fois toutes les 5 minutes (temps du jeu). */
     static final long PREVENIR = 20 * 300;
     private static final Map<String, Long> PREVENUS = new java.util.HashMap<>();
+    /** Le voleur averti (par chef et voleur, temps du jeu) : s'il rouvre le dépôt dans les 2 minutes, sur l'ordre du chef, on le frappe. */
+    static final long AVERTI = 20 * 120;
+    private static final Map<String, Long> AVERTIS = new java.util.HashMap<>();
 
     /**
      * Un joueur ouvre le dépôt d'un poste (le bureau ou un coffre collé à lui) : ni le chef, ni un faux joueur (machine), ni
@@ -408,6 +411,11 @@ final class Defense {
         java.util.UUID chef = b.proprietaire;
         Vec3 lieu = Vec3.atBottomCenterOf(b.getBlockPos());
         String nom = v.getGameProfile().getName();
+        long maintenant = v.level().getGameTime();
+        String cle = chef + "/" + v.getUUID();
+        // Averti il y a plus d'une seconde et moins de 2 minutes : il récidive (un double clic ne compte pas).
+        Long averti = AVERTIS.get(cle);
+        boolean recidive = averti != null && maintenant - averti >= 20 && maintenant - averti <= AVERTI;
         Travailleur garde = null, temoin = null;
         for (Travailleur t : v.level().getEntitiesOfClass(Travailleur.class, v.getBoundingBox().inflate(DEPOT_VUE, 8, DEPOT_VUE),
                 x -> x.isAlive() && chef.equals(x.chef) && x.distanceTo(v) <= DEPOT_VUE)) {
@@ -415,15 +423,17 @@ final class Defense {
             Metier m = Metier.de(t.metier);
             boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && x.cible != v && Monde.hostile(x.cible)
                     || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
-            if (m != null && m.combattant && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v); if (garde == null) garde = t; }
+            if (m != null && m.combattant && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v, recidive); if (garde == null) garde = t; }
             else if (temoin == null) temoin = t;
         }
         // Sans guerrier : un ouvrier le signale, d'un mot, pas plus.
         if (garde == null && temoin != null && Cerveau.parfois(temoin, "depot_vu", 30) && !Besoins.dire(temoin, "depot_vu", nom)) temoin.dire("Hé ! Ce dépôt n'est pas à toi !");
+        if (garde != null && (averti == null || maintenant - averti > AVERTI || maintenant < averti)) {
+            if (AVERTIS.size() > 64) AVERTIS.values().removeIf(x -> maintenant - x > AVERTI || maintenant < x);
+            AVERTIS.put(cle, maintenant);
+        }
         Travailleur qui = garde != null ? garde : temoin;
         if (qui == null) return;
-        long maintenant = v.level().getGameTime();
-        String cle = chef + "/" + v.getUUID();
         Long avant = PREVENUS.get(cle);
         if (avant != null && maintenant - avant < PREVENIR && maintenant >= avant) return;
         if (PREVENUS.size() > 64) PREVENUS.values().removeIf(x -> maintenant - x >= PREVENIR || maintenant < x);
@@ -432,13 +442,17 @@ final class Defense {
         Courrier.ecrireTexte(qui, "On se sert au dépôt", dit != null ? dit : "Chef, " + nom + " s'est servi dans notre dépôt. Je l'ai vu de mes yeux.", false);
     }
 
-    /** Le guerrier qui voit {@code v} au dépôt : il le frappe sur l'ordre du chef (jamais un joueur épargné), sinon il s'interpose. */
-    static void garderDepot(Travailleur t, Vec3 lieu, ServerPlayer v) {
+    /**
+     * Le guerrier qui voit {@code v} au dépôt : il s'interpose et l'avertit ; sur l'ordre du chef, il le frappe s'il
+     * récidive après l'avertissement (jamais un joueur épargné).
+     */
+    static void garderDepot(Travailleur t, Vec3 lieu, ServerPlayer v, boolean recidive) {
         Actions.Action ensuite = t.action instanceof Interposer i && i.agresseur == v ? i.ensuite
                 : t.mode == Travailleur.Mode.ATTENDRE ? new Actions.Aller(t.position(), 1) : null;
         boolean epargne = GardeChef.epargne(t.memoire.getString("epargnes"), v.getGameProfile().getName());
-        boolean guerre = Armee.ennemis(t).containsKey(v.getUUID()); // le chef ennemi, en guerre : l'ordre est implicite
-        if (!epargne && (guerre || GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE)) {
+        boolean guerre = !epargne && Armee.ennemis(t).containsKey(v.getUUID()); // le chef ennemi, en guerre : l'ordre est implicite
+        boolean ordre = !epargne && GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE;
+        if (guerre || (ordre && recidive)) {
             if (t.action instanceof Actions.Attaquer a && a.cible == v) return;
             if (!Besoins.dire(t, "depot_riposte", v.getGameProfile().getName())) t.dire("Pas un pas de plus avec notre bien. En garde !");
             Guerrier.armer(t);
@@ -453,7 +467,9 @@ final class Defense {
             x.ensuite = ensuite;
             Cerveau.lancer(t, x);
         }
-        if (Cerveau.parfois(t, "depot_interpose", 5) && !Besoins.dire(t, "depot_interpose", v.getGameProfile().getName())) t.dire("Holà ! Ce dépôt n'est pas le tien.");
+        // Sur l'ordre du chef : une sommation, la seule.
+        if (ordre) { if (!Besoins.dire(t, "depot_sommation", v.getGameProfile().getName())) t.dire("Repose ça. Si tu y reviens, je frappe."); }
+        else if (Cerveau.parfois(t, "depot_interpose", 5) && !Besoins.dire(t, "depot_interpose", v.getGameProfile().getName())) t.dire("Holà ! Ce dépôt n'est pas le tien.");
     }
 
     /**

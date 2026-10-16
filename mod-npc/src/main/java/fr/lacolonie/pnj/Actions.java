@@ -798,6 +798,8 @@ public final class Actions {
                 return Etat.OK;
             }
             if (garde != null && (garde.isRemoved() || !garde.isAlive() || garde.level() != t.level() || garde.distanceToSqr(cible) > portee * portee)) return Etat.OK;
+            // Un homme qu'il chasse d'un lieu (le dépôt) : parti au-delà de la laisse, il le laisse, même à l'arc.
+            if (poste != null && cible instanceof net.minecraft.world.entity.player.Player && cible.position().distanceToSqr(poste) > laisse * laisse) return Etat.OK;
             if (age > 20 * 60) return laisser(t, "trop_long");
             t.getLookControl().setLookAt(cible);
             if (recharge > 0) recharge--;
