@@ -2,15 +2,12 @@ package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -18,21 +15,21 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 /**
- * Les machines (lot 12, cahier 4.3) : le transporteur remplit et vide les machines de Create et les fours, sur ordre. Le
- * four (vanilla), et les vraies machines de Create (présent dans les essais seulement, en {@code localRuntime}) : le
- * présentoir sous la presse, le bassin qui garde ses entrées, le moulin plein (rien de perdu, la lettre le nomme). Coins 390
- * à 394.
+ * Les machines (lot 12, cahier 4.3) : le transporteur remplit et vide les machines sur ordre. Create n'est pas chargé dans
+ * les essais (essayé le 16/10 : Create envoie ses paquets à tous les joueurs à chaque tick, et le faux joueur des essais fait
+ * planter le serveur de test) : le four est un vrai four ; la presse et le bassin sont imités par des blocs vanilla inscrits
+ * dans {@link Machines#PAR_ID} pour les essais (la pierre d'aimant « presse », le distributeur « bassin » à 5 cases d'entrée).
+ * La reconnaissance des vrais identifiants de Create est vérifiée par {@code TransporteurTest}. Coins 390 à 393.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsMachines {
-    static Block bloc(String id) {
-        ResourceLocation r = ResourceLocation.parse(id);
-        if (!BuiltInRegistries.BLOCK.containsKey(r)) throw new net.minecraft.gametest.framework.GameTestAssertException("Create absent des essais : " + id);
-        return BuiltInRegistries.BLOCK.get(r);
+    static {
+        // Des blocs vanilla qui imitent les machines de Create (jamais employés par les autres essais).
+        Machines.m("la presse", Machines.Relais.DESSOUS, false, 0, "minecraft:lodestone");
+        Machines.m("le bassin", Machines.Relais.AUCUN, false, 5, "minecraft:dispenser");
     }
 
     static IItemHandler poignee(ServerLevel l, BlockPos p) { return l.getCapability(Capabilities.ItemHandler.BLOCK, p, Direction.UP); }
@@ -82,16 +79,16 @@ public class TestsMachines {
                 () -> TestsRepertoire.fin(e));
     }
 
-    /** « Mets le fer sous la presse » en regardant la presse (sans inventaire) : il pose sur le présentoir de Create dessous. */
+    /** « Mets le fer sous la presse » en regardant la presse (sans inventaire) : il pose dans ce qui est dessous (un tonneau, deux blocs plus bas). */
     @GameTest(template = "vide", timeoutTicks = 1600)
-    public static void presentoirSousLaPresse(GameTestHelper h) {
+    public static void sousLaPresse(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         BlockPos base = TestsJeu.sol(h, 391 * 400, 60000);
         ServerLevel l = h.getLevel();
         Travailleur g = avecChef(h, chef, base);
         BlockPos p = base.offset(6, 0, -3), presse = p.above(2);
-        l.setBlockAndUpdate(p, bloc("create:depot").defaultBlockState());
-        l.setBlockAndUpdate(presse, bloc("create:mechanical_press").defaultBlockState());
+        l.setBlockAndUpdate(p, Blocks.BARREL.defaultBlockState());
+        l.setBlockAndUpdate(presse, Blocks.LODESTONE.defaultBlockState());
         Bureau.Entite d = TestsBucheron.depot(g);
         d.depot.setItem(0, new ItemStack(Items.IRON_INGOT, 10));
         Travailleur[] e = {g};
@@ -101,52 +98,52 @@ public class TestsMachines {
                     g.parler(chef, "Mets le fer sous la presse");
                 },
                 () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).dest() == p.asLong(),
-                        "le trajet va au présentoir sous la presse : " + Transporteur.lire(g) + " / " + IA.echange(g)),
-                () -> h.assertTrue(compte(poignee(l, p), Items.IRON_INGOT) > 0, "du fer sur le présentoir (" + TestsJeu.etat(g, g.bureau) + ")"),
+                        "le trajet va à ce qui est sous la presse : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                () -> h.assertTrue(compte(poignee(l, p), Items.IRON_INGOT) == 10, "le fer sous la presse (" + TestsJeu.etat(g, g.bureau) + ")"),
                 () -> TestsRepertoire.fin(e));
     }
 
-    /** Un bassin de Create : il ne prend que ses sorties (les pépites), jamais ses entrées (le blé). */
+    /** Un « bassin » (5 cases d'entrée, puis les sorties) : il ne prend que les sorties (les pépites), jamais les entrées (le blé). */
     @GameTest(template = "vide", timeoutTicks = 1200)
-    public static void bassinGardeSesEntrees(GameTestHelper h) {
+    public static void sortiesSeulement(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = TestsTransporteur.seul(h, 392, b);
         ServerLevel l = h.getLevel();
         BlockPos a = b[0].offset(6, 0, 0);
-        l.setBlockAndUpdate(a, bloc("create:basin").defaultBlockState());
-        IItemHandlerModifiable bassin = (IItemHandlerModifiable) poignee(l, a);
-        bassin.setStackInSlot(0, new ItemStack(Items.WHEAT, 10));
-        bassin.setStackInSlot(9, new ItemStack(Items.IRON_NUGGET, 5));
+        l.setBlockAndUpdate(a, Blocks.DISPENSER.defaultBlockState());
+        net.minecraft.world.Container bassin = (net.minecraft.world.Container) l.getBlockEntity(a);
+        bassin.setItem(0, new ItemStack(Items.WHEAT, 10));
+        bassin.setItem(6, new ItemStack(Items.IRON_NUGGET, 5));
         TestsTransporteur.trajet(t, a.asLong(), Trajets.DEPOT, "");
         Transporteur.retenirMachine(t, a.asLong());
         Bureau.Entite d = TestsBucheron.depot(t);
         h.succeedWhen(() -> {
             h.assertTrue(TestsBucheron.compte(d, Items.IRON_NUGGET) == 5, "les pépites au dépôt : " + TestsBucheron.compte(d, Items.IRON_NUGGET) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(t.tickCount > 600, "plusieurs tours");
-            h.assertTrue(compte(poignee(l, a), Items.WHEAT) == 10 && TestsBucheron.compte(d, Items.WHEAT) == 0, "le blé reste dans le bassin");
+            h.assertTrue(TestsTransporteur.compte(bassin, Items.WHEAT) == 10 && TestsBucheron.compte(d, Items.WHEAT) == 0, "le blé reste dans le bassin");
             t.discard();
         });
     }
 
-    /** Un moulin de Create plein (à l'arrêt) : lettre « machine_pleine » qui le nomme, le blé revient au dépôt, rien de perdu. */
+    /** Un four dont l'entrée est pleine : lettre « machine_pleine » qui le nomme, le fer revient au dépôt, rien de perdu. */
     @GameTest(template = "vide", timeoutTicks = 1600)
-    public static void moulinPleinRienPerdu(GameTestHelper h) {
+    public static void fourPleinRienPerdu(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = TestsTransporteur.seul(h, 393, b);
         ServerLevel l = h.getLevel();
         BlockPos m = b[0].offset(6, 0, 0);
-        l.setBlockAndUpdate(m, bloc("create:millstone").defaultBlockState());
-        IItemHandler moulin = poignee(l, m);
-        moulin.insertItem(0, new ItemStack(Items.COBBLESTONE, 64), false);
+        l.setBlockAndUpdate(m, Blocks.FURNACE.defaultBlockState());
+        FurnaceBlockEntity four = (FurnaceBlockEntity) l.getBlockEntity(m);
+        four.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
         Bureau.Entite d = TestsBucheron.depot(t);
-        d.depot.setItem(0, new ItemStack(Items.WHEAT, 16));
-        TestsTransporteur.trajet(t, Trajets.DEPOT, m.asLong(), "minecraft:wheat");
+        d.depot.setItem(0, new ItemStack(Items.RAW_IRON, 16));
+        TestsTransporteur.trajet(t, Trajets.DEPOT, m.asLong(), "minecraft:raw_iron");
         Transporteur.retenirMachine(t, m.asLong());
         h.succeedWhen(() -> {
-            int ble = TestsBucheron.compte(d, Items.WHEAT) + TestsTransporteur.sac(t, Items.WHEAT) + compte(moulin, Items.WHEAT);
-            h.assertTrue(ble == 16, "16 blés en tout : " + ble);
-            h.assertTrue(TestsMineur.lettre(t, "machine_pleine"), "il écrit que le moulin est plein (" + TestsJeu.etat(t, t.bureau) + ")");
-            h.assertTrue(TestsBucheron.compte(d, Items.WHEAT) == 16 && compte(moulin, Items.COBBLESTONE) == 64, "le blé revenu au dépôt, le moulin intact");
+            int fer = TestsBucheron.compte(d, Items.RAW_IRON) + TestsTransporteur.sac(t, Items.RAW_IRON) + four.getItem(0).getCount() - 64;
+            h.assertTrue(fer == 16, "16 fers bruts en tout : " + fer);
+            h.assertTrue(TestsMineur.lettre(t, "machine_pleine"), "il écrit que le four est plein (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(TestsBucheron.compte(d, Items.RAW_IRON) == 16 && four.getItem(0).is(Items.COBBLESTONE) && four.getItem(0).getCount() == 64, "le fer revenu au dépôt, le four intact");
             h.assertTrue(TestsTransporteur.parTerre(l, b[0]) == 0, "rien par terre");
             t.discard();
         });
