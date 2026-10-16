@@ -70,7 +70,9 @@ final class Besoins {
         int avant = t.memoire.contains("moral_vu") ? t.memoire.getInt("moral_vu") : Obeissance.DEPART;
         t.memoire.putInt("moral_vu", t.moral);
         // Au repos chez lui, son lit est-il toujours là ? (monLit le voit cassé, en cherche un autre, et s'il n'y en a pas, le dit.)
-        boolean repos = !t.enService() || t.memoire.getBoolean("epuise");
+        // À 100 de fatigue, il est épuisé même si le cerveau ne l'a pas encore noté (veiller passe avant, au même tick) :
+        // il va se coucher, pas dire « fatigue », qui fermerait la bouche à « pas de lit » pendant ENTRE secondes.
+        boolean repos = !t.enService() || t.fatigue >= 100 || t.memoire.getBoolean("epuise");
         if (repos && t.lit != null && t.bureau != null && t.chezLui(t.blockPosition())) t.monLit();
         // Une seule réplique par passage : la première qui a quelque chose à dire.
         String faim = Vie.faim(t.faim), blessure = Blessures.cle(t), humeur = Vie.humeur(t.moral, avant);
