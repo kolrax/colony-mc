@@ -403,6 +403,7 @@ final class Transporteur extends Metier {
             }
             t.swing(InteractionHand.MAIN_HAND);
             Sons.coffre(t, BlockPos.of(p));
+            if (Machines.deCreate(machineDe(t, p)) && t.getRandom().nextInt(8) == 0) parler(t, p, "machine_peur", null); // devant une machine de Create, parfois, un mot sur elle
             switch (etape) {
                 case 0 -> {
                     // Une machine : seulement ses cases de sortie (un bassin garde ses entrées) ; jamais une machine qui n'a que des entrées.
