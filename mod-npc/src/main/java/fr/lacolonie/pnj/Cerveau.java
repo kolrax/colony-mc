@@ -131,12 +131,12 @@ final class Cerveau {
             return;
         }
 
-        // La faim : il mange ce qu'il a ; s'il n'a rien, il se sert au dépôt ou le demande à son chef.
+        // La faim : il mange ce qu'il a ; s'il n'a rien, il se sert au dépôt, en achète à un producteur voisin, ou le demande à son chef.
         if (t.faim <= 14 && t.manger()) return;
         if (t.faim <= 8) {
             Bureau.Entite b = Bureau.entite(t);
             if (b != null && b.compter(Actions.Filtre.de("nourriture")) > 0) lancer(t, new Actions.Prendre(Actions.Filtre.de("nourriture"), 16, 4)); // 4 de chaque sorte : des repas variés
-            else lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1));
+            else if (!Achats.acheter(t)) lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1)); // sinon il en achète à un voisin (lot 11)
             return;
         }
 

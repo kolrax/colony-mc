@@ -896,6 +896,7 @@ public final class Actions {
             if (du <= 0) return Etat.OK;
             if (Reglages.payer(b.caisse, du, b.caisse::addItem, s -> Block.popResource(t.level(), bureau.above(), s))) {
                 t.swing(InteractionHand.MAIN_HAND);
+                for (ItemStack p : Reglages.pieces(du)) t.ranger(p); // sa bourse : les pièces de sa paie, dans son sac (lot 11)
                 if (t.mode == Travailleur.Mode.GREVE) t.paye(du, jour);
                 else { t.paye(du, jour); t.dire("Paie touchée : " + Reglages.texte(du) + ". Merci chef !"); }
                 return Etat.OK;
@@ -931,6 +932,7 @@ public final class Actions {
                 int k = -1;
                 for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
                 if (k >= 0) { garde[k] = true; continue; }
+                if (Reglages.piece(s) >= 0) continue; // sa bourse reste à lui (lot 11)
                 int avant = s.getCount();
                 // Ce qu'il livre compte pour la première quantité à livrer de cet objet.
                 Travailleur.Mission credit = null;

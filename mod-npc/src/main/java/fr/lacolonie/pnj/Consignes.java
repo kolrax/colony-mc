@@ -805,6 +805,8 @@ final class Consignes {
             }
             case "salaire" -> new Fait("Je touche " + Reglages.texte(t.salaireVerse()) + " par paie"
                     + (t.impayes > 0 ? ", et tu me dois " + t.impayes + " paie(s)." : ", prochaine paie dans " + Math.max(0, (t.prochainePaie - System.currentTimeMillis()) / 60_000) + " minutes."), null);
+            case "bourse" -> new Fait(Achats.bourse(t), null);
+            case "achats" -> new Fait(Achats.dernierAchat(t), null);
             case "anciennete" -> {
                 long h = Math.max(0, (System.currentTimeMillis() - t.arrivee) / 3_600_000);
                 yield new Fait("Je travaille pour toi depuis " + (h < 1 ? "moins d'une heure" : h < 48 ? h + " heures" : h / 24 + " jours") + ", chef.", null);

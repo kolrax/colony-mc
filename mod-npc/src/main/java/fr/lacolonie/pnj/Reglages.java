@@ -17,6 +17,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
@@ -48,6 +49,16 @@ public class Reglages {
     public int[] prime_par_niveau = {8, 12, 24, 48, 96};
     public int minutes_entre_paies = 1440;
     public int paies_impayees_avant_greve = 2;
+    /**
+     * Les prix entre PNJ (lot 11), en valeur de pièces (1 = la plus petite pièce), par objet. Une nourriture absente : une
+     * pièce par tranche de 3 points de nourriture (Economie.prix).
+     */
+    public Map<String, Integer> prix = new java.util.LinkedHashMap<>(Map.of(
+            "minecraft:bread", 1, "minecraft:baked_potato", 1, "minecraft:apple", 1, "minecraft:carrot", 1,
+            "minecraft:cooked_beef", 3, "minecraft:cooked_porkchop", 3, "minecraft:cooked_mutton", 2, "minecraft:cooked_chicken", 2,
+            "minecraft:cooked_cod", 2, "minecraft:cooked_salmon", 2));
+    /** Un ouvrier qui a faim et rien au dépôt cherche à acheter à manger à un producteur à moins de N blocs (0 = jamais). */
+    public int achat_distance = 32;
     public int pnj_max_par_joueur = 5;
     public Chercheurs chercheurs = new Chercheurs();
     public List<String> metiers_inactifs = new ArrayList<>();
@@ -137,6 +148,9 @@ public class Reglages {
         monnaie.removeIf(p -> p == null || p.objet == null || p.valeur <= 0 || ResourceLocation.tryParse(p.objet) == null);
         for (Piece p : monnaie) if (p.nom == null || p.nom.isBlank()) p.nom = p.objet;
         if (salaire_par_niveau == null || salaire_par_niveau.length != 5) salaire_par_niveau = new int[]{2, 4, 8, 16, 32};
+        if (prix == null) prix = new java.util.LinkedHashMap<>();
+        prix.entrySet().removeIf(e -> e.getKey() == null || e.getValue() == null || e.getValue() <= 0);
+        achat_distance = Math.clamp(achat_distance, 0, 64);
         if (prime_par_niveau == null || prime_par_niveau.length != 5) prime_par_niveau = new int[]{8, 12, 24, 48, 96};
         if (chercheurs == null) chercheurs = new Chercheurs();
         if (metiers_inactifs == null) metiers_inactifs = new ArrayList<>();
@@ -190,6 +204,32 @@ public class Reglages {
             if (p >= 0) t += (long) actuel.monnaie.get(p).valeur * c.getItem(i).getCount();
         }
         return t;
+    }
+
+    /** Les quantités de chaque pièce dans un contenant (une case par pièce de la monnaie). */
+    static int[] quantites(Container c) {
+        int[] q = new int[actuel.monnaie.size()];
+        for (int i = 0; i < c.getContainerSize(); i++) {
+            int p = piece(c.getItem(i));
+            if (p >= 0) q[p] += c.getItem(i).getCount();
+        }
+        return q;
+    }
+
+    /** {@code montant} en pièces, les plus grosses d'abord (une pièce inconnue, mod absent, n'est pas faite). */
+    static List<ItemStack> pieces(long montant) {
+        int[] q = Monnaie.rendre(valeurs(), montant);
+        List<ItemStack> r = new ArrayList<>();
+        for (int p = 0; p < q.length; p++) {
+            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(actuel.monnaie.get(p).objet));
+            if (item == net.minecraft.world.item.Items.AIR) continue;
+            for (int n = q[p]; n > 0; ) {
+                ItemStack s = new ItemStack(item, Math.min(n, item.getDefaultMaxStackSize()));
+                n -= s.getCount();
+                r.add(s);
+            }
+        }
+        return r;
     }
 
     /**
