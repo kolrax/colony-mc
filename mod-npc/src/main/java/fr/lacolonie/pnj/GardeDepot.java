@@ -33,7 +33,9 @@ final class GardeDepot {
     static final Pattern DEPOT = p("depot|depots|reserve|reserves|coffres? du (?:poste|depot)|coffres? de la colonie|nos coffres|mes coffres|notre stock");
     /** Ce qu'on y fait sans droit (avec le dépôt nommé dans la phrase). */
     static final Pattern VOL = p("vole|volent|volera|voleront|volerait|voler|vol|vols|pille|pillent|pillera|piller|chaparde|chapardent|chaparder|derobe|derobent|derober"
-            + "|se sert|se servent|se servira|se serviront|se servir|pioche|piochent|piocher|fouille|fouillent|fouiller|puise|puisent|prend|prennent|prendra|prendre|touche|touchent|touchera|toucher");
+            + "|se sert|se servent|se servira|se serviront|se servir|pioche|piochent|piocher|fouille|fouillent|fouiller|puise|puisent"
+            // « Prendre », « toucher », seulement dits d'un autre (« va prendre l'épée au dépôt et attaque-le » n'en est pas) :
+            + "|(?:qui|quiconque|on|un|ne) (?:\\w+ ){0,2}?(?:prend|prennent|prendra|prendrait|touche|touchent|touchera|ouvre|ouvrent|ouvrira)");
     /** Les voleurs, nommés sans le dépôt : « attaque les voleurs », « quiconque pille ». */
     static final Pattern VOLEURS = p("voleur|voleurs|voleuse|voleuses|pillard|pillards|chapardeur|chapardeurs|(?:qui|quiconque) (?:vole|volent|pille|pillent|chaparde|chapardent|derobe|derobent)");
     /** Défendre le dépôt. */
@@ -95,6 +97,11 @@ final class GardeDepot {
             String n = e.group(g);
             if (n == null || GardeChef.PAS_UN_NOM.contains(n) || PAS_UN_NOM.contains(n) || !depot && !SUJET.matcher(e.group()).find()) continue;
             int a = s0 + e.start(g), b = a;
+            // « Jean-Pierre », « test-mock-player » : le trait d'union coupe le mot dans le texte aplati, pas dans le pseudo.
+            while (a - 2 >= s0 && texte.charAt(a - 1) == '-' && (Character.isLetterOrDigit(texte.charAt(a - 2)) || texte.charAt(a - 2) == '_')) {
+                a -= 2;
+                while (a - 1 >= s0 && (Character.isLetterOrDigit(texte.charAt(a - 1)) || texte.charAt(a - 1) == '_')) a--;
+            }
             while (b < texte.length() && (Character.isLetterOrDigit(texte.charAt(b)) || texte.charAt(b) == '_' || texte.charAt(b) == '-')) b++;
             String nom = texte.substring(a, b);
             if (dans.stream().noneMatch(nom::equalsIgnoreCase)) dans.add(nom);

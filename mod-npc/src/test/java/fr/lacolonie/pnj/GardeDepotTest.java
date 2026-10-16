@@ -14,7 +14,7 @@ class GardeDepotTest {
     @Test
     void attaqueLesVoleurs() {
         for (String s : List.of("Attaque ceux qui volent le dépôt.", "Défends le dépôt même par la force.", "Si quelqu'un vole au dépôt, frappe-le !",
-                "Frappe les voleurs.", "Tue quiconque pille la réserve, sans pitié.", "Défends nos coffres, l'épée à la main."))
+                "Frappe les voleurs.", "Attaque ceux qui touchent au dépôt.", "Tue quiconque pille la réserve, sans pitié.", "Défends nos coffres, l'épée à la main."))
             assertEquals(Posture.ATTAQUE, lu(s).depot, s);
         // L'ordre ne laisse rien derrière lui (ni mission, ni geste, ni garde du chef).
         Ordres.Lecture l = lu("Si quelqu'un vole au dépôt, frappe-le !");
@@ -27,7 +27,8 @@ class GardeDepotTest {
                 "Si on se sert au dépôt, interpose-toi.", "N'attaque jamais les voleurs."))
             assertEquals(Posture.TRANQUILLE, lu(s).depot, s);
         // Rien sur le dépôt : rien de lu.
-        for (String s : List.of("Attaque quiconque me frappe.", "Prends du fer au dépôt.", "Va déposer tes pierres au dépôt.", "Attaque ce zombie qui pille le dépôt."))
+        for (String s : List.of("Attaque quiconque me frappe.", "Prends du fer au dépôt.", "Va déposer tes pierres au dépôt.", "Attaque ce zombie qui pille le dépôt.",
+                "Va prendre une épée au dépôt et attaque-le."))
             assertNull(lu(s).depot, s);
         assertEquals(Posture.ATTAQUE, lu("Attaque quiconque me frappe.").posture);
     }
@@ -39,6 +40,8 @@ class GardeDepotTest {
         assertEquals(List.of("Raoul"), lu("Laisse Raoul se servir.").permis);
         assertEquals(List.of("Raoul"), lu("Raoul a le droit de se servir, et ramène 10 fers.").permis);
         assertEquals(List.of("Raoul"), lu("Raoul n'a plus le droit.").retires);
+        assertEquals(List.of("Jean-Pierre_2"), lu("Jean-Pierre_2 n'a plus le droit.").retires);
+        assertEquals(List.of("test-mock-player"), lu("test-mock-player peut se servir dans le dépôt.").permis);
         assertEquals(List.of("Raoul"), lu("Raoul ne peut plus se servir au dépôt.").retires);
         assertEquals(List.of("Raoul"), lu("Interdis le dépôt à Raoul.").retires);
         // Ni une garde, ni un geste, ni la garde du chef avec.

@@ -442,8 +442,9 @@ public final class Bureau {
      * sinon, ou si ce bureau n'est pas le poste de son propriétaire (GardeDepot, cahier 6.4).
      */
     static Entite depotDe(Level l, BlockPos p) {
-        if (l.getBlockEntity(p) instanceof Entite e) return e.estLePoste() ? e : null;
-        if (!Transporteur.coffre(l, p)) return null;
+        BlockEntity be = l.getBlockEntity(p);
+        if (be instanceof Entite e) return e.estLePoste() ? e : null;
+        if (be == null || !Transporteur.coffre(l, p)) return null; // un clic sur un bloc ordinaire : rien de plus à chercher
         for (BlockPos q : Transporteur.moities(l, p))
             for (Direction d : Direction.values())
                 if (l.getBlockEntity(q.relative(d)) instanceof Entite e && e.estLePoste()) return e;

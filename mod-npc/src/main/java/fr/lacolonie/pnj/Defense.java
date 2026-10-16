@@ -391,7 +391,7 @@ final class Defense {
      */
     static void depotOuvert(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) {
         if (e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND || !(e.getEntity() instanceof ServerPlayer v) || v instanceof FakePlayer || v.isSpectator()
-                || v.isSecondaryUseActive() && !v.getMainHandItem().isEmpty()) return; // accroupi, objet en main : il pose, il n'ouvre rien
+                || v.isSecondaryUseActive() && !(v.getMainHandItem().isEmpty() && v.getOffhandItem().isEmpty())) return; // accroupi, objet en main : il n'ouvre rien
         Bureau.Entite b = Bureau.depotDe(v.level(), e.getPos());
         if (b == null || v.getUUID().equals(b.proprietaire) || Courrier.de(v.server).permis(b.proprietaire, v.getGameProfile().getName())) return;
         depotVole(b, v);
