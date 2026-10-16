@@ -608,6 +608,20 @@ public final class Bureau {
     /** Le poste du PNJ (celui de son chef), ou null. */
     public static BlockPos trouver(Travailleur t) { return t.bureau; }
 
+    /**
+     * Le poste dont ce bloc fait partie du dépôt : le bureau lui-même, ou un coffre collé à lui (une moitié suffit) ; null
+     * sinon, ou si ce bureau n'est pas le poste de son propriétaire (GardeDepot, cahier 6.4).
+     */
+    static Entite depotDe(Level l, BlockPos p) {
+        BlockEntity be = l.getBlockEntity(p);
+        if (be instanceof Entite e) return e.estLePoste() ? e : null;
+        if (be == null || !Transporteur.coffre(l, p)) return null; // un clic sur un bloc ordinaire : rien de plus à chercher
+        for (BlockPos q : Transporteur.moities(l, p))
+            for (Direction d : Direction.values())
+                if (l.getBlockEntity(q.relative(d)) instanceof Entite e && e.estLePoste()) return e;
+        return null;
+    }
+
     /** Le poste chargé du PNJ, ou null. */
     static Entite entite(Travailleur t) {
         return t.bureau != null && t.level().isLoaded(t.bureau) && t.level().getBlockEntity(t.bureau) instanceof Entite e ? e : null;

@@ -42,6 +42,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/defense.txt"), e -> System.err.println("[colonie_pnj] Section de defense.txt ignorée : " + e.getMessage())));
         // Quand on frappe le chef, et ses ordres à ce sujet (lot 9, GardeChef) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/chef.txt"), e -> System.err.println("[colonie_pnj] Section de chef.txt ignorée : " + e.getMessage())));
+        // Le dépôt du poste : qui s'y sert, et les ordres du chef à ce sujet (lot 9, GardeDepot) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/depot.txt"), e -> System.err.println("[colonie_pnj] Section de depot.txt ignorée : " + e.getMessage())));
         // Le maçon et ses chantiers (lot 10) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/macon.txt"), e -> System.err.println("[colonie_pnj] Section de macon.txt ignorée : " + e.getMessage())));
     }

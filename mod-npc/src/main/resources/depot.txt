@@ -1,0 +1,125 @@
+# Quand un autre se sert au dépôt du poste, et les ordres du chef à ce sujet (lot 9, cahier 6.4). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt et chef.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+#
+# VARIABLES
+#   {chef}   nom du chef (partout)
+#   {nom}    celui qui se sert au dépôt ; dans depot_ordre_permis et depot_ordre_retire : le ou les noms dits par le chef
+#
+# CLÉS
+#   depot_interpose            le guerrier se met entre le dépôt et celui qui s'y sert, et l'avertit
+#   depot_sommation            sur l'ordre de frapper : la première fois, il s'interpose et le somme (pas de coup)
+#   depot_riposte              le guerrier, sur l'ordre donné plus tôt, frappe celui qui y revient après la sommation
+#   depot_vu                   sans guerrier, un autre ouvrier le voit et le signale
+#   depot_prevenir             au chef : de vive voix s'il est là, sinon par lettre
+#   depot_ordre_attaque        réponse à « attaque ceux qui volent le dépôt »
+#   depot_ordre_attaque_civil  la même, dite à un ouvrier qui ne porte pas les armes
+#   depot_ordre_tranquille     réponse à « défends le dépôt sans frapper »
+#   depot_ordre_permis         réponse à « {nom} peut se servir au dépôt » (il le dira aux autres)
+#   depot_ordre_retire         réponse à « {nom} n'a plus le droit »
+
+[depot_interpose]
+Holà, {nom} ! Ce dépôt n'est pas le tien.
+Repose ça, {nom}. Ce bien appartient à {chef}.
+Doucement, l'ami. Ce qui est là n'est pas à toi.
+Qui t'a permis de fouiller là, {nom} ? Recule.
+Ce dépôt est sous ma garde. Tes mains hors de là.
+Halte ! Rien ne sort d'ici sans l'accord de {chef}.
+calme: Je te prie de reposer ce que tu as pris, {nom}.
+calme: Ce bien n'est pas le tien. Restons-en là, veux-tu ?
+colerique: Encore une main dans ce coffre, {nom}, et tu la perds !
+colerique: Recule, chapardeur, ou par ma barbe tu le regretteras !
+peureux: Ce… ce n'est pas à toi, ça ! Repose-le, je t'en prie !
+peureux: Arrière ! Enfin… s'il te plaît, recule.
+fourbe: Prends donc, {nom}. {chef} saura tout, et de ma bouche.
+fourbe: Je n'ai rien vu… pour l'instant. Repose ça.
+
+[depot_sommation]
+Repose ça, {nom}. Si tu y reviens, je frappe.
+Dernier avertissement, {nom} : une main de plus dans ce dépôt, et c'est le fer.
+J'ai ordre de défendre ce dépôt par l'épée. Ne m'y oblige pas.
+Recule, {nom}. La prochaine fois, je ne parlerai plus.
+Ce bien est à {chef}. Reviens-y, et tu goûteras de ma lame.
+Je te le dis une fois, {nom}, pas deux : hors de ce dépôt.
+calme: Je préfère te prévenir, {nom} : j'ai ordre de frapper. Repose ça.
+colerique: Touche encore à ce coffre, et je te fends en deux !
+peureux: J'ai… j'ai ordre de frapper ! Ne reviens pas, je t'en prie.
+fourbe: Vas-y, recommence, {nom}. Je n'attends que ça.
+
+[depot_riposte]
+Tu pilles notre dépôt, {nom} ? Tu vas le payer !
+{chef} m'a donné l'ordre. En garde, voleur !
+On ne vole pas les gens de {chef}. À toi de goûter le fer !
+Pas un pas de plus avec notre bien. En garde !
+Voleur ! Tu as été prévenu, à présent je frappe.
+Lâche ce butin, {nom}, ou je te le reprends par l'épée !
+calme: J'ai mes ordres, {nom}. Pose ça, ou je frappe.
+colerique: Je t'attendais, chapardeur ! Viens donc !
+peureux: Les ordres sont les ordres… En garde, voleur !
+fourbe: On m'a dit de ne pas te laisser filer. Tant pis pour toi.
+
+[depot_vu]
+Hé ! Ce dépôt n'est pas à toi, {nom} !
+Au voleur ! On se sert dans notre dépôt !
+{nom}, ce bien est à {chef}. Laisse-le où il est.
+Repose ça ! Ce n'est pas ton coffre.
+Je t'ai vu, {nom}. {chef} le saura.
+Holà ! On ne fouille pas chez les autres.
+calme: Ce n'est pas à toi, ça. Je le dirai à {chef}.
+colerique: Voleur ! Lâche ça tout de suite !
+peureux: Au… au voleur ! Quelqu'un, vite !
+fourbe: Je n'ai rien vu, {nom}… sauf tout.
+
+[depot_prevenir]
+Chef, {nom} s'est servi dans notre dépôt. Je l'ai vu de mes yeux.
+{chef}, on fouille au dépôt : c'était {nom}.
+Chef, {nom} est venu se servir dans nos coffres. Je l'ai averti.
+Un mot, chef : {nom} a ouvert notre dépôt sans ta permission.
+{chef}, sache que {nom} a mis la main dans notre dépôt.
+Chef, j'ai surpris {nom} au dépôt. Il n'avait rien à y faire.
+
+[depot_ordre_attaque]
+Compris : qui pille le dépôt goûtera de mon fer.
+Bien, chef. Le prochain voleur ne repartira pas indemne.
+Entendu. Qui touche à notre dépôt aura affaire à moi.
+À tes ordres : je défendrai le dépôt, l'épée à la main.
+Compris, chef. Les voleurs n'ont qu'à bien se tenir.
+C'est dit : celui qui pille le dépôt, je le frappe.
+colerique: Enfin ! Qu'ils viennent donc, ces chapardeurs.
+peureux: Bien, chef… Je ferai de mon mieux, l'épée à la main.
+
+[depot_ordre_attaque_civil]
+Je ne porte pas les armes, chef : je crierai, mais je ne frapperai pas.
+Moi, frapper un voleur ? Je donnerai l'alarme, chef, rien de plus.
+Je n'ai pas d'épée, chef. Je préviendrai la garde.
+Je ne suis pas soldat, chef. Mais je crierai au voleur, ça oui.
+Frapper, ce n'est pas mon métier. Je te préviendrai, chef.
+Je n'ai que mes outils, chef. Je donnerai de la voix.
+
+[depot_ordre_tranquille]
+Compris : qui se sert au dépôt me trouvera devant lui, sans coup donné.
+Bien, chef. Je m'interposerai et j'avertirai, sans frapper.
+Entendu : je garde le dépôt, mais je ne lève pas l'épée.
+À tes ordres. Je les arrêterai de la voix, pas du fer.
+Compris, chef. Je me mettrai en travers, rien de plus.
+C'est dit : je défends le dépôt sans frapper personne.
+
+[depot_ordre_permis]
+Entendu, chef : {nom} pourra se servir au dépôt. Je le dirai aux autres.
+Bien. {nom} a ta permission pour le dépôt ; je fais passer le mot.
+Compris : on laissera {nom} se servir. Les autres le sauront.
+C'est noté, chef. {nom} peut puiser au dépôt, et toute la colonie le saura.
+Entendu. Personne ne gênera {nom} au dépôt, j'y veille.
+À tes ordres : {nom} est le bienvenu au dépôt. Je préviens les autres.
+
+[depot_ordre_retire]
+Entendu, chef : plus de dépôt pour {nom}. Je préviendrai les autres.
+Bien. {nom} n'a plus le droit de se servir ; je fais passer le mot.
+Compris : si {nom} revient au dépôt, on l'arrêtera. Les autres le sauront.
+C'est noté, chef. Le dépôt est fermé à {nom}.
+Entendu. {nom} ne puisera plus chez nous, toute la colonie le saura.
+À tes ordres : {nom} n'est plus le bienvenu au dépôt.

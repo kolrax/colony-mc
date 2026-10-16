@@ -62,9 +62,13 @@ final class Ordres {
         /** Ce qu'il fera quand on frappe son chef ({@link GardeChef}) : null si rien n'est dit ; les pseudos à ne jamais toucher. */
         GardeChef.Posture posture;
         final List<String> epargner = new ArrayList<>();
+        /** Le dépôt du poste ({@link GardeDepot}) : sa garde (null si rien n'est dit), qui peut s'y servir, qui ne le peut plus. */
+        GardeChef.Posture depot;
+        final List<String> permis = new ArrayList<>(), retires = new ArrayList<>();
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
-                && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty(); }
+                && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty()
+                && depot == null && permis.isEmpty() && retires.isEmpty(); }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -221,6 +225,9 @@ final class Ordres {
         // Ce qu'il fera si l'on frappe son chef (« attaque quiconque me frappe », « ne fais jamais rien à Nielscutt »).
         GardeChef.Lu garde = GardeChef.lire(texte);
         if (!garde.rien()) { l.posture = garde.posture; l.epargner.addAll(garde.epargner); texte = garde.reste; }
+        // Le dépôt du poste (« attaque ceux qui volent le dépôt », « Nielscutt peut se servir au dépôt »).
+        GardeDepot.Lu depot = GardeDepot.lire(texte);
+        if (!depot.rien()) { l.depot = depot.posture; l.permis.addAll(depot.permis); l.retires.addAll(depot.retires); texte = depot.reste; }
         // Les ordres longs d'abord : la conséquence d'une règle (« s'il pleut, rentre ») ne se fait pas tout de suite.
         OrdresLongs.Lu lu = OrdresLongs.lire(texte);
         for (OrdresLongs.Regle r : lu.regles) {

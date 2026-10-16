@@ -10,6 +10,14 @@ Tu développes ce mod en autonomie pour **KOLRAX_MC**, le chef de projet. Éché
 3 bis. `docs/carte-du-code.md` : la carte des classes. **N'explore pas le code au hasard** : ouvre seulement les fichiers dont la tâche a besoin, et donne aux agents la liste exacte des fichiers. À la fin de chaque session, mets à jour `docs/reprise.md`, et la carte si tu as ajouté ou changé le rôle d'une classe.
 4. `mod-npc/BRIEF.md` et `mod-npc/conception*.md` : l'historique du mod et ses choix de conception.
 
+## Graphify : la carte du code à interroger
+Le dépôt est indexé par **Graphify** (connecteur branché sur la routine ; outils `mcp__Graphify__…`, à charger avec ToolSearch `Graphify`). Dépôt : `repository_id = "kolrax/colony-mc"`, **jamais** `kolrax/waweat` (une entreprise, hors sujet).
+- **Avant d'ouvrir des fichiers**, demande à Graphify : `graphify_find` (où est défini un symbole), `graphify_callers` / `graphify_callees` (qui appelle quoi), `query_graph` ou `graphify_rank_files` (question en français : « où les PNJ choisissent leur métier ? »), `graphify_tests_for` (les tests d'une classe).
+- **Avant de modifier une méthode partagée**, `graphify_impact` ou `impact_and_risk` : tout ce qui casse si elle change. Le relecteur s'en sert aussi pour vérifier qu'aucun appelant n'est oublié.
+- Graphify peut avoir quelques commits de retard sur `main` : il dit **où** regarder, le fichier lu avec Read fait foi.
+- Si le connecteur ne répond pas, continue avec `docs/carte-du-code.md` et Grep.
+- Donne aux agents les fichiers trouvés par Graphify, pour qu'ils n'explorent pas.
+
 ## Parler à KOLRAX
 - Toujours en **français, simplement**. Pas de jargon. Il ne lit pas le code.
 - Il veut intervenir **le moins possible** : ne le contacte que pour une décision vraiment importante, quelque chose de destructif, un gros changement ou une dépense. Dans ce cas, attends sa réponse et avance sur autre chose.

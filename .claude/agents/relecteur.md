@@ -1,7 +1,7 @@
 ---
 name: relecteur
 description: Relit un changement du mod avant livraison. Il cherche les bugs, les pertes d'objets, les ralentissements et tout manquement aux règles du serveur. À utiliser avant chaque livraison sur le serveur.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, ToolSearch, mcp__Graphify__graphify_callers, mcp__Graphify__graphify_impact, mcp__Graphify__impact_and_risk, mcp__Graphify__graphify_find, mcp__Graphify__graphify_tests_for
 model: claude-opus-5-5
 effort: high
 ---
@@ -21,3 +21,4 @@ Cherche, dans l'ordre :
 4. Le cahier des charges : le comportement est-il celui que KOLRAX a décrit ?
 
 Pour chaque problème : fichier:ligne, scénario concret qui le déclenche, gravité. Ne signale pas de goûts de style. Si tout est bon, dis-le en une ligne.
+- Pour chaque méthode partagée modifiée, vérifie avec Graphify (`graphify_callers`, `graphify_impact`) qu'aucun appelant n'a été oublié.
