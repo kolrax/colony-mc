@@ -167,6 +167,7 @@ final class Humeur {
         Courrier.ecrire(t, "demission", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t),
                 laisse ? " Ce qui ne tenait pas au dépôt, je l'ai laissé à terre, là où j'étais." : "");
         Courrier.deposer(t); // il est au poste : ses lettres y restent (licencier les oublierait)
+        Courrier.reputer(t, Recrutement.DEPART); // on le saura dans le pays (lot 13)
         t.licencier(); // efface aussi son moral de ce chef-là (oublier)
         return true;
     }
@@ -620,6 +621,7 @@ final class Humeur {
         }
         Courrier.ecrire(t, "fuite", cause(t).isEmpty() ? "le cœur n'y est plus" : cause(t));
         Courrier.deposer(t); // encore près du poste : la lettre y reste (licencier l'oublierait) ; loin, un corbeau la porte déjà
+        Courrier.reputer(t, Recrutement.DEPART);
         t.licencier();
         return true;
     }

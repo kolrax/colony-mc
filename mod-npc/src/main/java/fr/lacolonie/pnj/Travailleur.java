@@ -121,6 +121,8 @@ public class Travailleur extends PathfinderMob {
     public long salaire = -1;
     /** Le facteur de son salaire, fixé à l'embauche selon le nombre d'ouvriers qu'avait déjà son chef ({@link Cout}) ; 1 pour les anciens. */
     public double surcout = 1;
+    /** Ses compétences propres (lot 13, {@link Talents}) : un ou deux talents tirés à son arrivée ; aucun pour les ouvriers d'avant. */
+    public List<String> talents = List.of();
     /**
      * Ses missions, dans l'ordre : il remplit la première qui ne l'est pas. Une quantité livrée est retirée ; un stock
      * reste (il reprend quand il baisse).
@@ -490,19 +492,20 @@ public class Travailleur extends PathfinderMob {
             int x = r.nextInt(100); // 40 % ★, 30 % ★★, 18 % ★★★, 9 % ★★★★, 3 % ★★★★★
             niveau = x < 40 ? 1 : x < 70 ? 2 : x < 88 ? 3 : x < 97 ? 4 : 5;
         }
+        talents = Talents.tirer(r::nextDouble);
         arrivee = System.currentTimeMillis();
         appliquerNiveau();
         majNom();
     }
 
     void appliquerNiveau() {
-        getAttribute(Attributes.MAX_HEALTH).setBaseValue(20 + 2 * (niveau - 1));
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(20 + 2 * (niveau - 1) + Talents.vie(talents));
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(1 + 0.5 * (niveau - 1));
         setHealth(getMaxHealth());
     }
 
     /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue ou une paie trop basse. */
-    public double facteurTravail() { return (0.6 + 0.2 * niveau) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
+    public double facteurTravail() { return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
 
     /** Ce qu'il demande pour son niveau, et selon la taille de la colonie à son embauche. */
     public long salaireDemande() { return Cout.salaire(Reglages.salaire(niveau), surcout); }
@@ -1067,7 +1070,7 @@ public class Travailleur extends PathfinderMob {
     void tickCorps() {
         // Faim : un point toutes les 6 minutes au travail, deux fois moins vite sinon.
         faimCompteur += (mode == Mode.TRAVAIL && action != null) ? (isSprinting() ? 3 : 2) : 1; // courir creuse l'appétit
-        if (faimCompteur >= 6 * 60 * 20 * 2) {
+        if (faimCompteur >= Talents.seuilFaim(6 * 60 * 20 * 2, talents)) {
             faimCompteur = 0;
             faim = Math.max(0, faim - 1);
             if (faim <= 6) changerMoral(Obeissance.FAIM); // la faim forte mine le moral, lentement
@@ -1087,7 +1090,7 @@ public class Travailleur extends PathfinderMob {
             // Une expédition fatigue : on y travaille plus dur, et on récupère mal en dormant dehors.
             boolean dehors = expedition && sortieDepuis >= 0;
             if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE) fatigue -= isSleeping() ? 12 : dehors ? 5 : 8;
-            else if (mode == Mode.TRAVAIL && action != null) fatigue += dehors ? 7 : 5;
+            else if (mode == Mode.TRAVAIL && action != null) fatigue += Talents.fatigue(dehors ? 7 : 5, talents);
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);
             moral = Moral.repos(moral, memoire.getInt("bilan")); // avec le temps, le moral revient doucement vers 60 (pas après un mauvais bilan)
@@ -1123,6 +1126,7 @@ public class Travailleur extends PathfinderMob {
         if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && sortieDepuis < 0 && paieEnRetard()) {
             impayes++;
             changerMoral(Obeissance.RETARD);
+            Courrier.reputer(this, Recrutement.IMPAYE);
             prochainePaie = System.currentTimeMillis() + periodePaie();
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
             else {
@@ -1146,6 +1150,7 @@ public class Travailleur extends PathfinderMob {
     void changerMoral(int delta) { moral = Obeissance.moral(moral, delta); }
 
     void commencerGreve() {
+        Courrier.reputer(this, Recrutement.GREVE);
         mode = Mode.GREVE;
         finirAction("greve");
         majNom();
@@ -1158,7 +1163,7 @@ public class Travailleur extends PathfinderMob {
         memoire.putLong("paie_le", jour()); // « paie_recue » des conversations
         changerMoral(Obeissance.PAIE);
         Sons.paie(this);
-        if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; }
+        if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; Courrier.reputer(this, Recrutement.PAIE); }
         if (mode == Mode.GREVE) {
             mode = bureau != null ? Mode.TRAVAIL : Mode.SUIVRE;
             majNom();
@@ -1474,6 +1479,8 @@ public class Travailleur extends PathfinderMob {
         }
         if (mode == Mode.CHOMEUR) {
             surcout = surcoutPour(sp); // le prix annoncé à celui qui l'aborde ; refait à l'embauche
+            getLookControl().setLookAt(player);
+            sePresenter(sp);
             PacketDistributor.sendToPlayer(sp, new Reseau.Fiche(getId(), fiche(true)));
             return InteractionResult.CONSUME;
         }
@@ -1528,7 +1535,7 @@ public class Travailleur extends PathfinderMob {
         t.putString("periode", Reglages.actuel.minutes_entre_paies % 1440 == 0
                 ? (Reglages.actuel.minutes_entre_paies == 1440 ? "par jour" : "tous les " + Reglages.actuel.minutes_entre_paies / 1440 + " jours")
                 : "toutes les " + Reglages.actuel.minutes_entre_paies + " minutes");
-        t.putString("attitude", attitude());
+        t.putString("attitude", (attitude() + " " + Talents.portrait(talents)).trim());
         t.putString("mode", switch (mode) {
             case CHOMEUR -> "Cherche du travail";
             case SUIVRE -> "Te suit";
@@ -1555,6 +1562,19 @@ public class Travailleur extends PathfinderMob {
             default -> new String[]{"Il a l'air posé.", "Il parle calmement."};
         };
         return phrases[Math.floorMod(getUUID().hashCode(), phrases.length)];
+    }
+
+    /**
+     * À l'entretien (lot 13) : il dit ce qu'il sait faire de mieux et ce qu'on raconte du chef ({@link Recrutement#palier}),
+     * au plus une fois toutes les 30 secondes.
+     */
+    void sePresenter(ServerPlayer p) {
+        long t = level().getGameTime();
+        if (memoire.contains("presente") && t - memoire.getLong("presente") < 600) return;
+        memoire.putLong("presente", t);
+        String talent = talents.isEmpty() ? null : Besoins.texte(this, "talent_" + talents.get(0), null, null);
+        String renom = Besoins.texte(this, Recrutement.palier(Courrier.de(p.getServer()).reputation(p.getUUID())), null, null);
+        dire(talent == null ? renom : renom == null ? talent : talent + " " + renom);
     }
 
     /** L'entretien d'embauche (le seul écran à boutons qui reste). */
@@ -1841,6 +1861,7 @@ public class Travailleur extends PathfinderMob {
         if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
             memoire.remove("renvoi");
             String adieu = Messages.corps(this, "dit_renvoye");
+            Courrier.reputer(this, Recrutement.RENVOI);
             licencier();
             return adieu;
         }
@@ -2137,6 +2158,8 @@ public class Travailleur extends PathfinderMob {
         Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(l);
         t.moveTo(p.x, p.y, p.z, -90, 0);
         t.tirerAuSort(metier, 5);
+        t.talents = List.of(); // pas de talent au hasard : les tests et le banc restent comparables
+        t.appliquerNiveau();
         t.mode = Mode.TRAVAIL;
         t.chef = chef;
         ServerPlayer j = chef == null ? null : l.getServer().getPlayerList().getPlayer(chef);
@@ -2181,7 +2204,8 @@ public class Travailleur extends PathfinderMob {
         impayes = 0;
         this.prime = 0; // (« prime = 0 » remettait la prime d'embauche à zéro, et le message disait « pour rien »)
         salaire = -1; // un nouveau marché : ni le salaire fixé par l'ancien chef…
-        surcout = Reglages.surcout(nb + 1); // …ni son ancien rang (cahier 9.2)
+        int renom = Courrier.de(p.getServer()).reputation(p.getUUID());
+        surcout = surcout(nb, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
         enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
@@ -2189,13 +2213,19 @@ public class Travailleur extends PathfinderMob {
         Remarques.embauche(this); // ses nouveaux collègues en parleront
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
         dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
-        if (surcout > 1) Besoins.dire(this, "embauche_surcout", null); // « Une grande colonie, ça se paie, chef. »
+        if (Recrutement.exigence(renom) > 1) Besoins.dire(this, "embauche_reputation", null); // on dit qu'il paie mal : il prend ses sûretés
+        else if (surcout > 1) Besoins.dire(this, "embauche_surcout", null); // « Une grande colonie, ça se paie, chef. »
         signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
                 + ". Salaire : " + Reglages.texte(salaireDemande()) + ", dans la caisse de ton poste.");
     }
 
     /** Le facteur de salaire qu'il demanderait à ce chef, selon les ouvriers que celui-ci a déjà (cahier 9.2). */
-    static double surcoutPour(ServerPlayer p) { return Reglages.surcout(ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size() + 1); }
+    static double surcoutPour(ServerPlayer p) {
+        return surcout(ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size(), Courrier.de(p.getServer()).reputation(p.getUUID()));
+    }
+
+    /** Le facteur de salaire chez un chef qui a déjà {@code nb} ouvriers et telle réputation ({@link Cout}, {@link Recrutement#exigence}). */
+    static double surcout(int nb, int reputation) { return Math.min(Cout.FACTEUR_MAX, Reglages.surcout(nb + 1) * Recrutement.exigence(reputation)); }
 
     // --- Sauvegarde ------------------------------------------------------------------------------
 
@@ -2220,6 +2250,7 @@ public class Travailleur extends PathfinderMob {
         t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
+        t.putString("Talents", Talents.texte(talents));
         ListTag ms = new ListTag();
         for (Mission m : missions) ms.add(m.sauver());
         t.put("Missions", ms);
@@ -2282,6 +2313,7 @@ public class Travailleur extends PathfinderMob {
         fin = t.contains("Fin") ? t.getInt("Fin") : 18;
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
         surcout = t.contains("Surcout") ? Math.clamp(t.getDouble("Surcout"), 1, Cout.FACTEUR_MAX) : 1; // avant le lot 11 : ×1
+        talents = Talents.lire(t.getString("Talents")); // avant le lot 13 : aucun
         missions.clear();
         if (t.contains("Missions")) for (Tag x : t.getList("Missions", Tag.TAG_COMPOUND)) missions.add(Mission.lire((CompoundTag) x));
         else if (!t.getString("Commande").isEmpty()) { // avant la 0.5.0 : une seule commande

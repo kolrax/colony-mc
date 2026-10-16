@@ -132,6 +132,8 @@ final class Courrier extends SavedData {
     final Map<UUID, String> permis = new HashMap<>();
     /** Les guerres (Armee) : pour chaque chef, ses ennemis et leur pseudo, du plus ancien au plus récent ; toujours des deux côtés. */
     final Map<UUID, LinkedHashMap<UUID, String>> guerres = new HashMap<>();
+    /** La réputation de chaque chef ({@link Recrutement}, lot 13) : absente = 0. */
+    final Map<UUID, Integer> reputations = new HashMap<>();
 
     static Courrier de(MinecraftServer s) {
         return s.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(Courrier::new, Courrier::charger), NOM);
@@ -218,6 +220,14 @@ final class Courrier extends SavedData {
             gu.add(x);
         }));
         t.put("Guerres", gu);
+        ListTag re = new ListTag();
+        reputations.forEach((chef, r) -> {
+            CompoundTag x = new CompoundTag();
+            x.putUUID("chef", chef);
+            x.putInt("r", r);
+            re.add(x);
+        });
+        t.put("Reputations", re);
         return t;
     }
 
@@ -272,6 +282,8 @@ final class Courrier extends SavedData {
             CompoundTag g = (CompoundTag) x;
             c.guerres.computeIfAbsent(g.getUUID("chef"), k -> new LinkedHashMap<>()).put(g.getUUID("ennemi"), g.getString("nom"));
         }
+        for (Tag x : t.getList("Reputations", Tag.TAG_COMPOUND))
+            c.reputations.put(((CompoundTag) x).getUUID("chef"), Recrutement.reputation(0, ((CompoundTag) x).getInt("r")));
         return c;
     }
 
@@ -312,6 +324,23 @@ final class Courrier extends SavedData {
         setDirty();
     }
 
+    // --- La réputation des chefs (Recrutement, lot 13) ---------------------------------------------------
+
+    int reputation(UUID chef) { return chef == null ? 0 : reputations.getOrDefault(chef, 0); }
+
+    void reputer(UUID chef, int delta) {
+        if (chef == null || delta == 0) return;
+        int r = Recrutement.reputation(reputation(chef), delta);
+        if (r == 0) reputations.remove(chef);
+        else reputations.put(chef, r);
+        setDirty();
+    }
+
+    /** Ce qui arrive à cet ouvrier compte pour la réputation de son chef. */
+    static void reputer(Travailleur t, int delta) {
+        if (t.chef != null && t.level() instanceof ServerLevel sl) de(sl.getServer()).reputer(t.chef, delta);
+    }
+
     // --- Postes de travail ------------------------------------------------------------------------
 
     Poste poste(UUID chef) { return chef == null ? null : postes.get(chef); }
@@ -347,6 +376,7 @@ final class Courrier extends SavedData {
 
     void marquerMort(Travailleur t, String quand) {
         if (t.chef == null) return;
+        reputer(t.chef, Recrutement.MORT); // un ouvrier mort à son service : ça se sait (lot 13)
         inscrire(t);
         effectifs.get(t.chef).get(t.getUUID()).mort = quand;
         setDirty();

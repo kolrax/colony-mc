@@ -31,11 +31,18 @@ public class Reglages {
         Piece(String objet, String nom, int valeur) { this.objet = objet; this.nom = nom; this.valeur = valeur; }
     }
 
+    /**
+     * Les chercheurs d'emploi : toutes les N minutes de jour, chaque joueur a tant de chances qu'il en vienne un (modulées
+     * par sa réputation, une affiche et un village voisin : {@link Recrutement#chance}). Plus rares depuis le lot 13
+     * (cahier 5.8) : 0,35 toutes les 15 minutes au lieu de 0,5 toutes les 10.
+     */
     public static class Chercheurs {
-        public int minutes_entre_arrivees = 10;
-        public double chance = 0.5;
+        public int minutes_entre_arrivees = 15;
+        public double chance = 0.35;
         public int duree_minutes = 60;
         public int max_autour = 2;
+        /** Vrai une fois la rareté du lot 13 appliquée à un ancien fichier (qui gardait 0,5 toutes les 10 minutes). */
+        public boolean plus_rares = false;
     }
 
     public List<Piece> monnaie = new ArrayList<>(List.of(
@@ -142,6 +149,7 @@ public class Reglages {
     public static synchronized void remplacer(Reglages r) throws IOException {
         r.jeton_panneau = actuel.jeton_panneau;
         r.port_panneau = actuel.port_panneau;
+        if (r.chercheurs != null) r.chercheurs.plus_rares = actuel.chercheurs.plus_rares; // le panneau ne l'envoie pas : ses chiffres sont respectés
         r.valider();
         actuel = r;
         sauver();
@@ -179,6 +187,13 @@ public class Reglages {
         caractere_diamant = Math.clamp(caractere_diamant, 0, 100);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;
         betes_par_enclos = Math.max(2, betes_par_enclos);
+        if (!chercheurs.plus_rares) { // une seule fois : ensuite, le réglage choisi au panneau ou dans le fichier est respecté
+            Chercheurs defaut = new Chercheurs();
+            chercheurs.chance = Math.min(chercheurs.chance, defaut.chance);
+            chercheurs.minutes_entre_arrivees = Math.max(chercheurs.minutes_entre_arrivees, defaut.minutes_entre_arrivees);
+            chercheurs.plus_rares = true;
+        }
+        chercheurs.chance = Double.isNaN(chercheurs.chance) ? 0 : Math.clamp(chercheurs.chance, 0, 1);
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
         chercheurs.duree_minutes = Math.max(1, chercheurs.duree_minutes);
     }

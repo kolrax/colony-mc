@@ -16,7 +16,8 @@ class VieTest {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
         assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size()
                 + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/chef.txt")).size() + Vie.lire(Repertoire.lignes("/macon.txt")).size()
-                + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size() + Vie.lire(Repertoire.lignes("/guerre.txt")).size());
+                + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size() + Vie.lire(Repertoire.lignes("/guerre.txt")).size()
+                + Vie.lire(Repertoire.lignes("/recrutement.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);

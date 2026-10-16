@@ -1,0 +1,71 @@
+# Le recrutement (lot 13, cahier 5.8) : talents d'un chercheur d'emploi et réputation du chef. Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+# Pas de variable ici : celui qui parle n'a pas encore de chef.
+#
+# CLÉS
+#   talent_habile          à l'entretien : il travaille vite
+#   talent_robuste         à l'entretien : il est solide
+#   talent_endurant        à l'entretien : il tient longtemps à la peine
+#   talent_sobre           à l'entretien : il mange peu
+#   reputation_bonne       à l'entretien : on dit du bien de la colonie de celui qui l'aborde
+#   reputation_neutre      à l'entretien : on n'en dit rien de particulier
+#   reputation_mauvaise    à l'entretien : on dit qu'elle paie mal ou traite mal ses gens
+#   reputation_terrible    à l'entretien : on en dit pis que pendre ; il demandera plus
+#   embauche_reputation    à l'embauche, chez un chef mal réputé : il demande plus, par prudence
+
+[talent_habile]
+J'ai la main vive : l'ouvrage avance vite avec moi.
+Je travaille vite et bien, demande à qui m'a connu.
+fourbe: Je suis le plus prompt à l'ouvrage, crois-moi.
+colerique: Je ne traîne pas, moi. L'ouvrage, je l'abats.
+peureux: On dit que je travaille vite… je fais de mon mieux.
+
+[talent_robuste]
+Je suis solide, je ne tombe pas au premier coup.
+J'ai le dos large et les bras durs.
+colerique: Bâti comme un chêne, et pas commode avec ça.
+peureux: Je suis fort, même si je n'en ai pas l'air.
+
+[talent_endurant]
+Je tiens la peine longtemps sans faiblir.
+Je peux trimer du matin au soir.
+fourbe: Je me fatigue moins que les autres, c'est mon secret.
+colerique: Fatigué, moi ? Jamais avant la nuit.
+
+[talent_sobre]
+Je mange peu, je ne te coûterai pas cher en pain.
+Un quignon me suffit pour la journée.
+fourbe: Peu de pain me suffit. Tu y gagneras.
+peureux: Je ne mange presque rien, ne crains rien.
+
+[reputation_bonne]
+On dit grand bien de ta colonie dans le pays.
+On dit que tu paies rubis sur l'ongle.
+fourbe: Ta colonie a bonne renommée. J'espère qu'elle la mérite.
+peureux: On dit que chez toi, les gens sont bien traités.
+
+[reputation_neutre]
+Je ne sais pas grand-chose de ta colonie.
+On ne m'a rien dit de toi, ni en bien ni en mal.
+
+[reputation_mauvaise]
+On dit que chez toi, la paie tarde.
+On raconte que tes gens ne restent pas longtemps.
+colerique: On dit que tu traites mal tes gens. Gare à toi.
+peureux: On m'a dit des choses… sur ta colonie.
+
+[reputation_terrible]
+On dit pis que pendre de ta colonie. Il faudra me payer plus.
+On raconte que chez toi, on meurt ou on s'enfuit.
+colerique: Ta colonie a mauvaise renommée. Ce sera plus cher.
+peureux: On dit qu'on meurt chez toi… je veux plus de pièces.
+
+[embauche_reputation]
+Avec ce qu'on dit de ta colonie, je prends mes sûretés.
+Ta renommée n'est pas bonne : mon prix est plus haut.
+fourbe: On dit que tu paies mal. Je me paie d'avance.

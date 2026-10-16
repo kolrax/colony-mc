@@ -239,17 +239,63 @@ public class ColoniePnj {
         if (secondes % (60L * Reglages.actuel.chercheurs.minutes_entre_arrivees) != 0) return;
         ServerLevel monde = e.getServer().overworld();
         if (!monde.isDay()) return; // la nuit, les voyageurs ne s'aventurent pas sur les routes
-        for (ServerPlayer p : monde.players())
-            if (!p.isSpectator() && monde.random.nextDouble() < Reglages.actuel.chercheurs.chance) faireVenir(monde, p);
+        for (ServerPlayer p : monde.players()) {
+            if (p.isSpectator()) continue;
+            boolean affiche = affiche(monde, p);
+            BlockPos village = village(monde, p);
+            double chance = Recrutement.chance(Reglages.actuel.chercheurs.chance, Courrier.de(e.getServer()).reputation(p.getUUID()), affiche, village != null);
+            if (monde.random.nextDouble() < chance) faireVenir(monde, p, village, affiche);
+        }
     }
 
-    static void faireVenir(ServerLevel l, ServerPlayer p) {
+    /** Un village (sa cloche) à moins de tant de blocs d'un joueur : des chercheurs en viennent (lot 13). */
+    static final int RAYON_VILLAGE = 96;
+
+    /**
+     * La cloche du village le plus proche, ou null. Seulement les points d'intérêt que le jeu connaît déjà (aucune
+     * recherche de structure), et seulement au moment d'une arrivée possible : une fois toutes les 15 minutes par joueur.
+     */
+    static BlockPos village(ServerLevel l, ServerPlayer p) {
+        return l.getPoiManager().findClosest(h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.MEETING), p.blockPosition(), RAYON_VILLAGE,
+                net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).orElse(null);
+    }
+
+    /**
+     * Le joueur est chez lui (à moins de 96 blocs de son poste) et une affiche d'embauche (un panneau « On embauche »,
+     * {@link Recrutement#affiche}) est à moins de 8 blocs du poste. On ne regarde que les blocs à données des chunks
+     * chargés autour du poste, au moment d'une arrivée possible.
+     */
+    static boolean affiche(ServerLevel l, ServerPlayer p) {
+        Courrier.Poste poste = Courrier.de(l.getServer()).poste(p.getUUID());
+        if (poste == null || !poste.monde().equals(l.dimension()) || p.blockPosition().distSqr(poste.pos()) > 96 * 96) return false;
+        BlockPos b = poste.pos();
+        for (int cx = (b.getX() - 8) >> 4; cx <= (b.getX() + 8) >> 4; cx++)
+            for (int cz = (b.getZ() - 8) >> 4; cz <= (b.getZ() + 8) >> 4; cz++) {
+                if (!l.hasChunk(cx, cz)) continue;
+                for (var be : l.getChunk(cx, cz).getBlockEntities().values())
+                    if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity s && be.getBlockPos().distSqr(b) <= 64
+                            && (Recrutement.affiche(texte(s.getFrontText())) || Recrutement.affiche(texte(s.getBackText())))) return true;
+            }
+        return false;
+    }
+
+    static String texte(net.minecraft.world.level.block.entity.SignText s) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < 4; i++) b.append(s.getMessage(i, false).getString()).append(' ');
+        return b.toString();
+    }
+
+    static void faireVenir(ServerLevel l, ServerPlayer p) { faireVenir(l, p, null, false); }
+
+    /** Un chercheur arrive à 24 à 40 blocs du joueur ; d'un village voisin, il arrive du côté du village. */
+    static void faireVenir(ServerLevel l, ServerPlayer p, BlockPos village, boolean affiche) {
         List<String> metiers = Metier.actifs();
         if (metiers.isEmpty()) return;
         long autour = l.getEntities(TRAVAILLEUR.get(), t -> t.mode == Travailleur.Mode.CHOMEUR && t.distanceTo(p) < 96).size();
         if (autour >= Reglages.actuel.chercheurs.max_autour) return;
         for (int essai = 0; essai < 10; essai++) {
-            double angle = l.random.nextDouble() * Math.PI * 2, d = 24 + l.random.nextInt(17);
+            double angle = village != null ? Math.atan2(village.getZ() + 0.5 - p.getZ(), village.getX() + 0.5 - p.getX()) + (l.random.nextDouble() - 0.5) * 1.2
+                    : l.random.nextDouble() * Math.PI * 2, d = 24 + l.random.nextInt(17);
             int x = (int) (p.getX() + Math.cos(angle) * d), z = (int) (p.getZ() + Math.sin(angle) * d);
             BlockPos pos = new BlockPos(x, l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
             if (!l.isLoaded(pos) || !l.getFluidState(pos.below()).isEmpty() || !l.getBlockState(pos.below()).isSolidRender(l, pos.below())) continue;
@@ -259,9 +305,14 @@ public class ColoniePnj {
             if (!l.noCollision(t)) continue;
             t.tirerAuSort(metiers.get(l.random.nextInt(metiers.size())), 0);
             l.addFreshEntity(t);
-            p.sendSystemMessage(Component.literal("On dit qu'un " + Metier.nom(t.metier).toLowerCase() + " cherche du travail dans les environs…").withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
+            p.sendSystemMessage(Component.literal(annonce(Metier.nom(t.metier), village != null, affiche)).withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
             return;
         }
+    }
+
+    /** « On dit qu'un mineur du village voisin a vu ton affiche et cherche du travail dans les environs… » */
+    static String annonce(String metier, boolean village, boolean affiche) {
+        return "On dit qu'un " + metier.toLowerCase() + (village ? " du village voisin" : "") + (affiche ? " a vu ton affiche et" : "") + " cherche du travail dans les environs…";
     }
 
     // --- Commandes d'admin : /pnj ---------------------------------------------------------------------

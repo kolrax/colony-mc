@@ -50,6 +50,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/macon.txt"), e -> System.err.println("[colonie_pnj] Section de macon.txt ignorée : " + e.getMessage())));
         // Achats et ventes entre PNJ (lot 11, Achats) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/economie.txt"), e -> System.err.println("[colonie_pnj] Section de economie.txt ignorée : " + e.getMessage())));
+        // Talents et réputation à l'entretien d'embauche (lot 13, Recrutement) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/recrutement.txt"), e -> System.err.println("[colonie_pnj] Section de recrutement.txt ignorée : " + e.getMessage())));
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */
