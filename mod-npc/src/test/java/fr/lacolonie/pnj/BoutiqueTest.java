@@ -22,6 +22,9 @@ class BoutiqueTest {
         assertTrue(Boutique.lire("Tu tiens la boutique ?").rien());
         assertTrue(Boutique.lire("Va miner du fer").rien());
         assertTrue(Boutique.lire("Garde le dépôt").rien());
+        assertTrue(Boutique.lire("Laisse la boutique ouverte").ouvrir == null);
+        assertTrue(Boutique.lire("Ne mets pas le feu").rien());
+        assertTrue(Boutique.lire("Propose-moi quelque chose").rien());
     }
 
     @Test

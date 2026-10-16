@@ -53,11 +53,11 @@ final class Boutique {
             + ARTICLE + "?(?:prix (?:du |de la |de l |des |d ))?(.+?) (?:a|pour|au prix de|contre|coute|coutera|coutent|couteront|vaut|vaudra|valent|sera a|seront a|est a|sont a|a raison de) "
             + NOMBRE + " " + MONNAIE + "(?: (?:chacun|chacune|chaque|piece|l unite|la piece|le lot|l un|l une|seulement|pas plus|pas moins))* $");
     /** « Ne vends pas le fer », « ne vends jamais d'or ni de diamants », « retire le fer de la vente ». */
-    static final Pattern EXCLURE = p("^ (?:et |alors |aussi |mais )?(?:tu )?ne (?:vends|vend|vendez|vendras|mets|propose|proposes) (?:pas|plus|jamais|point|surtout pas|sous aucun pretexte|en aucun cas) "
+    static final Pattern EXCLURE = p("^ (?:et |alors |aussi |mais )?(?:tu )?ne (?:vends|vend|vendez|vendras) (?:pas|plus|jamais|point|surtout pas|sous aucun pretexte|en aucun cas) "
             + ARTICLE + "?(.+?) $"
             + "|^ (?:et |alors |mais )?(?:retire|retirez|enleve|enlevez|ote|otez) " + ARTICLE + "?(.+?) de (?:la vente|l etal|la boutique|ta boutique|ton etal) $");
     /** « Vends aussi le fer », « tu peux vendre l'or », « remets le fer en vente », « vends tout ». */
-    static final Pattern PERMETTRE = p("^ (?:et |alors |mais )?(?:tu peux |tu pourras |je veux que tu )?(?:vends|vend|vendez|vendre|revends|revendre|remets en vente|mets en vente|propose|proposes) "
+    static final Pattern PERMETTRE = p("^ (?:et |alors |mais )?(?:tu peux |tu pourras |je veux que tu )?(?:vends|vend|vendez|vendre|revends|revendre|remets en vente|mets en vente) "
             + "(?:aussi |de nouveau |a nouveau |encore |maintenant )?" + ARTICLE + "?(.+?) $"
             + "|^ (?:et |alors |mais )?(?:remets|remettez|mets|mettez) " + ARTICLE + "?(.+?) en vente $");
     /** Après « ne vends pas … » : « … ni l'or », « … ni de diamants ». */
@@ -99,7 +99,8 @@ final class Boutique {
 
     /** Un morceau de phrase (normalisé, « tiens la boutique ») : vrai s'il parlait de la boutique. */
     static boolean morceau(String n, Lu lu) {
-        if (FERMER_NEGATIF.matcher(n).find() || FERMER.matcher(n).find() && !NEGATION.matcher(n).find()) { lu.ouvrir = false; return true; }
+        // « Laisse la boutique ouverte » n'est pas la fermer.
+        if (FERMER_NEGATIF.matcher(n).find() || FERMER.matcher(n).find() && !NEGATION.matcher(n).find() && !n.contains(" ouverte ") && !n.contains(" ouvert ")) { lu.ouvrir = false; return true; }
         if (OUVRIR.matcher(n).find()) {
             if (NEGATION.matcher(n).find()) return false; // « ne tiens pas la boutique » : dans le doute, rien
             lu.ouvrir = true;

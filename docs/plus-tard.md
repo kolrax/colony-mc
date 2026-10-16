@@ -99,3 +99,14 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Le marchandage est décidé par l'acheteur seul (le caractère du vendeur ne compte pas encore) ; pas de refus « trop cher » (`achat_refuse_cher` pas dit).
 - Le chef peut toujours prendre les pièces dans le sac de son ouvrier (écran du sac) : rien ne l'en empêche ni ne le compte comme un vol.
 - Non mesuré avec 50 ouvriers affamés en même temps (la recherche est bornée à 32 blocs et à une fois toutes les 3 minutes par ouvrier).
+
+## Boutiques (lot 11, première passe du 16/10)
+- Côté serveur seulement : pas d'écran de boutique ni de paquet nouveau. Le client parle au boutiquier dans la fenêtre de conversation de l'ouvrier (clic droit), qui montre aussi sa faim et sa vie (fiche d'un autre chef) ; le chat public et le micro ne vont pas encore à la boutique.
+- Par défaut seule la nourriture se vend (prix de la table `prix`, ou 1 pièce par 3 points de nourriture) : tout autre objet attend que le chef lui donne un prix (« vends le fer à 5 pièces »). Les outils, armes et armures ne se vendent jamais, même en trop (« en service » pas distingué) ; potions, objets enchantés ou nommés non plus.
+- Une seule marchandise par demande (« je veux 3 pains et 2 steaks » : seulement les pains), pas de marchandage avec un joueur, pas de « trop cher ». Les prix sont gardés avec l'ouvrier (renvoyé : oubliés) ; deux boutiquiers du même chef ont chacun leurs prix.
+- Une caisse pleine (9 cases) : les pièces en trop vont dans le sac du boutiquier (jamais perdues, mais le chef doit les y chercher).
+- La lettre `lettre_boutique_vide` d'economie.txt est écrite du point de vue d'un client (« Rien chez {nom}. J'y retournerai demain. ») : la lettre au chef utilise un texte à elle (`Messages`, `boutique_vide`). `vente_propose` (crier sa marchandise) n'est pas encore dit.
+- Dans economie.txt (branche `economie`), la section `[achat_accepte]` contient des répliques de « pas assez » (« Bon sang, il me manque des pièces », « Tu ne me ferais pas crédit ») : à ranger dans `[achat_pas_assez]`. La boutique ne s'en sert pas (elle dit `vente_conclue`).
+- Un boutiquier qui garde son poste de jour ne fait plus son métier ; « tous les jours de 8 h à 12 h, tiens la boutique » (règle à horaire) n'est pas compris.
+- Non mesuré avec 50 PNJ : l'étal (dépôt, coffres collés, réserve) n'est lu qu'à une vente, une question, un clic ou une fois par minute par boutiquier ; un affamé le lit pour chaque boutiquier à 32 blocs, une fois toutes les 3 minutes au plus.
+
