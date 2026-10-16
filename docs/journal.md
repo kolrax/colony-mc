@@ -431,7 +431,7 @@ Aucun code du mod touché, aucune action sur le serveur.
 
 ## 2026-10-16 20 h 00 - 22 h 20 UTC : session routine (cloud), bilan
 - **3 versions livrées** : 0.9.33 (économie entre PNJ : paie dans le sac, achat de nourriture), 0.9.34 (coût des ouvriers : plafond 30, +15 % par ouvrier après le 3e ; plafond du serveur passé à 30), 0.9.35 (boutiques). Aucune erreur du mod, pas de modpack (0.5.1 reste valable).
-- **Lot 11 terminé** sauf rien : ses 4 cases sont cochées (l'achat d'équipement reste dans plus-tard).
+- **Lot 11 terminé** : ses 4 cases sont cochées (l'achat d'équipement reste dans plus-tard).
 - **Tests instables** : de plus en plus nombreux, une passe complète sur deux environ a 1 ou 2 échecs au hasard, aussi sur `main` seul (vu sur 0.9.32 : `tondUnMouton`, `calmeFrappeSeDefend`). Liste dans `docs/reprise.md`.
 - Graphify : a répondu, mais son index (commit de main) ne contient pas les branches en cours ; les relecteurs ont vérifié les appelants avec Grep.
 - Point du jour : déjà envoyé le 16/10 (17 h 15 UTC) ; pas de nouveau message.
