@@ -44,11 +44,31 @@ final class Achats {
         return -1;
     }
 
-    /** Le contenant où le vendeur prend : son sac d'abord, sinon le dépôt de son poste ; null s'il n'a rien. */
-    static Container stock(Travailleur v) {
+    /** Ce qu'un vendeur d'un autre chef laisse toujours au dépôt de son poste, pour les siens. */
+    static final int RESERVE = 2;
+
+    /** Les parts vendables d'un contenant. */
+    static int parts(Container c) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (vendable(c.getItem(i))) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /**
+     * Le contenant où le vendeur prend pour cet acheteur : son sac d'abord, sinon le dépôt de son poste ; null s'il n'a rien.
+     * Pour l'ouvrier d'un autre chef, le dépôt garde au moins {@link #RESERVE} parts : on ne vide pas le garde-manger des voisins.
+     */
+    static Container stock(Travailleur v, Travailleur acheteur) {
         if (etal(v.inventaire) >= 0) return v.inventaire;
         Bureau.Entite b = Bureau.entite(v);
-        return b != null && etal(b.depot) >= 0 ? b.depot : null;
+        if (b == null || etal(b.depot) < 0) return null;
+        boolean voisin = acheteur.chef == null || !acheteur.chef.equals(v.chef);
+        return !voisin || parts(b.depot) > RESERVE ? b.depot : null;
+    }
+
+    /** Jamais d'achat chez un chef avec qui son chef est en guerre (Courrier.guerres). */
+    static boolean ennemi(Travailleur t, Travailleur v) {
+        return t.chef != null && v.chef != null && t.level().getServer() != null && Courrier.de(t.level().getServer()).enGuerre(t.chef, v.chef);
     }
 
     /**
@@ -61,11 +81,11 @@ final class Achats {
         Travailleur vendeur = null;
         double meilleur = Double.MAX_VALUE;
         for (Travailleur v : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(d),
-                v -> v != t && v.isAlive() && !v.aTerre && VENDEURS.contains(v.metier) && v.distanceToSqr(t) <= d * d)) {
-            if (v.distanceToSqr(t) < meilleur && stock(v) != null) { meilleur = v.distanceToSqr(t); vendeur = v; }
+                v -> v != t && v.isAlive() && !v.aTerre && VENDEURS.contains(v.metier) && v.distanceToSqr(t) <= d * d && !ennemi(t, v))) {
+            if (v.distanceToSqr(t) < meilleur && stock(v, t) != null) { meilleur = v.distanceToSqr(t); vendeur = v; }
         }
         if (vendeur == null) return false;
-        Container c = stock(vendeur);
+        Container c = stock(vendeur, t);
         ItemStack s = c.getItem(etal(c));
         int prix = prix(s);
         if (Reglages.valeur(t.inventaire) < prix) {
@@ -77,7 +97,10 @@ final class Achats {
     }
 
     /** « un peu de pain ». */
-    static String objet(ItemStack s) { return "un peu de " + Consignes.nom(s); }
+    static String objet(ItemStack s) {
+        String id = BuiltInRegistries.ITEM.getKey(s.getItem()).toString();
+        return Consignes.NOMS.containsKey(id) ? "un peu de " + Consignes.NOMS.get(id) : "de quoi manger"; // jamais le nom anglais du serveur
+    }
 
     /** Il dit la réplique {@code cle} d'economie.txt ; « 1 pièces » devient « 1 pièce ». */
     static void dire(Travailleur t, String cle, String nom, String objet, int prix) {
@@ -114,7 +137,7 @@ final class Achats {
      * sac du vendeur (ou à la caisse du poste, si la part vient du dépôt). Faux si rien ne s'est vendu.
      */
     static boolean conclure(Travailleur t, Travailleur v) {
-        Container c = stock(v);
+        Container c = ennemi(t, v) ? null : stock(v, t);
         if (c == null) { dire(v, "vente_rupture", t.prenom, null, 0); return false; }
         int i = etal(c);
         ItemStack s = c.getItem(i);
