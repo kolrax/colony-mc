@@ -34,7 +34,14 @@ public class TestsVie {
         Travailleur a = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
         Travailleur b = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(3)), new ItemStack(Items.IRON_PICKAXE));
         a.forcerChunk();
-        for (Travailleur t : new Travailleur[]{a, b}) { t.fatigue = 100; t.moral = 70; }
+        for (Travailleur t : new Travailleur[]{a, b}) {
+            t.fatigue = 100;
+            t.moral = 70;
+            // Le cas le plus dur, toujours : son premier passage au cerveau tombe sur un passage des besoins (Besoins.veiller,
+            // toutes les 100 ticks selon son identifiant), avant qu'il ne soit noté « épuisé ». Sans ça, le cas ne venait que
+            // selon les identifiants, donc selon les tests passés avant (« fatigue » dite, puis « pas de lit » muet 60 s).
+            t.tickCount = Math.floorMod(-t.getId() - 1, 100);
+        }
         Travailleur[] proprio = {null};
         boolean[] partage = {false}, casse = {false};
         int[] moralAvant = {0};
