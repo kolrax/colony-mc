@@ -15,3 +15,4 @@ Tu mènes le chantier du mod en autonomie, pour KOLRAX qui ne veut pas interveni
 6. Avant la fin de la session (ou si le quota s'épuise), écris dans `docs/journal.md` ce qui est fait et la prochaine étape exacte, puis commit et push.
 
 Tranche seul tout ce que le cahier des charges laisse ouvert, en suivant son esprit : naturel, pas de lag, amusant, jamais une corvée. Ne demande à KOLRAX que le destructif, les gros changements de direction ou ce qui coûte de l'argent. Pour une demande à la session Admin, utilise `docs/demandes-admin.md`.
+- Pour découper une case, situe le code avec Graphify (partie « Graphify » de `CLAUDE.md`) et donne aux agents la liste exacte des fichiers.
