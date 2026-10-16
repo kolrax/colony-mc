@@ -68,7 +68,8 @@ final class Cerveau {
             t.finirAction("interrompu");
         }
         // Un monstre en vue d'un ouvrier qui ne se bat pas (lot 9, cahier 14.11) : un creeper, il s'en éloigne et prévient le
-        // guerrier, qui vient le tuer ; un autre près du poste, il le signale (Defense).
+        // guerrier, qui vient le tuer ; un autre, selon son caractère (Bravoure) : il le frappe, le signale, fuit ou s'éclipse ;
+        // le calme frappé se défend ici, avant la fuite plus bas (Defense).
         if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
         if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque
@@ -97,6 +98,7 @@ final class Cerveau {
                 if (!m.combattant || Blessures.horsDeCombat(t)) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
                 else if (agresseur instanceof Player) dire(t, "fuite", 30, "Arrêtez ! Je ne frapperai pas sans l'ordre de mon chef.");
                 else dire(t, "fuite", 30, "Holà, tout doux ! Je ne lève pas mon arme sur une bête.");
+                Defense.retenirPlace(t);
                 lancer(t, new Actions.Fuir(agresseur));
             }
             return;
@@ -157,7 +159,7 @@ final class Cerveau {
             if (Blessures.horsDeCombat(t) || !m.escorter(t)) lancer(t, new Actions.SuivreChef());
             return;
         }
-        if (t.mode == Travailleur.Mode.ATTENDRE) { attendre(t, 2); return; }
+        if (t.mode == Travailleur.Mode.ATTENDRE) { if (!Defense.revenir(t)) attendre(t, 2); return; } // revenu d'une fuite ou d'un combat, il retourne à sa place
 
         // Au travail. Sans poste, pas de travail.
         if (t.bureau == null) {

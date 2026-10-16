@@ -515,6 +515,7 @@ public class TestsMorts {
             if (x != 16 || z == 10 || z == 14) h.setBlock(x, 2, z, Blocks.OAK_FENCE);
         Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
         debutant(t);
+        t.temperament = "peureux"; // il fuit les monstres (un calme ou un colérique se défendrait : Bravoure)
         net.minecraft.world.entity.monster.Zombie z = h.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 9, 2, 12);
         z.setNoAi(true);
         t.igniteForSeconds(10);

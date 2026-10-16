@@ -417,6 +417,8 @@ public class Travailleur extends PathfinderMob {
 
     /** Les cibles qu'il n'a pas pu atteindre (identifiant → moment jusqu'auquel il les laisse), pour ne pas s'acharner. */
     final java.util.Map<Integer, Long> inaccessibles = new java.util.HashMap<>();
+    /** Les monstres qu'il a fuis il y a peu : id → {distance à la fuite, jusqu'à quand il s'en souvient} (Defense.dejaFui). */
+    final java.util.Map<Integer, double[]> fuis = new java.util.HashMap<>();
     /**
      * Les blocs qu'il n'a pas pu atteindre (arbre perché, minerai derrière un mur : position → moment du monde jusqu'auquel
      * il les laisse, 30 s). Non sauvegardé. Sans ça, il les choisissait de nouveau aussitôt, et chaque essai coûte des

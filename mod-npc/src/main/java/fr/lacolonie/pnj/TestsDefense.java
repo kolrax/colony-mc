@@ -45,6 +45,7 @@ public class TestsDefense {
         m.chef = g.chef;
         TestsBucheron.depot(g).proprietaire = g.chef;
         m.mode = Travailleur.Mode.ATTENDRE;
+        m.temperament = "calme"; // il appelle le guerrier par son nom (le colérique recule sans crier à l'aide : Bravoure)
         m.forcerChunk();
         var creeper = TestsGuerrier.fige(h, EntityType.CREEPER, b.east(27));
         boolean[] loin = {false};
@@ -68,6 +69,7 @@ public class TestsDefense {
         m.chef = g.chef;
         TestsBucheron.depot(g).proprietaire = g.chef;
         m.mode = Travailleur.Mode.ATTENDRE;
+        m.temperament = "calme"; // il appelle le guerrier par son nom (le colérique recule sans crier à l'aide : Bravoure)
         m.forcerChunk();
         var creeper = TestsGuerrier.fige(h, EntityType.CREEPER, b.east(27));
         String[] faute = {null};
@@ -102,6 +104,7 @@ public class TestsDefense {
         BlockPos b = base(h, 5);
         Travailleur m = TestsJeu.employe(h, "mineur", b, Vec3.atBottomCenterOf(b.east(3)), new ItemStack(Items.IRON_PICKAXE));
         m.mode = Travailleur.Mode.ATTENDRE;
+        m.temperament = "calme"; // il signale (les autres caractères chargent, fuient ou s'éclipsent : Bravoure)
         m.forcerChunk();
         var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(9));
         h.succeedWhen(() -> {

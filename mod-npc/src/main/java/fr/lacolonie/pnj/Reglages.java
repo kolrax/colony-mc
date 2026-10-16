@@ -89,6 +89,8 @@ public class Reglages {
     public boolean sons = true;
     /** Nuit dehors (lot 9, cahier 14.12) : loin du poste, un ouvrier se creuse un trou dans la terre et s'y enferme jusqu'au matin (false : il dort à la belle étoile). */
     public boolean abri_nuit = true;
+    /** Devant un monstre, l'ouvrier agit selon son caractère (Bravoure) : le colérique le frappe, le peureux fuit, le fourbe s'éclipse, le calme se défend s'il est frappé (false : tous signalent et fuient s'ils sont frappés). */
+    public boolean caractere_monstres = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
 
