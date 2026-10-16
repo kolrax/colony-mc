@@ -52,7 +52,8 @@ public class TestsEconomie {
         BlockPos base = TestsJeu.sol(h, coin * 400, 60000);
         Travailleur a = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), ItemStack.EMPTY);
         a.prenom = "Gauthier";
-        a.faim = 6;
+        a.faim = 20; // il a faim une seconde après : à son premier tick, le cuisinier n'est pas encore visible (une recherche ratée = 3 minutes sans recherche)
+        h.runAtTickTime(20, () -> a.faim = 6);
         a.forcerChunk();
         Travailleur v = TestsJeu.employe(h, "cuisinier", base.east(8), Vec3.atBottomCenterOf(base.east(6)), ItemStack.EMPTY);
         v.prenom = "Mahaut";
