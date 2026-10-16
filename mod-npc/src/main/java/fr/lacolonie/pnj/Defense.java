@@ -474,10 +474,11 @@ final class Defense {
                     || chef != null && (!chef.isAlive() || chef.isRemoved() || chef.level() != t.level()) || agresseur.position().distanceTo(centre()) > SCENE) return Actions.Etat.OK;
             t.getLookControl().setLookAt(agresseur);
             if (place == null || age % 10 == 0) {
-                // À un pas et demi du chef (du dépôt), du côté de l'agresseur (au milieu s'ils sont tout près).
-                Vec3 c = centre(), d = agresseur.position().subtract(c).multiply(1, 0, 1);
+                // À un pas et demi du chef, du côté de l'agresseur ; au dépôt, devant celui qui s'y sert, du côté du dépôt
+                // (au milieu s'ils sont tout près).
+                Vec3 c = chef != null ? chef.position() : agresseur.position(), d = (chef != null ? agresseur.position() : lieu).subtract(c).multiply(1, 0, 1);
                 double l = d.length();
-                place = l < 0.1 ? c : c.add(d.scale(Math.min(1.5, l / 2) / l));
+                place = l < 0.1 ? c : c.add(d.scale(Math.min(chef != null ? 1.5 : 1.2, l / 2) / l));
             }
             if (t.position().distanceToSqr(place) > 1) { t.setGeste(""); marcher(t, place, 1.3); }
             else { t.getNavigation().stop(); t.setGeste("en_garde"); }
