@@ -74,7 +74,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 11. Économie (indispensable selon ses notes)
 - [x] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux (0.9.33, 1re passe : nourriture ; équipement dans plus-tard)
-- [ ] Boutiques ; argent physique = pièces Numismatics existantes
+- [x] Boutiques ; argent physique = pièces Numismatics existantes (0.9.35)
 - [x] Coût : un débutant peut payer 2 ou 3 PNJ, un joueur très riche une trentaine (0.9.34)
 - [x] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
 
