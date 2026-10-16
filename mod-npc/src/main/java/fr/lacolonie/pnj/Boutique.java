@@ -23,9 +23,13 @@ final class Boutique {
         final List<Prix> prix = new ArrayList<>();
         /** Ce qu'il ne doit plus vendre, et ce qu'il peut vendre de nouveau (« tout » : tout ce qui était exclu). */
         final List<String> exclus = new ArrayList<>(), permis = new ArrayList<>();
+        /** Un prix dit pour un lot (« 20 torches pour 2 pièces ») : il demande le prix d'une seule. */
+        boolean lot;
+        /** Pendant la lecture : la phrase en cours a déjà fixé un prix (« vends le pain à 2 pièces et le steak à 5 »). */
+        boolean enPrix;
         String reste;
 
-        boolean rien() { return ouvrir == null && prix.isEmpty() && exclus.isEmpty() && permis.isEmpty(); }
+        boolean rien() { return ouvrir == null && prix.isEmpty() && exclus.isEmpty() && permis.isEmpty() && !lot; }
     }
 
     record Prix(String objet, int prix) {}
@@ -37,29 +41,48 @@ final class Boutique {
     static final String NOMBRE = "(\\d+|" + String.join("|", Ordres.NOMBRES.keySet()) + ")";
     static final String MONNAIE = "(?:pieces?|sous|ecus?|deniers?)";
 
-    static final Pattern FERMER = p(" (?:ferme|fermez|fermer|fermeras|referme|refermez|quitte|quittez|lache|laisse|abandonne) " + ARTICLE + "?" + LIEU + " "
-            + "| (?:arrete|cesse|arretez|cessez|finis|fini|assez) (?:de vendre|la vente|les ventes|" + ARTICLE + "?" + LIEU + ") "
-            + "| plus de " + LIEU + " | plus de ventes ");
+    /**
+     * La tête d'un ordre : l'impératif vient en tête du morceau, après un prénom ou un mot d'élan au plus (« Raoul, tiens la
+     * boutique », « allez, ferme l'étal »). « Je tiens la boutique », « Raoul a fermé la boutique », « on garde l'étal » : ce
+     * ne sont pas des ordres.
+     */
+    static final String TETE = "^ (?:(?!(?:je|j|il|elle|on|nous|vous|ils|elles|tu|t|qui|que|qu|ce|c|ca|ta|ton|sa|son)\\b)[a-z0-9]+ )?"
+            + "(?:(?:et|alors|toi|maintenant|bon|allez|aussi|puis|desormais|dorenavant|demain|aujourd hui|des maintenant) )*";
+    static final String ROLE = "(?:le |la |notre |mon |ma |un |une )?(?:boutiquier|boutiquiere|marchand|marchande|commercant|commercante|vendeur|vendeuse) ";
+
+    static final Pattern FERMER = p(TETE + "(?:(?:ferme|fermez|fermeras|tu fermeras|va fermer|referme|refermez|quitte|quittez|lache|laisse|abandonne) " + ARTICLE + "?" + LIEU + " "
+            // « Arrête de vendre » ferme ; « arrête de vendre le pain » n'exclut que le pain (EXCLURE).
+            + "|(?:arrete|cesse|arretez|cessez) (?:de vendre (?:pour aujourd hui |aujourd hui |maintenant |pour le moment )?$|(?:la vente|les ventes|" + ARTICLE + "?" + LIEU + ") )"
+            + "|(?:fini|finie|assez|plus) (?:de |d )?(?:la |les )?(?:" + LIEU + "|vente|ventes) )");
     /** Fermer, dit avec une négation : « ne vends plus rien », « tu n'es plus le marchand ». */
-    static final Pattern FERMER_NEGATIF = p(" ne vends plus rien | ne vendez plus rien | tu n es plus (?:le |la |notre |mon |ma )?(?:boutiquier|boutiquiere|marchand|marchande|vendeur|vendeuse) ");
-    static final Pattern OUVRIR = p(" (?:tiens|tenez|tenir|tiendras|ouvre|ouvrez|ouvrir|ouvriras|rouvre|rouvrez|rouvrir|garde|gardes|prends|reprends|occupe toi d|occupe toi de|charge toi d|charge toi de) "
-            + ARTICLE + "?" + LIEU + " "
-            + "| (?:tu seras|tu es|deviens|sois|fais le|fais la|tu feras le|tu feras la) (?:le |la |notre |mon |ma |un |une )?(?:boutiquier|boutiquiere|marchand|marchande|commercant|commercante|vendeur|vendeuse) "
-            + "| vend(?:s|re|ras)? (?:au poste|au bureau|au comptoir|a l etal|a la boutique|a l echoppe) ");
+    static final Pattern FERMER_NEGATIF = p(TETE + "(?:ne vends plus rien|ne vendez plus rien|tu n es plus " + ROLE + ")");
+    static final Pattern OUVRIR = p(TETE + "(?:(?:tiens|tenez|tiendras|tu tiendras|tu vas tenir|tu dois tenir|va tenir|vas tenir|ouvre|ouvrez|ouvriras|va ouvrir|rouvre|rouvrez"
+            + "|garde|prends|reprends|occupe toi d|occupe toi de|charge toi d|charge toi de) " + ARTICLE + "?" + LIEU + " "
+            + "|(?:tu seras|tu es|deviens|sois|fais le|fais la|tu feras le|tu feras la) " + ROLE
+            + "|(?:va |vas |tu vas |tu iras )?vend(?:s|re|ras)? (?:au poste|au bureau|au comptoir|a l etal|a la boutique|a l echoppe) )");
     /** « Ne ferme pas la boutique », « ne tiens plus l'étal » : dans le doute, il ne change rien (sauf « ne vends plus rien »). */
     static final Pattern NEGATION = p(" (?:ne|n) (?:\\w+ ){0,2}?(?:pas|plus|jamais|point) ");
-    /** « Vends le pain à 2 pièces », « le steak coûte 3 pièces », « fixe le prix du gigot à 4 sous ». */
-    static final Pattern PRIX = p("^ (?:et |alors |aussi |puis )?(?:(?:je veux que tu |tu )?(?:vends|vend|vendez|vendre|vendras|mets|mettez|fixe|fixez|propose|proposes|fais|faites|affiche) )?"
-            + ARTICLE + "?(?:prix (?:du |de la |de l |des |d ))?(.+?) (?:a|pour|au prix de|contre|coute|coutera|coutent|couteront|vaut|vaudra|valent|sera a|seront a|est a|sont a|a raison de) "
-            + NOMBRE + " " + MONNAIE + "(?: (?:chacun|chacune|chaque|piece|l unite|la piece|le lot|l un|l une|seulement|pas plus|pas moins))* $");
-    /** « Ne vends pas le fer », « ne vends jamais d'or ni de diamants », « retire le fer de la vente ». */
-    static final Pattern EXCLURE = p("^ (?:et |alors |aussi |mais )?(?:tu )?ne (?:vends|vend|vendez|vendras) (?:pas|plus|jamais|point|surtout pas|sous aucun pretexte|en aucun cas) "
+    /**
+     * Le prix d'une unité, et seulement dit comme un ordre de vendre : « vends le pain à 2 pièces (l'unité) », « fixe le prix
+     * du gigot à 4 sous ». « Achète du pain pour 3 pièces », « je t'augmente à 10 pièces » n'en sont pas.
+     */
+    static final Pattern PRIX = p(TETE + "(?:(?:vends|vendez|vendras|tu vendras|vend) |fixe (?:le )?prix (?:du |de la |de l |des |d ))"
+            + ARTICLE + "?(.+?) (?:a|pour|au prix de) " + NOMBRE + " " + MONNAIE
+            + "(?: (?:chacun|chacune|chaque|piece|l unite|la piece|par piece|seulement|pas plus|pas moins))* $");
+    /** Dans la même phrase, après un prix : « …, et le steak à 5 pièces » (l'article d'abord, sans verbe). */
+    static final Pattern SUITE_PRIX = p("^ (?:et |aussi |puis )?" + ARTICLE + "(.+?) (?:a|pour|au prix de) " + NOMBRE + " " + MONNAIE
+            + "(?: (?:chacun|chacune|chaque|piece|l unite|la piece|par piece|seulement|pas plus|pas moins))* $");
+    /** « 20 torches pour 2 pièces » : le prix d'un lot ; il demande celui d'une seule. */
+    static final Pattern LOT = p("^(?:\\d+|" + String.join("|", Ordres.NOMBRES.keySet().stream().filter(x -> !x.equals("un") && !x.equals("une")).toList()) + ") ");
+    /** « Ne vends pas le fer », « ne vends jamais d'or ni de diamants », « arrête de vendre le pain », « retire le fer de la vente ». */
+    static final Pattern EXCLURE = p(TETE + "(?:tu )?ne (?:vends|vend|vendez|vendras) (?:pas|plus|jamais|point|surtout pas|sous aucun pretexte|en aucun cas) "
             + ARTICLE + "?(.+?) $"
-            + "|^ (?:et |alors |mais )?(?:retire|retirez|enleve|enlevez|ote|otez) " + ARTICLE + "?(.+?) de (?:la vente|l etal|la boutique|ta boutique|ton etal) $");
+            + "|" + TETE + "(?:retire|retirez|enleve|enlevez|ote|otez) " + ARTICLE + "?(.+?) de (?:la vente|l etal|la boutique|ta boutique|ton etal) $"
+            + "|" + TETE + "(?:arrete|arretez|cesse|cessez) de vendre " + ARTICLE + "?(.+?) $");
     /** « Vends aussi le fer », « tu peux vendre l'or », « remets le fer en vente », « vends tout ». */
-    static final Pattern PERMETTRE = p("^ (?:et |alors |mais )?(?:tu peux |tu pourras |je veux que tu )?(?:vends|vend|vendez|vendre|revends|revendre|remets en vente|mets en vente) "
+    static final Pattern PERMETTRE = p(TETE + "(?:tu peux |tu pourras |je veux que tu )?(?:vends|vend|vendez|vendre|revends|revendre|remets en vente|mets en vente) "
             + "(?:aussi |de nouveau |a nouveau |encore |maintenant )?" + ARTICLE + "?(.+?) $"
-            + "|^ (?:et |alors |mais )?(?:remets|remettez|mets|mettez) " + ARTICLE + "?(.+?) en vente $");
+            + "|" + TETE + "(?:remets|remettez|mets|mettez) " + ARTICLE + "?(.+?) en vente $");
     /** Après « ne vends pas … » : « … ni l'or », « … ni de diamants ». */
     static final Pattern NI = p(" ni " + ARTICLE + "?");
     /** Ce qui n'est pas un objet (« ne le vends pas », « vends-le », « vends à Raoul »). */
@@ -77,6 +100,7 @@ final class Boutique {
         for (int i = 0; i <= texte.length(); i++) {
             if (i < texte.length() && ".;!?\n".indexOf(texte.charAt(i)) < 0) continue;
             boolean question = i < texte.length() && texte.charAt(i) == '?';
+            lu.enPrix = false;
             if (!question && i > debutPhrase) morceaux(texte, debutPhrase, i, lu, sans);
             debutPhrase = i + 1;
         }
@@ -107,13 +131,16 @@ final class Boutique {
             return true;
         }
         Matcher m = PRIX.matcher(n);
-        if (m.find() && objet(m.group(1)) != null) {
+        boolean vu = m.find();
+        if (!vu && lu.enPrix) vu = (m = SUITE_PRIX.matcher(n)).find();
+        if (vu && objet(m.group(1)) != null) {
+            if (LOT.matcher(objet(m.group(1))).find()) { lu.lot = true; return true; } // « vends 20 torches pour 2 pièces » : le prix d'une seule, s'il te plaît
             int prix = nombre(m.group(2));
-            if (prix > 0) { lu.prix.add(new Prix(objet(m.group(1)), prix)); return true; }
+            if (prix > 0) { lu.prix.add(new Prix(objet(m.group(1)), prix)); lu.enPrix = true; return true; }
         }
         m = EXCLURE.matcher(n);
         if (m.find()) {
-            String o = m.group(1) != null ? m.group(1) : m.group(2);
+            String o = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3);
             boolean un = false;
             for (String x : NI.split(o)) if (objet(x) != null) { lu.exclus.add(objet(x)); un = true; }
             return un;
@@ -152,32 +179,40 @@ final class Boutique {
     /** Au plus autant d'objets d'un coup. */
     static final int MAX_ACHAT = 64;
 
-    static final Pattern CATALOGUE = p(" (?:qu est ce que tu vends|qu est ce que vous vendez|que vends tu|que vendez vous|tu vends quoi|vous vendez quoi"
-            + "|qu as tu a vendre|qu avez vous a vendre|qu est ce que tu as a vendre|qu est ce que tu as|qu est ce que vous avez|tes prix|vos prix|quels sont tes prix"
-            + "|quels sont vos prix|ta marchandise|votre marchandise|ton etal|votre etal|qu y a t il|qu est ce qu il y a|la liste|tu as quoi|vous avez quoi) ");
-    static final Pattern ACHAT = p(" (?:je t achete|je vous achete|j achete|je prends|je prendrai|je prendrais|je voudrais|je veux|j aimerais|je desire"
-            + "|donne moi|donnez moi|vends moi|vendez moi|il me faut|tu me vends|vous me vendez|tu me vendrais|vous me vendriez|mets moi|sers moi|servez moi) (.+?) $");
+    /** Les formules d'achat explicites : seules elles (ou « 3 pains » tout court) font payer. */
+    static final Pattern ACHAT = p(" (?:je t achete|je vous achete|j achete|je prends|je prendrai|je voudrais|je veux|j aimerais"
+            + "|donne moi|donnez moi|vends moi|vendez moi|sers moi|servez moi) (.+?) $");
+    /**
+     * Ce qui n'est jamais un achat, même avec un objet nommé : une négation (« pas de pain pour moi », « non merci »), « déjà »,
+     * un remerciement (« merci pour le pain »), le prix (« c'est combien le pain », « je voudrais savoir le prix »).
+     */
+    static final Pattern PAS_ACHAT = p(" (?:pas|non|nan|plus|jamais|rien|ne|n|deja|merci pour|merci de|combien|prix|savoir|coute|coutent|cher|chers|chere|cheres|vaut|valent) ");
+    static final Pattern POLITESSE = p(" (?:s il te plait|s il vous plait|stp|svp|merci|je te prie|je vous prie|mon ami|l ami|bonhomme|messire|marchand|vendeur|boutiquier|alors|donc|encore|bonjour|salut) ");
     static final Pattern QUANTITE = p("^(?:" + NOMBRE + " )?(?:(?:un peu|quelques|un morceau|une part|une miche|une portion) (?:de |d )?)?" + ARTICLE + "?(.+?)$");
-    static final Pattern POLITESSE = p(" (?:s il te plait|s il vous plait|stp|svp|merci|je te prie|je vous prie|mon ami|l ami|bonhomme|chef|messire|marchand|vendeur|boutiquier|aussi|alors|donc|encore) ");
+    /** Une phrase nue d'achat : au plus autant de mots (« 3 pains », « du pain », « un steak »), le nombre en plus. */
+    static final int MOTS_NUS = 2;
 
     /**
-     * Lit ce que dit un client. « Je t'achète 3 pains » : 3 « pains » ; « je veux du pain » : 1 « pain » ; « qu'est-ce que tu
-     * vends ? » : la liste. Une phrase sans formule d'achat (« deux pains ») est lue comme un achat : le jeu vérifie que le
-     * mot est un objet connu, sinon il montre la liste. Une question sans formule d'achat (« tu as du pain ? ») : la liste,
-     * avec les prix ; on ne fait jamais payer quelqu'un qui se renseigne.
+     * Lit ce que dit un client. Un achat seulement avec une formule explicite (« je t'achète 3 pains », « je veux du pain »,
+     * « donne-moi deux steaks ») ou une phrase nue d'un ou deux mots (« 3 pains », « du pain ») ; jamais une question, une
+     * négation, un remerciement ou une phrase sur le prix : on ne fait jamais payer quelqu'un qui se renseigne ou qui refuse.
+     * Tout le reste : la liste de l'étal, avec les prix.
      */
     static Demande demande(String texte) {
-        String n = Ordres.normaliser(texte).replace(" ? ", " ");
+        String n = Ordres.normaliser(texte);
+        if (texte.contains("?") || PAS_ACHAT.matcher(n).find()) return new Demande(null, 0);
         n = POLITESSE.matcher(n).replaceAll(" ").replaceAll("\\s+", " ");
         Matcher a = ACHAT.matcher(n);
-        if (a.find()) return quantite(a.group(1));
-        if (texte.contains("?") || CATALOGUE.matcher(n).find() || n.isBlank()) return new Demande(null, 0);
-        return quantite(n.strip());
+        if (a.find()) return quantite(a.group(1), 4);
+        return quantite(n.strip(), MOTS_NUS);
     }
 
-    private static Demande quantite(String s) {
+    /** « 3 pains » : 3 « pains » ; au plus {@code mots} mots après le nombre (article compris), sinon la liste. */
+    private static Demande quantite(String s, int mots) {
         Matcher q = QUANTITE.matcher(s.strip());
-        if (!q.matches()) return new Demande(null, 0);
+        if (s.isBlank() || !q.matches()) return new Demande(null, 0);
+        String reste = s.strip().replaceFirst("^" + NOMBRE + " ", "");
+        if (reste.split(" ").length > mots) return new Demande(null, 0);
         int nb = q.group(1) == null ? 1 : nombre(q.group(1));
         String o = objet(q.group(2));
         if (o == null || nb <= 0) return new Demande(null, 0);
@@ -207,7 +242,7 @@ final class Boutique {
     // --- Le règlement ---------------------------------------------------------------------------------------------
 
     /** Au-delà, la boutique ne fait pas l'affaire (le calcul de la monnaie resterait petit). */
-    static final long MONTANT_MAX = 200_000;
+    static final long MONTANT_MAX = 20_000;
 
     /** Le résultat d'un règlement : les pièces du client et de la caisse après l'affaire (une case par valeur). */
     record Reglement(int[] client, int[] caisse) {}

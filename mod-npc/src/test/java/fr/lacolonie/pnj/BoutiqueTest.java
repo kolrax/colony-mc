@@ -32,7 +32,7 @@ class BoutiqueTest {
         Boutique.Lu l = Boutique.lire("Vends le pain à 2 pièces et le steak à cinq pièces chacun");
         assertEquals(List.of(new Boutique.Prix("pain", 2), new Boutique.Prix("steak", 5)), l.prix);
         assertEquals(List.of(new Boutique.Prix("gigot", 4)), Boutique.lire("Fixe le prix du gigot à 4 sous").prix);
-        assertEquals(List.of(new Boutique.Prix("lingot de fer", 6)), Boutique.lire("Le lingot de fer coûte 6 pièces.").prix);
+        assertEquals(List.of(new Boutique.Prix("pain", 2)), Boutique.lire("Raoul, vends le pain pour 2 pièces l'unité").prix);
         assertTrue(Boutique.lire("Vends le pain à Raoul").prix.isEmpty()); // pas un prix
     }
 
@@ -115,5 +115,57 @@ class BoutiqueTest {
         caisse = new int[]{7, 3, 1, 0};
         r = Boutique.regler(VALEURS, client, caisse, 1234);
         conserve(client, caisse, r, 1234);
+    }
+
+    /** Relecture (bloquant) : un client ne paie que s'il le dit clairement ; jamais en refusant, en remerciant ou en demandant le prix. */
+    @Test
+    void unClientNePaieJamaisSansLeVouloir() {
+        for (String s : List.of("Merci pour le pain", "Non merci, pas de pain", "je veux pas de pain", "Pas de pain pour moi", "J'ai déjà du pain",
+                "Ton pain est trop cher", "C'est combien le pain", "Le pain a l'air bon", "Je voudrais savoir le prix du pain ?", "je viens de manger",
+                "Je ne veux plus de pain", "Tu as du pain ?", "Bonjour", "Jamais de steak"))
+            assertTrue(Boutique.demande(s).catalogue(), "« " + s + " » ne doit rien acheter : " + Boutique.demande(s));
+        assertEquals(new Boutique.Demande("pains", 3), Boutique.demande("3 pains"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("Du pain, s'il te plaît"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("Vends-moi un pain"));
+        assertEquals(new Boutique.Demande("steaks", 2), Boutique.demande("Je prends 2 steaks, merci"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("Je voudrais du pain"));
+    }
+
+    /** Relecture : « arrête de vendre le pain » n'exclut que le pain, sans fermer la boutique. */
+    @Test
+    void arreterDeVendreUnObjet() {
+        Boutique.Lu l = Boutique.lire("Arrête de vendre le pain");
+        assertNull(l.ouvrir);
+        assertEquals(List.of("pain"), l.exclus);
+        assertEquals(Boolean.FALSE, Boutique.lire("Arrête de vendre").ouvrir);
+    }
+
+    /** Relecture : ce qu'on raconte (« je tiens la boutique », « Raoul a fermé la boutique ») n'est pas un ordre. */
+    @Test
+    void premierePersonneEtPasseNeSontPasDesOrdres() {
+        for (String s : List.of("Je tiens la boutique aujourd'hui, toi va couper du bois", "Je garde la boutique", "Raoul a fermé la boutique",
+                "On ferme la boutique ce soir", "Je vends le pain à 2 pièces"))
+            assertTrue(Boutique.lire(s).rien(), s);
+        assertEquals("Je tiens la boutique aujourd'hui, toi va couper du bois", Boutique.lire("Je tiens la boutique aujourd'hui, toi va couper du bois").reste);
+        assertEquals(Boolean.TRUE, Boutique.lire("Allez, tiens la boutique").ouvrir);
+    }
+
+    /** Relecture : seul « vends le X à N pièces » fixe un prix, celui d'une unité. */
+    @Test
+    void prixSeulementPourVendreUneUnite() {
+        for (String s : List.of("Achète du pain pour 3 pièces", "Je t'augmente à 10 pièces", "Va acheter du fer pour 5 pièces", "Mets 20 torches pour 2 pièces"))
+            assertTrue(Boutique.lire(s).prix.isEmpty(), s + " : " + Boutique.lire(s).prix);
+        Boutique.Lu lot = Boutique.lire("Vends 20 torches pour 2 pièces");
+        assertTrue(lot.prix.isEmpty(), "pas 2 pièces par torche : " + lot.prix);
+        assertFalse(lot.rien(), "il demande le prix d'une seule");
+        assertEquals(List.of(new Boutique.Prix("torche", 2)), Boutique.lire("Vends une torche à 2 pièces").prix);
+    }
+
+    /** Relecture : tenir la boutique est un ordre de travail (son obéissance en décide), et la monnaie a une borne. */
+    @Test
+    void ouvrirEstUnTravailEtLaMonnaieABorne() {
+        assertEquals(Obeissance.Peine.NORMAL, Obeissance.peine(Ordres.lire("Tiens la boutique", "mineur"), "mineur", false).peine());
+        assertEquals(Obeissance.Peine.PENIBLE, Obeissance.peine(Ordres.lire("Tiens la boutique", "mineur"), "mineur", true).peine());
+        assertNull(Boutique.regler(VALEURS, new int[]{0, 0, 0, 10_000}, new int[]{0, 0, 0, 0}, 100_000));
     }
 }

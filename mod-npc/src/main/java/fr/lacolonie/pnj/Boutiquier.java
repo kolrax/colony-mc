@@ -79,10 +79,13 @@ final class Boutiquier {
             else exclus.remove(f);
             r.add(texte(t, "boutique_ordre_permis", null, f.equals("tout") ? "tout" : nom(f, o), 0, "Bien : " + nom(f, o) + ", de nouveau à vendre."));
         }
+        if (lu.lot) r.add(texte(t, "boutique_ordre_lot", null, null, 0, "Dis-moi le prix d'une seule, chef : « vends le pain à 2 pièces »."));
         e.put("prix", prix);
         e.put("exclus", exclus);
         if (lu.ouvrir != null) {
             if (lu.ouvrir && t.bureau == null) r.add(Messages.corps(t, "sans_poste"));
+            // En grève, il ne tient pas boutique pour un chef qui ne le paie pas (son obéissance a déjà parlé pour le reste).
+            else if (lu.ouvrir && t.mode == Travailleur.Mode.GREVE) r.add(Messages.corps(t, "refus_paie"));
             else {
                 e.putBoolean("ouverte", lu.ouvrir);
                 if (lu.ouvrir) {
@@ -111,7 +114,7 @@ final class Boutiquier {
      * de temps en temps ; une fois par minute il regarde si l'étal est vide (lettre au chef, une par jour au plus).
      */
     static boolean tenir(Travailleur t) {
-        if (!tient(t) || t.bureau == null) return false;
+        if (!tient(t) || t.bureau == null || Abri.nuit(t.level())) return false; // la nuit, la boutique est fermée : il vit sa nuit comme les autres
         if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) { Cerveau.rentrer(t); return true; }
         Bureau.Entite b = Bureau.entite(t);
         if (b != null && Cerveau.parfois(t, "boutique_etal", 60)) {
@@ -261,10 +264,19 @@ final class Boutiquier {
         return texte(t, "vente_etal", null, l, 0, "J'ai " + l + ". Que te faut-il ?");
     }
 
+    /** La dernière demande de chaque client (temps de jeu) : une par seconde au plus. Non sauvegardé. */
+    static final Map<java.util.UUID, Long> DERNIERE = new HashMap<>();
+    static final int ENTRE_DEMANDES = 20;
+
     /** Un autre joueur que son chef lui parle : vrai s'il tient la boutique (c'est elle qui répond, pas la conversation). */
     static boolean client(Travailleur t, ServerPlayer p, String texte) {
         if (!tient(t) || t.aTerre) return false;
         if (p.level() != t.level() || p.distanceToSqr(t) > PORTEE * PORTEE || texte.isBlank() || texte.length() > 256) return true;
+        long maintenant = t.level().getGameTime();
+        Long avant = DERNIERE.get(p.getUUID());
+        if (avant != null && maintenant >= avant && maintenant - avant < ENTRE_DEMANDES) return true; // trop vite : il n'a qu'une paire de mains
+        if (DERNIERE.size() > 1000) DERNIERE.clear();
+        DERNIERE.put(p.getUUID(), maintenant);
         t.getLookControl().setLookAt(p);
         t.dire(repondre(t, p, texte));
         return true;
@@ -284,8 +296,8 @@ final class Boutiquier {
         if (m == null) return texte(t, "vente_absent", null, null, 0, "Ça, je n'en vends pas.") + " " + catalogue(t, etal);
         int n = Math.min(d.nombre(), m.nombre());
         String quoi = Souvenirs.nombre(n, m.nom());
-        String r = vendre(t, b, m, d.nombre(), p.getInventory(), s -> { p.getInventory().add(s); return s; }, p::spawnAtLocation,
-                s -> { p.getInventory().add(s); if (!s.isEmpty()) p.spawnAtLocation(s); });
+        String r = vendre(t, b, m, d.nombre(), p.getInventory(), s -> donner(p, s), p::spawnAtLocation,
+                s -> { ItemStack reste = donner(p, s); if (!reste.isEmpty()) p.spawnAtLocation(reste); });
         String nom = p.getName().getString();
         return switch (r) {
             case VENDU -> texte(t, "vente_conclue", nom, quoi, (int) Math.min(Integer.MAX_VALUE, (long) m.prix() * n), "Voilà " + quoi + ".")
@@ -295,6 +307,29 @@ final class Boutiquier {
             case MONNAIE -> texte(t, "vente_sans_monnaie", nom, null, 0, "Je n'ai pas la monnaie. Apporte le compte juste.");
             default -> texte(t, "vente_rupture", null, null, 0, "Je n'ai plus rien à vendre.");
         };
+    }
+
+    /**
+     * Met une pile dans l'inventaire du joueur et rend ce qui n'y entre pas (à faire tomber à ses pieds). Pas
+     * {@code Inventory.add}, qui efface le surplus d'un joueur en créatif : ici rien ne disparaît.
+     */
+    static ItemStack donner(ServerPlayer p, ItemStack s) {
+        var inv = p.getInventory();
+        while (!s.isEmpty()) {
+            int i = inv.getSlotWithRemainingSpace(s);
+            if (i < 0) i = inv.getFreeSlot();
+            if (i < 0) break;
+            ItemStack la = inv.getItem(i);
+            if (la.isEmpty()) inv.setItem(i, s.split(Math.min(s.getCount(), s.getMaxStackSize())));
+            else {
+                int k = Math.min(s.getCount(), Math.min(la.getMaxStackSize(), inv.getMaxStackSize(la)) - la.getCount());
+                if (k <= 0) break;
+                la.grow(k);
+                s.shrink(k);
+            }
+        }
+        inv.setChanged();
+        return s;
     }
 
     /** Un affamé d'une autre colonie (Achats) : la nourriture qu'il trouverait à cette boutique, si elle est ouverte. */
@@ -312,6 +347,7 @@ final class Boutiquier {
         String objet = Achats.objet(m.modele());
         String r = b == null ? RUPTURE : vendre(v, b, m, 1, a.inventaire, a.inventaire::addItem, a::spawnAtLocation, a::ranger);
         if (r.equals(RUPTURE)) { Achats.dire(v, "vente_rupture", a.prenom, null, 0); return false; }
+        if (r.equals(MONNAIE)) { Achats.dire(v, "vente_sans_monnaie", a.prenom, null, 0); return false; }
         if (!r.equals(VENDU)) { Achats.dire(a, "achat_pas_assez", v.prenom, objet, m.prix()); return false; }
         Achats.dire(a, "achat_demande", v.prenom, objet, 0);
         Achats.dire(v, "vente_conclue", a.prenom, objet, m.prix());

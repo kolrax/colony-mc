@@ -62,6 +62,8 @@ final class Obeissance {
         Peine p = Peine.LEGER;
         boolean danger = false;
         boolean travail = !l.missions.isEmpty() || l.intentions.contains(Ordres.Intention.TRAVAIL);
+        // Tenir la boutique, c'est du travail (Boutique) : un ordre comme un autre, pas un geste.
+        if (l.boutique != null && Boolean.TRUE.equals(l.boutique.ouvrir)) travail = true;
         if (travail) p = horsService ? Peine.PENIBLE : Peine.NORMAL;
         if (l.missions.stream().anyMatch(m -> m.nombre() >= GROSSE)) p = Peine.PENIBLE;
         if (l.jours > 0) { p = Peine.PENIBLE; danger = true; } // une expédition lointaine

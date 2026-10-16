@@ -8,6 +8,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -22,7 +24,8 @@ import java.util.regex.Pattern;
  * Lot 11, la boutique (cahier 9.5 et 9.6) : le chef dit « tiens la boutique » à un ouvrier, qui vend au poste ce qu'il y a
  * au dépôt ; un autre joueur lui achète du pain avec ses pièces (elles passent à la caisse, il reçoit le pain), sans assez
  * de pièces rien ne bouge, le prix fixé par le chef est respecté (la caisse rend la monnaie), un objet exclu ne se vend
- * pas, et un affamé d'une autre colonie lui achète à manger. Coins 380 à 384 du monde plat. Lot à part (« boutique ») :
+ * pas, et un affamé d'une autre colonie lui achète à manger ; relecture : rien ne disparaît d'un inventaire plein, pas de
+ * boutique en grève ni la nuit. Coins 380 à 387 du monde plat. Lot à part (« boutique ») :
  * la monnaie y est changée en cuivre (1) et or (8), qui existent sans Numismatics, et remise à la fin du lot ; le lot
  * commence au matin (la boutique ferme la nuit).
  */
@@ -159,6 +162,7 @@ public class TestsBoutique {
                     h.assertTrue(compte(s.client().getInventory(), Items.COPPER_INGOT) == 10, "pas une pièce prise");
                     h.assertTrue(dit(s.t(), "vente_absent"), "il dit qu'il n'en vend pas : " + vu(s));
                 },
+                TestsIA.attendre(h, 25), // une demande par seconde au plus
                 () -> s.t().parler(s.client(), "Je t'achète un steak"),
                 () -> h.assertTrue(compte(s.client().getInventory(), Items.COOKED_BEEF) == 1 && compte(s.client().getInventory(), Items.COPPER_INGOT) == 7
                         && compte(s.poste().caisse, Items.COPPER_INGOT) == 3, "le steak vendu 3 pièces : " + vu(s)),
@@ -191,5 +195,73 @@ public class TestsBoutique {
                             "la caisse : la pièce d'or, sans ses 6 cuivres : " + Reglages.valeur(s.poste().caisse));
                 },
                 () -> fin(s.t(), a));
+    }
+
+    /** Ce qui est tombé au sol près du client. */
+    static int auSol(ServerPlayer p, Item i) {
+        int n = 0;
+        for (ItemEntity e : p.serverLevel().getEntitiesOfClass(ItemEntity.class, p.getBoundingBox().inflate(4), e -> e.getItem().is(i))) n += e.getItem().getCount();
+        return n;
+    }
+
+    /**
+     * Relecture : un client en créatif, l'inventaire plein, achète 2 pains d'une pièce d'or : la monnaie prend la place de
+     * l'or, et le pain tombe à ses pieds au lieu d'être effacé (Inventory.add efface le surplus d'un joueur en créatif).
+     */
+    @GameTest(template = "vide", timeoutTicks = 600, batch = "boutique")
+    public static void inventairePleinRienNeDisparait(GameTestHelper h) {
+        Scene s = scene(h, 385);
+        s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 5));
+        s.poste().caisse.setItem(0, new ItemStack(Items.COPPER_INGOT, 6));
+        s.client().setGameMode(GameType.CREATIVE);
+        s.client().getInventory().setItem(0, new ItemStack(Items.GOLD_INGOT, 1));
+        for (int i = 1; i < 36; i++) s.client().getInventory().setItem(i, new ItemStack(Items.DIRT, 64));
+        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+                () -> s.t().parler(s.chef(), "Tiens la boutique"),
+                () -> h.assertTrue(Boutiquier.ouverte(s.t()), "la boutique doit être ouverte : " + vu(s)),
+                () -> s.t().parler(s.client(), "Je t'achète 2 pains"),
+                () -> {
+                    h.assertTrue(compte(s.poste().depot, Items.BREAD) == 3, "2 pains vendus : " + vu(s));
+                    int pain = compte(s.client().getInventory(), Items.BREAD) + auSol(s.client(), Items.BREAD);
+                    int cuivre = compte(s.client().getInventory(), Items.COPPER_INGOT) + auSol(s.client(), Items.COPPER_INGOT);
+                    h.assertTrue(pain == 2, "les 2 pains, dans le sac ou à ses pieds : " + pain);
+                    h.assertTrue(cuivre == 6, "les 6 pièces de monnaie : " + cuivre);
+                    h.assertTrue(compte(s.poste().caisse, Items.GOLD_INGOT) == 1, "l'or à la caisse");
+                },
+                () -> fin(s.t()));
+    }
+
+    /** Relecture : en grève, il ne tient pas la boutique pour un chef qui ne le paie pas. */
+    @GameTest(template = "vide", timeoutTicks = 600, batch = "boutique")
+    public static void enGreveIlRefuse(GameTestHelper h) {
+        Scene s = scene(h, 387);
+        s.t().mode = Travailleur.Mode.GREVE;
+        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+                () -> s.t().parler(s.chef(), "Tiens la boutique"),
+                TestsIA.attendre(h, 10),
+                () -> h.assertTrue(!Boutiquier.tient(s.t()) && !Boutiquier.ouverte(s.t()), "pas de boutique en grève : " + vu(s)),
+                () -> fin(s.t()));
+    }
+
+    static long heureAvant = -1;
+
+    @BeforeBatch(batch = "boutique_nuit")
+    public static void laNuit(ServerLevel l) { heureAvant = l.getDayTime(); l.setDayTime(15000); }
+
+    @AfterBatch(batch = "boutique_nuit")
+    public static void auJour(ServerLevel l) { if (heureAvant >= 0) l.setDayTime(heureAvant); }
+
+    /** Relecture : la nuit, la boutique est fermée et il ne reste pas planté au poste (le cerveau ne l'y tient pas). */
+    @GameTest(template = "vide", timeoutTicks = 200, batch = "boutique_nuit")
+    public static void laNuitIlNeTientPasLePoste(GameTestHelper h) {
+        Scene s = scene(h, 386);
+        net.minecraft.nbt.CompoundTag e = s.t().memoire.getCompound(Boutiquier.CLE);
+        e.putBoolean("ouverte", true); // tenue (comme après « tiens la boutique »), sans attendre la parole du chef
+        s.t().memoire.put(Boutiquier.CLE, e);
+        h.succeedWhen(() -> {
+            h.assertTrue(Boutiquier.tient(s.t()) && !Boutiquier.ouverte(s.t()), "tenue, mais fermée la nuit : " + vu(s));
+            h.assertTrue(!Boutiquier.tenir(s.t()), "la nuit, le cerveau ne le garde pas au poste");
+            fin(s.t());
+        });
     }
 }

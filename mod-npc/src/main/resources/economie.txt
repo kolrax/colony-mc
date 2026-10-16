@@ -37,6 +37,7 @@
 #   boutique_ordre_prix    le chef fixe un prix : {objet} (son nom, sans article), {prix} pièces l'unité
 #   boutique_ordre_exclu   le chef lui dit de ne pas vendre {objet} (son nom, sans article)
 #   boutique_ordre_permis  {objet} est de nouveau à vendre (son nom, sans article)
+#   boutique_ordre_lot     le chef donne le prix d'un lot (« 20 torches pour 2 pièces ») : il demande celui d'une seule
 #   boutique_inconnu       le chef parle d'une marchandise qu'il ne connaît pas : {objet}, le mot dit
 #   vente_etal             il dit ce qu'il vend : {objet} est la liste (« pain à 1 pièce et steak à 3 pièces »)
 #   vente_absent           le client demande ce qu'il ne vend pas
@@ -201,7 +202,7 @@ colerique: Fermé ! Vous savez lire l'heure ?
 colerique: Encore fermé, chez {nom} ! Ça ouvre quand ?
 peureux: Pardon… c'est fermé. Ne m'en voulez pas.
 peureux: Fermé… Il est arrivé quelque chose à {nom} ?
-fourbe: Fermé. Mais pour un ami, on peut s'arranger.
+fourbe: Fermé. Reviens demain : j'aurai peut-être une affaire pour toi.
 fourbe: {nom} a fermé. Ça cache quelque chose.
 
 [paie_depensee]
@@ -349,6 +350,10 @@ fourbe: Dommage : {objet}, ça se vendait bien. Je n'y touche plus.
 [boutique_ordre_permis]
 Bien, {chef} : {objet}, de nouveau à vendre.
 Entendu : {objet}, je le remets à l'étal.
+
+[boutique_ordre_lot]
+Dis-moi le prix d'une seule, {chef} : « vends le pain à 2 pièces ».
+Pour un lot, je ne sais pas faire. Le prix d'une seule, {chef} ?
 
 [boutique_inconnu]
 Je ne sais pas ce que c'est, « {objet} », {chef}.
