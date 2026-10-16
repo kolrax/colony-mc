@@ -128,6 +128,8 @@ final class Courrier extends SavedData {
     long prochainId = 1;
     /** Ceux que chaque chef autorise à se servir au dépôt de son poste (« Nielscutt,Raoul ») : toute sa colonie le sait (GardeDepot). */
     final Map<UUID, String> permis = new HashMap<>();
+    /** Les guerres (Armee) : pour chaque chef, ses ennemis et leur pseudo, du plus ancien au plus récent ; toujours des deux côtés. */
+    final Map<UUID, LinkedHashMap<UUID, String>> guerres = new HashMap<>();
 
     static Courrier de(MinecraftServer s) {
         return s.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(Courrier::new, Courrier::charger), NOM);
@@ -197,6 +199,15 @@ final class Courrier extends SavedData {
             pe.add(x);
         });
         t.put("Permis", pe);
+        ListTag gu = new ListTag();
+        guerres.forEach((chef, m) -> m.forEach((ennemi, nom) -> {
+            CompoundTag x = new CompoundTag();
+            x.putUUID("chef", chef);
+            x.putUUID("ennemi", ennemi);
+            x.putString("nom", nom);
+            gu.add(x);
+        }));
+        t.put("Guerres", gu);
         return t;
     }
 
@@ -242,6 +253,10 @@ final class Courrier extends SavedData {
             c.vols.add(vo);
         }
         for (Tag x : t.getList("Permis", Tag.TAG_COMPOUND)) c.permis.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
+        for (Tag x : t.getList("Guerres", Tag.TAG_COMPOUND)) {
+            CompoundTag g = (CompoundTag) x;
+            c.guerres.computeIfAbsent(g.getUUID("chef"), k -> new LinkedHashMap<>()).put(g.getUUID("ennemi"), g.getString("nom"));
+        }
         return c;
     }
 
@@ -253,6 +268,32 @@ final class Courrier extends SavedData {
         String l = GardeDepot.changer(permis.get(chef), oui, non);
         if (l.isEmpty()) permis.remove(chef);
         else permis.put(chef, l);
+        setDirty();
+    }
+
+    // --- La guerre entre colonies (Guerre, Armee) -------------------------------------------------------
+
+    /** Les ennemis de ce chef (vide en paix) : une simple recherche dans une table, sans coût à chaque tick. */
+    Map<UUID, String> ennemis(UUID chef) {
+        Map<UUID, String> m = chef == null ? null : guerres.get(chef);
+        return m == null ? Map.of() : m;
+    }
+
+    boolean enGuerre(UUID a, UUID b) { return b != null && ennemis(a).containsKey(b); }
+
+    /** La guerre entre {@code a} et {@code b}, des deux côtés. */
+    void declarer(UUID a, String nomA, UUID b, String nomB) {
+        guerres.computeIfAbsent(a, k -> new LinkedHashMap<>()).put(b, nomB);
+        guerres.computeIfAbsent(b, k -> new LinkedHashMap<>()).put(a, nomA);
+        setDirty();
+    }
+
+    /** La paix entre {@code a} et {@code b}, des deux côtés (première passe : l'un des deux suffit). */
+    void paix(UUID a, UUID b) {
+        for (UUID[] x : new UUID[][]{{a, b}, {b, a}}) {
+            Map<UUID, String> m = guerres.get(x[0]);
+            if (m != null && m.remove(x[1]) != null && m.isEmpty()) guerres.remove(x[0]);
+        }
         setDirty();
     }
 

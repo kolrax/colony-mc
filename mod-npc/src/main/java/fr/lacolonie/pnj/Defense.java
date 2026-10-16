@@ -64,6 +64,8 @@ final class Defense {
         // Sans refuge, il ne recherche pas où fuir à chaque demi-seconde : toutes les 3 s au plus.
         if (caractere && t.action instanceof Actions.Attaquer a && Monde.hostile(a.cible) && faible(t) && Cerveau.parfois(t, "rompre", 3))
             return fuir(t, a.cible, DefaultRandomPos.getPosAway(t, 16, 7, a.cible.position()));
+        // En guerre, un ennemi chez nous : il le signale à la garde et s'écarte (Armee).
+        if (Armee.fuir(t)) return true;
         double vue = caractere ? Bravoure.vue(t.temperament) : VUE;
         // Une seule recherche : les monstres, et ses collègues tout proches (pour les secourir ou les envoyer à sa place).
         List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(vue, 3, vue),
@@ -435,11 +437,13 @@ final class Defense {
         Actions.Action ensuite = t.action instanceof Interposer i && i.agresseur == v ? i.ensuite
                 : t.mode == Travailleur.Mode.ATTENDRE ? new Actions.Aller(t.position(), 1) : null;
         boolean epargne = GardeChef.epargne(t.memoire.getString("epargnes"), v.getGameProfile().getName());
-        if (!epargne && GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE) {
+        boolean guerre = Armee.ennemis(t).containsKey(v.getUUID()); // le chef ennemi, en guerre : l'ordre est implicite
+        if (!epargne && (guerre || GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE)) {
             if (t.action instanceof Actions.Attaquer a && a.cible == v) return;
             if (!Besoins.dire(t, "depot_riposte", v.getGameProfile().getName())) t.dire("Pas un pas de plus avec notre bien. En garde !");
             Guerrier.armer(t);
             Actions.Attaquer x = new Actions.Attaquer(v).portee(DEPOT_VUE).tenir(lieu, LAISSE);
+            x.guerre = guerre;
             x.ensuite = ensuite;
             Cerveau.lancer(t, x);
             return;

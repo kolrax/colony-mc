@@ -768,6 +768,8 @@ public final class Actions {
         /** Au-delà, il laisse la cible (lancé par la veille ou la chasse de nuit : jusqu'au bout de l'espace de vie). */
         double portee = 32;
         net.minecraft.world.entity.player.Player garde;
+        /** Une attaque de guerre (Armee) : elle cesse à la paix. */
+        boolean guerre;
 
         Attaquer(LivingEntity cible) { super("attaquer"); this.cible = cible; mobile = true; }
 
