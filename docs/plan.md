@@ -66,10 +66,10 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Consigne de KOLRAX (14/10) : face aux monstres, chacun selon son caractère (colérique se bat, peureux fuit, fourbe s'éclipse ou envoie un collègue, calme se défend) (14/10, 0.9.28 : `Bravoure`, `Defense`)
 - [ ] Guerre entre colonies : déclaration ; un chef PNJ lève une armée (les guerriers, et des fermiers en renfort s'il le propose) ; attaque : casser, brûler, voler, mener la mission
 - [ ] Guerriers qui défendent le dépôt, sauf contre un joueur autorisé par le chef
-- [ ] Réaction quand on frappe le chef, selon les ordres donnés avant
+- [x] Réaction quand on frappe le chef, selon les ordres donnés avant
 
 ## 10. Construction (indispensable)
-- [ ] Maçon ou bâtisseur : construit un schéma placé par le joueur, avec les matériaux du dépôt
+- [x] Maçon ou bâtisseur : construit un schéma placé par le joueur, avec les matériaux du dépôt
 - [ ] KOLRAX importe ses propres schémas
 
 ## 11. Économie (indispensable selon ses notes)
