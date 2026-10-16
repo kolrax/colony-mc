@@ -289,7 +289,7 @@ final class Boutiquier {
         List<Marchandise> etal = etal(t, b);
         if (etal.isEmpty()) return texte(t, "vente_rupture", null, null, 0, "Je n'ai plus rien à vendre.");
         Boutique.Demande d = Boutique.demande(texte);
-        String f = d.catalogue() ? null : Consignes.filtre("", d.objet(), t);
+        String f = d.catalogue() || !connu(d.objet()) ? null : Consignes.filtre("", d.objet(), t);
         if (f == null) return catalogue(t, etal);
         Actions.Filtre fl = Actions.Filtre.de(f);
         Marchandise m = etal.stream().filter(x -> fl.objet(x.modele())).findFirst().orElse(null);
@@ -330,6 +330,16 @@ final class Boutiquier {
         }
         inv.setChanged();
         return s;
+    }
+
+    /** Le mot dit par le client est exactement le nom d'une marchandise connue (« pains », « pomme de terre »), pas un morceau de phrase. */
+    static boolean connu(String mot) {
+        if (Consignes.MOTS_OBJETS.containsKey(mot)) return true;
+        for (String nom : Consignes.NOMS.values()) {
+            String x = Ordres.normaliser(nom).strip();
+            if (x.equals(mot) || Souvenirs.nombre(2, x).substring(2).equals(mot)) return true;
+        }
+        return false;
     }
 
     /** Un affamé d'une autre colonie (Achats) : la nourriture qu'il trouverait à cette boutique, si elle est ouverte. */

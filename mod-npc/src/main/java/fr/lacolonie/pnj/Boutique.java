@@ -78,7 +78,12 @@ final class Boutique {
     static final Pattern EXCLURE = p(TETE + "(?:tu )?ne (?:vends|vend|vendez|vendras) (?:pas|plus|jamais|point|surtout pas|sous aucun pretexte|en aucun cas) "
             + ARTICLE + "?(.+?) $"
             + "|" + TETE + "(?:retire|retirez|enleve|enlevez|ote|otez) " + ARTICLE + "?(.+?) de (?:la vente|l etal|la boutique|ta boutique|ton etal) $"
-            + "|" + TETE + "(?:arrete|arretez|cesse|cessez) de vendre " + ARTICLE + "?(.+?) $");
+            + "|" + TETE + "(?:arrete|arretez|cesse|cessez) de vendre " + ARTICLE + "?(.+?) $"
+            // Sans « ne », comme on parle : « vends pas le pain » ; et « vends tout sauf le fer ».
+            + "|" + TETE + "(?:vends|vend|vendez) (?:pas|plus|jamais|point) " + ARTICLE + "?(.+?) $"
+            + "|" + TETE + "(?:vends|vend|vendez) (?:tout|de tout) (?:sauf|excepte|hormis|a part) " + ARTICLE + "?(.+?) $");
+    /** Une remise en vente ne se lit pas avec une restriction : « vends tout sauf le fer », « vends seulement le pain ». */
+    static final Pattern RESTRICTION = p(" (?:pas|plus|jamais|sauf|excepte|hormis|que|seulement|uniquement) ");
     /** « Vends aussi le fer », « tu peux vendre l'or », « remets le fer en vente », « vends tout ». */
     static final Pattern PERMETTRE = p(TETE + "(?:tu peux |tu pourras |je veux que tu )?(?:vends|vend|vendez|vendre|revends|revendre|remets en vente|mets en vente) "
             + "(?:aussi |de nouveau |a nouveau |encore |maintenant )?" + ARTICLE + "?(.+?) $"
@@ -140,12 +145,13 @@ final class Boutique {
         }
         m = EXCLURE.matcher(n);
         if (m.find()) {
-            String o = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3);
+            String o = null;
+            for (int g = 1; g <= m.groupCount() && o == null; g++) o = m.group(g);
             boolean un = false;
             for (String x : NI.split(o)) if (objet(x) != null) { lu.exclus.add(objet(x)); un = true; }
             return un;
         }
-        if (NEGATION.matcher(n).find()) return false;
+        if (NEGATION.matcher(n).find() || RESTRICTION.matcher(n).find()) return false; // « vends tout sauf le fer », « vends seulement le pain » : pas une remise en vente
         m = PERMETTRE.matcher(n);
         if (m.find()) {
             String o = objet(m.group(1) != null ? m.group(1) : m.group(2));
@@ -179,40 +185,40 @@ final class Boutique {
     /** Au plus autant d'objets d'un coup. */
     static final int MAX_ACHAT = 64;
 
-    /** Les formules d'achat explicites : seules elles (ou « 3 pains » tout court) font payer. */
-    static final Pattern ACHAT = p(" (?:je t achete|je vous achete|j achete|je prends|je prendrai|je voudrais|je veux|j aimerais"
+    /** Les formules d'achat explicites, en tête de phrase : seules elles (ou « 3 pains » tout court) font payer. */
+    static final Pattern ACHAT = p("^ (?:je t achete|je vous achete|j achete|je prends|je prendrai|je voudrais|je veux|j aimerais"
             + "|donne moi|donnez moi|vends moi|vendez moi|sers moi|servez moi) (.+?) $");
     /**
-     * Ce qui n'est jamais un achat, même avec un objet nommé : une négation (« pas de pain pour moi », « non merci »), « déjà »,
-     * un remerciement (« merci pour le pain »), le prix (« c'est combien le pain », « je voudrais savoir le prix »).
+     * Ce qui n'est jamais un achat, même avec un objet nommé : une négation (« pas de pain pour moi », « sans pain »), « déjà »,
+     * un remerciement (« merci pour le pain »), le prix (« c'est combien le pain », « le tarif »), un doute (« peut-être »,
+     * « si possible », « mais demain »), le gratuit.
      */
-    static final Pattern PAS_ACHAT = p(" (?:pas|non|nan|plus|jamais|rien|ne|n|deja|merci pour|merci de|combien|prix|savoir|coute|coutent|cher|chers|chere|cheres|vaut|valent) ");
-    static final Pattern POLITESSE = p(" (?:s il te plait|s il vous plait|stp|svp|merci|je te prie|je vous prie|mon ami|l ami|bonhomme|messire|marchand|vendeur|boutiquier|alors|donc|encore|bonjour|salut) ");
-    static final Pattern QUANTITE = p("^(?:" + NOMBRE + " )?(?:(?:un peu|quelques|un morceau|une part|une miche|une portion) (?:de |d )?)?" + ARTICLE + "?(.+?)$");
-    /** Une phrase nue d'achat : au plus autant de mots (« 3 pains », « du pain », « un steak »), le nombre en plus. */
-    static final int MOTS_NUS = 2;
+    static final Pattern PAS_ACHAT = p(" (?:pas|non|nan|plus|jamais|rien|ne|n|sans|aucun|aucune|deja|merci pour|merci de|combien|prix|tarif|tarifs|savoir"
+            + "|coute|coutent|cher|chers|chere|cheres|vaut|valent|gratuit|gratuite|gratuits|gratuitement|demain|peut etre|possible|mais) ");
+    static final Pattern POLITESSE = p(" (?:s il te plait|s il vous plait|stp|svp|merci|je te prie|je vous prie|bonjour|salut) ");
+    /** La part d'une sorte : « un peu de », « une part de ». */
+    static final String PART = "(?:un peu|un morceau|une part|une portion) (?:de |d )";
+    /** Le nom d'une marchandise : un mot, ou un mot de quelque chose de connu (« pomme de terre », « lingot de fer »). */
+    static final String NOM = "([a-z]+(?: (?:de|d) (?:terre|fer|or|cuivre|bois|chene|bouleau|sapin|porc|boeuf|mouton|lapin|ble|laine|morue|saumon)(?: cuite?s?)?)?)";
+    /** Après la formule : exactement un nombre ou un article, puis la marchandise ; rien d'autre (« le pain de Raoul », « ton pain » : non). */
+    static final Pattern APRES_FORMULE = p("^(?:" + NOMBRE + " |du |de la |de l |des |d |le |la |les |l |" + PART + ")?" + NOM + "$");
+    /** Une phrase nue : un nombre, ou « du / de la / des », puis la marchandise (« 3 pains », « du pain » ; pas « le pain », « beau pain »). */
+    static final Pattern NUE = p("^(?:" + NOMBRE + " |du |de la |de l |des |d |" + PART + ")" + NOM + "$");
 
     /**
-     * Lit ce que dit un client. Un achat seulement avec une formule explicite (« je t'achète 3 pains », « je veux du pain »,
-     * « donne-moi deux steaks ») ou une phrase nue d'un ou deux mots (« 3 pains », « du pain ») ; jamais une question, une
-     * négation, un remerciement ou une phrase sur le prix : on ne fait jamais payer quelqu'un qui se renseigne ou qui refuse.
-     * Tout le reste : la liste de l'étal, avec les prix.
+     * Lit ce que dit un client. Un achat seulement avec une formule explicite en tête (« je t'achète 3 pains », « je veux du
+     * pain », « donne-moi deux steaks ») suivie d'un nombre ou d'un article et de la marchandise, rien d'autre ; ou une phrase
+     * nue (« 3 pains », « du pain »). Jamais une question, une négation, un remerciement, une phrase sur le prix, un doute :
+     * on ne fait jamais payer quelqu'un qui se renseigne, qui hésite ou qui refuse. Tout le reste : la liste de l'étal.
      */
     static Demande demande(String texte) {
         String n = Ordres.normaliser(texte);
         if (texte.contains("?") || PAS_ACHAT.matcher(n).find()) return new Demande(null, 0);
         n = POLITESSE.matcher(n).replaceAll(" ").replaceAll("\\s+", " ");
+        if (n.isBlank()) return new Demande(null, 0);
         Matcher a = ACHAT.matcher(n);
-        if (a.find()) return quantite(a.group(1), 4);
-        return quantite(n.strip(), MOTS_NUS);
-    }
-
-    /** « 3 pains » : 3 « pains » ; au plus {@code mots} mots après le nombre (article compris), sinon la liste. */
-    private static Demande quantite(String s, int mots) {
-        Matcher q = QUANTITE.matcher(s.strip());
-        if (s.isBlank() || !q.matches()) return new Demande(null, 0);
-        String reste = s.strip().replaceFirst("^" + NOMBRE + " ", "");
-        if (reste.split(" ").length > mots) return new Demande(null, 0);
+        Matcher q = a.find() ? APRES_FORMULE.matcher(a.group(1).strip()) : NUE.matcher(n.strip());
+        if (!q.matches()) return new Demande(null, 0);
         int nb = q.group(1) == null ? 1 : nombre(q.group(1));
         String o = objet(q.group(2));
         if (o == null || nb <= 0) return new Demande(null, 0);

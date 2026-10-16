@@ -168,4 +168,33 @@ class BoutiqueTest {
         assertEquals(Obeissance.Peine.PENIBLE, Obeissance.peine(Ordres.lire("Tiens la boutique", "mineur"), "mineur", true).peine());
         assertNull(Boutique.regler(VALEURS, new int[]{0, 0, 0, 10_000}, new int[]{0, 0, 0, 0}, 100_000));
     }
+
+    /** 2e relecture (bloquant) : après la formule d'achat, seulement un nombre ou un article et la marchandise ; une phrase nue, seulement « 3 pains » ou « du pain ». */
+    @Test
+    void lAchatEstExactementUneFormuleEtUneMarchandise() {
+        for (String s : List.of("je veux juste regarder le pain", "je veux voir le pain", "je voudrais goûter ton pain", "je veux le tarif du pain",
+                "je veux te vendre du pain", "je veux te donner du pain", "je voudrais te rendre ton pain", "donne moi mon pain", "je prends le pain de Raoul",
+                "je prends le pain mais demain", "je voudrais un pain peut-être", "j'aimerais un pain si possible", "je veux du pain gratuit",
+                "donne-moi ton pain gratuitement", "sans pain", "aucun pain", "pain rassis", "mauvais pain", "beau pain", "le pain", "ton pain", "ce pain", "pain"))
+            assertTrue(Boutique.demande(s).catalogue(), "« " + s + " » ne doit rien acheter : " + Boutique.demande(s));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("je veux du pain"));
+        assertEquals(new Boutique.Demande("steaks", 2), Boutique.demande("donne-moi deux steaks"));
+        assertEquals(new Boutique.Demande("pains", 3), Boutique.demande("3 pains"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("je t'achète un pain"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("Je t'achète un pain, s'il te plaît"));
+        assertEquals(new Boutique.Demande("pommes de terre", 4), Boutique.demande("Je prends 4 pommes de terre"));
+        assertEquals(new Boutique.Demande("pain", 1), Boutique.demande("Je voudrais un peu de pain"));
+    }
+
+    /** 2e relecture : « vends pas le pain » exclut (sans « ne »), « vends tout sauf le fer » n'exclut que le fer et ne remet rien en vente. */
+    @Test
+    void vendsPasEtSauf() {
+        Boutique.Lu l = Boutique.lire("Vends pas le pain");
+        assertEquals(List.of("pain"), l.exclus);
+        assertTrue(l.permis.isEmpty());
+        l = Boutique.lire("Vends tout sauf le fer");
+        assertEquals(List.of("fer"), l.exclus);
+        assertTrue(l.permis.isEmpty(), "rien remis en vente : " + l.permis);
+        assertTrue(Boutique.lire("Vends seulement le pain").permis.isEmpty());
+    }
 }
