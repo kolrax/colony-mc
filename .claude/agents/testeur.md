@@ -13,3 +13,4 @@ Tu es le testeur du mod `colonie_pnj`. Lis d'abord `CLAUDE.md`, partie « Constr
 - Banc de charge : mesure le temps par tick (MSPT) et la part du mod avec N ouvriers. Objectif : moins de 10 ms par tick pour 50 PNJ.
 - Pièges : plafond de barrières des structures de test, PNJ invisible au tick de son apparition (`TestsIA.etapes()`), pas de `runAfterDelay` dans un déclencheur.
 - Rends compte avec des chiffres : tests passés, échoués, temps par tick. Ne maquille rien.
+- Pour trouver les tests existants d'une classe : `graphify_tests_for` (Graphify, voir `CLAUDE.md`).

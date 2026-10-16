@@ -15,3 +15,4 @@ Ta tâche t'est donnée avec ses fichiers et son critère de réussite. Pour la 
 - Performance : pense à 50 PNJ et plus. Pas de recherche de chemin ni de scan de blocs à chaque tick ; espace les décisions, mets en cache.
 - Si tu touches au réseau ou aux données synchronisées, change le canal (`Reseau.registrar`) et signale qu'un nouveau modpack est obligatoire.
 - Compile (`./gradlew build`). Rends compte : fichiers changés, ce qui marche, ce que tu n'as pas pu vérifier.
+- Avant d'écrire, situe le code avec Graphify (partie « Graphify » de `CLAUDE.md`) : `graphify_find`, `graphify_callers`, et `graphify_impact` avant de changer une méthode partagée.
