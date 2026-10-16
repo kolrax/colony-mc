@@ -140,6 +140,36 @@ final class Messages {
         t("coffre_plein", "colerique", "Le coffre {0} est plein ! J'ai porté cette charge pour rien. Vide-le, ou donne-m'en un autre !");
         t("coffre_plein", "peureux", "Le coffre {0} est plein… J'ai rapporté ce que je portais. Dis-moi quoi faire, s'il te plaît.");
 
+        m("materiau_manque", "Il me manque des matériaux",
+                "Pour l'ouvrage « {1} », il me manque {0} : il m'en faudrait encore {2} au moins. Le chantier attend ; dès qu'il y en a au dépôt, je reprends.",
+                "Plus de {0} au dépôt, et l'ouvrage « {1} » en réclame encore ({2} au moins). Je pose mes outils en attendant.",
+                "Le chantier « {1} » est à l'arrêt faute de {0}. Mets-en au dépôt, et je m'y remets.",
+                "Le dépôt n'a plus de quoi continuer l'ouvrage « {1} » : il me manque {0}, {2} au moins. Je garde le chantier en l'état et je reprends dès que le dépôt est garni.");
+        t("materiau_manque", "colerique", "On ne bâtit pas avec du vent ! Il me faut {0} pour l'ouvrage « {1} », et le dépôt est vide.",
+                "On ne bâtit pas avec des souhaits ! Il me faut {0} pour l'ouvrage « {1} », {2} au moins, et le dépôt n'en a plus. Remplis-le, qu'on en finisse.");
+        t("materiau_manque", "peureux", "Pardon de te déranger… il me manque {0} pour l'ouvrage « {1} ». J'attends au poste.",
+                "Je n'ose pas trop insister… mais l'ouvrage « {1} » attend {0}, {2} au moins. Je ne touche à rien tant qu'il n'y en a pas au dépôt.");
+        m("chantier_fini", "Le chantier est fini",
+                "L'ouvrage « {0} » est bâti, comme sur le plan. Viens voir !{1}",
+                "J'ai posé la dernière pierre de l'ouvrage « {0} ». Ce qui me restait est rangé au dépôt.{1}",
+                "Bonne nouvelle : l'ouvrage « {0} » est debout. Les matériaux en trop sont retournés au dépôt.{1}");
+        t("chantier_fini", "colerique", "L'ouvrage « {0} » est fini, et il tient ! Qu'on n'aille pas me dire que j'ai traîné.{1}");
+        t("chantier_fini", "peureux", "J'ai fini l'ouvrage « {0} »… J'ai tout vérifié deux fois. J'espère qu'il te plaira.{1}");
+        m("chantier_gene", "Quelque chose gêne le chantier",
+                "Sur le chantier « {0} », un ouvrage qui n'est pas de moi occupe une place du plan, en {1}. Je n'y touche pas : je laisse cette place.",
+                "Une construction gêne l'ouvrage « {0} », en {1}. Ce n'est pas à moi de la défaire : je bâtis autour.",
+                "Une construction qui n'est pas de moi se trouve sur le plan de l'ouvrage « {0} », en {1}. Je ne défais pas l'ouvrage d'un autre : je laisse cette place et je continue le reste.");
+        t("chantier_gene", "colerique", "Quelqu'un a bâti en plein sur mon chantier « {0} », en {1} ! Je n'y touche pas, mais l'ouvrage aura un trou à cet endroit. Arrange ça.");
+        t("chantier_gene", "peureux", "Il y a quelque chose qui n'est pas à moi sur le chantier « {0} », en {1}. Je n'ose pas y toucher. Je bâtis autour, si tu veux bien.");
+        m("chantier_arbre", "Un arbre gêne le chantier",
+                "Un arbre pousse sur le plan de l'ouvrage « {0} », en {1}. Abattre, c'est l'affaire du bûcheron : je laisse cette place et je bâtis le reste.",
+                "Sur le chantier « {0} », un arbre occupe une place du plan, en {1}. Fais-le abattre, et je reviendrai la faire.");
+        m("schema_perdu", "Je ne trouve plus le plan",
+                "Le plan de l'ouvrage « {0} » a disparu, ou je ne sais plus le lire. J'arrête ce chantier.",
+                "Je ne retrouve plus le plan de l'ouvrage « {0} ». Sans lui, je ne sais plus quoi poser : le chantier s'arrête. Ce qui est bâti reste en place.");
+        t("schema_perdu", "colerique", "Le plan de l'ouvrage « {0} » a disparu ! Je ne bâtis pas à l'aveugle : j'arrête ce chantier.");
+        t("schema_perdu", "peureux", "Pardon, chef… je ne trouve plus le plan de l'ouvrage « {0} ». Je préfère m'arrêter plutôt que de mal bâtir.");
+
         m("coffre_introuvable", "Je ne trouve pas le coffre",
                 "Je ne trouve plus le coffre {0}. Il a été cassé ou déplacé ? Montre-moi le nouveau.",
                 "J'ai fait le chemin jusqu'au coffre {0}, mais il n'y est plus. Je ne peux ni prendre ni déposer.");

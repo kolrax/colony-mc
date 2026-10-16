@@ -361,7 +361,8 @@ final class Adressage {
             Map.entry("pecheur", "pêche au bord de l'eau avec une canne et rapporte morues, saumons et autres poissons ; va pêcher, pêche à l'endroit montré"),
             Map.entry("eleveur", "élève vaches, moutons, cochons, poules ; rapporte cuir, laine, viande, œufs, lait ; nourrit les bêtes, tond les moutons, abat les bêtes en trop"),
             Map.entry("chasseur", "chasse le gibier sauvage à l'arc : lapins, cochons, vaches, moutons, poules hors des enclos ; rapporte viande, cuir, plumes"),
-            Map.entry("transporteur", "porte les marchandises d'un coffre à l'autre, ou d'un coffre au dépôt, sur les trajets montrés par le chef, en boucle"));
+            Map.entry("transporteur", "porte les marchandises d'un coffre à l'autre, ou d'un coffre au dépôt, sur les trajets montrés par le chef, en boucle"),
+            Map.entry("macon", "maçon, bâtisseur : construit d'après un plan (schéma) une maison, une cabane, une tour, à l'endroit montré, avec les matériaux du dépôt"));
 
     /** Une étiquette par ouvrier : son prénom (avec son métier si deux ouvriers ont le même). */
     static List<String> etiquettes(Situation s) {

@@ -597,7 +597,7 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
-                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") ? "Sans mission"
+                    : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") && !metier.equals("macon") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
         };
     }
@@ -976,7 +976,8 @@ public class Travailleur extends PathfinderMob {
 
     void finirAction(String r) {
         // Arrivé où il allait : un vrai progrès. Échoué à y aller : le temps « coincé » compte, même à l'arrêt (Coince).
-        if ("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) coince.echec(level().getGameTime());
+        if (("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) && !(action instanceof Actions.Casser k && k.chantier))
+            coince.echec(level().getGameTime());
         else if ("ok".equals(r) && action != null && action.aMarche()
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());
@@ -1998,6 +1999,8 @@ public class Travailleur extends PathfinderMob {
             case "attaquer" -> "Je me bats !";
             case "fuir" -> "Je fuis un danger !";
             case "poser" -> "Je pose des blocs.";
+            case "batir" -> "Je bâtis, pierre après pierre.";
+            case "approvisionner" -> "Je prends de quoi bâtir au dépôt.";
             case "ramasser" -> "Je ramasse ce qui traîne.";
             default -> "Je m'occupe.";
         };
@@ -2035,6 +2038,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
     void licencier() {
+        Macon.oublier(this); // son chantier était celui de ce chef-là
         Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
         chef = null;
@@ -2108,6 +2112,7 @@ public class Travailleur extends PathfinderMob {
         }
         // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
         Transporteur.oublier(this);
+        Macon.oublier(this);
         memoire.remove("champs");
         memoire.remove("plants_laisses");
         Fermier.TOURS.remove(this);

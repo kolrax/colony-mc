@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 final class Vie {
     private Vie() {}
 
-    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort");
+    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan"); // {plan} : l'ouvrage du maçon (macon.txt)
     static final Pattern CLE = Pattern.compile("\\[([a-z0-9_]+)]");
     /** Un préfixe en tête de réplique : « mot: texte ». Le mot doit être un tempérament connu. */
     static final Pattern PREFIXE = Pattern.compile("([a-z]+): (.*)");
@@ -42,6 +42,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/defense.txt"), e -> System.err.println("[colonie_pnj] Section de defense.txt ignorée : " + e.getMessage())));
         // Quand on frappe le chef, et ses ordres à ce sujet (lot 9, GardeChef) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/chef.txt"), e -> System.err.println("[colonie_pnj] Section de chef.txt ignorée : " + e.getMessage())));
+        // Le maçon et ses chantiers (lot 10) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/macon.txt"), e -> System.err.println("[colonie_pnj] Section de macon.txt ignorée : " + e.getMessage())));
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */

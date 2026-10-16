@@ -330,6 +330,8 @@ public final class Actions {
         /** Où il se met pour casser un bloc qui a du gravier ou du sable au-dessus, sans l'avoir sur la tête. */
         BlockPos cote;
         int bouchons, aCote;
+        /** Un bloc du chantier du maçon : hors d'atteinte, ce n'est pas être coincé ({@code Travailleur.finirAction}). */
+        boolean chantier;
 
         Casser(BlockPos pos) { super("casser"); this.pos = pos; }
 

@@ -110,6 +110,7 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
             ReglagesIA.charger();
+            Macon.preparerDossier();
             IA.DEPENSES = DepensesIA.charger(Reglages.dossier().resolve("depenses-ia.json"));
             chargerIncompris();
             PanneauWeb.demarrer(e.getServer());

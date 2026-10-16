@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Remarques spontanées, humour devant l'impossible, réactions selon le caractère (lot 7, remarques.txt). */
 class RemarquesTest {
-    static final List<String> METIERS = List.of("mineur", "bucheron", "guerrier", "fermier", "eleveur", "pecheur", "chasseur", "cuisinier", "transporteur", "guerisseur");
+    static final List<String> METIERS = List.of("mineur", "bucheron", "guerrier", "fermier", "eleveur", "pecheur", "chasseur", "cuisinier", "transporteur", "guerisseur", "macon");
 
     @Test
     void leFichierSeLit() {

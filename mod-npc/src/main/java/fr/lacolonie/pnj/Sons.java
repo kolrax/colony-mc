@@ -45,6 +45,12 @@ final class Sons {
         jouer(t, Cadence.Genre.COUP, p, s.getHitSound(), (s.getVolume() + 1) / 8, s.getPitch() * 0.5f);
     }
 
+    /** Le maçon pose un bloc : le bruit que le jeu fait entendre au joueur qui le pose. */
+    static void pose(Travailleur t, BlockPos p, BlockState st) {
+        SoundType s = st.getSoundType(t.level(), p, t);
+        jouer(t, Cadence.Genre.COUP, p, s.getPlaceSound(), (s.getVolume() + 1) / 2, s.getPitch() * 0.8f);
+    }
+
     /** Un coup d'arme : fort s'il touche, faible s'il manque. */
     static void frappe(Travailleur t, boolean touche) {
         jouer(t, Cadence.Genre.FRAPPE, touche ? SoundEvents.PLAYER_ATTACK_STRONG : SoundEvents.PLAYER_ATTACK_WEAK, 0.8f, 1);

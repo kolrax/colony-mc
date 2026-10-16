@@ -35,7 +35,7 @@
 #   Colonie :  remarque_nouveau_collegue ({nom} : le nouvel embauché), remarque_jour_paie (paie reçue)
 #   Métier :   remarque_mineur, remarque_bucheron, remarque_guerrier, remarque_fermier, remarque_eleveur,
 #              remarque_pecheur, remarque_chasseur, remarque_cuisinier (aussi boulanger), remarque_transporteur,
-#              remarque_guerisseur (dites au travail, selon le métier de l'ouvrier)
+#              remarque_guerisseur, remarque_macon (dites au travail, selon le métier de l'ouvrier)
 #
 # 2. HUMOUR DEVANT L'IMPOSSIBLE (cahier 14.9 : « il en rit, fait une blague »)
 # Réponse au chef qui demande l'impossible. Il refuse en riant, sans obéir.
@@ -414,6 +414,24 @@ calme: On ne guérit pas en un jour. Il faut du repos.
 peureux: J'ai horreur du sang… C'est embêtant, pour mon métier.
 fourbe: Mes remèdes ? Le secret, c'est de ne jamais dire ce qu'il y a dedans.
 colerique: Encore une blessure ? Faites attention, à la fin !
+
+[remarque_macon]
+Une pierre, puis une autre. C'est tout le secret du métier.
+Un mur droit, ça se voit de loin. Un mur penché aussi.
+Le plan dit ici. Alors ce sera ici.
+Couche par couche. On ne pose pas le toit avant les murs.
+Ce qu'on bâtit aujourd'hui, nos enfants l'habiteront.
+J'ai de la poussière de pierre jusque dans les cheveux.
+Encore un aller au dépôt, et je reprends la rangée.
+Une maison, c'est des murs, un toit, et beaucoup de patience.
+calme: Pas besoin de courir. Un mur bien fait tient cent ans.
+calme: Je regarde le plan, je pose la pierre. Et je recommence.
+peureux: Pourvu que ça tienne, là-haut… Je ne regarde pas en bas.
+peureux: Et si je me trompais de pierre ? Non. Je recompte.
+fourbe: Une pierre de moins dans le mur, personne ne la verra jamais.
+fourbe: Les beaux ouvrages, on se souvient de qui les a bâtis. Moi.
+colerique: Qui a mis cette pierre de travers ? Ah. C'était moi.
+colerique: Ce mur va tenir, que ça lui plaise ou non !
 
 # ============================================================
 # 2. HUMOUR DEVANT L'IMPOSSIBLE (réponse au chef)
