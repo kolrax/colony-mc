@@ -61,20 +61,8 @@ public class TestsChasseur {
         });
     }
 
-    static long heureAvant;
-
-    /**
-     * Le chasseur ne chasse que de jour : ce test tombait la nuit quand l'ordre des lots changeait (ajout du lot « economie »,
-     * 16/10). Son lot à lui le met au matin.
-     */
-    @net.minecraft.gametest.framework.BeforeBatch(batch = "chasse_jour")
-    public static void avantJour(ServerLevel l) { heureAvant = l.getDayTime(); l.setDayTime(1000); }
-
-    @net.minecraft.gametest.framework.AfterBatch(batch = "chasse_jour")
-    public static void apresJour(ServerLevel l) { l.setDayTime(heureAvant); }
-
     /** Quatre cochons dans un enclos : ce ne sont pas du gibier. Il n'y touche pas, et écrit qu'il n'y a pas de gibier. */
-    @GameTest(template = "vide", timeoutTicks = 1200, batch = "chasse_jour")
+    @GameTest(template = "vide", timeoutTicks = 1200)
     public static void laisseLesBetesDUnEnclos(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = seul(h, 171, b, true);

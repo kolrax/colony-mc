@@ -21,6 +21,12 @@ import java.util.List;
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsJeu {
+    /**
+     * Chaque lot par défaut (50 tests au plus) commence au matin : l'heure du monde dérive d'un lot à l'autre, et l'ordre des
+     * lots change quand on en ajoute un (16/10 : avec le lot « economie », le chasseur et le fourbe tombaient la nuit).
+     */
+    @net.minecraft.gametest.framework.BeforeBatch(batch = "defaultBatch")
+    public static void auMatin(ServerLevel l) { l.setDayTime(1000); }
 
     static Travailleur ouvrier(GameTestHelper h, String metier, int x, int y, int z, ItemStack outil) {
         return ouvrier(h, metier, x, y, z, outil, new BlockPos(0, 2, 0));
