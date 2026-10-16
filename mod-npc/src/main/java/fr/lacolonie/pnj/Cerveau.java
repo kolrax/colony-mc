@@ -230,6 +230,9 @@ final class Cerveau {
             return;
         }
 
+        // Il tient la boutique de son chef (Boutiquier) : de jour, il reste au poste et vend ; ses missions attendent.
+        if (Boutiquier.tenir(t)) return;
+
         // Ses missions : la première qui n'est pas remplie.
         t.nettoyerMissions();
         Travailleur.Mission mission = t.missionActive();

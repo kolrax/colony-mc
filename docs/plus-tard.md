@@ -99,6 +99,21 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Le marchandage est décidé par l'acheteur seul (le caractère du vendeur ne compte pas encore) ; pas de refus « trop cher » (`achat_refuse_cher` pas dit).
 - Le chef peut toujours prendre les pièces dans le sac de son ouvrier (écran du sac) : rien ne l'en empêche ni ne le compte comme un vol.
 - Non mesuré avec 50 ouvriers affamés en même temps (la recherche est bornée à 32 blocs et à une fois toutes les 3 minutes par ouvrier).
+
+## Boutiques (lot 11, première passe du 16/10)
+- Côté serveur seulement : pas d'écran de boutique ni de paquet nouveau. Le client parle au boutiquier dans la fenêtre de conversation de l'ouvrier (clic droit), qui montre à cet étranger la fiche de l'ouvrier (faim, vie, état, lieu) comme à son chef : à réduire quand on touchera au client (relecture, point 7). Le chat public et le micro ne vont pas encore à la boutique.
+- Un client ne paie qu'avec une formule claire (« je t'achète », « je veux », « donne-moi », « vends-moi »…) ou une phrase nue de deux mots (« 3 pains ») ; toute négation, « déjà », « merci pour », le prix : la liste, sans payer. Une demande par seconde et par joueur. « Tu me vends 2 pains ? » (question) montre la liste au lieu de vendre.
+- Le prix d'un lot (« vends 20 torches pour 2 pièces ») n'est pas compris : il demande le prix d'une seule.
+- Achat (2e relecture) : après la formule, seulement un nombre ou un article et la marchandise (« je veux du pain », « je prends 4 pommes de terre ») ; « je veux du pain blanc », « donne-moi le pain de Raoul », « pain » tout seul montrent la liste. Le mot doit être exactement un nom connu (`Consignes.MOTS_OBJETS` ou `Consignes.NOMS`, pluriel compris) : un objet sans nom français connu ne s'achète pas encore par son nom.
+- Restes mineurs de la 2e relecture non traités : voir le compte rendu de la branche `boutiques` (16/10, 22 h UTC).
+- Par défaut seule la nourriture se vend (prix de la table `prix`, ou 1 pièce par 3 points de nourriture) : tout autre objet attend que le chef lui donne un prix (« vends le fer à 5 pièces »). Les outils, armes et armures ne se vendent jamais, même en trop (« en service » pas distingué) ; potions, objets enchantés ou nommés non plus.
+- Une seule marchandise par demande (« je veux 3 pains et 2 steaks » : seulement les pains), pas de marchandage avec un joueur, pas de « trop cher ». Les prix sont gardés avec l'ouvrier (renvoyé : oubliés) ; deux boutiquiers du même chef ont chacun leurs prix.
+- Une caisse pleine (9 cases) : les pièces en trop vont dans le sac du boutiquier (jamais perdues, mais le chef doit les y chercher).
+- La nuit, le boutiquier n'est plus tenu au poste : il fait sa nuit comme les autres (ou son travail si ses horaires vont jour et nuit).
+- La lettre `lettre_boutique_vide` d'economie.txt est écrite du point de vue d'un client (« Rien chez {nom}. J'y retournerai demain. ») : la lettre au chef utilise un texte à elle (`Messages`, `boutique_vide`). `vente_propose` (crier sa marchandise) n'est pas encore dit.
+- Un boutiquier qui garde son poste de jour ne fait plus son métier ; « tous les jours de 8 h à 12 h, tiens la boutique » (règle à horaire) n'est pas compris.
+- Non mesuré avec 50 PNJ : l'étal (dépôt, coffres collés, réserve) n'est lu qu'à une vente, une question, un clic ou une fois par minute par boutiquier ; un affamé le lit pour chaque boutiquier à 32 blocs, une fois toutes les 3 minutes au plus.
+
 - Économie, relecture du 16/10 soir (mineurs non corrigés) : pièces ou part achetée au sol si le sac est plein (paie avant « sac plein » dans `Cerveau`) ; une pièce mal tapée dans `reglages.json` peut disparaître de la monnaie rendue ; il n'achète qu'une part (parfois 1 point de nourriture), puis attend 3 minutes ; le vendeur peut vendre ce qu'il garde pour travailler (viande crue du cuisinier, carottes de l'éleveur) ; le transporteur paie avec les pièces qu'il transporte ; « achat_pas_assez » dit même si le vendeur est à 32 blocs ; textes : « On travaille pour la même colonie » dit aussi au voisin, « Rupture. », « tes 1 pièce », « un peu de pomme » ; l'accord du chef vendeur pour vendre son dépôt aux voisins (tranché : permis, mais le dépôt garde toujours 2 parts ; jamais à un ennemi).
 
 ## Coût selon la taille de la colonie (lot 11, première passe du 16/10)

@@ -303,20 +303,25 @@ public final class Bureau {
             return true;
         }
 
-        public int compter(Actions.Filtre f) {
-            long n = reserve.compter(f::objet);
-            for (int i = 0; i < depot.getContainerSize(); i++) if (f.objet(depot.getItem(i))) n += depot.getItem(i).getCount();
+        public int compter(Actions.Filtre f) { return compter(f::objet); }
+
+        /** Combien d'objets de ce genre au dépôt (bureau, coffres voisins, réserve) ; la boutique compte une marchandise exacte. */
+        int compter(java.util.function.Predicate<ItemStack> f) {
+            long n = reserve.compter(f);
+            for (int i = 0; i < depot.getContainerSize(); i++) if (f.test(depot.getItem(i))) n += depot.getItem(i).getCount();
             for (IItemHandler h : voisins())
-                for (int i = 0; i < h.getSlots(); i++) if (f.objet(h.getStackInSlot(i))) n += h.getStackInSlot(i).getCount();
+                for (int i = 0; i < h.getSlots(); i++) if (f.test(h.getStackInSlot(i))) n += h.getStackInSlot(i).getCount();
             return (int) Math.min(n, Integer.MAX_VALUE);
         }
 
         /** Prend jusqu'à n objets au dépôt (puis dans les coffres voisins). */
-        public List<ItemStack> prendre(Actions.Filtre f, int n) {
+        public List<ItemStack> prendre(Actions.Filtre f, int n) { return prendre(f::objet, n); }
+
+        List<ItemStack> prendre(java.util.function.Predicate<ItemStack> f, int n) {
             List<ItemStack> pris = new ArrayList<>();
             for (int i = 0; i < depot.getContainerSize() && n > 0; i++) {
                 ItemStack s = depot.getItem(i);
-                if (!f.objet(s)) continue;
+                if (s.isEmpty() || !f.test(s)) continue;
                 ItemStack part = s.split(Math.min(n, s.getCount()));
                 n -= part.getCount();
                 pris.add(part);
@@ -324,13 +329,13 @@ public final class Bureau {
             depot.setChanged();
             for (IItemHandler h : voisins())
                 for (int i = 0; i < h.getSlots() && n > 0; i++) {
-                    if (!f.objet(h.getStackInSlot(i))) continue;
+                    if (h.getStackInSlot(i).isEmpty() || !f.test(h.getStackInSlot(i))) continue;
                     ItemStack part = h.extractItem(i, n, false);
                     n -= part.getCount();
                     if (!part.isEmpty()) pris.add(part);
                 }
             if (n > 0 && !reserve.vide()) {
-                for (Reserve.Tas<ItemStack> x : reserve.prendre(f::objet, n)) piles(x, pris);
+                for (Reserve.Tas<ItemStack> x : reserve.prendre(f, n)) piles(x, pris);
                 setChanged();
             }
             return pris;

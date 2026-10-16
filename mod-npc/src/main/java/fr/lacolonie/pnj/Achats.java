@@ -81,13 +81,16 @@ final class Achats {
         Travailleur vendeur = null;
         double meilleur = Double.MAX_VALUE;
         for (Travailleur v : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(d),
-                v -> v != t && v.isAlive() && !v.aTerre && VENDEURS.contains(v.metier) && v.distanceToSqr(t) <= d * d && !ennemi(t, v))) {
-            if (v.distanceToSqr(t) < meilleur && stock(v, t) != null) { meilleur = v.distanceToSqr(t); vendeur = v; }
+                v -> v != t && v.isAlive() && !v.aTerre && (VENDEURS.contains(v.metier) || Boutiquier.tient(v)) && v.distanceToSqr(t) <= d * d && !ennemi(t, v))) {
+            // Un boutiquier ouvert vend aussi à manger, au prix de son chef (Boutiquier).
+            if (v.distanceToSqr(t) < meilleur && (Boutiquier.manger(v) != null || VENDEURS.contains(v.metier) && stock(v, t) != null)) { meilleur = v.distanceToSqr(t); vendeur = v; }
         }
         if (vendeur == null) return false;
-        Container c = stock(vendeur, t);
-        ItemStack s = c.getItem(etal(c));
-        int prix = prix(s);
+        Boutiquier.Marchandise m = Boutiquier.manger(vendeur);
+        ItemStack s;
+        int prix;
+        if (m != null) { s = m.modele(); prix = m.prix(); }
+        else { Container c = stock(vendeur, t); s = c.getItem(etal(c)); prix = prix(s); }
         if (Reglages.valeur(t.inventaire) < prix) {
             if (Cerveau.parfois(t, "achat_pas_assez", 600)) dire(t, "achat_pas_assez", vendeur.prenom, objet(s), prix);
             return false;
@@ -137,6 +140,8 @@ final class Achats {
      * sac du vendeur (ou à la caisse du poste, si la part vient du dépôt). Faux si rien ne s'est vendu.
      */
     static boolean conclure(Travailleur t, Travailleur v) {
+        Boutiquier.Marchandise m = ennemi(t, v) ? null : Boutiquier.manger(v);
+        if (m != null) return Boutiquier.vendreAPnj(t, v, m); // sa boutique : le dépôt de son chef, au prix du chef
         Container c = ennemi(t, v) ? null : stock(v, t);
         if (c == null) { dire(v, "vente_rupture", t.prenom, null, 0); return false; }
         int i = etal(c);

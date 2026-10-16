@@ -45,6 +45,13 @@ final class Messages {
         t("faim", "colerique", "Je crève de faim ! On ne travaille pas le ventre vide : mets de quoi manger au dépôt.");
         t("faim", "fourbe", "Un ouvrier bien nourri est un ouvrier loyal, n'est-ce pas ? Il me faudrait de quoi manger.");
 
+        // La boutique (Boutiquier) : de la routine, une fois par jour au plus.
+        m("boutique_vide", "Ma boutique est vide",
+                "Ma boutique est vide : il n'y a plus rien à vendre au dépôt. Remplis-le, et l'étal reprendra.",
+                "Plus rien à vendre au poste. Tant que le dépôt reste vide, l'étal aussi.");
+        t("boutique_vide", "colerique", "L'étal est vide ! Je ne vends pas du vent : remplis le dépôt.");
+        t("boutique_vide", "fourbe", "Les clients repartent les mains vides, et leurs pièces avec. Un dépôt garni rapporterait gros.");
+
         m("pioche", "Il me faut une pioche",
                 "Je n'ai pas de pioche : je ne peux pas miner. Laisse-m'en une au dépôt, ou donne-la-moi en main propre.",
                 "Sans pioche, je reste les bras croisés. Il m'en faut une.",
