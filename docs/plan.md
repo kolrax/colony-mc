@@ -64,19 +64,19 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 9. Défense et guerre (indispensable)
 - [x] Défense de la colonie contre les monstres ; les ouvriers s'éloignent d'un creeper et préviennent le guerrier ; la nuit dehors, ils campent et se cachent (14/10, 0.9.27, première passe : `Defense`, `Abri`, `defense.txt` ; restes dans plus-tard.md)
 - [x] Consigne de KOLRAX (14/10) : face aux monstres, chacun selon son caractère (colérique se bat, peureux fuit, fourbe s'éclipse ou envoie un collègue, calme se défend) (14/10, 0.9.28 : `Bravoure`, `Defense`)
-- [ ] Guerre entre colonies : déclaration ; un chef PNJ lève une armée (les guerriers, et des fermiers en renfort s'il le propose) ; attaque : casser, brûler, voler, mener la mission
+- [x] Guerre entre colonies : déclaration ; un chef PNJ lève une armée (les guerriers, et des fermiers en renfort s'il le propose) ; attaque : casser, brûler, voler, mener la mission
 - [x] Guerriers qui défendent le dépôt, sauf contre un joueur autorisé par le chef
 - [x] Réaction quand on frappe le chef, selon les ordres donnés avant
 
 ## 10. Construction (indispensable)
 - [x] Maçon ou bâtisseur : construit un schéma placé par le joueur, avec les matériaux du dépôt
-- [ ] KOLRAX importe ses propres schémas
+- [x] KOLRAX importe ses propres schémas (déjà couvert par le maçon : `.nbt` dans `config/colonie_pnj/schemas/` ou envoi par la table à schémas de Create)
 
 ## 11. Économie (indispensable selon ses notes)
 - [ ] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux
 - [ ] Boutiques ; argent physique = pièces Numismatics existantes
 - [ ] Coût : un débutant peut payer 2 ou 3 PNJ, un joueur très riche une trentaine
-- [ ] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
+- [x] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
 
 ## 12. Create (indispensable)
 - [ ] Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ; ils sont la main-d'œuvre de l'industrie

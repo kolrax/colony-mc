@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 final class Vie {
     private Vie() {}
 
-    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "prix"); // {plan} : l'ouvrage du maçon (macon.txt) ; {prix} : economie.txt
+    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "prix", "ennemi"); // {plan} : l'ouvrage du maçon (macon.txt) ; {prix} : economie.txt ; {ennemi} : le chef ennemi (guerre.txt)
     static final Pattern CLE = Pattern.compile("\\[([a-z0-9_]+)]");
     /** Un préfixe en tête de réplique : « mot: texte ». Le mot doit être un tempérament connu. */
     static final Pattern PREFIXE = Pattern.compile("([a-z]+): (.*)");
@@ -44,6 +44,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/chef.txt"), e -> System.err.println("[colonie_pnj] Section de chef.txt ignorée : " + e.getMessage())));
         // Le dépôt du poste : qui s'y sert, et les ordres du chef à ce sujet (lot 9, GardeDepot) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/depot.txt"), e -> System.err.println("[colonie_pnj] Section de depot.txt ignorée : " + e.getMessage())));
+        // La guerre entre colonies (lot 9, Guerre, Armee) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/guerre.txt"), e -> System.err.println("[colonie_pnj] Section de guerre.txt ignorée : " + e.getMessage())));
         // Le maçon et ses chantiers (lot 10) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/macon.txt"), e -> System.err.println("[colonie_pnj] Section de macon.txt ignorée : " + e.getMessage())));
         // Achats et ventes entre PNJ (lot 11, Achats) : même format.

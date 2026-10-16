@@ -60,6 +60,7 @@ final class Besoins {
         if (objet != null) v.put("objet", objet);
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
+        if (t.memoire.contains("guerre_nom")) v.put("ennemi", t.memoire.getString("guerre_nom")); // le chef ennemi (Armee)
         if (t.memoire.contains("deuil_nom")) v.put("mort", t.memoire.getString("deuil_nom")); // deuil_tristesse (Humeur.deuil)
         return Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
     }

@@ -176,6 +176,7 @@ final class Cuisinier extends Metier {
         List<ItemStack> r = new ArrayList<>();
         for (int i = 0; i < b.depot.getContainerSize(); i++) r.add(b.depot.getItem(i));
         for (IItemHandler h : b.voisins()) for (int i = 0; i < h.getSlots(); i++) r.add(h.getStackInSlot(i));
+        r.addAll(b.reserveVue());
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) r.add(t.inventaire.getItem(i));
         return r;
     }

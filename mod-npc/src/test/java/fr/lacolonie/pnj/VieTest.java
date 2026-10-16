@@ -16,7 +16,7 @@ class VieTest {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/vie.txt"));
         assertEquals(Vie.TOUTES.size(), banque.size() + Vie.lire(Repertoire.lignes("/remarques.txt")).size() + Vie.lire(Repertoire.lignes("/relations.txt")).size()
                 + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/chef.txt")).size() + Vie.lire(Repertoire.lignes("/macon.txt")).size()
-                + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size());
+                + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size() + Vie.lire(Repertoire.lignes("/guerre.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
@@ -65,6 +65,24 @@ class VieTest {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/depot.txt"));
         for (String cle : List.of("depot_interpose", "depot_sommation", "depot_riposte", "depot_vu", "depot_prevenir", "depot_ordre_attaque", "depot_ordre_attaque_civil",
                 "depot_ordre_tranquille", "depot_ordre_permis", "depot_ordre_retire")) {
+            assertTrue(banque.containsKey(cle), cle);
+            assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
+            assertTrue(banque.get(cle).stream().filter(r -> r.temperament().isEmpty()).count() >= 4, cle + " : quatre répliques communes");
+        }
+        for (var e : banque.entrySet())
+            for (Vie.Replique r : e.getValue()) {
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+                assertTrue(r.texte().length() <= 90, r.texte());
+            }
+    }
+
+    /** Lot 9 : la guerre entre colonies (Guerre, Armee) : chaque situation, au moins quatre répliques communes, sans mot moderne. */
+    @Test
+    void guerreSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/guerre.txt"));
+        for (String cle : List.of("guerre_declaree", "guerre_recue", "guerre_levee", "guerre_renfort_propose", "guerre_renfort_refuse", "guerre_en_marche",
+                "guerre_assaut", "guerre_casse", "guerre_brule", "guerre_vol", "guerre_ennemi_vu", "guerre_defense", "guerre_blesse", "guerre_retraite",
+                "guerre_victoire", "guerre_defaite", "guerre_paix", "guerre_refus_hors_guerre", "lettre_guerre_attaque")) {
             assertTrue(banque.containsKey(cle), cle);
             assertTrue(Vie.TOUTES.containsKey(cle), cle + " chargée");
             assertTrue(banque.get(cle).stream().filter(r -> r.temperament().isEmpty()).count() >= 4, cle + " : quatre répliques communes");

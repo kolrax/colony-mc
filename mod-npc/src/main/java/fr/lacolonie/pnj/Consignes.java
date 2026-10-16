@@ -788,6 +788,11 @@ final class Consignes {
                 BlockPos e = Monde.chercherBloc(t, Actions.Filtre.de("minecraft:water"), 24, ici, true, false);
                 yield e == null ? new Fait("Je ne vois pas d'eau par ici.", null) : new Fait("Il y a de l'eau " + distance(ici, e) + ".", e);
             }
+            case "reserve" -> {
+                Bureau.Entite b = Bureau.entite(t);
+                yield b == null ? new Fait(t.bureau == null ? "Tu n'as pas encore de poste de travail, chef." : "Le poste est trop loin, je ne sais plus ce qu'il y a dans la réserve.", null)
+                        : new Fait(b.reserveTexte(), null);
+            }
             case "sac" -> new Fait("Sur moi, j'ai " + inventaire(t) + ".", null);
             case "sante" -> new Fait("Santé " + (int) Math.ceil(t.getHealth()) + " sur " + (int) t.getMaxHealth() + ", faim " + t.faim + " sur 20, fatigue "
                     + t.fatigue + " sur 100. " + Messages.etat(t), null);
