@@ -12,7 +12,8 @@
 #
 # CLÉS
 #   depot_interpose            le guerrier se met entre le dépôt et celui qui s'y sert, et l'avertit
-#   depot_riposte              le guerrier, sur l'ordre donné plus tôt, frappe celui qui pille le dépôt
+#   depot_sommation            sur l'ordre de frapper : la première fois, il s'interpose et le somme (pas de coup)
+#   depot_riposte              le guerrier, sur l'ordre donné plus tôt, frappe celui qui y revient après la sommation
 #   depot_vu                   sans guerrier, un autre ouvrier le voit et le signale
 #   depot_prevenir             au chef : de vive voix s'il est là, sinon par lettre
 #   depot_ordre_attaque        réponse à « attaque ceux qui volent le dépôt »
@@ -36,6 +37,18 @@ peureux: Ce… ce n'est pas à toi, ça ! Repose-le, je t'en prie !
 peureux: Arrière ! Enfin… s'il te plaît, recule.
 fourbe: Prends donc, {nom}. {chef} saura tout, et de ma bouche.
 fourbe: Je n'ai rien vu… pour l'instant. Repose ça.
+
+[depot_sommation]
+Repose ça, {nom}. Si tu y reviens, je frappe.
+Dernier avertissement, {nom} : une main de plus dans ce dépôt, et c'est le fer.
+J'ai ordre de défendre ce dépôt par l'épée. Ne m'y oblige pas.
+Recule, {nom}. La prochaine fois, je ne parlerai plus.
+Ce bien est à {chef}. Reviens-y, et tu goûteras de ma lame.
+Je te le dis une fois, {nom}, pas deux : hors de ce dépôt.
+calme: Je préfère te prévenir, {nom} : j'ai ordre de frapper. Repose ça.
+colerique: Touche encore à ce coffre, et je te fends en deux !
+peureux: J'ai… j'ai ordre de frapper ! Ne reviens pas, je t'en prie.
+fourbe: Vas-y, recommence, {nom}. Je n'attends que ça.
 
 [depot_riposte]
 Tu pilles notre dépôt, {nom} ? Tu vas le payer !
