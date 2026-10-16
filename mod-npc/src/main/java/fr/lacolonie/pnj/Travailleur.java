@@ -119,6 +119,8 @@ public class Travailleur extends PathfinderMob {
     public int debut = 6, fin = 18;
     /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
     public long salaire = -1;
+    /** Le facteur de son salaire, fixé à l'embauche selon le nombre d'ouvriers qu'avait déjà son chef ({@link Cout}) ; 1 pour les anciens. */
+    public double surcout = 1;
     /**
      * Ses missions, dans l'ordre : il remplit la première qui ne l'est pas. Une quantité livrée est retirée ; un stock
      * reste (il reprend quand il baisse).
@@ -502,8 +504,8 @@ public class Travailleur extends PathfinderMob {
     /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue ou une paie trop basse. */
     public double facteurTravail() { return (0.6 + 0.2 * niveau) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
 
-    /** Ce qu'il demande pour son niveau. */
-    public long salaireDemande() { return Reglages.salaire(niveau); }
+    /** Ce qu'il demande pour son niveau, et selon la taille de la colonie à son embauche. */
+    public long salaireDemande() { return Cout.salaire(Reglages.salaire(niveau), surcout); }
 
     /** Ce qu'on lui verse vraiment (fixé dans le bureau). */
     public long salaireVerse() { return salaire < 0 ? salaireDemande() : salaire; }
@@ -1470,6 +1472,7 @@ public class Travailleur extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         if (mode == Mode.CHOMEUR) {
+            surcout = surcoutPour(sp); // le prix annoncé à celui qui l'aborde ; refait à l'embauche
             PacketDistributor.sendToPlayer(sp, new Reseau.Fiche(getId(), fiche(true)));
             return InteractionResult.CONSUME;
         }
@@ -2141,7 +2144,7 @@ public class Travailleur extends PathfinderMob {
             signaler(p, "Ce métier n'est plus proposé sur le serveur.");
             return;
         }
-        long nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
+        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
         if (nb >= Reglages.actuel.pnj_max_par_joueur) {
             signaler(p, "Tu as déjà " + nb + " PNJ : c'est le maximum (" + Reglages.actuel.pnj_max_par_joueur + ").");
             return;
@@ -2162,7 +2165,9 @@ public class Travailleur extends PathfinderMob {
         mode = Mode.SUIVRE;
         coince.progres(getX(), getY(), getZ());
         impayes = 0;
-        prime = 0;
+        this.prime = 0; // (« prime = 0 » remettait la prime d'embauche à zéro, et le message disait « pour rien »)
+        salaire = -1; // un nouveau marché : ni le salaire fixé par l'ancien chef…
+        surcout = Reglages.surcout(nb + 1); // …ni son ancien rang (cahier 9.2)
         enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
@@ -2170,9 +2175,13 @@ public class Travailleur extends PathfinderMob {
         Remarques.embauche(this); // ses nouveaux collègues en parleront
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
         dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
+        if (surcout > 1) Besoins.dire(this, "embauche_surcout", null); // « Une grande colonie, ça se paie, chef. »
         signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
-                + ". Salaire : " + Reglages.texte(Reglages.salaire(niveau)) + ", dans la caisse de ton poste.");
+                + ". Salaire : " + Reglages.texte(salaireDemande()) + ", dans la caisse de ton poste.");
     }
+
+    /** Le facteur de salaire qu'il demanderait à ce chef, selon les ouvriers que celui-ci a déjà (cahier 9.2). */
+    static double surcoutPour(ServerPlayer p) { return Reglages.surcout(ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size() + 1); }
 
     // --- Sauvegarde ------------------------------------------------------------------------------
 
@@ -2196,6 +2205,7 @@ public class Travailleur extends PathfinderMob {
         t.putInt("Debut", debut);
         t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
+        t.putDouble("Surcout", surcout);
         ListTag ms = new ListTag();
         for (Mission m : missions) ms.add(m.sauver());
         t.put("Missions", ms);
@@ -2257,6 +2267,7 @@ public class Travailleur extends PathfinderMob {
         debut = t.contains("Debut") ? t.getInt("Debut") : 6;
         fin = t.contains("Fin") ? t.getInt("Fin") : 18;
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
+        surcout = t.contains("Surcout") ? Math.clamp(t.getDouble("Surcout"), 1, Cout.FACTEUR_MAX) : 1; // avant le lot 11 : ×1
         missions.clear();
         if (t.contains("Missions")) for (Tag x : t.getList("Missions", Tag.TAG_COMPOUND)) missions.add(Mission.lire((CompoundTag) x));
         else if (!t.getString("Commande").isEmpty()) { // avant la 0.5.0 : une seule commande

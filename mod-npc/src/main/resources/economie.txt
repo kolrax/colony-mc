@@ -27,6 +27,7 @@
 #   boutique_fermee      la boutique est fermée (le boutiquier, ou un client devant la porte de {nom})
 #   paie_depensee        remarque : il a déjà dépensé toute sa paie
 #   paie_economise       il met des pièces de côté (surtout calmes et fourbes)
+#   embauche_surcout     à l'embauche, chez un chef qui a déjà beaucoup d'ouvriers : il coûte plus cher (cahier 9.2)
 #   prix_monte           remarque : les prix montent
 #   riche_fier           il a la bourse pleine et s'en vante
 #   pauvre_plainte       il a la bourse vide et s'en plaint
@@ -225,6 +226,17 @@ peureux: Je cache mes économies. Personne ne les trouvera.
 fourbe: Je mets de côté. Et personne ne sait combien.
 fourbe: Mes écus dorment bien au chaud. Ils font des petits.
 fourbe: Moins je dépense, plus j'ai de quoi négocier plus tard.
+
+[embauche_surcout]
+Une grande colonie, ça se paie, chef.
+Avec tant de monde chez toi, mon salaire est un peu plus haut.
+Plus la colonie est grande, plus la peine est grande. D'où mon prix.
+Tu as déjà bien des bras, chef. Le mien coûte un peu plus.
+Tant de bouches à nourrir chez toi… je demande un peu plus.
+calme: Une grande maison demande plus de soin. Mon prix s'en ressent.
+colerique: Avec toute ta troupe, je ne travaille pas pour trois sous !
+peureux: Euh… avec tant de monde, je demande un peu plus. Si ça te va, chef.
+fourbe: Une colonie si riche peut bien payer un peu plus, non ?
 
 [prix_monte]
 Les prix montent. Tout coûte plus cher qu'hier.
