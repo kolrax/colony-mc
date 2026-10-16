@@ -405,6 +405,8 @@ sante | tous | dire comment il va (vie, faim, fatigue) | info sante | tu es bles
 outil_etat | tous | dire dans quel état est son outil | info outil geste=montrer | ton outil est usé ; dans quel état est ton outil ; ta pioche est usée ; ta hache est usée ; ton épée est usée ; il te faut un nouvel outil |
 armure | tous | dire quelle armure il porte | info armure geste=fier | tu as une armure ; quelle armure ; ton armure ; tu es protégé |
 salaire | tous | dire son salaire et sa prochaine paie | info salaire | combien tu gagnes ; ton salaire ; quand est ta paie ; je te dois combien ; ta paie ; tu es bien payé |
+bourse | tous | dire combien il a de pièces dans sa bourse | info bourse geste=montrer | combien as tu de pièces ; combien tu as de pièces ; ta bourse ; combien d'argent as tu ; tu as des sous ; il te reste combien de pièces ; tu es riche |
+achats | tous | dire ce qu'il a acheté dernièrement, à qui et pour combien | info achats | qu'as tu acheté ; qu'est ce que tu as acheté ; tu as acheté quoi ; tes achats ; tu as dépensé quoi ; à qui as tu acheté |
 anciennete | tous | dire depuis quand il travaille pour le chef | info anciennete | depuis quand travailles tu pour moi ; depuis combien de temps ; ton ancienneté ; tu es là depuis quand |
 temperament | tous | dire quel est son caractère | info caractere | quel est ton caractère ; tu es comment ; ton tempérament ; décris toi ; quel genre d'homme es tu |
 niveau | tous | dire son niveau de compétence | info niveau | quel est ton niveau ; tu es bon ; combien d'étoiles ; tu es doué ; ton expérience |

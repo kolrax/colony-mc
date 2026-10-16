@@ -1,0 +1,307 @@
+# L'économie entre PNJ : achats, ventes, boutiques, paie (lot 11, cahier 9.4 à 9.6). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt, defense.txt et chef.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+# La monnaie : les pièces de la colonie (pièces, sous, écus). Jamais de banque.
+#
+# VARIABLES
+#   {chef}   nom du chef (partout)
+#   {nom}    l'autre PNJ : le vendeur, l'acheteur ou le boutiquier
+#   {objet}  ce qui s'achète, tel qu'on le dit, avec son article (« du pain », « une hache »)
+#   {prix}   nombre de pièces, en chiffres ; les répliques disent « {prix} pièces » : prix de 2 au moins,
+#            ou le code remplace « 1 pièces » par « 1 pièce »
+#
+# CLÉS
+#   achat_demande        il demande à acheter {objet} à {nom}
+#   achat_accepte        le vendeur accepte de vendre {objet} pour {prix} pièces
+#   achat_marchande      il trouve le prix ({prix}) trop cher et marchande
+#   achat_refuse_cher    trop cher : il renonce
+#   achat_pas_assez      il n'a pas assez de pièces pour payer {prix}
+#   vente_propose        un vendeur vante sa marchandise ({objet})
+#   vente_faite          le vendeur est content après la vente (à {nom})
+#   vente_rupture        le vendeur n'a plus rien à vendre
+#   boutique_ouverte     le boutiquier ouvre sa boutique
+#   boutique_fermee      la boutique est fermée (le boutiquier, ou un client devant la porte de {nom})
+#   paie_depensee        remarque : il a déjà dépensé toute sa paie
+#   paie_economise       il met des pièces de côté (surtout calmes et fourbes)
+#   prix_monte           remarque : les prix montent
+#   riche_fier           il a la bourse pleine et s'en vante
+#   pauvre_plainte       il a la bourse vide et s'en plaint
+#   chef_achat_info      réponse au chef qui demande ce qu'il a acheté ({objet}, {nom}, {prix})
+#   lettre_boutique_vide ligne courte d'une lettre : la boutique de {nom} n'a plus rien
+
+[achat_demande]
+Bonjour, {nom}. Tu me vendrais {objet} ?
+{nom}, j'aurais besoin de {objet}. Tu en as ?
+Il me faut {objet}. Combien tu en demandes, {nom} ?
+J'ai quelques pièces, {nom}. Je te prendrais bien {objet}.
+Dis-moi, {nom}, tu as encore {objet} à vendre ?
+Je viens pour {objet}, {nom}. Tu me fais un prix ?
+calme: Quand tu auras un moment, {nom}, je voudrais {objet}.
+calme: Sans te presser, {nom} : je te prendrais {objet}.
+colerique: {nom} ! Il me faut {objet}, et vite.
+colerique: Allez, {nom}, sors-moi {objet}. Je n'ai pas toute la journée.
+peureux: Euh… {nom} ? Si ça ne te dérange pas… je voudrais {objet}.
+peureux: Pardon, {nom}… tu aurais {objet} pour moi ?
+fourbe: {nom}, mon ami ! Tu me ferais bien {objet} à bon prix, non ?
+fourbe: J'ai entendu dire que tu avais {objet}, {nom}. Parlons-en.
+
+[achat_accepte]
+Marché conclu : {objet} pour {prix} pièces.
+Ça fera {prix} pièces. Tiens, c'est à toi.
+{prix} pièces, et c'est à toi.
+D'accord pour {prix} pièces. Voilà ta marchandise.
+Tope là : {prix} pièces, pas une de plus.
+C'est bon, {prix} pièces. Bon usage !
+calme: {prix} pièces, c'est le juste prix. Voilà.
+calme: Prends, et compte bien tes {prix} pièces.
+colerique: {prix} pièces, et on n'en parle plus !
+colerique: Allez, {prix} pièces. Prends et file, j'ai du travail.
+peureux: {prix} pièces… ça te va ? Oui ? Ouf. Tiens.
+peureux: Je… je te fais {prix} pièces. C'est honnête, promis.
+fourbe: {prix} pièces. Un cadeau, entre nous.
+fourbe: Pour toi, {prix} pièces. Ne le répète à personne.
+
+[achat_marchande]
+{prix} pièces ? C'est cher. Tu ne ferais pas un effort ?
+Allons, {prix} pièces, c'est trop. Baisse un peu.
+À ce prix-là, j'achète une vache entière. Fais-moi mieux.
+{prix} pièces… Je t'en donne moins, et tout de suite.
+Chez le voisin, c'est moins cher. Tu t'alignes ?
+Un petit geste, {nom}. On travaille pour la même colonie.
+calme: {prix} pièces, c'est beaucoup. Trouvons un juste milieu.
+calme: Réfléchis un peu. Moins cher, et je reviendrai souvent.
+colerique: {prix} pièces ?! Tu me prends pour un seigneur ?
+colerique: Du vol ! Baisse ton prix, ou je vais voir ailleurs.
+peureux: C'est que… {prix} pièces, c'est beaucoup pour moi…
+peureux: Tu pourrais… peut-être… baisser un tout petit peu ?
+fourbe: {prix} pièces ? J'ai vu mieux et moins cher, tu sais.
+fourbe: Fais-moi un prix, et je dirai du bien de toi partout.
+
+[achat_refuse_cher]
+Trop cher pour moi. Tant pis.
+Non, à ce prix-là, je m'en passe.
+Je garde mes pièces. Une autre fois, peut-être.
+C'est trop. Je vais voir ailleurs.
+Je n'en ai pas besoin à ce point-là.
+Laisse tomber. Je me débrouillerai sans.
+calme: Merci quand même. C'est au-dessus de mes moyens.
+calme: Je préfère attendre que les prix baissent.
+colerique: Garde ta marchandise, voleur ! Je n'en veux plus.
+colerique: À ce prix-là ? Jamais de la vie !
+peureux: Pardon… c'est trop cher pour moi. Ne m'en veux pas.
+peureux: Je… je vais réfléchir. Enfin, non. C'est trop.
+fourbe: Tu le regretteras quand plus personne ne t'achètera rien.
+fourbe: Je trouverai moins cher. Je trouve toujours.
+
+[achat_pas_assez]
+Je n'ai pas {prix} pièces sur moi. Dommage.
+Ma bourse est trop légère pour ça.
+Il me manque des pièces. Je reviendrai après la paie.
+Pas assez de sous. Tu peux attendre la paie ?
+Je compte, je recompte… Non, ça ne suffit pas.
+Pas de quoi payer {prix} pièces. Une autre fois.
+calme: Je reviendrai quand j'aurai de quoi payer.
+calme: Pas assez pour l'instant. Je patienterai.
+colerique: Pas assez ! Avec ce qu'on nous paie, aussi…
+colerique: Bon sang, il me manque des pièces. Encore !
+peureux: Oh non… je n'ai pas assez. Pardon, je t'ai fait perdre ton temps.
+peureux: Il… il me manque des pièces. Désolé…
+fourbe: Tu ne me ferais pas crédit, {nom} ? Je suis honnête, tu sais.
+fourbe: Pas assez… Tu prendrais une promesse à la place ?
+
+[vente_propose]
+Approchez ! J'ai {objet}, du bon, du solide.
+Qui veut {objet} ? Tout juste prêt !
+À vendre : {objet} ! Prix honnête, qualité garantie.
+Venez voir : {objet}, comme on n'en fait plus.
+Il me reste {objet}. Avis aux amateurs !
+Pour bien travailler, il faut {objet}. J'en ai !
+calme: J'ai {objet}, si quelqu'un en a besoin.
+calme: Du travail soigné : {objet}. Prenez le temps de regarder.
+colerique: J'ai {objet}, le meilleur de la colonie ! Approchez donc !
+colerique: Achetez, achetez ! Je ne vais pas crier toute la journée !
+peureux: Euh… j'ai {objet}, si jamais… ça intéresse quelqu'un ?
+peureux: Ce n'est pas grand-chose, mais j'ai {objet} à vendre…
+fourbe: Il me reste {objet}, le dernier ou presque. Dépêchez-vous.
+fourbe: Une affaire, rien que pour vous : {objet}. Ça ne durera pas.
+
+[vente_faite]
+Merci, {nom}. Reviens quand tu veux.
+Bonne affaire pour nous deux.
+Et de quelques pièces de plus dans ma bourse !
+Merci bien. C'est un plaisir de faire affaire avec toi.
+Belle vente. La journée commence bien.
+À la prochaine, {nom}. Tu m'en diras des nouvelles.
+calme: Merci. Prends-en soin.
+calme: Affaire conclue. Bonne journée, {nom}.
+colerique: Voilà ! Au suivant !
+colerique: Enfin un client qui ne discute pas pendant une heure !
+peureux: Merci… merci beaucoup ! Tu reviendras, hein ?
+peureux: Ouf, une vente ! Merci, {nom}.
+fourbe: Merci, {nom}. Tu as fait une très bonne affaire… crois-moi.
+fourbe: Ha, voilà des pièces bien gagnées.
+
+[vente_rupture]
+Je n'ai plus rien. Tout est parti.
+Désolé, plus rien à vendre pour l'instant.
+Étal vide. Repassez plus tard.
+Tout a été vendu. Il faudra attendre.
+Plus rien en stock. Je dois en refaire.
+Il ne me reste rien, pas même une miette.
+calme: Plus rien aujourd'hui. Revenez demain.
+calme: Tout est vendu. Patience, j'en referai.
+colerique: Plus rien ! Ne me regardez pas comme ça !
+colerique: Tout est parti ! Ils ont tout raflé !
+peureux: Je… je n'ai plus rien. Pardon !
+peureux: Plus rien… Tu ne vas pas te fâcher, dis ?
+fourbe: Plus rien… pour toi. Reviens avec plus de pièces.
+fourbe: Rupture. Les prix vont monter, je te préviens.
+
+[boutique_ouverte]
+La boutique est ouverte ! Entrez !
+J'ouvre. Venez voir ce que j'ai.
+Boutique ouverte ! Il y en a pour tout le monde.
+C'est l'heure : la boutique est ouverte.
+Portes ouvertes ! Faites vos achats.
+Bienvenue ! Regardez, prenez votre temps.
+calme: La boutique est ouverte. Entrez sans façon.
+calme: Bonjour à tous. On est ouvert.
+colerique: C'est ouvert ! Et ne touchez à rien sans payer !
+colerique: Ouvert ! Allez, entrez, ne restez pas plantés là.
+peureux: Euh… c'est ouvert. Vous pouvez entrer… si vous voulez.
+peureux: J'ai ouvert. J'espère qu'il viendra du monde…
+fourbe: Ouvert ! Les meilleures affaires, c'est maintenant.
+fourbe: Entrez, entrez. Je fais des prix… pour les amis.
+
+[boutique_fermee]
+C'est fermé. Revenez demain.
+La boutique est fermée pour aujourd'hui.
+Fermé ! Repassez plus tard.
+Fermé… Tant pis, je repasserai chez {nom}.
+La boutique de {nom} est fermée. Pas de chance.
+On ferme. Merci à tous, à demain.
+calme: C'est fermé. Revenez demain matin.
+calme: La journée est finie. On rouvre demain.
+colerique: Fermé ! Vous savez lire l'heure ?
+colerique: Encore fermé, chez {nom} ! Ça ouvre quand ?
+peureux: Pardon… c'est fermé. Ne m'en voulez pas.
+peureux: Fermé… Il est arrivé quelque chose à {nom} ?
+fourbe: Fermé. Mais pour un ami, on peut s'arranger.
+fourbe: {nom} a fermé. Ça cache quelque chose.
+
+[paie_depensee]
+Ma paie est déjà partie. Il ne me reste rien.
+Toute ma paie, envolée. Où est-ce qu'elle est passée ?
+J'ai tout dépensé. Vivement la prochaine paie.
+Plus un sou. J'ai trop bien mangé, je crois.
+Ma bourse est vide, mais j'ai le ventre plein.
+Paie dépensée. Il faudra se serrer la ceinture.
+calme: Tout est dépensé, mais rien en vain.
+calme: Ma paie est partie. Je ferai plus attention.
+colerique: Déjà plus rien ! Tout est hors de prix, ici !
+colerique: Toute ma paie ! Et pour quoi ? Trois fois rien !
+peureux: J'ai tout dépensé… Et si j'en ai besoin demain ?
+peureux: Plus une pièce… Le chef va me gronder ?
+fourbe: Tout dépensé. Mais j'ai fait de bonnes affaires.
+fourbe: Plus rien en poche. Officiellement, du moins.
+
+[paie_economise]
+Je mets quelques pièces de côté.
+Une partie de ma paie au fond du coffre. On ne sait jamais.
+Je garde des sous pour plus tard.
+Pas de dépense aujourd'hui. J'économise.
+Pièce après pièce, ça finit par faire une somme.
+Je mets de côté pour un bon outil.
+calme: Un peu chaque jour, et l'hiver ne me fera pas peur.
+calme: J'économise. Je n'ai besoin de rien pour l'instant.
+calme: La sagesse, c'est de garder une poire pour la soif.
+colerique: Je garde mes pièces ! Pas question de les jeter par les fenêtres.
+peureux: Je garde des pièces, au cas où il arriverait un malheur.
+peureux: Je cache mes économies. Personne ne les trouvera.
+fourbe: Je mets de côté. Et personne ne sait combien.
+fourbe: Mes écus dorment bien au chaud. Ils font des petits.
+fourbe: Moins je dépense, plus j'ai de quoi négocier plus tard.
+
+[prix_monte]
+Les prix montent. Tout coûte plus cher qu'hier.
+Avant, ça coûtait moitié moins.
+Tout augmente, sauf la paie.
+Le pain coûte plus cher. Où va-t-on ?
+Avec ces prix, il faudra travailler double.
+Les vendeurs se font plaisir, ces temps-ci.
+calme: Les prix montent. Il faudra s'adapter.
+calme: Tout augmente. Ça finira par se calmer.
+colerique: Encore une hausse ! Ce sont des voleurs !
+colerique: À ce train-là, on paiera l'air qu'on respire !
+peureux: Tout est plus cher… Comment je vais faire ?
+peureux: Si ça continue, je ne pourrai plus rien acheter…
+fourbe: Les prix montent. J'avais tout acheté avant, heureusement.
+fourbe: Ça monte… Il est temps de vendre, moi.
+
+[riche_fier]
+Ma bourse est pleine. Belle saison !
+Écoutez ça : ça sonne, hein ?
+J'ai des pièces plein la bourse.
+Je suis à l'aise, en ce moment.
+Le travail paie, regardez-moi ça.
+Avec tout ça, je peux m'offrir ce que je veux.
+calme: J'ai bien travaillé, et ça se voit dans ma bourse.
+calme: Je ne manque de rien. C'est une bonne période.
+colerique: Plein la bourse ! Qui dira encore que je ne travaille pas ?
+colerique: Des écus, et pas qu'un peu ! Je les ai bien gagnés !
+peureux: J'ai beaucoup de pièces… J'espère qu'on ne va pas me voler.
+peureux: Chut ! Ne dites à personne que j'ai tout ça.
+fourbe: Les pièces, ça s'attire entre elles. Moi, j'en ai beaucoup.
+fourbe: Riche ? Moi ? Juste ce qu'il faut. Et un peu plus.
+
+[pauvre_plainte]
+Ma bourse est vide.
+Plus un sou. Comment je vais manger ?
+Je n'ai plus rien. Vivement la paie.
+Pas une pièce. Même pas pour du pain.
+Je suis à sec.
+Bourse vide, ventre creux. Triste journée.
+calme: Plus de pièces. Ce n'est qu'un mauvais moment.
+calme: Ma bourse est vide. J'attendrai la paie.
+colerique: Pas un sou ! Je travaille du matin au soir pour rien !
+colerique: Vide ! Ma bourse est vide ! C'est une honte !
+peureux: Je n'ai plus rien… Qu'est-ce que je vais devenir ?
+peureux: Plus une pièce… J'ai peur de ne pas manger ce soir.
+fourbe: Vide… Il faudra que je trouve une combine.
+fourbe: Plus rien. Quelqu'un me doit sûrement quelque chose.
+
+[chef_achat_info]
+J'ai acheté {objet} à {nom} pour {prix} pièces.
+Chez {nom}, {chef} : {objet}, pour {prix} pièces.
+Chez {nom} : {objet}, pour {prix} pièces.
+{chef}, {nom} m'a vendu {objet} pour {prix} pièces.
+J'ai pris {objet} chez {nom}. Ça m'a coûté {prix} pièces.
+{prix} pièces chez {nom}, pour {objet}. C'était nécessaire.
+calme: Chez {nom}, {objet}, pour {prix} pièces. Un achat raisonnable.
+calme: J'ai acheté {objet} à {nom}. {prix} pièces, prix correct.
+colerique: Chez {nom}, {objet} ! {prix} pièces ! Un vrai vol !
+colerique: {prix} pièces pour {objet}, chef ! {nom} exagère !
+peureux: J'ai… acheté {objet} à {nom}. {prix} pièces. Ce n'était pas bien ?
+peureux: Juste {objet}, {chef}, chez {nom}. {prix} pièces… pardon.
+fourbe: Chez {nom}, {objet}. {prix} pièces. Une affaire, croyez-moi.
+fourbe: Oh, trois fois rien : {objet}, chez {nom}. {prix} pièces.
+
+[lettre_boutique_vide]
+La boutique de {nom} n'a plus rien.
+Chez {nom}, l'étal est vide.
+Plus rien à acheter chez {nom}.
+Chez {nom}, tout est vendu. Il faudra attendre.
+La boutique de {nom} est vide. Il faudra chercher ailleurs.
+{nom} n'a plus rien à vendre pour le moment.
+calme: La boutique de {nom} est vide. Patience, ça reviendra.
+calme: Rien chez {nom}. J'y retournerai demain.
+colerique: Rien chez {nom} ! Pas même une miette !
+colerique: La boutique de {nom} est vide. À quoi bon y aller ?
+peureux: La boutique de {nom} est vide… Qu'est-ce qu'on va faire ?
+peureux: Plus rien chez {nom}. J'ai peur qu'on manque.
+fourbe: Plus rien chez {nom}. Bizarre, non ?
+fourbe: La boutique de {nom} est vide. Quelqu'un a tout raflé.

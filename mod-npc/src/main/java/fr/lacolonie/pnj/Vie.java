@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 final class Vie {
     private Vie() {}
 
-    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "ennemi"); // {plan} : l'ouvrage du maçon (macon.txt) ; {ennemi} : le chef ennemi (guerre.txt)
+    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "prix", "ennemi"); // {plan} : l'ouvrage du maçon (macon.txt) ; {prix} : economie.txt ; {ennemi} : le chef ennemi (guerre.txt)
     static final Pattern CLE = Pattern.compile("\\[([a-z0-9_]+)]");
     /** Un préfixe en tête de réplique : « mot: texte ». Le mot doit être un tempérament connu. */
     static final Pattern PREFIXE = Pattern.compile("([a-z]+): (.*)");
@@ -48,6 +48,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/guerre.txt"), e -> System.err.println("[colonie_pnj] Section de guerre.txt ignorée : " + e.getMessage())));
         // Le maçon et ses chantiers (lot 10) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/macon.txt"), e -> System.err.println("[colonie_pnj] Section de macon.txt ignorée : " + e.getMessage())));
+        // Achats et ventes entre PNJ (lot 11, Achats) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/economie.txt"), e -> System.err.println("[colonie_pnj] Section de economie.txt ignorée : " + e.getMessage())));
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */

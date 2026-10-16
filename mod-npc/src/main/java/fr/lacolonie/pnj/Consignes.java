@@ -644,7 +644,12 @@ final class Consignes {
                 {"dark_oak_log", "bûche de chêne noir"}, {"cherry_log", "bûche de cerisier"}, {"mangrove_log", "bûche de palétuvier"},
                 {"oak_sapling", "pousse de chêne"}, {"birch_sapling", "pousse de bouleau"}, {"spruce_sapling", "pousse de sapin"},
                 {"rotten_flesh", "chair putréfiée"}, {"bone", "os"}, {"string", "ficelle"}, {"paper", "papier"}, {"wheat_seeds", "graines"},
-                {"oak_boat", "barque"}, {"leather", "cuir"}, {"feather", "plume"}, {"egg", "œuf"}, {"wheat", "blé"}})
+                {"oak_boat", "barque"}, {"leather", "cuir"}, {"feather", "plume"}, {"egg", "œuf"}, {"wheat", "blé"},
+                {"cooked_cod", "morue grillée"}, {"cooked_salmon", "saumon grillé"}, {"rabbit", "lapin cru"}, {"cooked_rabbit", "lapin rôti"},
+                {"beetroot", "betterave"}, {"sweet_berries", "baies"}, {"glow_berries", "baies lumineuses"}, {"tropical_fish", "poisson des mers chaudes"},
+                {"pufferfish", "poisson-globe"}, {"melon_slice", "tranche de melon"}, {"pumpkin_pie", "tarte à la citrouille"}, {"cake", "gâteau"},
+                {"mushroom_stew", "soupe aux champignons"}, {"beetroot_soup", "soupe de betterave"}, {"rabbit_stew", "ragoût de lapin"},
+                {"dried_kelp", "algue séchée"}, {"golden_carrot", "carotte dorée"}, {"honey_bottle", "miel"}})
             NOMS.put("minecraft:" + n[0], n[1]);
     }
 
@@ -810,6 +815,8 @@ final class Consignes {
             }
             case "salaire" -> new Fait("Je touche " + Reglages.texte(t.salaireVerse()) + " par paie"
                     + (t.impayes > 0 ? ", et tu me dois " + t.impayes + " paie(s)." : ", prochaine paie dans " + Math.max(0, (t.prochainePaie - System.currentTimeMillis()) / 60_000) + " minutes."), null);
+            case "bourse" -> new Fait(Achats.bourse(t), null);
+            case "achats" -> new Fait(Achats.dernierAchat(t), null);
             case "anciennete" -> {
                 long h = Math.max(0, (System.currentTimeMillis() - t.arrivee) / 3_600_000);
                 yield new Fait("Je travaille pour toi depuis " + (h < 1 ? "moins d'une heure" : h < 48 ? h + " heures" : h / 24 + " jours") + ", chef.", null);
