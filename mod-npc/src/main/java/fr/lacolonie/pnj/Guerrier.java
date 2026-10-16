@@ -222,6 +222,12 @@ final class Guerrier extends Metier {
         return m;
     }
 
+    /** L'attaque de ce que sa veille a trouvé : un monstre, ou un ennemi en guerre (cette attaque-là cesse à la paix : {@link Armee#paixFaite}). */
+    static Actions.Attaquer contre(Travailleur t, LivingEntity m) {
+        double portee = 2.5 * Travailleur.ESPACE_DE_VIE;
+        return !Monde.hostile(m) && Armee.camp(m) != null ? Armee.attaque(t, m, portee) : new Actions.Attaquer(m).portee(portee);
+    }
+
     /** Un monstre qu'il peut combattre : pas un creeper sans arc (au corps à corps, il lui sauterait au visage). */
     static boolean aSaPortee(Travailleur t, LivingEntity e) { return !(e instanceof net.minecraft.world.entity.monster.Creeper) || peutTirer(t); }
 
@@ -397,7 +403,7 @@ final class Guerrier extends Metier {
             if (m != null) {
                 Cerveau.dire(t, "debout", 60, "Debout ! On attaque la colonie !");
                 armer(t);
-                Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE));
+                Cerveau.lancer(t, contre(t, m));
                 return;
             }
             if (t.isSleeping()) return;
@@ -449,7 +455,7 @@ final class Guerrier extends Metier {
         if (soigner(t)) return;
         // Un ouvrier de la colonie en danger ; la nuit, les rôdeurs autour de la colonie. Il revient ensuite à son poste.
         LivingEntity m = veille(t, Abri.nuit(t.level()));
-        if (m != null) { armer(t); Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE)); return; }
+        if (m != null) { armer(t); Cerveau.lancer(t, contre(t, m)); return; }
         if (t.distanceToSqr(Vec3.atBottomCenterOf(b)) > r * r) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(b), 3)); return; }
 
         // Près du poste, de temps en temps : ce que le dépôt a de mieux pour lui.
