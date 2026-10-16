@@ -1,5 +1,6 @@
 package fr.lacolonie.pnj;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -98,11 +99,14 @@ final class Guerre {
         return n.find();
     }
 
+    /** « Guerre contre les monstres », « contre eux » : pas un pseudo. */
+    static final java.util.Set<String> PAS_UN_NOM = java.util.Set.copyOf(List.of("les", "le", "la", "des", "ces", "ce", "cette", "eux", "lui", "leur", "leurs", "nous", "vous", "tous", "un", "une"));
+
     /** Le pseudo du premier groupe trouvé, tel qu'écrit (« Niels-cutt_42 » compris), ou null. */
     private static String nom(String texte, int s0, Matcher m) {
         for (int g = 1; g <= m.groupCount(); g++) {
             if (m.group(g) == null) continue;
-            if (GardeChef.PAS_UN_NOM.contains(m.group(g)) || GardeDepot.PAS_UN_NOM.contains(m.group(g))) return null;
+            if (GardeChef.PAS_UN_NOM.contains(m.group(g)) || GardeDepot.PAS_UN_NOM.contains(m.group(g)) || PAS_UN_NOM.contains(m.group(g))) return null;
             int a = s0 + m.start(g), b = a;
             while (b < texte.length() && (Character.isLetterOrDigit(texte.charAt(b)) || texte.charAt(b) == '_' || texte.charAt(b) == '-')) b++;
             while (b > a && texte.charAt(b - 1) == '-') b--;

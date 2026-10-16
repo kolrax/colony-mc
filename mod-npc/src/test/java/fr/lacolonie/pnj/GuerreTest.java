@@ -27,6 +27,8 @@ class GuerreTest {
         for (String s : List.of("Ne déclare pas la guerre à Nielscutt.", "On ne déclare jamais la guerre à Nielscutt.", "On déclare la guerre à Nielscutt ?",
                 "Ne lève pas l'armée.", "Il ne faut pas attaquer la colonie de Nielscutt."))
             assertTrue(lu(s) == null || lu(s).declare == null && !lu(s).lever, s);
+        // Pas un pseudo : pas de déclaration.
+        assertTrue(lu("Nous sommes en guerre contre les monstres.") == null || lu("Nous sommes en guerre contre les monstres.").declare == null);
         // Rien sur la guerre : rien de lu (les autres ordres restent aux leurs).
         for (String s : List.of("Attaque quiconque me frappe.", "Attaque ceux qui volent le dépôt.", "Va couper du bois.", "Rentre au poste.", "Attaque ce zombie."))
             assertNull(lu(s), s);

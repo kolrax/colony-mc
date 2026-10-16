@@ -170,7 +170,10 @@ final class Armee {
         }
         if (g.retraite) {
             String ennemi = null;
-            for (Travailleur w : armee(s, t.chef)) if (w.memoire.contains("guerre_assaut")) { ennemi = c.ennemis(t.chef).get(uuid(w.memoire.getString("guerre_assaut"))); finir(w); }
+            for (Travailleur w : armee(s, t.chef)) {
+                if (w.memoire.contains("guerre_assaut")) { ennemi = c.ennemis(t.chef).get(uuid(w.memoire.getString("guerre_assaut"))); finir(w); }
+                if (w.action instanceof Actions.Attaquer a && a.guerre) w.finirAction("retraite"); // il rompt le combat
+            }
             r.add(texte(t, "guerre_retraite", ennemi, null, "Retraite ! On rentre !"));
         }
         if (g.lever) {
@@ -178,6 +181,7 @@ final class Armee {
             if (u == null) { r.add(texte(t, "guerre_refus_hors_guerre", null, null, "Nous ne sommes pas en guerre, chef. Je ne frapperai personne.")); return; }
             String ennemi = c.ennemis(t.chef).get(u);
             List<Travailleur> armee = armee(s, t.chef);
+            if ("guerrier".equals(t.metier) && !armee.contains(t)) armee.add(t); // tout juste arrivé, il n'est pas encore dans la liste du monde
             for (Travailleur w : armee) {
                 w.memoire.putString("guerre_assaut", u.toString());
                 w.memoire.putString("guerre_nom", ennemi);
