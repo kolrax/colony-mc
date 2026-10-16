@@ -77,14 +77,14 @@ public class TestsEconomie {
         });
     }
 
-    /** Sans pièces : il ne prend rien au cuisinier et le dit (« pas assez »). */
+    /** Sans pièces : il ne prend rien au cuisinier et le dit (« pas assez » ; « 1 pièce » au singulier, remis au pluriel du fichier pour le reconnaître). */
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "economie")
     public static void sansPiecesPasDAchat(GameTestHelper h) {
         Travailleur[] e = scene(h, 371, true);
         Travailleur a = e[0], v = e[1];
         v.inventaire.addItem(new ItemStack(Items.BREAD, 3));
         h.succeedWhen(() -> {
-            h.assertTrue(a.paroles.stream().anyMatch(p -> Vie.vient("achat_pas_assez", p)), "il doit dire qu'il n'a pas de quoi : " + a.paroles);
+            h.assertTrue(a.paroles.stream().anyMatch(p -> Vie.vient("achat_pas_assez", p.replaceAll("(?<![0-9])1 pièce\\b", "1 pièces"))), "il doit dire qu'il n'a pas de quoi : " + a.paroles);
             h.assertTrue(pains(v) == 3 && !a.memoire.contains("achat"), "rien vendu : " + pains(v));
             fin(a, v);
         });
