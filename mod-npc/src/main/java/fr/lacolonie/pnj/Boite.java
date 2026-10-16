@@ -32,7 +32,7 @@ final class Boite {
      * chacun. {@code poste_detruit} reste importante mais se regroupe quand même (une lettre, pas trente). Pas
      * « toujours en grève » : chacun a sa somme due.
      */
-    static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "paie_retard", "sans_poste", "poste_detruit");
+    static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "depot_reserve", "paie_retard", "sans_poste", "poste_detruit");
 
     static boolean commune(Courrier.Lettre l) { return TOUS_OUVRIERS.contains(l.type); }
 

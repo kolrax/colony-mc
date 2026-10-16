@@ -251,6 +251,18 @@ final class Guerrier extends Metier {
                 double n = note.applyAsDouble(v.getStackInSlot(i));
                 if (n > max) { max = n; k = i; h = v; }
             }
+        Reserve.Tas<ItemStack> r = null; // la réserve du poste compte aussi (cahier 14.4)
+        for (Reserve.Tas<ItemStack> x : b.reserve.tas) {
+            double n = x.nombre > 0 ? note.applyAsDouble(x.sorte) : 0;
+            if (n > max) { max = n; r = x; }
+        }
+        if (r != null) {
+            if (!prendre) return r.sorte.copy();
+            b.reserve.retirer(r, 1);
+            b.reserve.nettoyer();
+            b.setChanged();
+            return r.sorte.copy();
+        }
         if (k < 0) return ItemStack.EMPTY;
         if (!prendre) return (h == null ? b.depot.getItem(k) : h.getStackInSlot(k)).copyWithCount(1);
         if (h != null) return h.extractItem(k, 1, false);

@@ -922,6 +922,7 @@ public final class Actions {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
             boolean plein = false, diamants = false, depose = false;
+            long reserve = b.reserve.total();
             boolean[] garde = new boolean[garder.size()];
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
@@ -948,6 +949,7 @@ public final class Actions {
             if (depose) Sons.depot(t, b.getBlockPos()); // le sac vidé ne sonne que s'il a vraiment laissé quelque chose
             t.nettoyerMissions();
             if (diamants) Humeur.diamantsRendus(t); // celui qui ne triche pas s'en vante
+            if (b.reserve.total() > reserve) Cerveau.ecrire(t, "reserve", Cerveau.UN_JOUR, "depot_reserve"); // une fois par jour au plus
             return plein ? echec("depot_plein") : Etat.OK;
         }
     }

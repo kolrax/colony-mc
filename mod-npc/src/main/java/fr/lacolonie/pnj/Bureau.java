@@ -93,6 +93,14 @@ public final class Bureau {
             }
         }
 
+        /** La réserve reverse dans le dépôt une fois par seconde (rien à faire si elle est vide). */
+        @Override
+        public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state,
+                net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+            return level.isClientSide ? null : createTickerHelper(type, ColoniePnj.BUREAU_BE.get(),
+                    (l, p, st, e) -> { if (!e.reserve.vide() && Math.floorMod(l.getGameTime() + p.hashCode(), 20L) == 0) e.reverser(); });
+        }
+
         @Override
         protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
             if (!level.isClientSide && level.getBlockEntity(pos) instanceof Entite e && player instanceof ServerPlayer sp) {
@@ -108,6 +116,7 @@ public final class Bureau {
             if (!state.is(neuf.getBlock()) && level.getBlockEntity(pos) instanceof Entite e) {
                 Containers.dropContents(level, pos, e.caisse);
                 Containers.dropContents(level, pos, e.depot);
+                e.lacherReserve(); // la réserve tombe au sol comme un coffre : rien de perdu
                 if (e.proprietaire != null && level instanceof ServerLevel sl) {
                     Courrier c = Courrier.de(sl.getServer());
                     Courrier.Poste p = c.poste(e.proprietaire);
@@ -147,6 +156,8 @@ public final class Bureau {
         };
         public UUID proprietaire;
         public String nomProprietaire = "";
+        /** La réserve (cahier 14.4) : le surplus des ouvriers quand le dépôt est plein ; sorte = une pile d'un objet. Jamais montrée au joueur. */
+        final Reserve<ItemStack> reserve = new Reserve<>(ItemStack::isSameItemSameComponents);
 
         public Entite(BlockPos pos, BlockState state) { super(ColoniePnj.BUREAU_BE.get(), pos, state); }
 
@@ -157,6 +168,17 @@ public final class Bureau {
             t.put("Depot", depot.createTag(reg));
             if (proprietaire != null) t.putUUID("Proprietaire", proprietaire);
             t.putString("NomProprietaire", nomProprietaire);
+            if (!reserve.vide()) {
+                ListTag r = new ListTag();
+                for (Reserve.Tas<ItemStack> x : reserve.tas) {
+                    if (x.nombre <= 0) continue;
+                    CompoundTag c = new CompoundTag();
+                    c.put("Objet", x.sorte.save(reg));
+                    c.putLong("Nombre", x.nombre);
+                    r.add(c);
+                }
+                t.put("Reserve", r);
+            }
         }
 
         @Override
@@ -166,6 +188,12 @@ public final class Bureau {
             depot.fromTag(t.getList("Depot", Tag.TAG_COMPOUND), reg);
             proprietaire = t.hasUUID("Proprietaire") ? t.getUUID("Proprietaire") : null;
             nomProprietaire = t.getString("NomProprietaire");
+            reserve.vider();
+            for (Tag x : t.getList("Reserve", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) x;
+                ItemStack s = ItemStack.parseOptional(reg, c.getCompound("Objet"));
+                if (!s.isEmpty()) reserve.ajouter(s.copyWithCount(1), c.getLong("Nombre"));
+            }
         }
 
         @Override
@@ -174,7 +202,7 @@ public final class Bureau {
         }
 
         @Override
-        public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) { return new Menu(id, inv, caisse, depot, this); }
+        public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) { reverser(); return new Menu(id, inv, caisse, depot, this); }
 
         boolean estLePoste() {
             if (proprietaire == null || !(level instanceof ServerLevel sl)) return false;
@@ -207,6 +235,12 @@ public final class Bureau {
          * déjà de la pierre.
          */
         public ItemStack ranger(ItemStack s) {
+            ItemStack reste = rangerVisible(s);
+            return reste.isEmpty() ? reste : versReserve(reste);
+        }
+
+        /** Le rangement d'avant la réserve : le dépôt visible seulement (le bureau et les coffres collés). */
+        ItemStack rangerVisible(ItemStack s) {
             ItemStack reste = s;
             List<IItemHandler> v = voisins();
             int sorte = -1;
@@ -238,11 +272,11 @@ public final class Bureau {
         }
 
         public int compter(Actions.Filtre f) {
-            int n = 0;
+            long n = reserve.compter(f::objet);
             for (int i = 0; i < depot.getContainerSize(); i++) if (f.objet(depot.getItem(i))) n += depot.getItem(i).getCount();
             for (IItemHandler h : voisins())
                 for (int i = 0; i < h.getSlots(); i++) if (f.objet(h.getStackInSlot(i))) n += h.getStackInSlot(i).getCount();
-            return n;
+            return (int) Math.min(n, Integer.MAX_VALUE);
         }
 
         /** Prend jusqu'à n objets au dépôt (puis dans les coffres voisins). */
@@ -263,7 +297,80 @@ public final class Bureau {
                     n -= part.getCount();
                     if (!part.isEmpty()) pris.add(part);
                 }
+            if (n > 0 && !reserve.vide()) {
+                for (Reserve.Tas<ItemStack> x : reserve.prendre(f::objet, n)) piles(x, pris);
+                setChanged();
+            }
             return pris;
+        }
+
+        // --- La réserve (cahier 14.4) : le surplus des ouvriers, sans limite pour eux, invisible pour le joueur ----------
+
+        /** Met en réserve ce que le dépôt visible n'a pas pris ; renvoie ce qui reste (seulement si un garde-fou est atteint). */
+        ItemStack versReserve(ItemStack s) {
+            long n = reserve.ajouter(s.copyWithCount(1), s.getCount());
+            if (n > 0) setChanged();
+            return n >= s.getCount() ? ItemStack.EMPTY : s.copyWithCount(s.getCount() - (int) n);
+        }
+
+        /** Un tas de la réserve en piles du jeu (au plus la taille d'une pile chacune). */
+        static void piles(Reserve.Tas<ItemStack> x, List<ItemStack> l) {
+            for (long r = x.nombre; r > 0; ) {
+                int k = (int) Math.min(r, x.sorte.getMaxStackSize());
+                l.add(x.sorte.copyWithCount(k));
+                r -= k;
+            }
+        }
+
+        /** La réserve vue comme des piles (copies, une par sorte, sans rien prendre) : pour lire le dépôt en entier. */
+        List<ItemStack> reserveVue() {
+            List<ItemStack> l = new ArrayList<>();
+            for (Reserve.Tas<ItemStack> x : reserve.tas) if (x.nombre > 0) l.add(x.sorte.copyWithCount((int) Math.min(x.nombre, Integer.MAX_VALUE)));
+            return l;
+        }
+
+        /** Une case du dépôt visible a-t-elle encore de la place (vide, ou pile pas pleine) ? */
+        boolean placeVisible() {
+            for (int i = 0; i < depot.getContainerSize(); i++) { ItemStack s = depot.getItem(i); if (s.isEmpty() || s.getCount() < s.getMaxStackSize()) return true; }
+            for (IItemHandler h : voisins())
+                for (int i = 0; i < h.getSlots(); i++) { ItemStack s = h.getStackInSlot(i); if (s.isEmpty() || s.getCount() < Math.min(h.getSlotLimit(i), s.getMaxStackSize())) return true; }
+            return false;
+        }
+
+        /** Reverse la réserve dans le dépôt visible tant qu'il y a de la place (64 sortes au plus par appel). Rien ne se perd, rien ne se crée. */
+        void reverser() {
+            if (reserve.vide() || level == null || level.isClientSide || !placeVisible()) return;
+            int essais = 0;
+            boolean change = false;
+            for (Reserve.Tas<ItemStack> x : reserve.tas) {
+                if (essais++ >= 64) break;
+                while (x.nombre > 0) {
+                    int k = (int) Math.min(x.nombre, x.sorte.getMaxStackSize());
+                    int entre = k - rangerVisible(x.sorte.copyWithCount(k)).getCount();
+                    if (entre <= 0) break;
+                    reserve.retirer(x, entre);
+                    change = true;
+                }
+            }
+            if (change) { reserve.nettoyer(); setChanged(); }
+        }
+
+        /** Le bureau est cassé : la réserve tombe au sol, en piles. */
+        void lacherReserve() {
+            if (level == null || reserve.vide()) return;
+            List<ItemStack> l = new ArrayList<>();
+            for (Reserve.Tas<ItemStack> x : reserve.tas) piles(x, l);
+            reserve.vider();
+            for (ItemStack s : l) Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), s);
+        }
+
+        /** Ce qu'un ouvrier répond quand on lui demande ce qu'il y a dans la réserve : les 5 plus grosses sortes. */
+        String reserveTexte() {
+            if (reserve.vide()) return "La réserve est vide, chef : tout tient au dépôt.";
+            List<String> l = new ArrayList<>();
+            for (Reserve.Tas<ItemStack> x : reserve.plusGros(5)) l.add(x.nombre + " " + Consignes.nom(x.sorte));
+            int autres = reserve.tas.size() - l.size();
+            return "Dans la réserve : " + String.join(", ", l) + (autres > 0 ? ", et " + autres + " autre" + (autres > 1 ? "s" : "") + " sorte" + (autres > 1 ? "s" : "") : "") + ".";
         }
 
         // --- L'écran du poste -------------------------------------------------------------------------

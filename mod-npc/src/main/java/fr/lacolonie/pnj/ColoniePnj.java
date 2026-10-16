@@ -479,6 +479,7 @@ public class ColoniePnj {
             if (l == null || !(l.getBlockEntity(p.pos()) instanceof Bureau.Entite b) || !CHEF_BANC.equals(b.proprietaire)) continue;
             b.caisse.clearContent(); // ce qu'ils y ont déposé disparaît avec eux
             b.depot.clearContent();
+            b.reserve.vider();
             l.removeBlock(p.pos(), false);
         }
         c.postes.remove(CHEF_BANC);
