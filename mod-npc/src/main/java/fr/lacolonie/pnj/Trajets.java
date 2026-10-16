@@ -41,14 +41,17 @@ final class Trajets {
 
     /**
      * « Porte le fer de ce coffre au dépôt » : vers le dépôt ; « porte les bûches du dépôt à ce coffre », « remplis ce
-     * coffre » : du dépôt. Sans dépôt nommé, du coffre vers le dépôt.
+     * coffre » : du dépôt. Sans dépôt nommé, du coffre vers le dépôt. Les machines (lot 12) : « mets le blé dans le moulin »,
+     * « verse le minerai dans ce broyeur » : du dépôt ; « vide le bassin », « ramène ce qui sort de la machine » : vers le
+     * dépôt. « Le dépôt de Create », « ce dépôt-là » sont la machine regardée, pas notre dépôt ({@link Machines#sansDepotDeCreate}).
      */
     static Sens sens(String phrase) {
-        String n = Ordres.normaliser(phrase);
+        String n = Machines.sansDepotDeCreate(Ordres.normaliser(phrase));
         if (Ordres.dit(n, "du depot", "depuis le depot", "de notre depot", "du poste", "depuis le poste", "hors du depot", "pris au depot",
                 "prends au depot", "prise au depot")) return Sens.DU_DEPOT;
         if (Ordres.dit(n, "au depot", "vers le depot", "jusqu au depot", "au poste", "dans le depot")) return Sens.VERS_DEPOT;
-        if (Ordres.dit(n, "remplis", "remplir", "remplissez", "approvisionne", "approvisionner", "ravitaille", "garnis", "alimente")) return Sens.DU_DEPOT;
+        if (Ordres.dit(n, "remplis", "remplir", "remplissez", "approvisionne", "approvisionner", "ravitaille", "garnis", "alimente",
+                "mets", "met", "mettez", "mettre", "verse", "versez", "verser", "nourris", "nourrir", "enfourne", "enfourner", "charge le", "charge la")) return Sens.DU_DEPOT;
         return Sens.VERS_DEPOT;
     }
 

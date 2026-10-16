@@ -1,6 +1,6 @@
 # Machines de Create : l'ouvrier remplit ou vide une machine, et en parle. Fichier UTF-8.
 #
-# FORMAT : exactement celui de vie.txt et defense.txt (même lecteur possible : Vie.lire).
+# FORMAT : exactement celui de vie.txt et defense.txt (lu par Vie.lire, au chargement de Vie).
 # Les lignes vides et les lignes qui commencent par # sont ignorées.
 #
 #   [cle]
@@ -20,11 +20,9 @@
 #              machine_remplir_ok et machine_charge seulement
 #   {machine}  la machine, avec son article défini (« le moulin », « le broyeur », « le bassin »,
 #              « le tapis », « le présentoir ») : machine_remplir_ok, machine_vider_ok, machine_vide_rien,
-#              machine_pleine, lettre_machine_pleine, lettre_machine_introuvable
+#              machine_pleine, machine_introuvable
 #              Jamais précédée de « à » ni de « de » (pas de contraction « au », « du ») ; jamais en début
 #              de phrase (la majuscule manquerait).
-#   {lieu}     où se trouve la machine, préposition comprise (« près du poste », « en 120, 64, -35 ») :
-#              lettre_machine_pleine et lettre_machine_introuvable seulement
 # Les répliques avec {objet} ne sortent que si la valeur est connue ; chaque section garde au moins quatre
 # répliques sans {objet}.
 #
@@ -39,8 +37,8 @@
 #   machine_pleine               la machine est pleine, il attend
 #   machine_pas_capable          le bloc montré n'accepte rien : il demande le présentoir ou le tapis dessous
 #   machine_peur                 remarque spontanée devant une machine qui tourne
-#   lettre_machine_pleine        lettre au chef : la machine est pleine depuis un moment
-#   lettre_machine_introuvable   lettre au chef : la machine a disparu
+#   machine_introuvable          la machine a disparu (bulle)
+# Les lettres au chef sur les machines (pleine, disparue…) sont dans Messages.java (machine_pleine, machine_introuvable…).
 
 [machine_remplir_ok]
 Entendu. Je mets {objet} dans {machine}.
@@ -126,26 +124,14 @@ peureux: Je ne passe jamais trop près. Une manche prise, et adieu.
 fourbe: Si ça travaille à notre place, on pourra se reposer. En théorie.
 colerique: Elle grince encore ! Qui va la graisser, cette maudite roue ?
 
-[lettre_machine_pleine]
-Ça déborde {lieu} : je ne peux plus rien mettre dans {machine}.
-Plus de place dans {machine}, {lieu}. Je garde la charge en attendant.
-Plus rien n'entre dans {machine}, {lieu}. Il faudrait vider ce qui en sort.
-J'ai voulu charger {machine}, {lieu}, mais tout est plein. Le travail attend.
-Il faut quelqu'un pour vider {machine}, {lieu}. Moi, je ne peux plus rien y mettre.
-Rien ne passe plus dans {machine}, {lieu}. C'est plein, dedans comme dessous.
-calme: Plus de place dans {machine}, {lieu}. Rien de grave, mais il faudra vider.
-peureux: Ça déborde dans {machine}, {lieu}… Je n'ose pas y toucher sans toi.
-fourbe: Plus de place dans {machine}, {lieu}. Je n'y suis pour rien, je le précise.
-colerique: Encore plein à ras bord, {lieu} ! Qu'on vide {machine}, enfin !
-
-[lettre_machine_introuvable]
-Je venais charger {machine}, {lieu}. Il n'y a plus rien.
-Je ne vois plus {machine}, {lieu}. Quelqu'un a tout démonté ?
-J'ai cherché {machine}, {lieu}, sans rien trouver. Dis-moi où c'est passé.
-Une machine pareille ne s'envole pas. Pourtant, {machine} a disparu, {lieu}.
-Je garde ma charge sur moi : {machine} a disparu, {lieu}.
-Je ne trouve plus {machine}, {lieu}. Montre-moi où charger, et j'y retourne.
-calme: Je n'ai pas trouvé {machine}, {lieu}. J'attends que tu m'indiques où aller.
-peureux: Je ne vois plus {machine}, {lieu}… Ça n'est pas parti tout seul, j'espère ?
-fourbe: Je ne trouve plus {machine}, {lieu}. Je n'y ai pas touché, je le précise.
-colerique: Qui a enlevé {machine}, {lieu} ? Qu'on me le dise !
+[machine_introuvable]
+Je ne vois plus {machine}. C'était pourtant là.
+Je cherche {machine}. Quelqu'un a tout démonté ?
+J'arrive avec ma charge, et plus de machine. Ça commence bien.
+{chef}, je ne trouve plus {machine}.
+Une machine pareille ne s'envole pas. Pourtant, plus rien.
+Je garde ma charge sur moi en attendant.
+calme: Plus de machine ici. J'attends qu'on m'en montre une autre.
+peureux: {machine} a disparu… Pourvu que personne ne se soit blessé.
+fourbe: Je n'y ai pas touché, je le précise.
+colerique: Qui a démonté {machine} ? Qu'on remette tout ça, et vite !

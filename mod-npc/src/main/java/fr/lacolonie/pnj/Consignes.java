@@ -616,6 +616,7 @@ final class Consignes {
         mot("#minecraft:saplings", "pousse", "pousses", "jeune arbre", "graine d arbre");
         mot("minecraft:wheat_seeds", "graine", "graines");
         mot("minecraft:wheat", "ble");
+        mot("#c:ores|#c:raw_materials", "minerai", "minerais"); // ce qu'on verse au broyeur (lot 12)
         mot("#minecraft:wool", "laine");
         mot("minecraft:leather", "cuir");
         mot("minecraft:bone", "os");

@@ -186,6 +186,40 @@ final class Messages {
         m("coffre_inaccessible", "Je n'arrive pas au coffre",
                 "Je n'arrive pas jusqu'au coffre {0} : le chemin est barré. Je réessaierai plus tard.",
                 "Impossible d'atteindre le coffre {0}. Un mur, un trou ? Ouvre-moi un passage, et je reprends mes trajets.");
+        // Les machines (lot 12) : {0} = la machine avec son article (« le moulin »), {1} = où (« à 30 pas au nord du poste (x y z) »).
+        m("machine_pleine", "La machine est pleine",
+                "Ça déborde {1} : je ne peux plus rien mettre dans {0}.",
+                "Plus de place dans {0}, {1}. Je garde la charge en attendant.",
+                "Plus rien n'entre dans {0}, {1}. Il faudrait vider ce qui en sort.",
+                "J'ai voulu charger {0}, {1}, mais tout est plein. Le travail attend.",
+                "Il faut quelqu'un pour vider {0}, {1}. Moi, je ne peux plus rien y mettre.",
+                "Rien ne passe plus dans {0}, {1}. C'est plein, dedans comme dessous.");
+        t("machine_pleine", "calme", "Plus de place dans {0}, {1}. Rien de grave, mais il faudra vider.");
+        t("machine_pleine", "peureux", "Ça déborde dans {0}, {1}… Je n'ose pas y toucher sans toi.");
+        t("machine_pleine", "fourbe", "Plus de place dans {0}, {1}. Je n'y suis pour rien, je le précise.");
+        t("machine_pleine", "colerique", "Encore plein à ras bord, {1} ! Qu'on vide {0}, enfin !");
+        m("machine_introuvable", "Je ne trouve plus la machine",
+                "Je venais charger {0}, {1}. Il n'y a plus rien.",
+                "Je ne vois plus {0}, {1}. Quelqu'un a tout démonté ?",
+                "J'ai cherché {0}, {1}, sans rien trouver. Dis-moi où c'est passé.",
+                "Une machine pareille ne s'envole pas. Pourtant, {0} a disparu, {1}.",
+                "Je garde ma charge sur moi : {0} a disparu, {1}.",
+                "Je ne trouve plus {0}, {1}. Montre-moi où charger, et j'y retourne.");
+        t("machine_introuvable", "calme", "Je n'ai pas trouvé {0}, {1}. J'attends que tu m'indiques où aller.");
+        t("machine_introuvable", "peureux", "Je ne vois plus {0}, {1}… Ça n'est pas parti tout seul, j'espère ?");
+        t("machine_introuvable", "fourbe", "Je ne trouve plus {0}, {1}. Je n'y ai pas touché, je le précise.");
+        t("machine_introuvable", "colerique", "Qui a enlevé {0}, {1} ? Qu'on me le dise !");
+        m("machine_source_vide", "Rien ne sort de la machine",
+                "Je suis passé voir {0}, {1} : rien n'en est sorti. J'attends un peu avant de refaire le chemin.",
+                "Rien à prendre dans {0}, {1}. Il faudrait y mettre de quoi travailler, ou faire tourner les roues.",
+                "Pas un grain à ramener : {0}, {1}, ne donne rien. Je reste au poste et j'y retourne plus tard.");
+        t("machine_source_vide", "fourbe", "Rien dans {0}, {1}. Je n'y ai pas touché, je le précise : c'était vide en arrivant.");
+        m("machine_inaccessible", "Je n'arrive pas à la machine",
+                "Je n'arrive pas à atteindre {0}, {1} : le chemin est barré. Je réessaierai plus tard.",
+                "Impossible d'atteindre {0}, {1}. Un mur, un trou ? Ouvre-moi un passage, et je reprends mes trajets.");
+        m("machine_interdite", "Une machine que je laisse",
+                "Je laisse {0}, {1} : ce n'est plus à nous, ou c'est trop loin du poste. Montre-m'en une autre si tu veux.",
+                "Je ne m'occupe plus de ça : {0}, {1}, est chez un voisin, ou trop loin de chez nous.");
         m("sans_champ", "Où dois-je cultiver ?",
                 "Tu ne m'as marqué aucun champ : je ne touche à rien. Regarde une terre près de l'eau et dis-moi « plante un champ ici ».",
                 "Je n'ai pas encore de champ à moi. Montre-moi une bonne terre, près de l'eau, et dis « plante un champ ici ».");
