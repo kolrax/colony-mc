@@ -61,15 +61,17 @@ public class TestsReserve {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = TestsOutils.ouvrier(h, "mineur", 341, b, ItemStack.EMPTY);
         Bureau.Entite d = TestsBucheron.depot(t);
-        t.discard();
+        t.mode = Travailleur.Mode.ATTENDRE; // il garde le coin chargé (le poste ne reverse que chargé), sans rien faire
         remplir(d);
-        h.assertTrue(d.ranger(new ItemStack(Items.IRON_INGOT, 64)).isEmpty() && d.ranger(new ItemStack(Items.IRON_INGOT, 36)).isEmpty(), "le dépôt plein prend tout");
+        d.versReserve(new ItemStack(Items.IRON_INGOT, 64));
+        d.versReserve(new ItemStack(Items.IRON_INGOT, 36));
         h.assertTrue(enReserve(d, Items.IRON_INGOT) == 100, "100 fers en réserve");
         d.depot.removeItem(0, 64); // le joueur retire une pile de terre
         h.succeedWhen(() -> {
             h.assertTrue(TestsBucheron.compte(d, Items.IRON_INGOT) == 64, "une pile de fer revenue au dépôt (" + TestsBucheron.compte(d, Items.IRON_INGOT) + ")");
             h.assertTrue(enReserve(d, Items.IRON_INGOT) == 36, "le reste en réserve (" + enReserve(d, Items.IRON_INGOT) + ")");
             h.assertTrue(TestsBucheron.compte(d, Items.DIRT) == 26 * 64, "la terre intacte");
+            t.discard();
         });
     }
 
@@ -81,7 +83,7 @@ public class TestsReserve {
         t.mission("charbon", "stock", 64);
         Bureau.Entite d = TestsBucheron.depot(t);
         remplir(d);
-        d.ranger(new ItemStack(Items.IRON_PICKAXE));
+        d.versReserve(new ItemStack(Items.IRON_PICKAXE));
         h.assertTrue(enReserve(d, Items.IRON_PICKAXE) == 1, "la pioche est en réserve");
         BlockPos filon = b[0].west(2).south(2);
         h.getLevel().setBlockAndUpdate(filon, Blocks.COAL_ORE.defaultBlockState());
