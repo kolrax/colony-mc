@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * La réserve du poste (cahier 14.4) : le dépôt plein, les ouvriers y rangent sans limite ; elle reverse au dépôt dès
  * qu'une place s'y libère ; ils y trouvent leurs outils ; elle se sauve avec le bureau et tombe au sol s'il est cassé.
- * Coins 340 à 344 du monde plat.
+ * Coins 340 à 346 du monde plat.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -118,22 +118,81 @@ public class TestsReserve {
         h.succeed();
     }
 
-    /** Le bureau cassé : la réserve tombe au sol en piles, rien de perdu. */
+    /** Le bureau cassé : rien ne tombe au sol, la réserve est gardée pour son chef et rendue à son prochain poste. */
     @GameTest(template = "vide", timeoutTicks = 100)
-    public static void bureauCasseLaReserveTombe(GameTestHelper h) {
+    public static void bureauCasseLaReserveGardee(GameTestHelper h) {
         BlockPos[] b = new BlockPos[1];
         Travailleur t = TestsOutils.ouvrier(h, "mineur", 344, b, ItemStack.EMPTY);
         Bureau.Entite d = TestsBucheron.depot(t);
+        java.util.UUID chef = t.chef;
+        d.proprietaire = chef;
         t.discard();
         remplir(d);
         d.ranger(new ItemStack(Items.IRON_INGOT, 64));
         d.ranger(new ItemStack(Items.IRON_INGOT, 36));
         BlockPos p = d.getBlockPos();
-        h.getLevel().removeBlock(p, false);
+        var l = h.getLevel();
+        l.removeBlock(p, false);
         int fer = 0;
-        for (ItemEntity ie : h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(p).inflate(3)))
+        for (ItemEntity ie : l.getEntitiesOfClass(ItemEntity.class, new AABB(p).inflate(3)))
             if (ie.getItem().is(Items.IRON_INGOT)) fer += ie.getItem().getCount();
-        h.assertTrue(fer == 100, "100 fers au sol (" + fer + ")");
+        h.assertTrue(fer == 0, "rien au sol (" + fer + " fers)");
+        Courrier c = Courrier.de(l.getServer());
+        h.assertTrue(c.reserves.containsKey(chef), "réserve gardée pour le chef");
+        BlockPos q = p.east(3);
+        l.setBlockAndUpdate(q, ColoniePnj.BUREAU.get().defaultBlockState());
+        Bureau.Entite n = (Bureau.Entite) l.getBlockEntity(q);
+        n.proprietaire = chef;
+        Bureau.rendreReserve(c, n);
+        h.assertTrue(enReserve(n, Items.IRON_INGOT) == 100, "100 fers rendus au nouveau poste (" + enReserve(n, Items.IRON_INGOT) + ")");
+        h.assertTrue(!c.reserves.containsKey(chef), "plus rien de gardé à part");
+        l.removeBlock(q, false);
+        c.reserves.remove(chef);
+        h.succeed();
+    }
+
+    /** Le transporteur qui porte au dépôt plein ne remplit pas la réserve (pas de stock sans limite pour le chef) : le fer revient au coffre. */
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void transporteurNeRemplitPasLaReserve(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = TestsTransporteur.seul(h, 345, b);
+        var l = h.getLevel();
+        BlockPos a = b[0].offset(6, 0, 0);
+        net.minecraft.world.Container c = TestsTransporteur.coffre(l, a, new ItemStack(Items.IRON_INGOT, 16));
+        Bureau.Entite d = TestsBucheron.depot(t);
+        remplir(d);
+        TestsTransporteur.trajet(t, a.asLong(), Trajets.DEPOT, "");
+        boolean[] porte = {false};
+        h.succeedWhen(() -> {
+            if (TestsTransporteur.sac(t, Items.IRON_INGOT) > 0) porte[0] = true;
+            h.assertTrue(enReserve(d, Items.IRON_INGOT) == 0, "rien en réserve (" + enReserve(d, Items.IRON_INGOT) + ")");
+            h.assertTrue(porte[0] || TestsMineur.lettre(t, "coffre_plein"), "il a essayé (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(TestsTransporteur.compte(c, Items.IRON_INGOT) == 16, "le fer revenu au coffre : " + TestsTransporteur.compte(c, Items.IRON_INGOT));
+            t.discard();
+        });
+    }
+
+    /** Une boîte pleine et un livre écrit ne vont jamais en réserve : ils restent au sac, comme avant. */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void boitesEtLivresPasEnReserve(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = TestsOutils.ouvrier(h, "mineur", 346, b, ItemStack.EMPTY);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        remplir(d);
+        ItemStack boite = new ItemStack(Items.SHULKER_BOX);
+        boite.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(new ItemStack(Items.DIAMOND, 64))));
+        ItemStack livre = new ItemStack(Items.WRITTEN_BOOK);
+        livre.set(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT,
+                new net.minecraft.world.item.component.WrittenBookContent(net.minecraft.server.network.Filterable.passThrough("Registre"), "Chef", 0, List.of(), true));
+        t.inventaire.addItem(boite);
+        t.inventaire.addItem(livre);
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 5));
+        new Actions.Deposer(List.of()).tick(t);
+        h.assertTrue(enReserve(d, Items.COBBLESTONE) == 5, "la pierre en réserve");
+        h.assertTrue(enReserve(d, Items.SHULKER_BOX) == 0 && enReserve(d, Items.WRITTEN_BOOK) == 0, "ni boîte ni livre en réserve");
+        h.assertTrue(t.compter(Actions.Filtre.de("minecraft:shulker_box")) == 1 && t.compter(Actions.Filtre.de("minecraft:written_book")) == 1, "les deux restent au sac");
+        t.discard();
         h.succeed();
     }
 }

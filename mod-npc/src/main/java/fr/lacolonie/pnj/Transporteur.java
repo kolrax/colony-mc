@@ -177,7 +177,7 @@ final class Transporteur extends Metier {
         if (renvoi && charge && t.bureau != null && t.level().isLoaded(t.bureau) && t.level().getBlockEntity(t.bureau) instanceof Bureau.Entite b)
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
-                if (!s.isEmpty()) t.inventaire.setItem(i, b.ranger(s));
+                if (!s.isEmpty()) t.inventaire.setItem(i, b.rangerVisible(s)); // pas la réserve : elle n'est pas un stock sans limite pour le chef
             }
         purger(t);
         for (String k : List.of("trajets", "trajet_depart", "trajet_depart_o", "trajet_depart_n", "en_charge", "transport_repos", "trajet_vides", "trajet_n", "trajets_revus"))
@@ -402,7 +402,7 @@ final class Transporteur extends Metier {
             for (ItemStack c : charge) {
                 ItemStack s = sortir(t, c);
                 if (s.isEmpty()) continue;
-                if (b != null) s = b.ranger(s);
+                if (b != null) s = b.rangerVisible(s); // pas la réserve (cahier 14.4 : « mais pas le joueur »)
                 else for (IItemHandler h : hs) if (!s.isEmpty()) s = ItemHandlerHelper.insertItemStacked(h, s, false);
                 if (!s.isEmpty()) {
                     restes.add(s.copy());

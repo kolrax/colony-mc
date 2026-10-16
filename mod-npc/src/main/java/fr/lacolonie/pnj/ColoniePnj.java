@@ -484,6 +484,7 @@ public class ColoniePnj {
         }
         c.postes.remove(CHEF_BANC);
         c.boites.remove(CHEF_BANC);
+        c.reserves.remove(CHEF_BANC);
         c.effectifs.remove(CHEF_BANC);
         c.vols.removeIf(v -> CHEF_BANC.equals(v.chef));
         c.setDirty();
