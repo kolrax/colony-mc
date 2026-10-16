@@ -134,7 +134,11 @@ class TransporteurTest {
     void repliquesDesMachines() {
         var banque = Vie.lire(Repertoire.lignes("/machines.txt"));
         for (String k : List.of("machine_remplir_ok", "machine_vider_ok", "machine_charge", "machine_vide_rien", "machine_pleine", "machine_pas_capable", "machine_introuvable"))
-            assertTrue(banque.containsKey(k), k);
+            assertTrue(banque.containsKey(k) && Vie.TOUTES.containsKey(k), k);
+        for (var e : banque.entrySet())
+            for (Vie.Replique r : e.getValue())
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ", " au {machine}", " du {machine}", " à {machine}", " de {machine}"))
+                    assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
         String s = Vie.tirer(banque, "machine_pleine", "", java.util.Map.of("machine", "le moulin", "chef", "chef"), () -> 0.0);
         assertFalse(s.contains("{"), s);
     }

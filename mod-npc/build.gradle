@@ -134,6 +134,9 @@ dependencies {
     // Simple Voice Chat est facultatif : le mod s'en sert s'il est installé (c'est le cas sur le serveur).
     compileOnly "de.maxhenkel.voicechat:voicechat-api:2.6.0"
     localRuntime "maven.modrinth:simple-voice-chat:neoforge-1.21.1-2.6.22"
+    // Create (6.0.10, celui du modpack ; Flywheel, Ponder et Registrate sont dedans) : seulement pour les essais en jeu des
+    // machines (TestsMachines). Aucune dépendance de compilation : le mod reconnaît les blocs de Create par leur identifiant.
+    localRuntime "maven.modrinth:create:UjX6dr61"
     testImplementation 'com.google.code.gson:gson:2.10.1' // celui de Minecraft 1.21.1, pour les tests sans le jeu
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
