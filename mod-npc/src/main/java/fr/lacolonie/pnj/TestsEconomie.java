@@ -1,6 +1,7 @@
 package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.AfterBatch;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
@@ -23,7 +24,6 @@ import java.util.List;
 @PrefixGameTestTemplate(false)
 public class TestsEconomie {
     static List<Reglages.Piece> normale;
-    static int restants = 4;
 
     static void monnaie() {
         if (normale == null) normale = Reglages.actuel.monnaie;
@@ -33,7 +33,17 @@ public class TestsEconomie {
 
     static void fin(Travailleur... ts) {
         for (Travailleur t : ts) { Courrier.de(t.level().getServer()).postes.remove(t.chef); t.discard(); }
-        if (--restants <= 0 && normale != null) Reglages.actuel.monnaie = normale;
+    }
+
+    /** Le lot commence au matin : sinon, selon l'ordre des lots, il tombe le soir et l'affamé rentre au lieu d'acheter. */
+    @net.minecraft.gametest.framework.BeforeBatch(batch = "economie")
+    public static void avant(net.minecraft.server.level.ServerLevel l) { l.setDayTime(1000); }
+
+    /** La vraie monnaie revient à la fin du lot, même si un test a échoué (sinon les lingots resteraient des pièces). */
+    @AfterBatch(batch = "economie")
+    public static void apres(net.minecraft.server.level.ServerLevel l) {
+        if (normale != null) Reglages.actuel.monnaie = normale;
+        normale = null;
     }
 
     /** Un affamé (mineur) à son poste vide, et un cuisinier à 8 blocs ; {@code memeChef} : le même chef pour les deux. */
@@ -42,7 +52,8 @@ public class TestsEconomie {
         BlockPos base = TestsJeu.sol(h, coin * 400, 60000);
         Travailleur a = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), ItemStack.EMPTY);
         a.prenom = "Gauthier";
-        a.faim = 6;
+        a.faim = 20; // il a faim une seconde après : à son premier tick, le cuisinier n'est pas encore visible (une recherche ratée = 3 minutes sans recherche)
+        h.runAtTickTime(20, () -> a.faim = 6);
         a.forcerChunk();
         Travailleur v = TestsJeu.employe(h, "cuisinier", base.east(8), Vec3.atBottomCenterOf(base.east(6)), ItemStack.EMPTY);
         v.prenom = "Mahaut";
@@ -105,6 +116,24 @@ public class TestsEconomie {
             h.assertTrue(Reglages.valeur(a.inventaire) == 7 && Reglages.valeur(d.caisse) == 1,
                     "1 pièce à la caisse du poste : acheteur " + Reglages.valeur(a.inventaire) + ", caisse " + Reglages.valeur(d.caisse));
             fin(a, v);
+        });
+    }
+
+    /** En guerre : l'affamé n'achète rien au cuisinier du chef ennemi, même avec de quoi payer. */
+    @GameTest(template = "vide", timeoutTicks = 200, batch = "economie")
+    public static void pasDAchatChezLEnnemi(GameTestHelper h) {
+        Travailleur[] e = scene(h, 374, false);
+        Travailleur a = e[0], v = e[1];
+        a.inventaire.addItem(new ItemStack(Items.GOLD_INGOT, 1));
+        v.inventaire.addItem(new ItemStack(Items.BREAD, 3));
+        Courrier.de(h.getLevel().getServer()).declarer(a.chef, "Alpha", v.chef, "Beta");
+        h.runAtTickTime(20, () -> {
+            // le marché lui-même, face à face (la fuite des civils en guerre ne suffit pas à le prouver)
+            h.assertFalse(Achats.conclure(a, v), "le cuisinier ennemi ne vend pas");
+            h.assertTrue(pains(v) == 3 && !a.memoire.contains("achat"), "rien acheté chez l'ennemi : " + pains(v));
+            Courrier.de(h.getLevel().getServer()).paix(a.chef, v.chef);
+            fin(a, v);
+            h.succeed();
         });
     }
 

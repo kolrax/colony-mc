@@ -2106,6 +2106,7 @@ public class Travailleur extends PathfinderMob {
         regles.clear();
         memoire.remove("garde_chef"); // « attaque quiconque me frappe » : l'ordre de ce chef-là, pas du suivant (GardeChef)
         memoire.remove("epargnes");
+        memoire.remove("achat"); // « qu'as-tu acheté ? » : la réponse est pour ce chef-là
         memoire.remove("garde_depot");
         memoire.remove("boutique"); // sa boutique et ses prix : ceux de ce chef-là (Boutiquier)
         souvenirs.liste.clear(); // ses souvenirs parlent de ce chef-là
