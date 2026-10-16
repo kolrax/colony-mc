@@ -123,9 +123,8 @@ final class Armee {
         ServerPlayer p = s.getPlayerList().getPlayerByName(nom);
         if (p != null && c.postes.containsKey(p.getUUID())) return Map.entry(p.getUUID(), p.getGameProfile().getName());
         for (Travailleur w : ColoniePnj.tous(s)) if (w.chef != null && w.chefNom.equalsIgnoreCase(nom)) return Map.entry(w.chef, w.chefNom);
-        var profil = s.getProfileCache() == null ? java.util.Optional.<com.mojang.authlib.GameProfile>empty() : s.getProfileCache().get(nom);
-        if (profil.isPresent() && c.postes.containsKey(profil.get().getId())) return Map.entry(profil.get().getId(), profil.get().getName());
-        return null;
+        return null; // jamais le cache des profils : il peut interroger Mojang sur le fil du serveur
+
     }
 
     /** L'ennemi nommé (parmi ceux en guerre avec ce chef), ou le plus récent si personne n'est nommé ; null sinon. */
@@ -139,8 +138,17 @@ final class Armee {
     }
 
     /** Ce que le chef dit de la guerre à cet ouvrier : il agit, et ajoute à {@code r} ce qu'il répond (c'est le mod qui répond). */
-    static void ordre(Travailleur t, Guerre.Lu g, List<String> r) {
+    static void ordre(Travailleur t, Guerre.Lu g, List<String> r, boolean agir) {
         if (t.chef == null || !(t.level() instanceof ServerLevel sl)) return;
+        // Dite à plusieurs (une lettre lue devant tous, une phrase entendue de tous) : le premier agit, les autres répondent seulement.
+        if (!agir) {
+            if (g.declare != null) r.add(texte(t, "guerre_declaree", g.declare, null, "C'est donc la guerre contre " + g.declare + "."));
+            if (g.paix != null || g.paixToutes) r.add(texte(t, "guerre_paix", g.paix, null, "La paix. Enfin."));
+            if (g.retraite) r.add(texte(t, "guerre_retraite", null, null, "Retraite ! On rentre !"));
+            Metier mt = Metier.de(t.metier);
+            if (g.lever && mt != null && mt.combattant && t.memoire.contains("guerre_assaut")) r.add(texte(t, "guerre_levee", null, null, "Présent ! Je rejoins les rangs."));
+            return;
+        }
         MinecraftServer s = sl.getServer();
         Courrier c = Courrier.de(s);
         String moi = t.chefNom.isEmpty() ? "ton voisin" : t.chefNom;
@@ -164,6 +172,7 @@ final class Armee {
             if (qui.isEmpty()) r.add("Nous ne sommes pas en guerre" + (g.paix != null ? " avec " + g.paix : "") + ", chef.");
             for (UUID u : qui) {
                 c.paix(t.chef, u);
+                for (Travailleur w : armee(s, t.chef)) if (u.toString().equals(w.memoire.getString("guerre_assaut"))) finir(w);
                 r.add(texte(t, "guerre_paix", en.get(u), null, "La paix avec " + en.get(u) + ". Enfin."));
                 Courrier.avis(s, u, "guerre", true, "La paix", moi + " fait la paix avec toi. La guerre est finie.");
             }
@@ -188,6 +197,7 @@ final class Armee {
                 w.memoire.putBoolean("guerre_casse", g.casser);
                 w.memoire.putBoolean("guerre_pille", g.piller);
                 w.memoire.remove("guerre_porte");
+                w.memoire.putLong("guerre_depuis", w.level().getGameTime());
                 if (w.action instanceof Actions.Reposer || w.action instanceof Actions.Aller) w.finirAction("guerre"); // il part tout de suite
             }
             Metier m = Metier.de(t.metier);
@@ -209,8 +219,18 @@ final class Armee {
     static UUID uuid(String s) { try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; } }
 
     static void finir(Travailleur t) {
-        for (String k : List.of("guerre_assaut", "guerre_casse", "guerre_pille", "guerre_porte")) t.memoire.remove(k);
+        // En marche vers l'ennemi : il s'arrête (la marche de guerre, pas un autre trajet).
+        if (t.memoire.getBoolean("guerre_marche") && t.action instanceof Actions.Aller) t.finirAction("guerre");
+        for (String k : List.of("guerre_assaut", "guerre_casse", "guerre_pille", "guerre_porte", "guerre_marche", "guerre_depuis")) t.memoire.remove(k);
     }
+
+    /** Pendant une action (depuis {@link Guerrier#vigilance}) : la paix faite, il arrête sa marche de guerre. Une lecture de table. */
+    static void veiller(Travailleur t) {
+        if (t.memoire.contains("guerre_assaut") && !ennemis(t).containsKey(uuid(t.memoire.getString("guerre_assaut")))) finir(t);
+    }
+
+    /** Un assaut qui n'aboutit pas (chemin introuvable, poste muré) : il y renonce au bout de 8 minutes. */
+    static final long LIMITE = 20 * 60 * 8;
 
     // --- L'assaut ---------------------------------------------------------------------------------------
 
@@ -241,15 +261,23 @@ final class Armee {
         Courrier.Poste po = c.postes.get(u);
         if (ennemi == null || po == null || po.monde() != t.level().dimension()) { finir(t); return false; } // la paix, ou plus de poste
         BlockPos cible = po.pos();
+        long depuis = mem.getLong("guerre_depuis");
+        if (depuis > 0 && t.level().getGameTime() - depuis > LIMITE) {
+            Cerveau.dire(t, "guerre_renonce", 60, "Impossible d'atteindre leur colonie, chef. Nous rentrons.");
+            finir(t);
+            return false;
+        }
         LivingEntity x = ennemi(t, t.getBoundingBox().inflate(CHARGE, 6, CHARGE));
         if (x != null) {
             if (Cerveau.parfois(t, "guerre_assaut", 30)) dire(t, "guerre_assaut", ennemi, null);
             Cerveau.lancer(t, attaque(t, x, 2 * CHARGE));
             return true;
         }
+        mem.remove("guerre_marche");
         if (t.distanceToSqr(Vec3.atBottomCenterOf(cible)) > ARRIVE * ARRIVE) {
             if (Cerveau.parfois(t, "guerre_en_marche", 90)) dire(t, "guerre_en_marche", ennemi, null);
             Cerveau.Portee p = Cerveau.partir(t, cible, "la guerre contre " + ennemi);
+            mem.putBoolean("guerre_marche", true);
             if (p == Cerveau.Portee.DEMAIN || p == Cerveau.Portee.TROP_LOIN) {
                 t.dire("Leur colonie est trop loin pour nos jambes, chef. Nous restons ici.");
                 finir(t);

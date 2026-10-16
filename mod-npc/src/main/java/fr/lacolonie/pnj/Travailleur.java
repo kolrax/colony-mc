@@ -1859,7 +1859,13 @@ public class Travailleur extends PathfinderMob {
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
         }
         // La guerre entre colonies (Guerre, Armee) : déclaration, paix, levée, retraite ; « rentre » ramène aussi l'armée.
-        if (!parRegle && l.guerre != null) { Armee.ordre(this, l.guerre, r); reponseImposee = true; }
+        if (!parRegle && l.guerre != null) { Armee.ordre(this, l.guerre, r, l.rang == 0); reponseImposee = true; }
+        // « Repliez-vous », « rentrez » : en guerre, c'est aussi la retraite de l'armée (la phrase reste à la consigne « repli »).
+        else if (!parRegle && l.rang == 0 && Guerre.repli(l.texte) && !Armee.ennemis(this).isEmpty()) {
+            Guerre.Lu g = new Guerre.Lu();
+            g.retraite = true;
+            Armee.ordre(this, g, r, true);
+        }
         if (l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.
         String relaye = null;

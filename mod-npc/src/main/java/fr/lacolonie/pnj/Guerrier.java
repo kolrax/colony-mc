@@ -387,6 +387,7 @@ final class Guerrier extends Metier {
     @Override
     void vigilance(Travailleur t) {
         // Au plus mal en plein combat : il boit une potion et recule un instant.
+        Armee.veiller(t); // la paix faite en pleine marche de guerre : il s'arrête
         if (t.action instanceof Actions.Attaquer a) {
             if (Armee.paixFaite(t, a)) { t.finirAction("paix"); return; } // la paix est faite : il baisse son arme
             if (t.getHealth() < t.getMaxHealth() * 0.4 && boire(t)) {

@@ -12,8 +12,8 @@ class GuerreTest {
 
     @Test
     void declaration() {
-        for (String s : List.of("On déclare la guerre à Nielscutt.", "Je déclare la guerre à Nielscutt !", "Nous sommes en guerre contre Nielscutt.",
-                "Déclare la guerre à la colonie de Nielscutt.", "C'est décidé : guerre contre Nielscutt."))
+        for (String s : List.of("On déclare la guerre à Nielscutt.", "Je déclare la guerre à Nielscutt !", "Nous entrons en guerre contre Nielscutt.",
+                "Déclare la guerre à la colonie de Nielscutt.", "C'est décidé : on déclare la guerre à Nielscutt.", "Nous déclarons la guerre à Nielscutt."))
             assertEquals("Nielscutt", lu(s) == null ? null : lu(s).declare, s);
         // Le pseudo tel qu'écrit, trait d'union et souligné compris.
         assertEquals("Niels_cutt-42", lu("On déclare la guerre à Niels_cutt-42.").declare);
@@ -32,6 +32,35 @@ class GuerreTest {
         // Rien sur la guerre : rien de lu (les autres ordres restent aux leurs).
         for (String s : List.of("Attaque quiconque me frappe.", "Attaque ceux qui volent le dépôt.", "Va couper du bois.", "Rentre au poste.", "Attaque ce zombie."))
             assertNull(lu(s), s);
+    }
+
+    /** Relecture B1 : un récit, une hypothèse, un autre qui déclare : pas une déclaration. */
+    @Test
+    void pasUneDeclaration() {
+        for (String s : List.of("Notre guerre contre Nielscutt est finie.", "Tu te souviens de la guerre contre Nielscutt ?", "On a perdu la guerre contre Nielscutt.",
+                "En cas de guerre contre Nielscutt, défends le poste.", "Si on entre en guerre contre Nielscutt, prépare-toi.", "Nielscutt a déclaré la guerre à Raoul.",
+                "Raoul est en guerre avec Nielscutt."))
+            assertTrue(lu(s) == null || lu(s).declare == null, s);
+    }
+
+    /** Relecture B2 : « et ne cassez rien », « mais ne pillez pas » : ni casse ni pillage. */
+    @Test
+    void sansCasseNiPillage() {
+        Guerre.Lu g = lu("Attaquez la colonie de Nielscutt et ne cassez rien.");
+        assertTrue(g.lever && !g.casser, "pas de casse");
+        g = lu("Attaquez la colonie de Nielscutt, cassez leurs portes mais ne pillez pas.");
+        assertTrue(g.lever && g.casser && !g.piller, "casse sans pillage");
+        g = lu("Marchez sur Nielscutt et ne volez rien.");
+        assertTrue(g.lever && !g.piller, "pas de vol");
+    }
+
+    /** Relecture B3 et I4 : pas une levée, pas une retraite ; la phrase reste aux autres ordres. */
+    @Test
+    void pasUneLevee() {
+        for (String s : List.of("Va à l'attaque de ce filon.", "À l'attaque, les gars, coupez ces arbres.", "Marche sur la route jusqu'au pont.", "Marche sur le pont.",
+                "Attaque les gens de la mine.", "Prends ta retraite.", "Repliez-vous !"))
+            assertTrue(lu(s) == null || !lu(s).lever && !lu(s).retraite, s);
+        assertTrue(Guerre.repli("Repliez-vous !"), "en guerre, ce sera la retraite (Armee)");
     }
 
     @Test
@@ -62,7 +91,7 @@ class GuerreTest {
 
     @Test
     void retraite() {
-        for (String s : List.of("Retraite !", "Repliez-vous !", "On se replie.", "Abandonnez l'assaut."))
+        for (String s : List.of("Retraite !", "Sonnez la retraite !", "Battez en retraite.", "Abandonnez l'assaut."))
             assertTrue(lu(s) != null && lu(s).retraite, s);
     }
 }
