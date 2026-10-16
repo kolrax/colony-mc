@@ -70,7 +70,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## 10. Construction (indispensable)
 - [x] Maçon ou bâtisseur : construit un schéma placé par le joueur, avec les matériaux du dépôt
-- [ ] KOLRAX importe ses propres schémas
+- [x] KOLRAX importe ses propres schémas (déjà couvert par le maçon : `.nbt` dans `config/colonie_pnj/schemas/` ou envoi par la table à schémas de Create)
 
 ## 11. Économie (indispensable selon ses notes)
 - [ ] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux
