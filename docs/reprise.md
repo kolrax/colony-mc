@@ -12,7 +12,7 @@ Mise à jour : 16/10/2026, 19 h 15 UTC. Une page à lire en début de session, a
 - **Décision de KOLRAX (16/10, 17 h 12 UTC)** : le serveur n'ouvre que quand le mod est fini ; le chantier continue ; monde de test encore jetable (régénération permise).
 
 ## Branches à reprendre
-- **`economie`** (lot 11, « les PNJ dépensent leur salaire chez d'autres PNJ ») : en cours, voir `docs/economie-en-cours.md` sur cette branche s'il existe, sinon le dernier commit. Textes `economie.txt` (239 répliques) déjà dedans. Pas relue. Worktree `/home/user/wt-eco` (perdu avec le conteneur : repartir de `origin/economie`).
+- **`economie`** (`e9d89f1`, lot 11, « les PNJ dépensent leur salaire chez d'autres PNJ ») : **1re passe faite et verte** (274 JUnit, 335/335 en jeu, sur la base 0.9.30), **PAS RELUE**, pas fusionnée. Bourse (la paie va maintenant dans le sac : avant, les pièces disparaissaient), achat de nourriture à un producteur à 32 blocs, prix dans `reglages.json`, marchandage, questions « qu'as-tu acheté ? » / « combien as-tu de pièces ? ». Pas fait : achat d'équipement. Ajout hors sujet à valider : `TestsJeu.auMatin`. Détails : `docs/economie-en-cours.md` sur la branche. Worktree `/home/user/wt-eco` (perdu avec le conteneur : repartir de `origin/economie`).
 - `en-cours` = `main` (GitHub refuse la suppression de branche depuis le cloud : on la remet sur `main`). Les autres branches (`depot`, `reserve`, `guerre`, `lit`, `frappe-chef`, `macon`, `textes-*`) sont fusionnées.
 
 ## Ce que le mod sait faire aujourd'hui
@@ -32,7 +32,7 @@ Mise à jour : 16/10/2026, 19 h 15 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » et « Graphify » dans CLAUDE.md.**
-1. Reprendre `origin/economie` : finir, une passe verte, relecture, livrer.
+1. `origin/economie` : relecture (pièces jamais perdues ni créées, vraies pièces Numismatics, 50 affamés), corrections, fusion de `main` dedans, build + passe complète, livrer.
 2. Puis lot 11 : boutiques (pièces Numismatics seulement), coût des ouvriers (cahier 9.2 : débutant 2-3 PNJ, très riche ~30) ; lot 12 Create ; lot 13 ; lot 14.
 3. Restes de la guerre (plus-tard) : renfort des civils sur « oui », feu, casse au-delà des portes, paix des deux côtés, porte d'un voisin tiers.
 4. Instables vus le 16/10 (passés à la relance) : `bucheronPresDeLaLave`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `coupsDArme`, `iavoix`, `sortDeLaLave`, `compagnonsEnParlent`, `tondUnMouton`. `litASoiPasPrisParUnAutre` réglé (vrai défaut).
