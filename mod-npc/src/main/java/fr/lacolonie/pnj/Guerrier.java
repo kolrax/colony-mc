@@ -202,7 +202,8 @@ final class Guerrier extends Metier {
             LivingEntity m = null;
             LivingEntity a = o.getLastHurtByMob();
             if (a != null && Monde.hostile(a) && Monde.recent(o, o.getLastHurtByMobTimestamp())) m = a;
-            if (m == null && o.memoire.getLong("alerte_t") > maintenant - 600 && t.level().getEntity(o.memoire.getInt("alerte")) instanceof LivingEntity c && Monde.hostile(c)) m = c;
+            if (m == null && o.memoire.getLong("alerte_t") > maintenant - 600 && t.level().getEntity(o.memoire.getInt("alerte")) instanceof LivingEntity c
+                    && (Monde.hostile(c) || Armee.ennemi(t, Armee.ennemis(t), c))) m = c; // un monstre, ou un ennemi en guerre (Armee.fuir)
             if (m == null) m = t.level().getEntitiesOfClass(LivingEntity.class, o.getBoundingBox().inflate(6, 3, 6), Monde::hostile).stream().findFirst().orElse(null);
             if (m != null && !t.inaccessibles.containsKey(m.getId()) && aSaPortee(t, m)) {
                 Cerveau.dire(t, "secours", 20, "Tiens bon, " + o.prenom + ", j'arrive !");
@@ -216,7 +217,15 @@ final class Guerrier extends Metier {
                 e -> Monde.hostile(e) && (e.getX() - b.getX()) * (e.getX() - b.getX()) + (e.getZ() - b.getZ()) * (e.getZ() - b.getZ()) <= r * r
                         && aSaHauteur(t, e) && aSaPortee(t, e) && !t.inaccessibles.containsKey(e.getId())).stream().min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
         if (m != null) Cerveau.dire(t, "chasse", 120, nuit ? "Un rôdeur dans la nuit. Je m'en charge." : "Un monstre près du poste. Je m'en charge.");
+        // En guerre : un ouvrier ennemi, ou le chef ennemi, dans l'espace de vie (Armee) ; la déclaration est l'ordre.
+        if (m == null && (m = Armee.ennemi(t, zone)) != null && Cerveau.parfois(t, "guerre_defense", 30)) Armee.dire(t, "guerre_defense", Armee.ennemis(t).get(Armee.camp(m)), null);
         return m;
+    }
+
+    /** L'attaque de ce que sa veille a trouvé : un monstre, ou un ennemi en guerre (cette attaque-là cesse à la paix : {@link Armee#paixFaite}). */
+    static Actions.Attaquer contre(Travailleur t, LivingEntity m) {
+        double portee = 2.5 * Travailleur.ESPACE_DE_VIE;
+        return !Monde.hostile(m) && Armee.camp(m) != null ? Armee.attaque(t, m, portee) : new Actions.Attaquer(m).portee(portee);
     }
 
     /** Un monstre qu'il peut combattre : pas un creeper sans arc (au corps à corps, il lui sauterait au visage). */
@@ -390,7 +399,9 @@ final class Guerrier extends Metier {
     @Override
     void vigilance(Travailleur t) {
         // Au plus mal en plein combat : il boit une potion et recule un instant.
+        Armee.veiller(t); // la paix faite en pleine marche de guerre : il s'arrête
         if (t.action instanceof Actions.Attaquer a) {
+            if (Armee.paixFaite(t, a)) { t.finirAction("paix"); return; } // la paix est faite : il baisse son arme
             if (t.getHealth() < t.getMaxHealth() * 0.4 && boire(t)) {
                 Cerveau.dire(t, "boire", 20, "Je recule, le temps de boire un coup !");
                 Cerveau.lancer(t, new Actions.Fuir(a.cible));
@@ -405,7 +416,7 @@ final class Guerrier extends Metier {
             if (m != null) {
                 Cerveau.dire(t, "debout", 60, "Debout ! On attaque la colonie !");
                 armer(t);
-                Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE));
+                Cerveau.lancer(t, contre(t, m));
                 return;
             }
             if (t.isSleeping()) return;
@@ -413,7 +424,12 @@ final class Guerrier extends Metier {
         // Une consigne de combat (tenir une porte, protéger quelqu'un, se replier) mène elle-même sa lutte.
         if (t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat")) return;
         List<LivingEntity> c = cibles(t, 10);
-        if (!c.isEmpty()) attaquer(t, c.get(0));
+        if (!c.isEmpty()) { attaquer(t, c.get(0)); return; }
+        // En guerre, un ennemi tout près (une fois par seconde au plus) : il le frappe, sans autre ordre (la déclaration en est un).
+        if ((t.tickCount + t.getId()) % 20 < 10 && !(t.action instanceof Consignes.Faire)) {
+            LivingEntity e = Armee.ennemi(t, t.getBoundingBox().inflate(10, 4, 10));
+            if (e != null && (t.memoire.contains("guerre_assaut") || t.bureau != null && t.chezLui(e.blockPosition()))) Cerveau.lancer(t, Armee.attaque(t, e, 2.5 * Travailleur.ESPACE_DE_VIE));
+        }
     }
 
     @Override
@@ -427,6 +443,8 @@ final class Guerrier extends Metier {
     @Override
     void travailler(Travailleur t) {
         armer(t);
+        // La guerre : l'assaut d'une colonie ennemie, ou le butin à déposer au retour (Armee).
+        if (Armee.assaut(t)) return;
         Commande c = Metier.commande(t);
         String id = c == null ? "garder" : c.id;
 
@@ -450,7 +468,7 @@ final class Guerrier extends Metier {
         if (soigner(t)) return;
         // Un ouvrier de la colonie en danger ; la nuit, les rôdeurs autour de la colonie. Il revient ensuite à son poste.
         LivingEntity m = veille(t, Abri.nuit(t.level()));
-        if (m != null) { armer(t); Cerveau.lancer(t, new Actions.Attaquer(m).portee(2.5 * Travailleur.ESPACE_DE_VIE)); return; }
+        if (m != null) { armer(t); Cerveau.lancer(t, contre(t, m)); return; }
         if (t.distanceToSqr(Vec3.atBottomCenterOf(b)) > r * r) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(b), 3)); return; }
 
         // Près du poste, de temps en temps : ce que le dépôt a de mieux pour lui.

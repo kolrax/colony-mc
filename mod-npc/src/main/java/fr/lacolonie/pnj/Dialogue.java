@@ -207,6 +207,7 @@ final class Dialogue {
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
                 GardeChef.reprendre(lecture, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 GardeDepot.reprendre(lecture, seul); // le dépôt du poste non plus
+                Guerre.reprendre(lecture, seul); // ni la guerre
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) lecture.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
             }
             lecture.rang = i;

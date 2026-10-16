@@ -957,6 +957,7 @@ public class Travailleur extends PathfinderMob {
                 Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
                 GardeChef.reprendre(li, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 GardeDepot.reprendre(li, seul); // le dépôt du poste non plus
+                Guerre.reprendre(li, seul); // ni la guerre
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
                 if (li.texte.isBlank()) li.texte = l.texte;
                 String dit = appliquer(li, null);
@@ -1857,6 +1858,15 @@ public class Travailleur extends PathfinderMob {
             auTravail = true;
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
         }
+        // La guerre entre colonies (Guerre, Armee) : déclaration, paix, levée, retraite ; « rentre » ramène aussi l'armée.
+        if (!parRegle && l.guerre != null) { Armee.ordre(this, l.guerre, r, l.rang == 0); reponseImposee = true; }
+        // « Repliez-vous », « rentrez » : en guerre, c'est aussi la retraite de l'armée (la phrase reste à la consigne « repli »).
+        else if (!parRegle && l.rang == 0 && Guerre.repli(l.texte) && !Armee.ennemis(this).isEmpty()) {
+            Guerre.Lu g = new Guerre.Lu();
+            g.retraite = true;
+            Armee.ordre(this, g, r, true);
+        }
+        if (l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.
         String relaye = null;
         if (!parRegle && chef != null && mode != Mode.GREVE) for (var e : l.pourAutres.entrySet()) {

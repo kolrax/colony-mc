@@ -65,10 +65,12 @@ final class Ordres {
         /** Le dépôt du poste ({@link GardeDepot}) : sa garde (null si rien n'est dit), qui peut s'y servir, qui ne le peut plus. */
         GardeChef.Posture depot;
         final List<String> permis = new ArrayList<>(), retires = new ArrayList<>();
+        /** La guerre entre colonies ({@link Guerre}) : déclaration, paix, levée de l'armée, retraite ; null si rien n'est dit. */
+        Guerre.Lu guerre;
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
                 && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty()
-                && depot == null && permis.isEmpty() && retires.isEmpty(); }
+                && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null; }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -222,6 +224,9 @@ final class Ordres {
             return l;
         }
         Lecture l = new Lecture();
+        // La guerre d'abord (« attaquez la colonie de X et pillez leur dépôt » n'est ni la garde du chef, ni celle de notre dépôt).
+        Guerre.Lu guerre = Guerre.lire(texte);
+        if (!guerre.rien()) { l.guerre = guerre; texte = guerre.reste; }
         // Ce qu'il fera si l'on frappe son chef (« attaque quiconque me frappe », « ne fais jamais rien à Nielscutt »).
         GardeChef.Lu garde = GardeChef.lire(texte);
         if (!garde.rien()) { l.posture = garde.posture; l.epargner.addAll(garde.epargner); texte = garde.reste; }

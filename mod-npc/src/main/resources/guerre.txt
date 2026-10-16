@@ -1,0 +1,298 @@
+# La guerre entre colonies : déclaration, armée, assaut, défense, paix (cahier : guerre simple). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt, defense.txt et chef.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+#
+# RÈGLE : un PNJ ne frappe un joueur que sur ordre de son chef, en guerre. Hors guerre, il refuse.
+#
+# VARIABLES
+#   {chef}     nom de son chef (partout)
+#   {ennemi}   nom du chef ennemi (partout)
+#   {nom}      prénom d'un collègue (guerre_levee, guerre_renfort_propose, guerre_blesse)
+#              ou d'un ennemi (guerre_ennemi_vu)
+#
+# CLÉS
+#   guerre_declaree          le chef déclare la guerre à {ennemi} : réaction de l'ouvrier
+#   guerre_recue             on apprend que {ennemi} nous a déclaré la guerre
+#   guerre_levee             le guerrier rejoint l'armée
+#   guerre_renfort_propose   un fermier ou un autre civil propose de venir en renfort
+#   guerre_renfort_refuse    un civil peureux refuse d'y aller
+#   guerre_en_marche         en route vers la colonie ennemie
+#   guerre_assaut            au moment d'attaquer
+#   guerre_casse             il casse un mur ou une porte ennemis
+#   guerre_brule             il met le feu
+#   guerre_vol               il emporte un butin
+#   guerre_ennemi_vu         il voit un ouvrier ou un guerrier ennemi près de chez lui
+#   guerre_defense           il défend sa colonie contre l'attaque
+#   guerre_blesse            blessé en guerre
+#   guerre_retraite          le chef ordonne la retraite
+#   guerre_victoire          la guerre est gagnée
+#   guerre_defaite           la guerre est perdue
+#   guerre_paix              la paix est signée avec {ennemi}
+#   guerre_refus_hors_guerre on lui demande d'attaquer un joueur sans guerre ni ordre clair : il refuse poliment
+#   lettre_guerre_attaque    ligne courte pour une lettre au chef : la colonie est attaquée par les gens de {ennemi}
+
+[guerre_declaree]
+La guerre contre {ennemi}… Que Dieu nous garde.
+Si {chef} l'a décidé, c'est qu'il n'y avait plus d'autre chemin.
+Alors c'est la guerre. Je vais affûter mes outils.
+{ennemi} l'a bien cherché, à ce qu'on dit.
+calme: Gardons la tête froide. Une guerre se gagne avec patience.
+calme: Je ferai ma part, sans haine et sans faiblesse.
+colerique: Enfin ! Il était temps qu'on montre à {ennemi} de quel bois on se chauffe !
+colerique: {ennemi} va regretter le jour où il a croisé notre route !
+peureux: La guerre ? Mais… et nos maisons, et nos champs ?
+peureux: Pourvu que ça ne dure pas…
+fourbe: La guerre a du bon : les greniers de {ennemi} sont bien garnis.
+fourbe: Intéressant. Voyons ce que {ennemi} cache derrière ses murs.
+
+[guerre_recue]
+{ennemi} nous déclare la guerre ? Il faut prévenir tout le monde !
+La guerre est à nos portes. Fermez les coffres et gardez les yeux ouverts.
+Des gens de {ennemi} pourraient venir. Restons sur nos gardes.
+On nous attaque de parole, bientôt ce sera par le fer.
+calme: Pas de panique. On s'organise, et on tient bon.
+calme: Une déclaration n'est pas une défaite. Préparons-nous.
+colerique: Qu'il vienne, ce {ennemi} ! On l'attend de pied ferme !
+colerique: Il ose ? Il va voir ce qu'il en coûte !
+peureux: Ils vont venir… Ils vont venir nous prendre tout !
+peureux: Je savais que ça finirait mal. Je le savais.
+fourbe: {ennemi} montre ses cartes trop tôt. Tant mieux pour nous.
+fourbe: On va lui faire une belle surprise, à ce {ennemi}.
+
+[guerre_levee]
+Présent ! Je rejoins les rangs.
+À vos ordres, {chef}. Mon épée est à vous.
+Je suis prêt. On part quand vous voulez.
+J'en suis. {nom}, tu marches à côté de moi ?
+calme: Je prends ma place dans la troupe. Comptez sur moi.
+calme: J'ai réglé mes affaires. Je suis prêt à partir.
+colerique: Enfin un vrai travail pour mon épée !
+colerique: Donnez-moi la première ligne, {chef} !
+peureux: J'y vais… Je fais mon devoir, même si j'ai les jambes qui tremblent.
+peureux: Je reste près de toi, {nom}, d'accord ?
+fourbe: Je marche avec vous. Je garde un œil sur leurs réserves.
+fourbe: Comptez sur moi. Et sur ma part du butin.
+
+[guerre_renfort_propose]
+{chef}, je sais tenir une fourche. Je peux venir en renfort.
+Si l'armée manque de bras, je suis là.
+Je ne suis pas guerrier, mais je peux porter, creuser, aider.
+Laissez-moi venir avec {nom}. Deux bras de plus, ça compte.
+Mes champs attendront. La colonie passe avant.
+Je n'ai jamais fait la guerre, mais je ne veux pas rester en arrière.
+calme: Je peux suivre l'armée et tenir les arrières, si vous le voulez.
+calme: Dites-moi seulement où je serai le plus utile.
+colerique: Une fourche bien tenue vaut une épée ! Prenez-moi avec vous !
+colerique: Je ne vais pas rester planté là pendant qu'on se bat !
+peureux: Je… je peux venir aussi, si vous avez vraiment besoin de monde.
+fourbe: Je viens. On voit des choses intéressantes, à la guerre.
+
+[guerre_renfort_refuse]
+Pardon, {chef}, mais je ne suis pas fait pour la bataille.
+Je ne saurais pas me battre. Je serais un poids pour vous.
+Je préfère garder la colonie pendant votre absence.
+Quelqu'un doit rester pour les champs et les bêtes.
+Je ne peux pas. Vraiment, je ne peux pas.
+Ne m'en voulez pas, {chef}. Je reste ici.
+peureux: Moi, à la guerre ? Je tomberais au premier coup !
+peureux: Non, non… Je tremble rien que d'y penser.
+peureux: Je vous en prie, laissez-moi ici. Je ferai double travail.
+peureux: J'ai trop peur, {chef}. Je ne vous serais d'aucune aide.
+calme: Je suis plus utile ici, à faire tourner la colonie.
+fourbe: La guerre, c'est pour les braves. Moi, je garde les réserves.
+
+[guerre_en_marche]
+En route. Restons groupés.
+La colonie de {ennemi} n'est plus très loin.
+On avance. Gardez vos armes à portée de main.
+Pas trop de bruit. Il ne faut pas qu'ils nous entendent venir.
+calme: Marchons d'un bon pas, mais gardons nos forces.
+calme: Les yeux ouverts. On ne sait pas ce qui nous attend.
+colerique: Plus vite ! J'ai hâte d'y être !
+colerique: Ils ne nous verront pas arriver, ceux-là !
+peureux: On est encore loin ? Je n'aime pas ces bois…
+peureux: Et s'ils nous attendent derrière la colline ?
+fourbe: Je connais un passage par le côté. Personne ne le surveille.
+fourbe: Leurs gardes dorment, j'en suis sûr. Profitons-en.
+
+[guerre_assaut]
+À l'attaque !
+Pour {chef} et pour la colonie !
+En avant ! Tous ensemble !
+C'est le moment. Chargez !
+calme: Restez en rang. Maintenant, en avant !
+calme: Chacun à sa place. Allons-y.
+colerique: Sus à {ennemi} ! Qu'ils tremblent !
+colerique: Rien ne nous arrêtera ! À l'assaut !
+peureux: Allons-y… Allons-y ! Que Dieu nous protège !
+peureux: Je suis derrière vous ! Juste derrière !
+fourbe: Pendant qu'ils regardent devant, passons par derrière.
+fourbe: Frappons là où ils ne nous attendent pas.
+
+[guerre_casse]
+Ce mur ne tiendra pas longtemps.
+Encore un coup, et la porte cède !
+Voilà une brèche. Passez par là !
+Leurs murs sont moins solides qu'ils le croient.
+La porte est tombée. Entrez !
+On ouvre un passage. Suivez-moi.
+calme: Pierre par pierre. Patience, ça vient.
+calme: Le mur est ouvert. Allons-y prudemment.
+colerique: Tiens, prends ça, maudite porte !
+colerique: Rien ne résiste à mes coups !
+peureux: Ça y est, c'est cassé… On n'aurait pas dû, peut-être ?
+fourbe: Une belle porte. Dommage pour eux.
+
+[guerre_brule]
+Le feu prend. Écartez-vous !
+Qu'il brûle, puisque c'est la guerre.
+Mettez le feu, et reculez vite !
+Les flammes feront le reste.
+Ça brûle ! Ne restez pas trop près !
+Ainsi le veut {chef}. Que le feu fasse son œuvre.
+calme: Le feu est lancé. Surveillez qu'il ne revienne pas vers nous.
+calme: Je n'aime pas ça, mais c'est un ordre.
+colerique: Brûle ! Que {ennemi} voie ça de loin !
+colerique: Voilà ce qu'on fait de ceux qui nous cherchent !
+peureux: Ça brûle trop vite ! Reculons !
+fourbe: Un peu de fumée, et ils ne sauront plus où donner de la tête.
+
+[guerre_vol]
+J'emporte ça. Ça servira chez nous.
+Voilà une bonne prise pour la colonie.
+On ne repart pas les mains vides.
+Ce coffre était bien rempli. Je prends tout.
+Le butin est pour {chef} et la colonie.
+calme: Je prends ce qui nous sera utile. Le reste, on le laisse.
+calme: Une prise de guerre. On la rapporte au poste.
+colerique: Tout ça est à nous, maintenant !
+colerique: {ennemi} n'avait qu'à mieux garder ses biens !
+peureux: Je prends ça… Personne ne m'a vu, j'espère ?
+fourbe: Joli butin. Personne ne le regrettera, sauf {ennemi}.
+fourbe: Je mets un peu de côté pour le voyage. On ne sait jamais.
+
+[guerre_ennemi_vu]
+Attention ! Un des gens de {ennemi} rôde par ici !
+Là-bas ! C'est {nom}, de chez {ennemi} !
+Un ennemi près de nos maisons ! Prévenez les gardes !
+{nom} traîne autour de nos murs. Ça ne me plaît pas.
+calme: Je vois {nom}, de chez {ennemi}. Gardons un œil sur lui.
+calme: Un ennemi tout près. Pas de geste brusque, je préviens {chef}.
+colerique: Toi ! Déguerpis avant que je te fasse courir !
+colerique: {nom} ose venir jusqu'ici ? Quel culot !
+peureux: Un ennemi ! Là ! Il faut prévenir {chef} !
+peureux: Ne… ne t'approche pas plus !
+fourbe: Tiens, {nom}… Que viens-tu donc espionner ?
+fourbe: Je fais semblant de ne pas le voir. On verra ce qu'il cherche.
+
+[guerre_defense]
+Tenez bon ! Ils ne passeront pas !
+Défendez les maisons ! Défendez les nôtres !
+Ce sont nos murs. Personne n'y entrera !
+Aux portes ! Vite, aux portes !
+calme: Gardez vos places. Laissez-les venir à nous.
+calme: Ne cédez pas. Ils se fatigueront avant nous.
+colerique: Venez, bande de pillards ! Venez donc !
+colerique: Retournez chez {ennemi}, et vite !
+peureux: Ils sont là ! Ils sont partout ! Tenez bon !
+peureux: Je défends la porte… Je la défends, promis !
+fourbe: Laissons-les entrer un peu. Ils ne ressortiront pas si vite.
+fourbe: Par le côté. On les prend à revers.
+
+[guerre_blesse]
+Aïe ! Je suis touché !
+Ce n'est rien… Je peux encore tenir.
+Je saigne, mais je reste debout.
+{nom}, aide-moi ! J'ai pris un mauvais coup.
+calme: Une blessure, rien de plus. Je continue.
+calme: Je vais bander ça et je reviens.
+colerique: Tu m'as eu ? Tu vas le payer cher !
+colerique: Une égratignure ! Ça ne m'arrêtera pas !
+peureux: Je suis blessé ! Je suis blessé ! Au secours !
+peureux: J'ai mal… Je ne veux pas mourir ici.
+fourbe: Je fais le mort un instant. Ils passeront sans me voir.
+fourbe: Bien joué, l'ami. Mais je me souviendrai de toi.
+
+[guerre_retraite]
+Retraite ! On rentre !
+Repliez-vous ! Ordre de {chef} !
+On recule, en bon ordre !
+Ne restez pas là ! On se replie !
+calme: Pas de course. On recule ensemble.
+calme: Une retraite n'est pas une défaite. Suivez-moi.
+colerique: Reculer ? Si c'est un ordre… mais ça me coûte !
+colerique: On reviendra, {ennemi}, tu peux m'en croire !
+peureux: Enfin ! On rentre, vite, vite !
+peureux: Attendez-moi ! Ne me laissez pas derrière !
+fourbe: Je pars le dernier. Il reste un coffre à vider.
+fourbe: Reculons. Qu'ils croient avoir gagné.
+
+[guerre_victoire]
+Victoire ! La colonie a tenu bon !
+On a gagné ! Vive {chef} !
+{ennemi} a compris la leçon.
+C'est fini. On a gagné, et on rentre chez nous.
+calme: Victoire. Prenons soin des blessés avant de nous réjouir.
+calme: C'est gagné. Espérons que ce soit la dernière fois.
+colerique: Ha ! Qu'il revienne, {ennemi}, s'il ose !
+colerique: Je savais qu'on les écraserait !
+peureux: On a gagné ? On a vraiment gagné ? Ouf !
+peureux: Je suis encore entier. Quelle chance !
+fourbe: Victoire, et les réserves de {ennemi} sont à nous.
+fourbe: Tout s'est passé comme je l'avais prévu.
+
+[guerre_defaite]
+Nous avons perdu… Il faudra se relever.
+C'est fini. {ennemi} l'a emporté.
+Une défaite. Ça fait mal, mais on reste debout.
+On a fait ce qu'on a pu.
+calme: Nous avons perdu une bataille, pas la colonie.
+calme: Soignons nos blessés. Le reste viendra.
+colerique: Ce n'est pas fini ! On aura notre revanche !
+colerique: Je n'oublierai pas ce jour, {ennemi} !
+peureux: J'avais dit que ça finirait mal…
+peureux: Et maintenant ? Qu'est-ce qu'on va devenir ?
+fourbe: Perdu ? Pour cette fois. Je retiens chaque visage.
+fourbe: Faisons profil bas. Notre heure reviendra.
+
+[guerre_paix]
+La paix avec {ennemi} ! Enfin, on peut souffler.
+C'est fini. On retourne au travail.
+La paix est signée. Que ça dure longtemps.
+Plus de guerre. Je vais pouvoir dormir tranquille.
+calme: La paix vaut mieux que toutes les victoires.
+calme: Rangeons les armes et réparons ce qui a été cassé.
+colerique: La paix ? Bon… Mais qu'il se tienne tranquille, ce {ennemi}.
+colerique: Je range mon épée. Pas trop loin, quand même.
+peureux: La paix ! Oh, merci, merci !
+peureux: Plus personne ne viendra nous attaquer ? Vraiment ?
+fourbe: La paix… pour l'instant. Gardons nos yeux ouverts.
+fourbe: On signe, on sourit, et on reste prudents.
+
+[guerre_refus_hors_guerre]
+Non. Je ne frappe personne sans guerre déclarée.
+Je ne lève pas la main sur quelqu'un sans un ordre clair de {chef}.
+Nous ne sommes pas en guerre. Je ne ferai pas ça.
+Pardon, mais ce n'est pas juste. Je refuse.
+calme: Je comprends ta colère, mais je ne frapperai pas sans raison.
+calme: Il faut une guerre et un ordre. Nous n'avons ni l'un ni l'autre.
+colerique: Ce n'est pas l'envie qui me manque, mais non. Pas sans ordre.
+colerique: Je ne suis pas un brigand ! Je me bats quand c'est la guerre.
+peureux: Attaquer quelqu'un ? Non, non, je n'oserais jamais.
+peureux: On aurait des ennuis… Je ne veux pas.
+fourbe: Sans guerre ? On nous traiterait de bandits. Très peu pour moi.
+fourbe: Pas comme ça. Une guerre en règle, et là, on verra.
+
+[lettre_guerre_attaque]
+{chef}, les gens de {ennemi} nous attaquent ! Reviens vite !
+On est attaqués par ceux de {ennemi}. Nous tenons, mais il faut de l'aide.
+Les hommes de {ennemi} sont à nos portes. Viens vite, {chef}.
+Alerte : {ennemi} nous attaque. Nous défendons la colonie.
+La colonie est attaquée par les gens de {ennemi}. Reviens dès que tu peux.
+{ennemi} a lancé ses gens contre nous. On a besoin de toi, {chef}.
+Ceux de {ennemi} cassent nos murs ! Reviens vite !
+On se bat contre les gens de {ennemi}. Ne tarde pas, {chef}.
