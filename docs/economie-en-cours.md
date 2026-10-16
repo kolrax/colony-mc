@@ -42,6 +42,6 @@ Rien côté client : pas de nouveau modpack. `mod_version` inchangée.
   ajouté alors `TestsJeu.auMatin` (`@BeforeBatch` « defaultBatch » : chaque lot par défaut commence au matin, l'ordre des
   lots ayant changé avec le lot « economie ») ; passe 4 : `TestsEleveur.nourritEtFaitNaitreUnVeau` (éleveur resté dehors
   au portillon) et `TestsChasseur.tueUnCochonSauvageEtDeposeLaViande` (3 cochons tués au lieu de 2, déjà vu instable).
-  Aucun de ces échecs ne touche à l'achat ni aux pièces, mais **il faut une passe complète verte avant la fusion sur main**.
-- À faire en premier par la session suivante : relancer la suite ; si l'éleveur ou le chasseur échouent encore, comparer
-  avec `main` (et retirer `TestsJeu.auMatin` si c'est lui qui gêne).
+  Aucun de ces échecs ne touche à l'achat ni aux pièces.
+- **Passe 5 (19 h 09 UTC, code inchangé depuis la passe 4, commit f7f44cd) : 335/335 en jeu, tout vert.** La branche peut
+  être fusionnée ; l'éleveur et le chasseur de la passe 4 sont à surveiller (instables, déjà vus avant pour le chasseur).
