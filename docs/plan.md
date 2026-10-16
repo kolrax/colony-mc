@@ -73,7 +73,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] KOLRAX importe ses propres schémas (déjà couvert par le maçon : `.nbt` dans `config/colonie_pnj/schemas/` ou envoi par la table à schémas de Create)
 
 ## 11. Économie (indispensable selon ses notes)
-- [ ] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux
+- [x] Les PNJ dépensent leur salaire chez d'autres PNJ (nourriture, équipement) : une vraie économie entre eux (0.9.33, 1re passe : nourriture ; équipement dans plus-tard)
 - [ ] Boutiques ; argent physique = pièces Numismatics existantes
 - [ ] Coût : un débutant peut payer 2 ou 3 PNJ, un joueur très riche une trentaine
 - [x] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
