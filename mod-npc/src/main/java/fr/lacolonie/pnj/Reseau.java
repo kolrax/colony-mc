@@ -108,5 +108,18 @@ public final class Reseau {
         r.playToServer(Parler.TYPE, Parler.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) t.parler(sp, p.texte());
         });
+        r.playToServer(Barre.TYPE, Barre.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) BarreCommandes.executer(sp, t, p.action());
+        });
+    }
+
+    /** Une ligne choisie dans la barre de commandes : l'action du répertoire, pour cet ouvrier (joueur vers serveur, {@link BarreCommandes}). */
+    public record Barre(int id, String action) implements CustomPacketPayload {
+        static final Type<Barre> TYPE = typeDe("barre");
+        static final StreamCodec<RegistryFriendlyByteBuf, Barre> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Barre::id, ByteBufCodecs.stringUtf8(64), Barre::action, Barre::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 }
