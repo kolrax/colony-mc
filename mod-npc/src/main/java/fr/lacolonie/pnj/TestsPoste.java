@@ -123,6 +123,49 @@ public class TestsPoste {
 
     static List<String> ids(Travailleur t) { return t.missions.stream().map(m -> m.id).toList(); }
 
+    /** Combien de livrets du chef dans son sac. */
+    static int livrets(ServerPlayer p) {
+        int n = 0;
+        for (ItemStack s : p.getInventory().items) {
+            var c = s.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            if (s.is(Items.WRITTEN_BOOK) && c != null && c.title().raw().equals(Bureau.livret().titre()) && !c.pages().isEmpty()) n += s.getCount();
+        }
+        return n;
+    }
+
+    /** « Faire de ce bureau mon poste » : le livret du chef, une seule fois par joueur, même s'il refait un poste. */
+    @GameTest(template = "vide", batch = "poste")
+    public static void livretDonneUneSeuleFois(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.oublierPoste(chef.getUUID(), h.getLevel(), e.getBlockPos()); // un bureau qui n'est pas encore son poste
+        h.assertTrue(livrets(chef) == 0, "pas de livret avant");
+        e.action(chef, "devenir_poste", new CompoundTag());
+        h.assertTrue(c.poste(chef.getUUID()) != null, "le bureau est son poste");
+        h.assertTrue(livrets(chef) == 1, "le livret du chef, avec ses pages : " + livrets(chef));
+        c.oublierPoste(chef.getUUID(), h.getLevel(), e.getBlockPos());
+        e.action(chef, "devenir_poste", new CompoundTag());
+        h.assertTrue(livrets(chef) == 1, "une seule fois par joueur : " + livrets(chef));
+        h.succeed();
+    }
+
+    /** L'onglet Caisse montre les guerres en cours (les pseudos, depuis Courrier.guerres). */
+    @GameTest(template = "vide", batch = "poste")
+    public static void guerresDansLaFiche(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        h.assertTrue(e.fiche(chef).getList("guerres", Tag.TAG_STRING).isEmpty(), "en paix");
+        java.util.UUID ennemi = java.util.UUID.randomUUID();
+        c.declarer(chef.getUUID(), "Chef", ennemi, "Morvan");
+        try {
+            var g = e.fiche(chef).getList("guerres", Tag.TAG_STRING);
+            h.assertTrue(g.size() == 1 && g.getString(0).equals("Morvan"), "en guerre contre Morvan : " + g);
+        } finally { c.paix(chef.getUUID(), ennemi); }
+        h.succeed();
+    }
+
     /** Plus de corbeau : le type n'existe plus, et un ouvrier au loin qui a quelque chose à dire ne fait rien apparaître. */
     @GameTest(template = "vide", batch = "poste")
     public static void plusAucunCorbeau(GameTestHelper h) {

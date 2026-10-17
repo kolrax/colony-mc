@@ -90,6 +90,7 @@ public final class Bureau {
                 if (ancien == null || !posteExiste(p.server, ancien)) {
                     c.definirPoste(p.getUUID(), level, pos);
                     rendreReserve(c, e);
+                    donnerLivret(p);
                     Travailleur.signaler(p, "Ton poste de travail est posé : tous tes ouvriers s'y rattachent. Clic droit dessus pour les gérer.");
                 }
             }
@@ -145,6 +146,43 @@ public final class Bureau {
         if (!reste.isEmpty()) c.reserves.put(e.proprietaire, reste);
         c.setDirty();
         e.setChanged();
+    }
+
+    /** Ce que le joueur garde (données du joueur, côté serveur) : il a déjà reçu le livret. */
+    static final String CLE_LIVRET = "colonie_pnj_livret";
+    /** Le livret, lu une fois dans les ressources du mod. */
+    private static Livret.Contenu livret;
+
+    static Livret.Contenu livret() {
+        if (livret == null) {
+            try (var in = Bureau.class.getResourceAsStream("/livret.txt")) {
+                livret = Livret.lire(in == null ? "" : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (java.io.IOException x) {
+                ColoniePnj.LOG.warn("Livret du chef illisible", x);
+                livret = Livret.lire("");
+            }
+        }
+        return livret;
+    }
+
+    /** Le livret du chef en livre écrit. */
+    static ItemStack livre() {
+        Livret.Contenu c = livret();
+        ItemStack s = new ItemStack(net.minecraft.world.item.Items.WRITTEN_BOOK);
+        s.set(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT, new net.minecraft.world.item.component.WrittenBookContent(
+                net.minecraft.server.network.Filterable.passThrough(c.titre()), c.auteur(), 0,
+                c.pages().stream().map(p -> net.minecraft.server.network.Filterable.<Component>passThrough(Component.literal(p))).toList(), true));
+        return s;
+    }
+
+    /** La première fois qu'un joueur a un poste, il reçoit le livret du chef ; une seule fois par joueur. */
+    static void donnerLivret(ServerPlayer p) {
+        var donnees = p.getPersistentData();
+        if (donnees.getBoolean(CLE_LIVRET) || livret().pages().isEmpty()) return;
+        donnees.putBoolean(CLE_LIVRET, true);
+        ItemStack s = livre();
+        if (!p.getInventory().add(s)) p.drop(s, false);
+        Travailleur.signaler(p, "Un livret t'est remis : « " + livret().titre() + " ». Il t'apprend à mener tes ouvriers.");
     }
 
     /** Le poste existe encore (son monde est là et le bloc aussi, s'il est chargé). */
@@ -481,6 +519,9 @@ public final class Bureau {
             f.put("journal", journal(c.boite(p.getUUID())));
             f.put("depot", depotTag(p.registryAccess()));
             f.put("caisse", caisseTag(p));
+            ListTag guerres = new ListTag(); // les pseudos de ceux avec qui il est en guerre
+            for (String nom : c.ennemis(p.getUUID()).values()) guerres.add(net.minecraft.nbt.StringTag.valueOf(nom));
+            f.put("guerres", guerres);
             return f;
         }
 
@@ -589,6 +630,7 @@ public final class Bureau {
                     if (ancien != null && posteExiste(p.server, ancien) && !estLePoste()) return;
                     c.definirPoste(p.getUUID(), level, worldPosition);
                     Travailleur.signaler(p, "Ce bureau est ton poste de travail : tous tes ouvriers s'y rattachent.");
+                    donnerLivret(p);
                 }
                 case "enregistrer" -> {
                     Travailleur t = ouvrier(p, d.getString("uuid"));

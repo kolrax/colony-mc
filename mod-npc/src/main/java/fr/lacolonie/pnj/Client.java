@@ -680,10 +680,10 @@ public final class Client {
         static final String[] NOMS_ONGLETS = {"Ouvriers", "Missions", "Dépôt", "Caisse", "Journal"};
         static final String[] CATEGORIES = {"", "outils", "minerais", "nourriture", "bois", "blocs", "divers"};
         static final String[] NOMS_CATEGORIES = {"Tout", "Outils", "Minerais", "Nourriture", "Bois", "Blocs", "Divers"};
-        static String ongletMemo = "ouvriers", choisiMemo = "", categorieMemo = "", rechercheMemo = "";
+        static String ongletMemo = "ouvriers", choisiMemo = "", categorieMemo = "", rechercheMemo = "", guerreMemo = "";
         /** Le défilement de la liste de l'onglet ouvert (lignes, ou rangées de la grille du dépôt). */
         static int defilement;
-        static final int LIGNES_OUVRIERS = 8, LIGNE_OUVRIER = 14, LIGNES_MISSIONS = 10, LIGNES_JOURNAL = 19, CASE = 18, COLONNES = 22, RANGEES = 9;
+        static final int LIGNES_OUVRIERS = 8, LIGNE_OUVRIER = 14, LIGNES_MISSIONS = 10, LIGNES_JOURNAL = 19, LIGNES_CAISSE = 8, CASE = 18, COLONNES = 22, RANGEES = 9;
 
         final BlockPos pos;
         final CompoundTag f;
@@ -695,7 +695,7 @@ public final class Client {
         CompoundTag choisi;
         // Réglages de l'ouvrier choisi
         int debut, fin, jours;
-        EditBox salaire, recherche;
+        EditBox salaire, recherche, cible;
         Button bDebut, bFin, bJours;
 
         EcranPoste(BlockPos pos, CompoundTag infos) {
@@ -772,7 +772,7 @@ public final class Client {
                 case "missions" -> new int[]{lignesMissions().size(), LIGNES_MISSIONS};
                 case "journal" -> new int[]{journal.size(), LIGNES_JOURNAL};
                 case "depot" -> new int[]{(visibles().size() + COLONNES - 1) / COLONNES, RANGEES};
-                case "caisse" -> new int[]{ouvriers.size(), 12};
+                case "caisse" -> new int[]{ouvriers.size(), LIGNES_CAISSE};
                 default -> new int[]{ouvriers.size(), LIGNES_OUVRIERS};
             };
         }
@@ -805,8 +805,7 @@ public final class Client {
             switch (ongletMemo) {
                 case "missions" -> initMissions();
                 case "depot" -> initDepot();
-                case "caisse" -> bouton("Déposer des pièces", x0 + largeur - 138, y0 + 28, 130, b -> envoyer("stock", new CompoundTag()))
-                        .setTooltip(Tooltip.create(Component.literal("Ouvre la caisse : mets-y les pièces de la paie.")));
+                case "caisse" -> initCaisse();
                 case "journal" -> {}
                 default -> initOuvriers();
             }
@@ -861,6 +860,29 @@ public final class Client {
             bDebut.setMessage(Component.literal(debut + " h"));
             bFin.setMessage(Component.literal(fin + " h"));
             bJours.setMessage(Component.literal(jours + (jours > 1 ? " jours" : " jour")));
+        }
+
+        // --- Onglet Caisse : la paie, et l'encadré « Guerre »
+
+        void initCaisse() {
+            bouton("Déposer des pièces", x0 + largeur - 138, y0 + 28, 130, b -> envoyer("stock", new CompoundTag()))
+                    .setTooltip(Tooltip.create(Component.literal("Ouvre la caisse : mets-y les pièces de la paie.")));
+            cible = new EditBox(font, x0 + 10, y0 + 220, 120, 18, Component.literal("Pseudo"));
+            cible.setMaxLength(16);
+            cible.setValue(guerreMemo);
+            cible.setHint(Component.literal("Pseudo du chef…").withStyle(s -> s.withColor(0x777777)));
+            cible.setResponder(v -> guerreMemo = v);
+            addRenderableWidget(cible);
+            bouton("Déclarer la guerre", x0 + 136, y0 + 219, 116, b -> guerre("declarer_guerre"))
+                    .setTooltip(Tooltip.create(Component.literal("Vos deux colonies le sauront. Tes gardes pourront alors frapper ses gens, sur ton ordre.")));
+            bouton("Faire la paix", x0 + 256, y0 + 219, 96, b -> guerre("paix"));
+        }
+
+        void guerre(String action) {
+            if (guerreMemo.isBlank()) return;
+            CompoundTag d = new CompoundTag();
+            d.putString("cible", guerreMemo.strip());
+            envoyer(action, d);
         }
 
         // --- Onglet Missions : toutes les files, à réordonner ou annuler
@@ -1054,7 +1076,7 @@ public final class Client {
             texte(g, "OUVRIER", x, yl, OR);
             texte(g, "SALAIRE", x + 140, yl, OR);
             texte(g, "PAIE", x + 230, yl, OR);
-            for (int r = 0; r < Math.min(12, ouvriers.size() - defilement); r++) {
+            for (int r = 0; r < Math.min(LIGNES_CAISSE, ouvriers.size() - defilement); r++) {
                 CompoundTag o = ouvriers.get(defilement + r);
                 int y2 = yl + 12 + r * 11;
                 texte(g, couper(o.getString("nom"), 130), x, y2, o.getBoolean("absent") ? GRIS : BLANC);
@@ -1062,6 +1084,14 @@ public final class Client {
                 texte(g, couper(o.getString("salaire") + " " + (o.getString("periode").isEmpty() ? "" : o.getString("periode")), 86), x + 140, y2, BLANC);
                 texte(g, couper(o.getString("paie"), largeur - 250), x + 230, y2, o.getInt("impayes") > 0 ? ROUGE : GRIS);
             }
+            // La guerre : contre qui, et le champ pour la déclarer ou faire la paix.
+            g.fill(x0 + 6, y0 + 194, x0 + largeur - 6, y0 + 195, 0xFF8A6A2A);
+            texte(g, "GUERRE", x, y0 + 199, OR);
+            ListTag gs = f.getList("guerres", Tag.TAG_STRING);
+            List<String> noms = new ArrayList<>();
+            for (int i = 0; i < gs.size(); i++) noms.add(gs.getString(i));
+            texte(g, couper(noms.isEmpty() ? "Tu es en paix avec tout le monde." : "En guerre contre : " + String.join(", ", noms), largeur - 70),
+                    x + 50, y0 + 199, noms.isEmpty() ? GRIS : ROUGE);
         }
 
         void renderJournal(GuiGraphics g, int mx, int my) {
