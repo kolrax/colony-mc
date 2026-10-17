@@ -44,6 +44,68 @@ class NuitTest {
         assertTrue(l.debut < 0 && l.fin < 0, "une règle n'est pas un horaire");
     }
 
+    /** Relecture 1 : toute négation des nuits, c'est le jour, jamais la nuit. */
+    @Test
+    void negationsDonnentLeJour() {
+        for (String s : List.of("Arrêtez de travailler de nuit", "Arrêtes de travailler de nuit", "Ne travaillez plus la nuit", "Ne travaille plus la nuit",
+                "Pas de nuit pour toi", "Tu ne travailleras plus de nuit", "Je ne veux plus que tu travailles de nuit", "Stop les nuits", "Cesse de travailler la nuit",
+                "Fini le travail de nuit"))
+            assertEquals(0, lire(s).equipe, s);
+        assertEquals(1, lire("Ne t'en fais pas, travaille de nuit").equipe, "la négation d'une autre proposition ne compte pas");
+        assertEquals(1, lire("Travaille de nuit, ne t'arrête pas").equipe);
+    }
+
+    /** Relecture 2 : « poste / équipe de nuit » seulement après un verbe d'affectation. */
+    @Test
+    void posteDeNuitSeulementAffecte() {
+        for (String s : List.of("Rentre au poste de nuit", "Reste au poste de nuit", "L'équipe de nuit est fatiguée", "Le service de nuit commence"))
+            assertEquals(-1, lire(s).equipe, s);
+        for (String s : List.of("Mets-toi au poste de nuit", "Tu seras de l'équipe de nuit", "Tu passes en équipe de nuit", "Rejoins l'équipe de nuit"))
+            assertEquals(1, lire(s).equipe, s);
+        assertEquals(0, lire("Tu seras de l'équipe de jour").equipe);
+    }
+
+    /** Relecture 3 et 6 : heures à moitié dites, « travaille de jour » sur un ouvrier qui n'est pas de nuit. */
+    @Test
+    void heuresCompletees() {
+        Ordres.Lecture l = lire("Travaille de nuit et commence à 22h");
+        assertEquals(1, l.equipe);
+        assertArrayEquals(new int[]{22, 6}, Nuit.horaires(l.equipe, l.debut, l.fin, 6, 18, 20, 6), "le début dit, la fin des réglages");
+        l = lire("Travaille de nuit et finis à 4h");
+        assertArrayEquals(new int[]{20, 4}, Nuit.horaires(l.equipe, l.debut, l.fin, 6, 18, 20, 6));
+        assertArrayEquals(new int[]{20, 6}, Nuit.horaires(1, -1, -1, 6, 18, 20, 6));
+        assertArrayEquals(new int[]{6, 18}, Nuit.horaires(0, -1, -1, 20, 6, 20, 6), "de nuit, remis au jour");
+        assertArrayEquals(new int[]{7, 19}, Nuit.horaires(0, -1, -1, 7, 19, 20, 6), "déjà de jour : ses heures réglées restent");
+        assertArrayEquals(new int[]{8, 16}, Nuit.horaires(-1, 8, 16, 6, 18, 20, 6), "des heures dites seules");
+    }
+
+    /** Relecture 4 : une question polie est un ordre ; une vraie question non. */
+    @Test
+    void questionsPolies() {
+        assertEquals(1, lire("Peux-tu travailler de nuit ?").equipe);
+        assertEquals(1, lire("Travaille de nuit, ça te va ?").equipe);
+        assertEquals(1, lire("Tu veux bien faire les nuits ?").equipe);
+        assertEquals(-1, lire("Tu travailles de nuit ?").equipe);
+    }
+
+    /** Relecture 5 : seules les règles de nuit ou de jour tombent quand une équipe est dite. */
+    @Test
+    void autresReglesGardees() {
+        Ordres.Lecture l = lire("Travaille de nuit. Le soir, rentre au poste.");
+        assertEquals(1, l.equipe);
+        assertTrue(l.regles.stream().anyMatch(r -> r.quand.equals("SOIR")), "la règle du soir reste : " + l.regles);
+    }
+
+    /** Relecture 6 : jour et nuit, c'est toute la journée. */
+    @Test
+    void jourCommeNuit() {
+        for (String s : List.of("Travaille de jour comme de nuit", "Travaille le jour et la nuit", "Travaille de jour et de nuit")) {
+            Ordres.Lecture l = lire(s);
+            assertEquals(-1, l.equipe, s);
+            assertTrue(l.debut == 0 && l.fin == 0, s + " : toute la journée (" + l.debut + "-" + l.fin + ")");
+        }
+    }
+
     @Test
     void heuresDeNuit() {
         assertTrue(Nuit.deNuit(20, 6));

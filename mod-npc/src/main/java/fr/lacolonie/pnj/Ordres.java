@@ -208,13 +208,46 @@ final class Ordres {
 
     /** Les mots du travail de nuit, et du retour au jour (lot 13, {@link Nuit}). */
     static final String[] NUIT = {"travaille de nuit", "travailles de nuit", "travaillez de nuit", "travailles la nuit", "travailler de nuit", "travailleras de nuit", "travaillerez de nuit",
-            "bosse de nuit", "bossez de nuit", "feras les nuits", "ferez les nuits", "fais les nuits", "faites les nuits", "fera les nuits",
-            "equipe de nuit", "poste de nuit", "service de nuit", "ouvrier de nuit", "travailleur de nuit",
-            "travaille la nuit", "travaillez la nuit", "travailler la nuit", "travailleras la nuit"};
+            "bosse de nuit", "bossez de nuit", "feras les nuits", "ferez les nuits", "fais les nuits", "faites les nuits", "fera les nuits", "faire les nuits",
+            "ouvrier de nuit", "travailleur de nuit", "travaille la nuit", "travaillez la nuit", "travailler la nuit", "travailleras la nuit"};
     static final String[] JOUR = {"travaille de jour", "travaillez de jour", "travailler de jour", "travailleras de jour", "reprends le jour",
-            "reprenez le jour", "equipe de jour", "poste de jour", "service de jour", "plus de nuit", "plus de nuits", "fini les nuits",
-            "finies les nuits", "assez de nuits", "arrete les nuits", "arretez les nuits", "arrete de travailler de nuit", "arrete de travailler la nuit",
-            "ne travaille plus de nuit", "ne travaille plus la nuit", "ne travailles plus la nuit", "ne travaillez plus de nuit", "travaille le jour", "travaillez le jour"};
+            "reprenez le jour", "travaille le jour", "travaillez le jour"};
+    /** Jour et nuit : toute la journée, pas une équipe. */
+    static final String[] JOUR_ET_NUIT = {"jour et nuit", "nuit et jour", "de jour comme de nuit", "de nuit comme de jour", "jour comme nuit", "nuit comme jour",
+            "le jour et la nuit", "la nuit et le jour", "de jour et de nuit", "de nuit et de jour"};
+    /** « Mets-toi au poste de nuit », « tu seras de l'équipe de nuit » ; pas « rentre au poste de nuit ». */
+    static final Pattern AFFECTE = Pattern.compile("\\b(?:mets toi|met toi|mettez vous|passe|passes|passez|passera|passeras|seras|serez|sera|es|etes|prends|prenez"
+            + "|rejoins|rejoignez|integre|integres|integrez|fais partie|feras partie|faites partie)(?: [a-z]+){0,2}? (?:au |a l |de l |de |en |dans l |dans |du |d )?"
+            + "(?:equipe|poste|service|quart|tour) de (nuit|jour)\\b");
+    /** Une négation devant les nuits : « ne travaille plus la nuit », « arrêtez de travailler de nuit », « plus de nuits ». */
+    static final Pattern NIE = Pattern.compile("\\b(?:ne|n|pas|plus|jamais|arret[a-z]*|cesse[a-z]*|stop[a-z]*|fini[a-z]*|assez|sans)(?: [a-z]+){0,4}? (?:de|des|la|les) nuits?\\b");
+    static final Pattern PLUS_DE_NUITS = Pattern.compile("\\b(?:plus|pas|assez|fini[a-z]*|arret[a-z]*|stop[a-z]*|cesse[a-z]*)(?: le travail)? (?:de|des|les) nuits?\\b");
+    /** Le travail de nuit dit avec des mots entre deux (« ne travaillez plus la nuit ») : seulement pour une négation. */
+    static final Pattern TRAVAIL_DE_NUIT = Pattern.compile("\\b(?:travail[a-z]*|boss[a-z]*|fai[a-z]*|fer[a-z]*)(?: [a-z]+){0,2}? (?:de|la|les) nuits?\\b");
+    /** Une question polie qui est un ordre : « peux-tu travailler de nuit ? », « … ça te va ? ». */
+    static final String[] POLI = {"peux tu", "pourrais tu", "pourriez vous", "pouvez vous", "tu peux", "tu pourrais", "veux tu", "voudrais tu", "voulez vous",
+            "tu veux bien", "vous voulez bien", "ca te va", "ca vous va", "d accord ?", "ok ?"};
+
+    /**
+     * L'équipe dite (lot 13) : 1 de nuit, 0 de jour, -1 rien. Proposition par proposition (« ne t'en fais pas, travaille de nuit ») :
+     * la dernière qui en parle l'emporte ; une négation des nuits, c'est le jour ; « jour et nuit » n'est pas une équipe ; une vraie
+     * question (« tu travailles de nuit ? ») n'est pas un ordre, une question polie (« peux-tu… ? », « … ça te va ? ») en est un.
+     */
+    static int equipe(String texte) {
+        String tout = normaliser(texte);
+        if (dit(tout, JOUR_ET_NUIT) || tout.contains("?") && !dit(tout, POLI)) return -1;
+        int e = -1;
+        for (String p : texte.split("[,.;:!?…]+")) {
+            String n = normaliser(p);
+            Matcher a = AFFECTE.matcher(n);
+            String affecte = a.find() ? a.group(1) : "";
+            boolean nuit = dit(n, NUIT) || affecte.equals("nuit");
+            if ((nuit || TRAVAIL_DE_NUIT.matcher(n).find() || PLUS_DE_NUITS.matcher(n).find()) && NIE.matcher(n).find()) e = 0;
+            else if (dit(n, JOUR) || affecte.equals("jour")) e = 0;
+            else if (nuit) e = 1;
+        }
+        return e;
+    }
 
     static final Pattern HORAIRES = Pattern.compile(" (?:de |entre |des |a partir de )?(\\d{1,2}) ?h(?:eures?)?(?: ?\\d{1,2})? (?:a|jusqu a|et|au|-) (\\d{1,2}) ?h");
     static final Pattern COMMENCE = Pattern.compile(" (?:commence|commences|commencez|commencer|debute|debutes|debuter|embauche|leve toi|reveille toi) (?:a |vers |des )?(\\d{1,2}) ?h");
@@ -254,11 +287,12 @@ final class Ordres {
         // Le travail de nuit (lot 13), lu avant : « reprends le jour » n'est pas la règle « le jour, reprends ». Jamais « bonne nuit »,
         // « la nuit tombe » ni « la nuit, rentre » ; le jour d'abord (« arrête de travailler de nuit » contient « travailler de nuit ») ;
         // « tu travailles de nuit ? » est une question. Des heures dites (« de 22 h à 4 h ») restent les siennes (plus bas).
-        String n0 = normaliser(texte);
-        if (!n0.contains("?")) l.equipe = dit(n0, JOUR) ? 0 : dit(n0, NUIT) ? 1 : -1;
+        l.equipe = equipe(texte);
+        boolean jourEtNuit = dit(normaliser(texte), JOUR_ET_NUIT); // « travaille le jour et la nuit » : toute la journée (plus bas)
         OrdresLongs.Lu lu = OrdresLongs.lire(texte);
         for (OrdresLongs.Regle r : lu.regles) {
-            if (l.equipe >= 0 && OrdresLongs.heure(r.quand)) continue; // « travaille la nuit » : ses heures, pas une règle
+            // « Travaille la nuit », « le jour et la nuit » : ses heures, pas une règle (les autres règles restent : « le soir, préviens-moi »).
+            if ((l.equipe >= 0 || jourEtNuit) && (r.quand.equals("NUIT") || r.quand.equals("JOUR"))) continue;
             if (r.voit() && r.previens()) { l.regles.add(r); continue; }
             Lecture x = lire(r.suite, metier);
             String verbe = OrdresLongs.metierDuVerbe(r.suite);
@@ -282,7 +316,7 @@ final class Ordres {
         if (m.find()) { l.debut = Math.floorMod(Integer.parseInt(m.group(1)), 24); l.fin = Math.floorMod(Integer.parseInt(m.group(2)), 24); }
         if ((m = COMMENCE.matcher(n)).find()) l.debut = Math.floorMod(Integer.parseInt(m.group(1)), 24);
         if ((m = FINIS.matcher(n)).find()) l.fin = Math.floorMod(Integer.parseInt(m.group(1)), 24);
-        if (dit(n, "toute la journee", "jour et nuit", "nuit et jour", "sans arret", "24h", "24 h sur 24")) { l.debut = 0; l.fin = 0; }
+        if (jourEtNuit || dit(n, "toute la journee", "sans arret", "24h", "24 h sur 24")) { l.debut = 0; l.fin = 0; }
         if ((dit(n, "expedition", "expeditions", "absent", "partir", "pars", "parti", "voyage", "dehors", "loin") || n.contains(" jours max"))
                 && (m = JOURS.matcher(n)).find()) {
             String j = m.group(1);

@@ -1136,7 +1136,13 @@ public class Travailleur extends PathfinderMob {
             boolean laNuit = Nuit.heureDeNuit(heure()), travaille = false;
             if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE)
                 fatigue -= Nuit.repos(isSleeping() ? 12 : dehors ? 5 : 8, !laNuit && deNuit(), rg.nuit_sommeil_jour);
-            else if (mode == Mode.TRAVAIL && action != null) { fatigue += Talents.fatigue(Nuit.fatigue(dehors ? 7 : 5, laNuit, rg.nuit_fatigue), talents); travaille = true; }
+            else if (mode == Mode.TRAVAIL && action != null) {
+                // Seul un vrai travail compte pour la nuit : pas l'attente au poste, une pause, ni le retour au poste (le chasseur de nuit).
+                travaille = !(action instanceof Actions.Attendre) && !(action instanceof Besoins.Flaner) && !(action instanceof Causeries.Bavarder)
+                        && !(action instanceof Actions.LireLettres) && !(action instanceof Actions.ToucherPaie)
+                        && !(action instanceof Actions.Aller a && bureau != null && a.cible.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 25);
+                fatigue += Talents.fatigue(Nuit.fatigue(dehors ? 7 : 5, laNuit && travaille, rg.nuit_fatigue), talents);
+            }
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);
             compterNuits(travaille && laNuit);
@@ -2044,13 +2050,10 @@ public class Travailleur extends PathfinderMob {
 
         // Horaires et expéditions.
         if (l.debut >= 0 || l.fin >= 0 || l.equipe >= 0) {
-            if (l.debut >= 0) debut = l.debut;
-            if (l.fin >= 0) fin = l.fin;
-            // « Travaille de nuit » sans heures dites : celles des réglages (lot 13) ; « travaille de jour » : 6 h - 18 h.
-            if (l.debut < 0 && l.fin < 0) {
-                debut = l.equipe == 1 ? Reglages.actuel.nuit_debut : 6;
-                fin = l.equipe == 1 ? Reglages.actuel.nuit_fin : 18;
-            }
+            // « Travaille de nuit » : ce qui n'est pas dit vient des réglages ; « travaille de jour » : 6 h - 18 h s'il était de nuit (lot 13, Nuit).
+            int[] h = Nuit.horaires(l.equipe, l.debut, l.fin, debut, fin, Reglages.actuel.nuit_debut, Reglages.actuel.nuit_fin);
+            debut = h[0];
+            fin = h[1];
             r.add(debut == fin ? Messages.corps(this, "dit_toute_journee")
                     : l.equipe == 1 ? Messages.corps(this, "dit_nuit", debut, fin)
                     : l.equipe == 0 ? Messages.corps(this, "dit_jour", debut, fin)

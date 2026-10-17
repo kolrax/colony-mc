@@ -20,6 +20,17 @@ final class Nuit {
         return nuit * 2 > total;
     }
 
+    /**
+     * Ses heures {début, fin} après un ordre : les heures dites d'abord ; de nuit, ce qui manque vient des réglages (« travaille de
+     * nuit et commence à 22 h » → 22 h - 6 h) ; de jour, 6 h - 18 h, mais un ouvrier qui n'était pas de nuit garde ses heures réglées.
+     */
+    static int[] horaires(int equipe, int debutDit, int finDit, int debut, int fin, int nuitDebut, int nuitFin) {
+        if (equipe == 1) return new int[]{debutDit >= 0 ? debutDit : nuitDebut, finDit >= 0 ? finDit : nuitFin};
+        if (equipe == 0 && debutDit < 0 && finDit < 0) return deNuit(debut, fin) ? new int[]{6, 18} : new int[]{debut, fin};
+        if (equipe == 0 && deNuit(debut, fin)) return new int[]{debutDit >= 0 ? debutDit : 6, finDit >= 0 ? finDit : 18};
+        return new int[]{debutDit >= 0 ? debutDit : debut, finDit >= 0 ? finDit : fin};
+    }
+
     /** La fatigue d'une heure de travail : la nuit, tant de fois plus (arrondi, au moins le gain de jour). */
     static int fatigue(int gain, boolean laNuit, double facteur) {
         return laNuit ? Math.max(gain, (int) Math.round(gain * facteur)) : gain;
