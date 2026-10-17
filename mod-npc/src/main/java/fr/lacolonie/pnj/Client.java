@@ -265,8 +265,21 @@ public final class Client {
             if (metier != null) { icone(m, buf, metier, x, -0.5f, 9); x += 10; }
             ecrire(font, e.prenomLu, x, 0, 0xFFFFFFFF, m, buf, fond);
             if (details) {
-                ResourceLocation etat = ICONES_ETAT.get(e.etat());
-                if (etat != null) icone(m, buf, etat, -5, -12, 10);
+                // Au-dessus du prénom : son statut unique (refonte 1.0.0, « ⛏ Mine · 32/64 fer », « ⚠ Pas de pioche au dépôt ») ;
+                // un chercheur d'emploi n'en a pas : son icône d'état, comme avant.
+                String statut = e.statutTete();
+                if (!statut.isEmpty()) {
+                    if (!statut.equals(e.statutLu)) { e.statutLu = statut; e.largeurStatut = font.width(statut); }
+                    int couleur = statut.startsWith("⚠") ? 0xFFFF9966 : statut.equals(Statut.ATTENTE) || statut.equals(Statut.HORS_HORAIRES) ? 0xFFBBBBBB : 0xFF9FE09F;
+                    ps.pushPose();
+                    ps.translate(0, -10, 0);
+                    ps.scale(0.75f, 0.75f, 1);
+                    ecrire(font, statut, -e.largeurStatut / 2f, 0, couleur, ps.last().pose(), buf, fond);
+                    ps.popPose();
+                } else {
+                    ResourceLocation etat = ICONES_ETAT.get(e.etat());
+                    if (etat != null) icone(m, buf, etat, -5, -12, 10);
+                }
                 String role = e.role();
                 if (!role.isEmpty()) {
                     if (!role.equals(e.roleLu)) { e.roleLu = role; e.largeurRole = font.width(role); }
@@ -577,6 +590,176 @@ public final class Client {
             for (int k = debut; k < lignes.size(); k++) { g.drawString(font, lignes.get(k), x0 + 12, y, couleurs.get(k), false); y += 10; }
             if (lignes.isEmpty()) texte(g, "Écris-lui ce que tu veux : « suis-moi », « ramène 10 fers », « où en es-tu ? »… (« aide » : la liste)", x0 + 12, y0 + 40, 0x777777);
             texte(g, "Entrée : envoyer   Échap : fermer", x0 + 10, y0 + hauteur - 14, 0x666666);
+        }
+    }
+
+    // --- La fiche de l'ouvrier, la nouvelle mission et la confirmation (refonte 1.0.0, parties 4.1 et 4.4) ----------------
+
+    static void ouvrirFicheOuvrier(Reseau.FicheOuvrier f) { Minecraft.getInstance().setScreen(new EcranOuvrier(f.id(), f.infos())); }
+
+    static void envoyer(int id, String action, CompoundTag d) { PacketDistributor.sendToServer(new Reseau.OrdreOuvrier(id, action, d)); }
+
+    static int couleurStatut(String st) {
+        return st.startsWith("⚠") ? ORANGE : st.equals(Statut.ATTENTE) || st.equals(Statut.HORS_HORAIRES) ? GRIS : VERT;
+    }
+
+    /** Au clic droit : sa mission et sa progression, sa file, sa paie et sa faim, son équipement, et les six boutons. */
+    static class EcranOuvrier extends Cadre {
+        final int id;
+        final CompoundTag i;
+        final List<CompoundTag> file = new ArrayList<>();
+        static final int LIGNES = 6;
+
+        EcranOuvrier(int id, CompoundTag infos) {
+            super(Component.literal(infos.getString("nom")), 330, 250);
+            this.id = id;
+            this.i = infos;
+            for (Tag t : infos.getList("file", Tag.TAG_COMPOUND)) file.add((CompoundTag) t);
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            for (int k = 0; k < Math.min(LIGNES, file.size()); k++) {
+                CompoundTag d = new CompoundTag();
+                d.putInt("index", k);
+                addRenderableWidget(Button.builder(Component.literal("✖"), b -> envoyer(id, "annuler", d))
+                        .bounds(x0 + largeur - 24, y0 + 92 + k * 14, 14, 12).tooltip(Tooltip.create(Component.literal("Annuler cette mission"))).build());
+            }
+            int w = 100, xa = x0 + 10, xb = x0 + 115, xc = x0 + 220, y1 = y0 + hauteur - 52, y2 = y0 + hauteur - 28;
+            bouton("Nouvelle mission", xa, y1, w, b -> minecraft.setScreen(new EcranNouvelleMission(this)));
+            bouton("Travaille ici", xb, y1, w, b -> envoyer(id, "ici", new CompoundTag()));
+            bouton("Suis-moi", xc, y1, w, b -> envoyer(id, "suivre", new CompoundTag()));
+            bouton("Attends ici", xa, y2, w, b -> envoyer(id, "attendre", new CompoundTag()));
+            bouton("Rentre au poste", xb, y2, w, b -> envoyer(id, "rentrer", new CompoundTag()));
+            Button renvoi = bouton("Licencier", xc, y2, w, b -> minecraft.setScreen(new EcranConfirmer(this,
+                    "Renvoyer " + i.getString("nom") + " ? Il ne travaillera plus pour toi.", () -> { envoyer(id, "licencier", new CompoundTag()); onClose(); })));
+            renvoi.active = i.getBoolean("chef");
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            super.render(g, mx, my, pt);
+            int x = x0 + 10, w = largeur - 20;
+            texte(g, i.getString("nom") + " — " + i.getString("metier") + " " + "★".repeat(i.getInt("niveau")), x, y0 + 8, OR);
+            String st = i.getString("statut");
+            texte(g, st, x, y0 + 22, couleurStatut(st));
+            texte(g, "Salaire : " + i.getString("salaireTexte") + "   Faim " + i.getInt("faim") + "/20   Vie " + i.getInt("vie") + "/" + i.getInt("vieMax"), x, y0 + 36, GRIS);
+            List<String> eq = new ArrayList<>();
+            for (Tag t : i.getList("equipement", Tag.TAG_STRING)) eq.add(t.getAsString());
+            paragraphe(g, "Équipement : " + (eq.isEmpty() ? "rien" : String.join(", ", eq)), x, y0 + 50, w, GRIS, 2);
+            texte(g, "Missions" + (i.contains("ici") ? " (travaille en " + i.getString("ici") + ")" : "") + " :", x, y0 + 78, BLANC);
+            if (file.isEmpty()) texte(g, "Aucune. « Nouvelle mission » pour lui en donner une.", x + 4, y0 + 94, GRIS);
+            for (int k = 0; k < Math.min(LIGNES, file.size()); k++) {
+                CompoundTag m = file.get(k);
+                String t = (k + 1) + ". " + m.getString("texte");
+                texte(g, font.plainSubstrByWidth(t, w - 22), x + 4, y0 + 94 + k * 14, m.getBoolean("active") ? VERT : BLANC);
+            }
+            if (file.size() > LIGNES) texte(g, "… et " + (file.size() - LIGNES) + " autre(s), au poste.", x + 4, y0 + 94 + LIGNES * 14, GRIS);
+        }
+    }
+
+    /** « Nouvelle mission » : seulement les missions de son métier, puis la quantité, la répétition, les horaires, le lieu. */
+    static class EcranNouvelleMission extends Cadre {
+        static final String[] REPETITIONS = {"fois", "jour", "stock"}, NOMS_REPETITION = {"Une fois", "Tous les jours", "Garder au dépôt"};
+        static final String[] HORAIRES = {"toujours", "jour", "nuit"}, NOMS_HORAIRES = {"Toujours", "Le jour", "La nuit"};
+        final EcranOuvrier fiche;
+        final List<CompoundTag> commandes = new ArrayList<>();
+        int choix = -1, repetition, horaires;
+        boolean ici;
+        String quantite = "64";
+        EditBox boite;
+
+        EcranNouvelleMission(EcranOuvrier fiche) {
+            super(Component.literal("Nouvelle mission"), 330, 250);
+            this.fiche = fiche;
+            for (Tag t : fiche.i.getList("commandes", Tag.TAG_COMPOUND)) commandes.add((CompoundTag) t);
+        }
+
+        CompoundTag choisie() { return choix < 0 || choix >= commandes.size() ? null : commandes.get(choix); }
+
+        int nombre() {
+            try { return Math.max(1, Integer.parseInt(quantite)); } catch (NumberFormatException x) { return 1; }
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            if (boite != null) quantite = boite.getValue();
+            for (int k = 0; k < Math.min(18, commandes.size()); k++) {
+                int n = k;
+                Button b = bouton(commandes.get(k).getString("nom"), x0 + 10 + (k % 3) * 104, y0 + 24 + (k / 3) * 22, 100, x -> { choix = n; rebuildWidgets(); });
+                b.active = k != choix;
+            }
+            int y = y0 + hauteur - 76;
+            CompoundTag c = choisie();
+            if (c != null && c.getBoolean("compte")) {
+                boite = new EditBox(font, x0 + 70, y + 1, 50, 18, Component.literal("Quantité"));
+                boite.setFilter(v -> v.matches("[0-9]{0,5}"));
+                boite.setValue(quantite);
+                addRenderableWidget(boite);
+                bouton(NOMS_REPETITION[repetition] + " ▸", x0 + 130, y, 120, x -> { repetition = (repetition + 1) % 3; rebuildWidgets(); });
+            } else boite = null;
+            bouton("Horaires : " + NOMS_HORAIRES[horaires] + " ▸", x0 + 10, y + 24, 150, x -> { horaires = (horaires + 1) % 3; rebuildWidgets(); });
+            bouton(ici ? "Lieu : ici ▸" : "Lieu : à son choix ▸", x0 + 166, y + 24, 150, x -> { ici = !ici; rebuildWidgets(); });
+            Button ok = bouton("Valider", x0 + 10, y + 48, 150, x -> valider());
+            ok.active = c != null;
+            bouton("Retour", x0 + 166, y + 48, 150, x -> minecraft.setScreen(fiche));
+        }
+
+        void valider() {
+            CompoundTag c = choisie();
+            if (c == null) return;
+            if (boite != null) quantite = boite.getValue();
+            boolean compte = c.getBoolean("compte");
+            String rep = compte ? REPETITIONS[repetition] : "fois";
+            String texte = Statut.confirmation(fiche.i.getString("nom"), fiche.i.getString("metierId"), c.getString("nom"), compte, rep, nombre(), HORAIRES[horaires], ici);
+            CompoundTag d = new CompoundTag();
+            d.putString("id", c.getString("id"));
+            d.putString("repetition", rep);
+            d.putInt("nombre", nombre());
+            d.putString("horaires", HORAIRES[horaires]);
+            d.putBoolean("ici", ici);
+            minecraft.setScreen(new EcranConfirmer(this, texte, () -> envoyer(fiche.id, "mission", d)));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            super.render(g, mx, my, pt);
+            texte(g, "Nouvelle mission pour " + fiche.i.getString("nom") + " (" + fiche.i.getString("metier").toLowerCase() + ")", x0 + 10, y0 + 8, OR);
+            if (commandes.isEmpty())
+                paragraphe(g, "Son métier n'a pas de mission à choisir : il travaille avec le poste. « Travaille ici » lui donne un lieu.", x0 + 10, y0 + 30, largeur - 20, GRIS, 4);
+            CompoundTag c = choisie();
+            if (c != null && c.getBoolean("compte")) texte(g, "Quantité :", x0 + 10, y0 + hauteur - 70, BLANC);
+            else if (c != null) texte(g, c.getString("nom") + " : sans quantité.", x0 + 10, y0 + hauteur - 70, GRIS);
+            else if (!commandes.isEmpty()) texte(g, "Choisis une mission.", x0 + 10, y0 + hauteur - 70, GRIS);
+        }
+    }
+
+    /** « Compris : Raoul mine du fer jusqu'à 64. » ✔ / ✖ (partie 4.4). Aussi pour le renvoi. */
+    static class EcranConfirmer extends Cadre {
+        final Screen retour;
+        final String texte;
+        final Runnable oui;
+
+        EcranConfirmer(Screen retour, String texte, Runnable oui) {
+            super(Component.literal("Confirmer"), 300, 90);
+            this.retour = retour;
+            this.texte = texte;
+            this.oui = oui;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            bouton("✔ Oui", x0 + 10, y0 + hauteur - 28, 135, b -> oui.run());
+            bouton("✖ Non", x0 + largeur - 145, y0 + hauteur - 28, 135, b -> minecraft.setScreen(retour));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            super.render(g, mx, my, pt);
+            paragraphe(g, texte, x0 + 10, y0 + 12, largeur - 20, BLANC, 4);
         }
     }
 

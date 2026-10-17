@@ -1,0 +1,113 @@
+titre: Le métier de chef
+auteur: L'Intendant
+Bienvenue, chef.
+
+Ce livret t'apprend à mener tes ouvriers. Ils sont fidèles et font ce qu'on leur demande, sans caprice.
+
+Garde-le près de toi, et relis-le au besoin.
+---
+LE POSTE
+
+Pose ton poste (le bloc Bureau) au coeur de ta colonie. La colonie, c'est la zone autour de lui.
+
+Pose des coffres juste à côté : ils forment le dépôt, la réserve de tes ouvriers.
+---
+RECRUTER
+
+Des chercheurs d'emploi errent dans le pays. Fais un clic droit sur l'un d'eux pour voir ce qu'il sait faire, puis embauche-le.
+
+Il devient ton ouvrier et rejoint ton poste.
+---
+LA PAIE
+
+Un ouvrier se paie en pièces. Mets-les dans la caisse du poste.
+
+Sans paie, il se met en grève. Bien payé et bien nourri, il travaille plus vite.
+---
+LA NOURRITURE ET LES OUTILS
+
+Mets des vivres dans le dépôt : l'ouvrier s'y sert quand il a faim.
+
+Il y prend aussi ses outils. Pas de pioche au dépôt, pas de mine.
+---
+LA FICHE
+
+Un clic droit sur ton ouvrier ouvre sa fiche : sa mission, sa file, son salaire, sa nourriture et son équipement.
+
+En bas, des boutons pour lui donner tes ordres.
+---
+LES BOUTONS
+
+Nouvelle mission : un travail de son métier.
+Travaille ici : à l'endroit où tu es.
+Suis-moi : il te suit.
+Attends ici : il ne bouge plus.
+Rentre au poste.
+Licencier : il s'en va.
+---
+LA MISSION
+
+Une mission dit :
+- quoi faire ;
+- où (il choisit, ou "Travaille ici") ;
+- jusqu'à quand : une quantité, une fois, chaque jour, ou un stock à garder ;
+- à quelles heures.
+---
+CONFIRMER
+
+Avant chaque mission, on te la redit :
+"Compris : Raoul mine du fer jusqu'à 64."
+
+Clique ✔ si c'est juste, ✖ sinon.
+
+L'ouvrier finit sa mission, puis passe à la suivante de sa file.
+---
+LE STATUT
+
+Au-dessus de sa tête :
+- en cours : ce qu'il fait et où il en est ;
+- ⚠ bloqué : la raison et le remède, comme "Pas de pioche au dépôt" ;
+- en attente ;
+- hors horaires.
+---
+OÙ IL TRAVAILLE
+
+L'ouvrier choisit un endroit sûr et te dit où.
+
+Il ne casse jamais une construction. Le bûcheron ne coupe que les arbres sauvages, et replante. Le mineur creuse loin de tes murs.
+---
+LE POSTE ET SES ONGLETS
+
+Ouvriers : chacun et sa mission.
+Missions : les files, à changer.
+Dépôt : ce que tu as en réserve.
+Caisse : la paie.
+Journal : les dernières nouvelles de ta colonie.
+---
+LA BARRE DE COMMANDES
+
+Appuie sur la touche B (réglable). Tape le début d'un ordre, comme "gar", puis choisis une ligne dans la liste.
+
+Pas besoin d'écrire une phrase entière.
+---
+ÉTOILES ET FORMATION
+
+Un ouvrier gagne des étoiles. Chaque étoile le rend plus rapide, mais plus cher.
+
+Tu peux aussi payer sa formation pour qu'il progresse.
+---
+LA GUERRE
+
+Au poste, déclare la guerre à un autre chef. La paix se fait au même endroit.
+
+Tes gardes peuvent défendre la colonie, escorter quelqu'un, ou attaquer un poste ennemi.
+---
+UN SOUCI ?
+
+Si quelque chose ne va pas, écris dans le chat :
+
+/rapport ton message
+
+Dis ce que tu as vu, et où. L'Intendant le lira.
+
+Bonne route, chef.
