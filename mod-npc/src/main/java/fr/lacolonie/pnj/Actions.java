@@ -341,6 +341,8 @@ public final class Actions {
             if (st.isAir() || !st.getFluidState().isEmpty() && st.canBeReplaced()) return Etat.OK;
             if (st.getDestroySpeed(lvl, pos) < 0) return echec("incassable");
             if (lvl.getBlockEntity(pos) != null) return echec("contenant");
+            // Jamais une construction (refonte, partie 2 : Lieux), sauf le chantier du maçon (il ne défait que du naturel).
+            if (!chantier && Lieux.protege(t, pos)) { t.blocInaccessible(pos); return echec("construction"); }
             if (!aPortee(t, pos)) {
                 if (coince() || age > 20 * 60) { t.blocInaccessible(pos); return echec("inaccessible"); }
                 marcher(t, Vec3.atCenterOf(pos), 1.0);
@@ -508,7 +510,7 @@ public final class Actions {
                     return age > 200 ? echec("perdu") : Etat.EN_COURS;
                 }
                 BlockState st = l.getBlockState(tete);
-                if (!st.getCollisionShape(l, tete).isEmpty() && st.getDestroySpeed(l, tete) >= 0 && !Monde.construit(l, tete)) {
+                if (!st.getCollisionShape(l, tete).isEmpty() && st.getDestroySpeed(l, tete) >= 0 && !Lieux.protege(t, tete)) {
                     if (!tete.equals(fouille)) { fouille = tete; progres = 0; }
                     t.getLookControl().setLookAt(Vec3.atCenterOf(tete));
                     if (age % 5 == 0) { t.swing(InteractionHand.MAIN_HAND); Sons.coup(t, tete, st); }
@@ -652,7 +654,7 @@ public final class Actions {
         ArrayDeque<BlockPos> file = new ArrayDeque<>(List.of(pied));
         vus.add(pied);
         Block essence = lvl.getBlockState(pied).getBlock();
-        int feuilles = 0;
+        int feuilles = 0, posees = 0;
         while (!file.isEmpty() && bois.size() < BUCHES_MAX) {
             BlockPos p = file.poll();
             bois.add(p);
@@ -666,10 +668,11 @@ public final class Actions {
                 BlockState st = lvl.getBlockState(q);
                 // Seulement le bois de la même essence que le pied : un arbre ne mêle pas ses bois (une cabane d'un autre bois reste).
                 if (st.is(essence)) { BlockPos im = q.immutable(); vus.add(im); file.add(im); }
-                else if (st.getBlock() instanceof LeavesBlock && !st.getValue(LeavesBlock.PERSISTENT)) feuilles++;
+                else if (st.getBlock() instanceof LeavesBlock) { if (st.getValue(LeavesBlock.PERSISTENT)) posees++; else feuilles++; }
             }
         }
-        return feuilles >= 4 ? bois : null;
+        // Un arbre de décoration : des feuilles posées à la main (persistantes) autant que de naturelles. Il n'y touche pas.
+        return feuilles >= 4 && posees < feuilles ? bois : null;
     }
 
     /** Le pied de l'arbre naturel le plus proche du centre, dans un rayon donné. */
@@ -680,6 +683,11 @@ public final class Actions {
      * {@code pour} n'a pas pu atteindre récemment (null = aucun).
      */
     static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon, Filtre bois, Travailleur pour) {
+        return chercherArbre(lvl, centre, rayon, bois, pour, null);
+    }
+
+    /** Pareil, en ne gardant que les arbres que {@code permis} accepte (null : tous ; le bûcheron : {@link Lieux#arbrePermis}). */
+    static BlockPos chercherArbre(ServerLevel lvl, BlockPos centre, int rayon, Filtre bois, Travailleur pour, java.util.function.Predicate<BlockPos> permis) {
         BlockPos meilleur = null;
         double dMin = Double.MAX_VALUE;
         for (int dx = -rayon; dx <= rayon; dx++)
@@ -697,6 +705,7 @@ public final class Actions {
                     if (!lvl.getBlockState(p.below()).is(BlockTags.DIRT)) break;
                     if (bois != null && !bois.bloc(lvl.getBlockState(p))) break;
                     if (pour != null && pour.blocInaccessible(p.asLong())) break;
+                    if (permis != null && !permis.test(p)) break;
                     if (arbre(lvl, p) != null) { meilleur = p; dMin = d; }
                     break;
                 }

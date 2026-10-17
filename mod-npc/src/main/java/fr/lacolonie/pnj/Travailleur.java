@@ -235,6 +235,8 @@ public class Travailleur extends PathfinderMob {
     public void travailleIci(BlockPos p) {
         lieuImpose = p == null ? null : p.immutable();
         for (Mission m : missions) if (m.lieu == null || p == null) m.lieu = lieuImpose;
+        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu (Lieux)
+        memoire.remove("lieu");
     }
 
     /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */
@@ -2309,6 +2311,7 @@ public class Travailleur extends PathfinderMob {
         t.putString("ChefNom", chefNom);
         t.putString("Mode", mode.name());
         if (bureau != null) t.put("Bureau", NbtUtils.writeBlockPos(bureau));
+        if (lieuImpose != null) t.put("LieuImpose", NbtUtils.writeBlockPos(lieuImpose));
         if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
         t.putInt("JoursExpedition", joursExpedition);
         t.putLong("SortieDepuis", sortieDepuis);
@@ -2369,6 +2372,7 @@ public class Travailleur extends PathfinderMob {
         chefNom = t.getString("ChefNom");
         try { mode = Mode.valueOf(t.getString("Mode")); } catch (IllegalArgumentException e) { mode = Mode.CHOMEUR; }
         bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
+        lieuImpose = NbtUtils.readBlockPos(t, "LieuImpose").orElse(null);
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
         joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;
