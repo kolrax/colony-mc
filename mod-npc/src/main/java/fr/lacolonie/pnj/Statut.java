@@ -169,6 +169,7 @@ public final class Statut {
 
     public static final String SANS_CHAMP = "Pas de terrain plat près du poste : dis-lui « Travaille ici »",
             RIEN_A_SEMER = "Rien à semer ici : il faut de la terre libre, des graines et une houe",
+            SANS_GRAINES = "Plus de graines au dépôt : son champ reste à moitié vide",
             SANS_EAU = "Pas d'eau près du poste : montre-lui un étang",
             SANS_EAU_ICI = "Pas d'eau à pêcher ici : choisis un autre lieu",
             SANS_ARME = "Pas d'arc ni de lame au dépôt",
