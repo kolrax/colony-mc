@@ -656,6 +656,9 @@ public final class Bureau {
                 case "retirer" -> {
                     try { c.retirer(p.getUUID(), UUID.fromString(d.getString("uuid"))); } catch (IllegalArgumentException ignore) { return; }
                 }
+                // La guerre et la paix (refonte, partie 6) : « cible » est le pseudo d'un chef (ou son identifiant, de Armee.adversaires).
+                case "declarer_guerre" -> Travailleur.signaler(p, Armee.declarer(p, d.contains("cible") ? d.getString("cible") : d.getString("qui")));
+                case "paix" -> Travailleur.signaler(p, Armee.paix(p, d.contains("cible") ? d.getString("cible") : d.getString("qui")));
                 default -> { return; }
             }
             if (p.connection != null && p.connection.hasChannel(Reseau.Poste.TYPE)) PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));

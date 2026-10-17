@@ -89,6 +89,57 @@ class GuerreTest {
         assertFalse(seul.piller || seul.casser, "sans le dire, ni pillage ni casse");
     }
 
+    /** Refonte, partie 6 : un garde ne frappe un homme qu'en guerre déclarée, sur mission « défendre » ou « attaquer ». */
+    @Test
+    void frapperUnHomme() {
+        assertFalse(Guerre.frappeHomme(false, Guerre.DEFENDRE), "sans guerre, jamais");
+        assertFalse(Guerre.frappeHomme(false, Guerre.ATTAQUER), "sans guerre, jamais");
+        assertTrue(Guerre.frappeHomme(true, Guerre.DEFENDRE));
+        assertTrue(Guerre.frappeHomme(true, Guerre.ATTAQUER));
+        for (String m : java.util.Arrays.asList(Guerre.ESCORTER, "garder", "ronde", null))
+            assertFalse(Guerre.frappeHomme(true, m), "pas sur ordre : " + m);
+        // Le statut au-dessus de sa tête.
+        assertEquals("⚔ Défend la colonie", Statut.enCours("guerrier", Statut.DEFENDRE, 0, 0));
+        assertEquals("⚔ À l'attaque", Statut.enCours("guerrier", Statut.ATTAQUER, 0, 0));
+    }
+
+    /** Il casse des blocs seulement avec la mission « attaquer », pendant la guerre. */
+    @Test
+    void casser() {
+        assertTrue(Guerre.casse(true, Guerre.ATTAQUER));
+        assertFalse(Guerre.casse(false, Guerre.ATTAQUER));
+        assertFalse(Guerre.casse(true, Guerre.DEFENDRE));
+        assertFalse(Guerre.casse(true, null));
+    }
+
+    @Test
+    void repliSous30() {
+        assertTrue(Guerre.repli(5.9, 20));
+        assertFalse(Guerre.repli(6, 20));
+        assertFalse(Guerre.repli(20, 20));
+        assertFalse(Guerre.repli(0, 0));
+    }
+
+    /** Les rangs : le chef de file en tête, trois de front derrière lui, à 2 blocs d'écart ; une colonne avec un seul de front. */
+    @Test
+    void formation() {
+        assertArrayEquals(new double[]{0, 0}, Guerre.place(0, 1, 0, 3), 1e-9);
+        // Il marche vers l'est (+x) : le premier rang est 2 blocs derrière (x - 2), sur trois places côte à côte (z -2, 0, +2).
+        assertArrayEquals(new double[]{-2, -2}, Guerre.place(1, 5, 0, 3), 1e-9);
+        assertArrayEquals(new double[]{-2, 0}, Guerre.place(2, 5, 0, 3), 1e-9);
+        assertArrayEquals(new double[]{-2, 2}, Guerre.place(3, 5, 0, 3), 1e-9);
+        assertArrayEquals(new double[]{-4, -2}, Guerre.place(4, 5, 0, 3), 1e-9);
+        // En colonne, vers le sud (+z) : l'un derrière l'autre.
+        assertArrayEquals(new double[]{0, -2}, Guerre.place(1, 0, 3, 1), 1e-9);
+        assertArrayEquals(new double[]{0, -6}, Guerre.place(3, 0, 3, 1), 1e-9);
+        // 30 gardes : 30 places toutes différentes.
+        java.util.Set<String> vues = new java.util.HashSet<>();
+        for (int i = 0; i < 30; i++) { double[] p = Guerre.place(i, 1, 1, 3); vues.add(Math.round(p[0] * 100) + "," + Math.round(p[1] * 100)); }
+        assertEquals(30, vues.size());
+        assertTrue(Guerre.declaration("Raoul", "Niels").contains("déclare la guerre à Niels"));
+        assertTrue(Guerre.paixFaite("Raoul", "Niels").contains("paix avec Niels"));
+    }
+
     @Test
     void retraite() {
         for (String s : List.of("Retraite !", "Sonnez la retraite !", "Battez en retraite.", "Abandonnez l'assaut."))

@@ -135,4 +135,44 @@ final class Guerre {
 
     /** Avec l'IA : ce que l'interpréteur a lu de la guerre, repris tel quel (l'IA ne connaît pas ces ordres). */
     static void reprendre(Ordres.Lecture vers, Ordres.Lecture seul) { if (seul.guerre != null) vers.guerre = seul.guerre; }
+
+    // --- Refonte 1.0.0, partie 6 : les règles des gardes et la formation (pur) ---------------------------------
+
+    /** Les trois missions des gardes : défendre la colonie, escorter le chef, attaquer (un poste ennemi ou le lieu donné). */
+    static final String DEFENDRE = "defendre", ESCORTER = "escorter", ATTAQUER = "attaquer";
+    /** Sous 30 % de sa vie, il se replie vers le poste. */
+    static final double SEUIL_REPLI = 0.3;
+    /** L'écart entre deux gardes dans les rangs, en blocs ; tant de gardes de front quand ils marchent. */
+    static final double ECART = 2;
+    static final int FRONT = 3;
+
+    /** Il frappe un homme (un joueur ou un ouvrier ennemi) seulement pendant une guerre déclarée, et sur mission « défendre » ou « attaquer ». */
+    static boolean frappeHomme(boolean enGuerre, String mission) { return enGuerre && (ATTAQUER.equals(mission) || DEFENDRE.equals(mission)); }
+
+    /** Il casse des blocs seulement avec la mission « attaquer », pendant la guerre. */
+    static boolean casse(boolean enGuerre, String mission) { return enGuerre && ATTAQUER.equals(mission); }
+
+    /** Trop blessé pour se battre : il se replie vers le poste. */
+    static boolean repli(double vie, double max) { return max > 0 && vie < max * SEUIL_REPLI; }
+
+    /**
+     * Sa place dans les rangs, par rapport au chef de file ({@code rang} 0), qui marche dans la direction ({@code dx}, {@code dz}) :
+     * {@code front} gardes par rang, derrière lui ({@code front} 1 : une colonne ; grand : une ligne). Renvoie {décalage x, décalage z}.
+     */
+    static double[] place(int rang, double dx, double dz, int front) {
+        if (rang <= 0) return new double[]{0, 0};
+        double n = Math.sqrt(dx * dx + dz * dz);
+        if (n < 1e-6) { dx = 1; dz = 0; n = 1; }
+        dx /= n;
+        dz /= n;
+        int f = Math.max(1, front), k = rang - 1;
+        double derriere = (k / f + 1) * ECART, cote = (k % f - (f - 1) / 2.0) * ECART;
+        // Derrière : l'opposé de la direction ; à côté : la perpendiculaire (-dz, dx).
+        return new double[]{-dx * derriere - dz * cote, -dz * derriere + dx * cote};
+    }
+
+    /** Ce que lisent les deux chefs à la déclaration et à la paix. */
+    static String declaration(String de, String a) { return "⚔ " + de + " déclare la guerre à " + a + "."; }
+
+    static String paixFaite(String de, String a) { return "☮ " + de + " fait la paix avec " + a + ". La guerre est finie."; }
 }

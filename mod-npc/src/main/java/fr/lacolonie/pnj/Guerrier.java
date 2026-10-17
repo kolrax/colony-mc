@@ -45,11 +45,25 @@ final class Guerrier extends Metier {
     static final int POINTS_MAX = 16;
 
     Guerrier() {
-        super("guerrier", "Guerrier", "Garde le bureau, fait la ronde autour ou escorte son chef, et tue les monstres. Il ne lève son arme sur un homme que sur l'ordre de son chef ; si quelqu'un le frappe, il recule sans rendre le coup. Il ne touche jamais aux villageois ni aux bêtes.",
+        super("guerrier", "Guerrier", "Défend la colonie, escorte son chef ou attaque l'ennemi, et tue les monstres. Il ne lève son arme sur un homme qu'en guerre déclarée au poste, pour défendre ou attaquer ; il marche en rangs, se replie quand il est trop blessé et lève son bouclier s'il en a un. Il ne touche jamais aux villageois ni aux bêtes.",
                 true, "nourriture", "#minecraft:swords", "#minecraft:axes", "minecraft:bow|minecraft:crossbow", "#minecraft:arrows", "soin", "soin");
+        // Les trois missions des gardes (refonte, partie 6), puis la garde du bureau et la ronde d'avant.
+        commandes.add(new Commande(Guerre.DEFENDRE, Statut.DEFENDRE, null));
+        commandes.add(new Commande(Guerre.ESCORTER, Statut.ESCORTER, null));
+        commandes.add(new Commande(Guerre.ATTAQUER, Statut.ATTAQUER, null));
         commandes.add(new Commande("garder", "Garder le bureau", null));
         commandes.add(new Commande("ronde", "Faire la ronde (50 blocs)", null));
-        commandes.add(new Commande("escorter", "Escorter son chef", null));
+    }
+
+    /** Un garde en combat qui a un bouclier à la main gauche : il le lève quand l'ennemi le serre de près, et le baisse pour frapper. */
+    static void bouclier(Travailleur t, Actions.Attaquer a) {
+        if (!(t.getOffhandItem().getItem() instanceof net.minecraft.world.item.ShieldItem)) return;
+        LivingEntity c = a.cible;
+        boolean menace = c instanceof net.minecraft.world.entity.Mob m && m.getTarget() == t || c instanceof net.minecraft.world.entity.player.Player
+                || c instanceof Travailleur w && w.action instanceof Actions.Attaquer x && x.cible == t;
+        boolean lever = menace && t.distanceToSqr(c) < 5 * 5 && a.recharge > 3 && !TIR.objet(t.getMainHandItem());
+        if (lever && !t.isUsingItem()) t.startUsingItem(InteractionHand.OFF_HAND);
+        else if (!lever && t.isUsingItem() && t.getUsedItemHand() == InteractionHand.OFF_HAND) t.stopUsingItem();
     }
 
     // --- Les armes --------------------------------------------------------------------------------------
@@ -328,6 +342,11 @@ final class Guerrier extends Metier {
             mieux = true;
             if (faire) { t.setItemSlot(slot, piece); rendre(t, b, porte); }
         }
+        // Un bouclier à la main gauche, s'il a la main libre (refonte, partie 6).
+        if (t.getOffhandItem().isEmpty()) {
+            ItemStack bouclier = auDepot(b, s -> s.getItem() instanceof net.minecraft.world.item.ShieldItem ? 1 : 0, 0, faire);
+            if (!bouclier.isEmpty()) { mieux = true; if (faire) t.setItemSlot(EquipmentSlot.OFFHAND, bouclier); }
+        }
         // De quoi tirer de loin.
         boolean arc = t.compter(TIR) > 0;
         if (!arc && Monde.libres(t) > 0) {
@@ -405,10 +424,14 @@ final class Guerrier extends Metier {
             if (t.getHealth() < t.getMaxHealth() * 0.4 && boire(t)) {
                 Cerveau.dire(t, "boire", 20, "Je recule, le temps de boire un coup !");
                 Cerveau.lancer(t, new Actions.Fuir(a.cible));
+                return;
             }
+            if (Armee.replier(t)) return; // sous 30 % de sa vie : il rompt et se replie vers le poste (refonte, partie 6)
+            bouclier(t, a);
             return;
         }
-        if (t.action instanceof Actions.Echapper || t.action instanceof Actions.Fuir) return;
+        if (t.isUsingItem() && t.getUsedItemHand() == InteractionHand.OFF_HAND) t.stopUsingItem(); // hors combat, le bouclier se baisse
+        if (t.action instanceof Actions.Echapper || t.action instanceof Actions.Fuir || t.action instanceof Armee.Repli) return;
         // Au repos (la nuit, hors service), il garde l'oreille ouverte : un ouvrier en danger, un monstre près du poste, il
         // se lève et y va (lot 9). Il reprend son repos ensuite.
         if (t.action instanceof Actions.Reposer) {
@@ -426,9 +449,15 @@ final class Guerrier extends Metier {
         List<LivingEntity> c = cibles(t, 10);
         if (!c.isEmpty()) { attaquer(t, c.get(0)); return; }
         // En guerre, un ennemi tout près (une fois par seconde au plus) : il le frappe, sans autre ordre (la déclaration en est un).
-        if ((t.tickCount + t.getId()) % 20 < 10 && !(t.action instanceof Consignes.Faire)) {
-            LivingEntity e = Armee.ennemi(t, t.getBoundingBox().inflate(10, 4, 10));
-            if (e != null && (t.memoire.contains("guerre_assaut") || t.bureau != null && t.chezLui(e.blockPosition()))) Cerveau.lancer(t, Armee.attaque(t, e, 2.5 * Travailleur.ESPACE_DE_VIE));
+        // En mission « attaquer », la troupe charge l'ennemi dès 16 blocs (Armee.CHARGE).
+        if ((t.tickCount + t.getId()) % 20 == 0 && !(t.action instanceof Consignes.Faire)) {
+            boolean attaque = Guerre.ATTAQUER.equals(Armee.mission(t));
+            double r = attaque ? Armee.CHARGE : 10;
+            LivingEntity e = Armee.ennemi(t, t.getBoundingBox().inflate(r, 4, r));
+            if (e != null && (attaque || t.memoire.contains("guerre_assaut") || t.bureau != null && t.chezLui(e.blockPosition()))) {
+                if (attaque && Cerveau.parfois(t, "charge", 30)) t.dire("Chargez !");
+                Cerveau.lancer(t, Armee.attaque(t, e, 2.5 * Travailleur.ESPACE_DE_VIE));
+            }
         }
     }
 
@@ -447,6 +476,18 @@ final class Guerrier extends Metier {
         if (Armee.assaut(t)) return;
         Commande c = Metier.commande(t);
         String id = c == null ? "garder" : c.id;
+        // Trop blessé (sous 30 %) : il se replie au poste et s'y soigne avant de repartir (refonte, partie 6).
+        if (Guerre.repli(t.getHealth(), t.getMaxHealth())) {
+            if (soigner(t)) return;
+            if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 3 * 3) { Armee.replier(t); return; }
+            Cerveau.attendre(t, 5);
+            return;
+        }
+        // Attaquer : la troupe marche en rangs vers le poste ennemi (ou le lieu donné). Sans guerre ni lieu, il défend la colonie.
+        if (id.equals(Guerre.ATTAQUER)) {
+            if (Armee.campagne(t)) return;
+            id = Guerre.DEFENDRE;
+        }
 
         if (id.equals("escorter")) {
             ServerPlayer chef = t.chefJoueur();
@@ -461,6 +502,7 @@ final class Guerrier extends Metier {
 
         BlockPos b = t.lieuTravail() != null ? t.lieuTravail() : t.bureau; // sa mission a un lieu (ou « Travaille ici ») : il garde ce lieu
         // La nuit, la garde devient une ronde autour du poste (lot 9) : huit postes à 8 et 12 blocs.
+        // Défendre la colonie : la ronde dans toute la colonie, autour du poste (et, en guerre, les ennemis qui y entrent : veille).
         boolean nuitGarde = id.equals("garder") && Abri.nuit(t.level());
         int r = nuitGarde ? 20 : id.equals("garder") ? 12 : Travailleur.ESPACE_DE_VIE;
         List<LivingEntity> cibles = cibles(t, Math.min(r, 32));
@@ -481,7 +523,7 @@ final class Guerrier extends Metier {
 
         // Une ronde, ce n'est pas marcher au hasard : le parcours que le chef lui a montré, sinon un circuit de huit postes
         // autour du bureau, toujours le même. Pour garder le bureau : quatre postes tout près, avec une pause à chacun.
-        boolean ronde = id.equals("ronde") || nuitGarde;
+        boolean ronde = id.equals("ronde") || id.equals(Guerre.DEFENDRE) || nuitGarde;
         long[] parcours = id.equals("ronde") ? t.memoire.getLongArray("ronde_points") : new long[0];
         if (nuitGarde && Cerveau.parfois(t, "ronde_nuit", 900)) Besoins.dire(t, "ronde_nuit", null);
         int postes = ronde ? parcours.length > 0 ? parcours.length : 8 : 4;
