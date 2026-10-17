@@ -290,6 +290,48 @@ public class TestsFermier {
     @GameTest(template = "vide", timeoutTicks = 1000)
     public static void plusDeGrainesSEffaceChampSeme(GameTestHelper h) { plusDeGraines(h, 129, false); }
 
+    /**
+     * Fantôme : 16 graines, un champ de 9 sur 9 loin de l'eau et pas de seau, 0 blé en 2 jours (sur une terre sèche et serré,
+     * le blé met une semaine à mûrir). Maintenant : il creuse une mare au milieu, sème une case sur deux en tout sens (aucun
+     * plant n'en touche un autre, même en coin), laboure les autres cases : toute la terre du champ est arrosée.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void champSansSeauNiAssezDeGraines(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 119);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 16));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        BlockPos centre = o.offset(9, -1, 0);
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    h.assertTrue(l.getFluidState(centre).is(net.minecraft.tags.FluidTags.WATER), "une mare au milieu du champ : " + l.getBlockState(centre));
+                    List<BlockPos> ble = new ArrayList<>();
+                    List<String> pasLaboure = new ArrayList<>();
+                    for (int x = -4; x <= 4; x++)
+                        for (int z = -4; z <= 4; z++) {
+                            BlockPos q = centre.offset(x, 0, z);
+                            if (l.getBlockState(q.above()).is(Blocks.WHEAT)) ble.add(q);
+                            if ((x != 0 || z != 0) && !l.getBlockState(q).is(Blocks.FARMLAND)) pasLaboure.add(x + " " + z);
+                        }
+                    h.assertTrue(ble.size() == 16, "16 cases semées : " + ble.size());
+                    for (BlockPos q : ble) for (BlockPos r : ble)
+                        h.assertTrue(q == r || Math.abs(q.getX() - r.getX()) > 1 || Math.abs(q.getZ() - r.getZ()) > 1,
+                                "deux plants se touchent : " + q.subtract(centre).toShortString() + " et " + r.subtract(centre).toShortString());
+                    h.assertTrue(pasLaboure.isEmpty(), "toute la terre du champ labourée : " + pasLaboure);
+                    h.assertTrue(l.getBlockState(centre.offset(5, 0, 0)).is(Blocks.GRASS_BLOCK) && l.getBlockState(centre.offset(0, 0, -5)).is(Blocks.GRASS_BLOCK), "rien hors du champ");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
     /** Relecture : « Oublie ce champ », en le regardant : il le retire de ses champs, sans rien arracher. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void oublieLeChamp(GameTestHelper h) {

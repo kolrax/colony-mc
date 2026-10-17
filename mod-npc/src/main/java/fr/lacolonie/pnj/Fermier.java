@@ -41,7 +41,7 @@ import java.util.WeakHashMap;
  * Jamais : piétiner une terre labourée ({@link #pietiner}), casser une culture pas mûre, toucher aux cultures d'une structure
  * ou plus près du poste d'un autre chef que du sien ({@link #aLui}), labourer un bloc construit ou hors de son espace de vie,
  * laisser l'eau couler hors du champ. Rien ne tombe par terre, rien ne se crée : chaque graine semée sort de la récolte ou du
- * sac, le pain suit la recette du jeu.
+ * sac, le pain suit la recette du jeu. Seule l'eau du milieu d'un champ neuf, faute de seau, vient d'une mare qu'il creuse.
  */
 final class Fermier extends Metier {
     static final Actions.Filtre HOUES = Actions.Filtre.de("#minecraft:hoes");
@@ -454,9 +454,11 @@ final class Fermier extends Metier {
         final boolean ordre;
         /** Les sols à semer, dans l'ordre. */
         final List<BlockPos> cases = new ArrayList<>();
+        /** Les sols à labourer sans graine (il en manquait) : la terre labourée et arrosée autour d'un plant le fait pousser plus vite. */
+        final List<BlockPos> labours = new ArrayList<>();
         Actions.Action sous;
         BlockPos centreSol;
-        int etape, voulues, semees, prochain, marche;
+        int etape, voulues, semees, prochain, marche, plants;
         boolean eau;
 
         Champ(BlockPos centre, Fouille.Plan plan, Cultures.Culture culture, boolean ordre) {
@@ -514,10 +516,8 @@ final class Fermier extends Metier {
                 }
                 case 1 -> {
                     etape = 2;
-                    if (eau && t.compter(SEAU) == 0) {
-                        eau = false;
-                        dire(t, "Je n'ai pas de seau d'eau, chef : pas d'eau au milieu du champ, il poussera moins vite.");
-                    }
+                    // Sans seau d'eau, il creuse une mare au milieu : sans eau, le blé met une semaine à mûrir (fantôme : 0 blé en 2 jours).
+                    if (eau && t.compter(SEAU) == 0) dire(t, "Je n'ai pas de seau d'eau, chef : je creuse une mare au milieu du champ.");
                     if (eau) cases.remove(centreSol);
                     // Les graines qui manquent, autant que son sac en tient (une place gardée pour l'herbe arrachée) : rien par terre.
                     int manque = Math.min(cases.size() - t.compter(graine), (Monde.libres(t) - 1) * 64);
@@ -531,6 +531,7 @@ final class Fermier extends Metier {
                     etape = 4;
                     voulues = cases.size();
                     int graines = t.compter(graine);
+                    if (graines == 0 && !ordre && plants > 0) { plusSansGraines(t); return Actions.Etat.OK; } // ses plants poussent : il ressèmera de la récolte
                     if (graines == 0) {
                         t.memoire.putString("sans_graines", graine.texte);
                         t.bloquer(Statut.SANS_GRAINES);
@@ -544,17 +545,18 @@ final class Fermier extends Metier {
                         else Cerveau.ecrire(t, "houe", 1800, "houe");
                         return echec("pas_de_houe");
                     }
-                    while (cases.size() > graines) cases.remove(cases.size() - 1);
+                    if (cases.size() > graines) espacer(graines);
                 }
                 case 4 -> {
                     etape = 5;
                     if (eau) return mettreEau(t, l);
                 }
                 default -> {
-                    if (cases.isEmpty()) return finir(t);
-                    BlockPos q = cases.get(0);
+                    List<BlockPos> file = cases.isEmpty() ? labours : cases; // les semis d'abord, puis la terre labourée sans graine
+                    if (file.isEmpty()) return finir(t);
+                    BlockPos q = file.get(0);
                     if (!Actions.aPortee(t, q)) {
-                        if (coince() || ++marche > 20 * 30) { cases.remove(0); marche = 0; t.blocInaccessible(q); return coince() ? finir(t) : Actions.Etat.EN_COURS; }
+                        if (coince() || ++marche > 20 * 30) { file.remove(0); marche = 0; t.blocInaccessible(q); return coince() ? finir(t) : Actions.Etat.EN_COURS; }
                         marcher(t, Vec3.atBottomCenterOf(q.above()), 1.0);
                         return Actions.Etat.EN_COURS;
                     }
@@ -563,11 +565,29 @@ final class Fermier extends Metier {
                     if (age < prochain) return Actions.Etat.EN_COURS;
                     prochain = age + 5;
                     marche = 0;
-                    cases.remove(0);
-                    semer(t, l, q);
+                    file.remove(0);
+                    semer(t, l, q, file == cases);
                 }
             }
             return Actions.Etat.EN_COURS;
+        }
+
+        /**
+         * Moins de graines que de cases : il sème une case sur deux en tout sens (deux plants qui se touchent, même en coin,
+         * poussent deux fois moins vite), et laboure les autres sans graine. Les cases vides se rempliront de la récolte.
+         */
+        void espacer(int graines) {
+            Parcelle p = new Parcelle(centre, plan, culture);
+            int f0 = -(plan.longueur() - 1) / 2, c0 = -(plan.largeur() - 1) / 2;
+            List<BlockPos> espacees = new ArrayList<>();
+            for (BlockPos q : cases) {
+                int[] k = p.coordonnees(q.getX(), q.getZ());
+                if (espacees.size() < graines && Math.floorMod(k[0] - f0, 2) == 0 && Math.floorMod(k[1] - c0, 2) == 0) espacees.add(q);
+            }
+            for (BlockPos q : cases) if (espacees.size() < graines && !espacees.contains(q)) espacees.add(q); // plus de graines que de cases espacées
+            for (BlockPos q : cases) if (!espacees.contains(q)) labours.add(q);
+            cases.clear();
+            cases.addAll(espacees);
         }
 
         String nomGraines() {
@@ -586,7 +606,9 @@ final class Fermier extends Metier {
         void relever(Travailleur t, ServerLevel l) {
             Fouille.Plan p = ordre ? plan : Cultures.agrandi(plan);
             for (int[] k : Cultures.cases(p)) {
-                BlockPos q = sol(t, l, centre.relative(d, k[0]).relative(d.getClockWise(), k[1]), centre.getY());
+                BlockPos col = centre.relative(d, k[0]).relative(d.getClockWise(), k[1]);
+                if (l.getBlockState(col.above()).getBlock() instanceof CropBlock) plants++;
+                BlockPos q = sol(t, l, col, centre.getY());
                 if (k[0] == 0 && k[1] == 0) centreSol = q;
                 if (q != null && (ordre || Cultures.dans(plan, k[0], k[1]) || l.getBlockState(q).is(Blocks.FARMLAND) || arrose(l, q))) cases.add(q);
             }
@@ -615,12 +637,11 @@ final class Fermier extends Metier {
             if (!labourable(sol) && !sol.is(Blocks.FARMLAND) || Monde.construit(l, q) || !bassin(l, q))
                 return sansEau(t, "Le milieu du champ a changé, chef : l'eau s'en irait, je n'en mets pas.");
             if (Monde.libres(t) < 2) return sansEau(t, "Mon sac est trop plein pour creuser le milieu, chef : pas d'eau.");
-            // Le seau d'abord : sans seau d'eau, rien n'est creusé.
+            // Son seau d'eau s'il en a un (le seau vide lui reste) ; sinon il creuse une mare : l'eau monte du sol.
             boolean vide = false;
             if (SEAU.objet(t.getMainHandItem())) { t.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BUCKET)); vide = true; }
             else for (int i = 0; i < t.inventaire.getContainerSize() && !vide; i++)
                 if (SEAU.objet(t.inventaire.getItem(i))) { t.inventaire.setItem(i, new ItemStack(Items.BUCKET)); vide = true; }
-            if (!vide) return sansEau(t, "Je n'ai plus de seau d'eau, chef : pas d'eau au milieu du champ.");
             if (!l.getBlockState(q.above()).isAir()) Actions.recolter(t, q.above()); // l'herbe haute
             Actions.recolter(t, q);
             l.setBlockAndUpdate(q, Blocks.WATER.defaultBlockState());
@@ -638,13 +659,13 @@ final class Fermier extends Metier {
             return Actions.Etat.EN_COURS;
         }
 
-        /** Une case : l'herbe arrachée (au sac), la terre labourée, la graine semée. Faux si rien n'est semé. */
-        boolean semer(Travailleur t, ServerLevel l, BlockPos q) {
+        /** Une case : l'herbe arrachée (au sac), la terre labourée, la graine semée ({@code graineAussi}). Faux si rien n'est semé. */
+        boolean semer(Travailleur t, ServerLevel l, BlockPos q, boolean graineAussi) {
             BlockState sol = l.getBlockState(q), dessus = l.getBlockState(q.above());
             if (!libreDessus(dessus) || Monde.construit(l, q) || !sol.is(Blocks.FARMLAND) && !labourable(sol)) return false;
             if (!sol.is(Blocks.FARMLAND) && !HOUES.objet(t.getMainHandItem())) return false; // la houe d'abord, avant d'arracher l'herbe
             Block bloc = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(culture.bloc()));
-            if (t.compter(graine) == 0) return false;
+            if (graineAussi && t.compter(graine) == 0) return false;
             if (!dessus.isAir()) {
                 if (Monde.libres(t) == 0) return false;
                 Actions.recolter(t, q.above());
@@ -654,6 +675,7 @@ final class Fermier extends Metier {
                 l.playSound(null, q, SoundEvents.HOE_TILL, SoundSource.BLOCKS, 1, 1);
                 Actions.userOutil(t, 1);
             }
+            if (!graineAussi) return false;
             if (!bloc.defaultBlockState().canSurvive(l, q.above())) return false;
             if (Actions.sortir(t, graine).isEmpty()) return false;
             l.setBlockAndUpdate(q.above(), bloc.defaultBlockState());
