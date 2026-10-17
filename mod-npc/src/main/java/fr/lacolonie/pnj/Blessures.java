@@ -110,10 +110,7 @@ final class Blessures {
                         o -> o != blesse && blesse.chef.equals(o.chef) && o.isAlive() && !o.aTerre
                                 && o.distanceToSqr(blesse) <= RAYON * RAYON && peutAccourir(o))
                 .stream().sorted(Comparator.comparingDouble(o -> o.distanceToSqr(blesse))).limit(ACCOURENT).collect(java.util.stream.Collectors.toList());
-        // L'être aimé accourt aussi, de plus loin, et vient tout près (Relations).
-        Travailleur conjoint = Relations.conjoint(blesse);
-        if (conjoint != null && !proches.contains(conjoint) && !conjoint.aTerre && conjoint.distanceToSqr(blesse) <= Relations.INQUIET * Relations.INQUIET
-                && peutAccourir(conjoint)) proches.add(conjoint);
+        Travailleur conjoint = null;
         for (int i = 0; i < proches.size(); i++) {
             Accourir a = new Accourir(blesse, i);
             a.inquiet = proches.get(i) == conjoint;
@@ -163,7 +160,6 @@ final class Blessures {
                 if (d > 6 * 6) return Actions.Etat.ECHEC; // pas de passage jusqu'à lui
                 arrive = true;
                 t.getNavigation().stop();
-                Relations.aide(t, blesse); // il est venu jusqu'à lui
                 if (inquiet) Besoins.dire(t, "couple_inquiet", blesse.prenom);
                 else if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
             }

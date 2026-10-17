@@ -43,6 +43,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -61,23 +62,17 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Tout ce qui ne tourne que chez le joueur : l'apparence des PNJ et du corbeau, les bulles, et les écrans. */
+/** Tout ce qui ne tourne que chez le joueur : l'apparence des PNJ, les bulles, et les écrans. */
 @EventBusSubscriber(modid = ColoniePnj.MODID, value = Dist.CLIENT)
 public final class Client {
     private Client() {}
 
-    static final ModelLayerLocation COUCHE_CORBEAU = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "corbeau"), "main");
-    static final ResourceLocation TEXTURE_CORBEAU = ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "textures/entity/corbeau.png");
     static final int OR = 0xF2C14E, GRIS = 0xAAAAAA, BLANC = 0xFFFFFF, ROUGE = 0xFF5555, ORANGE = 0xFF9966, VERT = 0x88DD88;
 
     @SubscribeEvent
     static void rendus(EntityRenderersEvent.RegisterRenderers e) {
         e.registerEntityRenderer(ColoniePnj.TRAVAILLEUR.get(), Rendu::new);
-        e.registerEntityRenderer(ColoniePnj.CORBEAU.get(), RenduCorbeau::new);
     }
-
-    @SubscribeEvent
-    static void couches(EntityRenderersEvent.RegisterLayerDefinitions e) { e.registerLayerDefinition(COUCHE_CORBEAU, ModeleCorbeau::couche); }
 
     @SubscribeEvent
     static void ecrans(RegisterMenuScreensEvent e) { e.register(ColoniePnj.BUREAU_MENU.get(), EcranBureau::new); }
@@ -87,8 +82,8 @@ public final class Client {
     static void ouvrirConversation(Reseau.Conversation f) { Minecraft.getInstance().setScreen(new EcranConversation(f.id(), f.infos())); }
 
     static void ouvrirPoste(Reseau.Poste f) {
-        // Une nouvelle ouverture repart du courrier ; une mise à jour (après un bouton) reste où l'on était.
-        if (!(Minecraft.getInstance().screen instanceof EcranPoste e && e.pos.equals(f.pos()))) EcranPoste.archivesMemo = false;
+        // Une nouvelle ouverture repart du haut de la liste ; une mise à jour (après un bouton) reste où l'on était.
+        if (!(Minecraft.getInstance().screen instanceof EcranPoste e && e.pos.equals(f.pos()))) EcranPoste.defilement = 0;
         Minecraft.getInstance().setScreen(new EcranPoste(f.pos(), f.infos()));
     }
 
@@ -363,91 +358,6 @@ public final class Client {
 
         @Override
         protected void scale(Travailleur e, PoseStack ps, float pt) { ps.scale(0.9375f, 0.9375f, 0.9375f); }
-    }
-
-    // --- Le corbeau ----------------------------------------------------------------------------------------
-
-    static class ModeleCorbeau extends HierarchicalModel<Corbeau> {
-        final ModelPart racine, tete, queue, aileGauche, aileDroite, patteGauche, patteDroite, lettre;
-
-        ModeleCorbeau(ModelPart r) {
-            racine = r;
-            tete = r.getChild("tete");
-            queue = r.getChild("queue");
-            aileGauche = r.getChild("aile_gauche");
-            aileDroite = r.getChild("aile_droite");
-            patteGauche = r.getChild("patte_gauche");
-            patteDroite = r.getChild("patte_droite");
-            lettre = r.getChild("tete").getChild("lettre");
-        }
-
-        /** Un corbeau d'un demi-bloc : corps, tête et bec, queue, deux ailes, deux pattes, et la lettre au bec. Texture 64 x 32. */
-        static LayerDefinition couche() {
-            MeshDefinition m = new MeshDefinition();
-            PartDefinition r = m.getRoot();
-            r.addOrReplaceChild("corps", CubeListBuilder.create().texOffs(0, 0).addBox(-2f, -2f, -4f, 4, 4, 8), PartPose.offset(0, 19, 0));
-            PartDefinition tete = r.addOrReplaceChild("tete", CubeListBuilder.create().texOffs(0, 12).addBox(-1.5f, -3f, -3f, 3, 3, 3)
-                    .texOffs(12, 12).addBox(-0.5f, -2f, -5f, 1, 1, 2), PartPose.offset(0, 18.5f, -3.5f));
-            tete.addOrReplaceChild("lettre", CubeListBuilder.create().texOffs(28, 12).addBox(-1.5f, -1f, -0.5f, 3, 2, 1), PartPose.offset(0, -1, -5.5f));
-            r.addOrReplaceChild("queue", CubeListBuilder.create().texOffs(0, 18).addBox(-1.5f, 0f, 0f, 3, 1, 5), PartPose.offsetAndRotation(0, 18, 3.5f, -0.25f, 0, 0));
-            r.addOrReplaceChild("aile_gauche", CubeListBuilder.create().texOffs(24, 0).addBox(0f, 0f, -3f, 1, 3, 7), PartPose.offset(2, 17.5f, 0));
-            r.addOrReplaceChild("aile_droite", CubeListBuilder.create().texOffs(24, 0).mirror().addBox(-1f, 0f, -3f, 1, 3, 7), PartPose.offset(-2, 17.5f, 0));
-            r.addOrReplaceChild("patte_gauche", CubeListBuilder.create().texOffs(24, 12).addBox(-0.5f, 0f, -0.5f, 1, 3, 1), PartPose.offset(1, 21, 0.5f));
-            r.addOrReplaceChild("patte_droite", CubeListBuilder.create().texOffs(24, 12).addBox(-0.5f, 0f, -0.5f, 1, 3, 1), PartPose.offset(-1, 21, 0.5f));
-            return LayerDefinition.create(m, 64, 32);
-        }
-
-        @Override
-        public ModelPart root() { return racine; }
-
-        @Override
-        public void setupAnim(Corbeau e, float limbSwing, float limbSwingAmount, float age, float netHeadYaw, float headPitch) {
-            lettre.visible = e.porteLettre();
-            if (e.pose()) {
-                // Posé : ailes repliées, il hoche la tête et remue la queue.
-                aileGauche.zRot = -0.05f;
-                aileDroite.zRot = 0.05f;
-                patteGauche.xRot = patteDroite.xRot = 0;
-                tete.xRot = Mth.sin(age * 0.35f) * 0.25f;
-                tete.yRot = Mth.sin(age * 0.11f) * 0.4f;
-                queue.xRot = -0.25f + Mth.sin(age * 0.5f) * 0.08f;
-            } else {
-                // En vol : il bat des ailes, pattes repliées.
-                float battement = Mth.sin(age * 1.3f);
-                aileGauche.zRot = -0.35f - battement * 1.1f;
-                aileDroite.zRot = 0.35f + battement * 1.1f;
-                patteGauche.xRot = patteDroite.xRot = 1.3f;
-                tete.xRot = 0;
-                tete.yRot = 0;
-                queue.xRot = -0.1f;
-            }
-        }
-    }
-
-    static class RenduCorbeau extends EntityRenderer<Corbeau> {
-        final ModeleCorbeau modele;
-
-        RenduCorbeau(EntityRendererProvider.Context c) {
-            super(c);
-            modele = new ModeleCorbeau(c.bakeLayer(COUCHE_CORBEAU));
-            shadowRadius = 0.15f;
-        }
-
-        @Override
-        public void render(Corbeau e, float yaw, float pt, PoseStack ps, MultiBufferSource buf, int lumiere) {
-            ps.pushPose();
-            ps.mulPose(Axis.YP.rotationDegrees(180.0f - Mth.rotLerp(pt, e.yRotO, e.getYRot())));
-            ps.mulPose(Axis.XP.rotationDegrees(Mth.lerp(pt, e.xRotO, e.getXRot())));
-            ps.scale(-1.0f, -1.0f, 1.0f);
-            ps.translate(0.0f, -1.501f, 0.0f);
-            modele.setupAnim(e, 0, 0, e.tickCount + pt, 0, 0);
-            modele.renderToBuffer(ps, buf.getBuffer(modele.renderType(TEXTURE_CORBEAU)), lumiere, OverlayTexture.NO_OVERLAY);
-            ps.popPose();
-            super.render(e, yaw, pt, ps, buf, lumiere);
-        }
-
-        @Override
-        public ResourceLocation getTextureLocation(Corbeau e) { return TEXTURE_CORBEAU; }
     }
 
     // --- Outils d'écran ------------------------------------------------------------------------------------
@@ -766,37 +676,44 @@ public final class Client {
     // --- Le poste de travail ------------------------------------------------------------------------------------
 
     static class EcranPoste extends Cadre {
-        static String ongletMemo = "ouvriers", choisiMemo = "";
-        static long lettreMemo = -1;
+        static final String[] ONGLETS = {"ouvriers", "missions", "depot", "caisse", "journal"};
+        static final String[] NOMS_ONGLETS = {"Ouvriers", "Missions", "Dépôt", "Caisse", "Journal"};
+        static final String[] CATEGORIES = {"", "outils", "minerais", "nourriture", "bois", "blocs", "divers"};
+        static final String[] NOMS_CATEGORIES = {"Tout", "Outils", "Minerais", "Nourriture", "Bois", "Blocs", "Divers"};
+        static String ongletMemo = "ouvriers", choisiMemo = "", categorieMemo = "", rechercheMemo = "";
+        /** Le défilement de la liste de l'onglet ouvert (lignes, ou rangées de la grille du dépôt). */
         static int defilement;
-        /** On regarde les archives plutôt que le courrier. */
-        static boolean archivesMemo;
+        static final int LIGNES_OUVRIERS = 8, LIGNE_OUVRIER = 14, LIGNES_MISSIONS = 10, LIGNES_JOURNAL = 19, CASE = 18, COLONNES = 22, RANGEES = 9;
 
         final BlockPos pos;
         final CompoundTag f;
-        final List<CompoundTag> ouvriers = new ArrayList<>(), lettres = new ArrayList<>(), archives = new ArrayList<>();
+        final List<CompoundTag> ouvriers = new ArrayList<>(), journal = new ArrayList<>();
+        /** Le dépôt : une pile d'un objet par sorte, son nombre et sa catégorie. */
+        final List<ItemStack> objets = new ArrayList<>();
+        final List<Long> nombres = new ArrayList<>();
+        final List<String> categories = new ArrayList<>();
         CompoundTag choisi;
-        CompoundTag lue;
-        /** « Tout effacer » demande un second clic. */
-        boolean confirmer;
         // Réglages de l'ouvrier choisi
         int debut, fin, jours;
-        EditBox mission, salaire;
+        EditBox salaire, recherche;
         Button bDebut, bFin, bJours;
-        // Écriture d'une lettre
-        boolean ecrire;
-        int destinataire;
-        MultiLineEditBox corps;
 
         EcranPoste(BlockPos pos, CompoundTag infos) {
             super(Component.literal(infos.getString("titre")), 420, 252);
             this.pos = pos;
             this.f = infos;
             for (Tag x : infos.getList("ouvriers", Tag.TAG_COMPOUND)) ouvriers.add((CompoundTag) x);
-            for (Tag x : infos.getList("lettres", Tag.TAG_COMPOUND)) lettres.add((CompoundTag) x);
-            for (Tag x : infos.getList("archives", Tag.TAG_COMPOUND)) archives.add((CompoundTag) x);
+            for (Tag x : infos.getList("journal", Tag.TAG_COMPOUND)) journal.add((CompoundTag) x);
+            var niveau = Minecraft.getInstance().level;
+            if (niveau != null) for (Tag x : infos.getList("depot", Tag.TAG_COMPOUND)) {
+                CompoundTag d = (CompoundTag) x;
+                ItemStack s = ItemStack.parseOptional(niveau.registryAccess(), d.getCompound("objet"));
+                if (s.isEmpty()) continue;
+                objets.add(s);
+                nombres.add(d.getLong("n"));
+                categories.add(d.getString("cat"));
+            }
             choisi = ouvriers.stream().filter(o -> o.getString("uuid").equals(choisiMemo)).findFirst().orElse(ouvriers.isEmpty() ? null : ouvriers.get(0));
-            lue = liste().stream().filter(l -> l.getLong("id") == lettreMemo).findFirst().orElse(null);
             if (choisi != null) {
                 debut = choisi.getInt("debut");
                 fin = choisi.getInt("fin");
@@ -806,19 +723,67 @@ public final class Client {
 
         void envoyer(String action, CompoundTag d) { PacketDistributor.sendToServer(new Reseau.ActionBureau(pos, action, d)); }
 
-        /** Les lettres de la liste : le courrier, ou les archives. */
-        List<CompoundTag> liste() { return archivesMemo ? archives : lettres; }
+        void onglet(String o) { ongletMemo = o; defilement = 0; rebuildWidgets(); }
 
-        void surLettre(String action) {
-            CompoundTag d = new CompoundTag();
-            d.putLong("id", lue.getLong("id"));
-            lettreMemo = -1;
-            envoyer(action, d);
+        /** La couleur d'un statut : rouge s'il est bloqué, absent, à terre ou en grève ; vert au travail ; or en expédition. */
+        static int couleur(CompoundTag o) {
+            String st = o.getString("statut");
+            if (o.getBoolean("absent") || st.startsWith("⚠") || st.contains("loqué") || st.equals("En grève") || st.equals("À terre")) return ROUGE;
+            if (st.equals("En expédition")) return OR;
+            if (st.equals("Au travail") || st.startsWith("⛏") || st.contains("·")) return VERT;
+            return GRIS;
         }
 
-        void onglet(String o) { ongletMemo = o; ecrire = false; rebuildWidgets(); }
+        /** Sa mission en cours (la première de sa file), ou un tiret. */
+        static String missionEnCours(CompoundTag o) {
+            ListTag ms = o.getList("missions", Tag.TAG_STRING);
+            return o.getBoolean("absent") ? "" : ms.isEmpty() ? "Aucune mission" : ms.getString(0) + (ms.size() > 1 ? "  (+" + (ms.size() - 1) + ")" : "");
+        }
 
-        List<CompoundTag> vivants() { return ouvriers.stream().filter(o -> !o.getBoolean("absent")).toList(); }
+        /** Le texte coupé pour tenir dans {@code w} pixels. */
+        String couper(String t, int w) { return font.width(t) <= w ? t : font.plainSubstrByWidth(t, w - font.width("…")) + "…"; }
+
+        /** Les objets du dépôt montrés : la catégorie choisie et la recherche. */
+        List<Integer> visibles() {
+            List<Integer> l = new ArrayList<>();
+            String q = rechercheMemo.strip().toLowerCase(java.util.Locale.ROOT);
+            for (int i = 0; i < objets.size(); i++)
+                if ((categorieMemo.isEmpty() || categorieMemo.equals(categories.get(i)))
+                        && (q.isEmpty() || objets.get(i).getHoverName().getString().toLowerCase(java.util.Locale.ROOT).contains(q))) l.add(i);
+            return l;
+        }
+
+        /** Les lignes de l'onglet Missions : {ouvrier, -1} pour son nom, {ouvrier, i} pour sa mission n° i. */
+        List<int[]> lignesMissions() {
+            List<int[]> l = new ArrayList<>();
+            for (int k = 0; k < ouvriers.size(); k++) {
+                CompoundTag o = ouvriers.get(k);
+                if (o.getBoolean("absent")) continue;
+                int n = o.getList("missions", Tag.TAG_STRING).size();
+                l.add(new int[]{k, -1});
+                for (int i = 0; i < n; i++) l.add(new int[]{k, i});
+            }
+            return l;
+        }
+
+        /** Le nombre de lignes de la liste de l'onglet ouvert, et combien s'en voient à la fois. */
+        int[] tailleListe() {
+            return switch (ongletMemo) {
+                case "missions" -> new int[]{lignesMissions().size(), LIGNES_MISSIONS};
+                case "journal" -> new int[]{journal.size(), LIGNES_JOURNAL};
+                case "depot" -> new int[]{(visibles().size() + COLONNES - 1) / COLONNES, RANGEES};
+                case "caisse" -> new int[]{ouvriers.size(), 12};
+                default -> new int[]{ouvriers.size(), LIGNES_OUVRIERS};
+            };
+        }
+
+        void defiler(int sens) {
+            int[] t = tailleListe();
+            int d = Mth.clamp(defilement + sens, 0, Math.max(0, t[0] - t[1]));
+            if (d == defilement) return;
+            defilement = d;
+            if (ongletMemo.equals("missions")) rebuildWidgets(); // ses boutons suivent les lignes
+        }
 
         @Override
         protected void init() {
@@ -829,36 +794,31 @@ public final class Client {
                 bouton("Fermer", x0 + largeur - 90, y0 + hauteur - 28, 80, b -> onClose());
                 return;
             }
-            long nonLues = f.getLong("nonLues");
-            bouton("Ouvriers", x0 + 150, y0 + 4, 70, b -> onglet("ouvriers")).active = !ongletMemo.equals("ouvriers");
-            bouton("Lettres" + (nonLues > 0 ? " (" + nonLues + ")" : ""), x0 + 222, y0 + 4, 74, b -> onglet("lettres")).active = !ongletMemo.equals("lettres");
-            bouton("Caisse et dépôt", x0 + 298, y0 + 4, 94, b -> envoyer("stock", new CompoundTag()));
+            if (!List.of(ONGLETS).contains(ongletMemo)) ongletMemo = "ouvriers";
+            for (int k = 0; k < ONGLETS.length; k++) {
+                String o = ONGLETS[k];
+                bouton(NOMS_ONGLETS[k], x0 + 8 + k * 68, y0 + 4, 66, b -> onglet(o)).active = !ongletMemo.equals(o);
+            }
             bouton("✕", x0 + largeur - 22, y0 + 4, 18, b -> onClose());
-            if (ongletMemo.equals("lettres")) initLettres(); else initOuvriers();
+            int[] t = tailleListe();
+            defilement = Mth.clamp(defilement, 0, Math.max(0, t[0] - t[1]));
+            switch (ongletMemo) {
+                case "missions" -> initMissions();
+                case "depot" -> initDepot();
+                case "caisse" -> bouton("Déposer des pièces", x0 + largeur - 138, y0 + 28, 130, b -> envoyer("stock", new CompoundTag()))
+                        .setTooltip(Tooltip.create(Component.literal("Ouvre la caisse : mets-y les pièces de la paie.")));
+                case "journal" -> {}
+                default -> initOuvriers();
+            }
         }
 
-        // --- Onglet Ouvriers
+        // --- Onglet Ouvriers : la liste (état et mission de chacun), puis les réglages de celui qu'on a choisi
 
         void initOuvriers() {
-            for (int k = 0; k < Math.min(10, ouvriers.size()); k++) {
-                CompoundTag o = ouvriers.get(k);
-                String st = o.getString("statut");
-                int couleur = o.getBoolean("absent") || st.equals("En grève") || st.equals("À terre") ? ROUGE : st.equals("En expédition") ? OR
-                        : st.equals("Au travail") ? VERT : GRIS;
-                Button b = addRenderableWidget(Button.builder(Component.literal(o.getString("nom") + " " + "★".repeat(o.getInt("niveau"))).withStyle(s -> s.withColor(couleur)), x -> {
-                    choisiMemo = o.getString("uuid");
-                    choisi = o;
-                    debut = o.getInt("debut");
-                    fin = o.getInt("fin");
-                    jours = Math.max(1, o.getInt("joursExpedition"));
-                    rebuildWidgets();
-                }).bounds(x0 + 8, y0 + 30 + k * 22, 120, 20).tooltip(Tooltip.create(Component.literal(o.getString("metier") + " · " + st))).build());
-                b.active = choisi == null || !choisi.getString("uuid").equals(o.getString("uuid"));
-            }
             if (choisi == null) return;
-            int x = x0 + 136;
+            int x = x0 + 8, y = y0 + 166;
             if (choisi.getBoolean("absent")) {
-                bouton("Retirer de la liste", x, y0 + 80, 140, b -> {
+                bouton("Retirer de la liste", x, y + 30, 140, b -> {
                     CompoundTag d = new CompoundTag();
                     d.putString("uuid", choisi.getString("uuid"));
                     choisiMemo = "";
@@ -866,36 +826,25 @@ public final class Client {
                 });
                 return;
             }
-            mission = new EditBox(font, x, y0 + 140, 222, 18, Component.literal("Mission"));
-            mission.setMaxLength(256);
-            mission.setHint(Component.literal("Ex. : ramène 10 fers et 1 diamant").withStyle(s -> s.withColor(0x777777)));
-            addRenderableWidget(mission);
-            bouton("Envoyer", x + 226, y0 + 139, 50, b -> {
-                if (mission.getValue().isBlank()) return;
-                CompoundTag d = new CompoundTag();
-                d.putString("uuid", choisi.getString("uuid"));
-                d.putString("texte", mission.getValue());
-                envoyer("ecrire", d);
-            }).setTooltip(Tooltip.create(Component.literal("Ta mission part en lettre : s'il est près du poste, il passe la prendre ; s'il est loin, un corbeau la lui porte. Il te répond ce qu'il a compris.")));
             // Horaires
-            bouton("-", x, y0 + 178, 14, b -> { debut = Math.floorMod(debut - 1, 24); majBoutons(); });
-            bDebut = bouton("", x + 15, y0 + 178, 34, b -> {});
-            bouton("+", x + 50, y0 + 178, 14, b -> { debut = (debut + 1) % 24; majBoutons(); });
-            bouton("-", x + 82, y0 + 178, 14, b -> { fin = Math.floorMod(fin - 1, 24); majBoutons(); });
-            bFin = bouton("", x + 97, y0 + 178, 34, b -> {});
-            bouton("+", x + 132, y0 + 178, 14, b -> { fin = (fin + 1) % 24; majBoutons(); });
+            bouton("-", x, y + 40, 14, b -> { debut = Math.floorMod(debut - 1, 24); majBoutons(); });
+            bDebut = bouton("", x + 15, y + 40, 34, b -> {});
+            bouton("+", x + 50, y + 40, 14, b -> { debut = (debut + 1) % 24; majBoutons(); });
+            bouton("-", x + 82, y + 40, 14, b -> { fin = Math.floorMod(fin - 1, 24); majBoutons(); });
+            bFin = bouton("", x + 97, y + 40, 34, b -> {});
+            bouton("+", x + 132, y + 40, 14, b -> { fin = (fin + 1) % 24; majBoutons(); });
             // Expéditions
-            bouton("-", x + 166, y0 + 178, 14, b -> { jours = Math.max(1, jours - 1); majBoutons(); });
-            bJours = bouton("", x + 181, y0 + 178, 46, b -> {});
-            bJours.setTooltip(Tooltip.create(Component.literal("Il va où il faut pour sa mission. Pour une sortie à la journée, il rentre le soir. Plus loin, il part de lui-même en expédition : il campe, se fatigue plus vite, et rentre au plus tard au bout de ce nombre de jours.")));
-            bouton("+", x + 228, y0 + 178, 14, b -> { jours = Math.min(30, jours + 1); majBoutons(); });
+            bouton("-", x + 160, y + 40, 14, b -> { jours = Math.max(1, jours - 1); majBoutons(); });
+            bJours = bouton("", x + 175, y + 40, 46, b -> {});
+            bJours.setTooltip(Tooltip.create(Component.literal("Plus loin qu'une journée de marche, il part en expédition : il campe, et rentre au plus tard au bout de ce nombre de jours.")));
+            bouton("+", x + 222, y + 40, 14, b -> { jours = Math.min(30, jours + 1); majBoutons(); });
             // Paie
-            salaire = new EditBox(font, x, y0 + 214, 56, 16, Component.literal("Paie"));
+            salaire = new EditBox(font, x + 250, y + 42, 56, 16, Component.literal("Paie"));
             salaire.setMaxLength(9);
             salaire.setFilter(v -> v.matches("[0-9]*"));
             salaire.setValue(String.valueOf(choisi.getLong("salaireVerse")));
             addRenderableWidget(salaire);
-            bouton("Enregistrer", x + 186, y0 + 212, 90, b -> {
+            bouton("Enregistrer", x + 312, y + 40, 92, b -> {
                 CompoundTag d = new CompoundTag();
                 d.putString("uuid", choisi.getString("uuid"));
                 d.putInt("debut", debut);
@@ -914,171 +863,223 @@ public final class Client {
             bJours.setMessage(Component.literal(jours + (jours > 1 ? " jours" : " jour")));
         }
 
-        // --- Onglet Lettres
+        // --- Onglet Missions : toutes les files, à réordonner ou annuler
 
-        void initLettres() {
-            if (ecrire) {
-                List<CompoundTag> v = vivants();
-                if (v.isEmpty()) { ecrire = false; } else {
-                    destinataire = Math.floorMod(destinataire, v.size());
-                    bouton("À : " + v.get(destinataire).getString("nom") + " ▸", x0 + 164, y0 + 30, 140, b -> { destinataire++; rebuildWidgets(); });
-                    corps = new MultiLineEditBox(font, x0 + 164, y0 + 54, 246, 160, Component.literal("Ta lettre… (ordres, missions, ou demander des nouvelles)"), Component.literal("Lettre"));
-                    corps.setCharacterLimit(1000);
-                    addRenderableWidget(corps);
-                    bouton("Envoyer", x0 + 164, y0 + 222, 80, b -> {
-                        if (corps.getValue().isBlank()) return;
-                        CompoundTag d = new CompoundTag();
-                        d.putString("uuid", v.get(destinataire).getString("uuid"));
-                        d.putString("texte", corps.getValue());
-                        ecrire = false;
-                        envoyer("ecrire", d);
-                    });
-                    bouton("Annuler", x0 + 248, y0 + 222, 80, b -> { ecrire = false; rebuildWidgets(); });
-                }
+        void initMissions() {
+            List<int[]> l = lignesMissions();
+            for (int r = 0; r < Math.min(LIGNES_MISSIONS, l.size() - defilement); r++) {
+                int[] ligne = l.get(defilement + r);
+                if (ligne[1] < 0) continue;
+                CompoundTag o = ouvriers.get(ligne[0]);
+                int i = ligne[1], n = o.getList("missions", Tag.TAG_STRING).size(), y = y0 + 30 + r * 19;
+                bouton("▲", x0 + largeur - 70, y, 20, b -> mission(o, "mission_monter", i, n)).active = i > 0;
+                bouton("▼", x0 + largeur - 49, y, 20, b -> mission(o, "mission_descendre", i, n)).active = i < n - 1;
+                bouton("✕", x0 + largeur - 28, y, 20, b -> mission(o, "mission_annuler", i, n))
+                        .setTooltip(Tooltip.create(Component.literal(i == 0 ? "Annuler cette mission : il passe à la suivante." : "Annuler cette mission.")));
             }
-            List<CompoundTag> lettres = liste();
-            int visibles = 8;
-            defilement = Mth.clamp(defilement, 0, Math.max(0, lettres.size() - visibles));
-            for (int k = 0; k < Math.min(visibles, lettres.size() - defilement); k++) {
-                CompoundTag l = lettres.get(defilement + k);
-                boolean importante = l.getBoolean("importante"), dejaLue = l.getBoolean("lue");
-                String t = (importante ? "! " : dejaLue ? "" : "● ") + l.getString("de") + " : " + l.getString("objet");
-                if (font.width(t) > 140) t = font.plainSubstrByWidth(t, 134) + "…";
-                int couleur = dejaLue ? GRIS : importante ? ORANGE : BLANC;
-                Button b = addRenderableWidget(Button.builder(Component.literal(t).withStyle(s -> s.withColor(couleur)), x -> {
-                    lettreMemo = l.getLong("id");
-                    lue = l;
-                    ecrire = false;
-                    if (!l.getBoolean("lue")) {
-                        l.putBoolean("lue", true);
-                        CompoundTag d = new CompoundTag();
-                        d.putLong("id", l.getLong("id"));
-                        envoyer("lue", d);
-                    } else rebuildWidgets();
-                }).bounds(x0 + 8, y0 + 30 + k * 21, 150, 20).build());
-                b.active = lue == null || lue.getLong("id") != l.getLong("id") || ecrire;
+        }
+
+        void mission(CompoundTag o, String action, int i, int n) {
+            CompoundTag d = new CompoundTag();
+            d.putString("uuid", o.getString("uuid"));
+            d.putInt("i", i);
+            d.putInt("n", n);
+            envoyer(action, d);
+        }
+
+        // --- Onglet Dépôt : la grille, des catégories et une recherche
+
+        void initDepot() {
+            for (int k = 0; k < CATEGORIES.length; k++) {
+                String c = CATEGORIES[k];
+                bouton(NOMS_CATEGORIES[k], x0 + 8 + k * 58, y0 + 28, 56, b -> { categorieMemo = c; defilement = 0; rebuildWidgets(); }).active = !categorieMemo.equals(c);
             }
-            // Ranger le courrier : tout marquer lu, voir les archives, effacer les lettres lues (deux clics).
-            // Pendant qu'il écrit, ni « Tout lu » ni « Tout effacer » : la réponse du serveur referait l'écran et perdrait le brouillon.
-            Button toutLu = bouton("Tout lu", x0 + 8, y0 + 200, 72, b -> envoyer("tout_lu", new CompoundTag()));
-            toutLu.active = !ecrire && !archivesMemo && f.getInt("aMarquer") > 0; // compté par le serveur, au-delà des 60 lettres envoyées
-            toutLu.setTooltip(Tooltip.create(Component.literal("Les lettres importantes (!) restent à ouvrir une par une.")));
-            bouton(archivesMemo ? "◂ Courrier" : "Archives", x0 + 82, y0 + 200, 76, b -> {
-                archivesMemo = !archivesMemo;
-                lettreMemo = -1;
-                lue = null;
-                defilement = 0;
-                ecrire = false;
-                rebuildWidgets();
-            }).setTooltip(Tooltip.create(Component.literal(archivesMemo ? "Revenir au courrier." : "Les lettres que tu as gardées de côté (" + archives.size() + ").")));
-            bouton("▲", x0 + 8, y0 + 222, 20, b -> { defilement--; rebuildWidgets(); }).active = defilement > 0;
-            bouton("▼", x0 + 30, y0 + 222, 20, b -> { defilement++; rebuildWidgets(); }).active = defilement + visibles < lettres.size();
-            Button effacer = bouton(confirmer ? "Sûr ?" : "Tout effacer", x0 + 52, y0 + 222, 106, b -> {
-                if (!confirmer) { confirmer = true; rebuildWidgets(); return; }
-                confirmer = false;
-                lettreMemo = -1;
-                envoyer("tout_effacer", new CompoundTag());
-            });
-            effacer.active = !ecrire && !archivesMemo && f.getInt("lues") > 0;
-            effacer.setTooltip(Tooltip.create(Component.literal(confirmer ? "Clique encore pour effacer les lettres lues." : "Efface les lettres déjà lues. Les non lues et les archives restent.")));
-            if (!ecrire) {
-                bouton("Écrire", x0 + 164, y0 + 222, 60, b -> { ecrire = true; rebuildWidgets(); }).active = !vivants().isEmpty();
-                if (lue != null) {
-                    if (lue.hasUUID("deUuid")) bouton("Répondre", x0 + 226, y0 + 222, 64, b -> {
-                        List<CompoundTag> v = vivants();
-                        for (int k = 0; k < v.size(); k++) if (v.get(k).getString("uuid").equals(lue.getUUID("deUuid").toString())) destinataire = k;
-                        ecrire = true;
-                        rebuildWidgets();
-                    }).active = vivants().stream().anyMatch(o -> o.getString("uuid").equals(lue.getUUID("deUuid").toString()));
-                    bouton(archivesMemo ? "Ressortir" : "Archiver", x0 + 292, y0 + 222, 64, b -> surLettre(archivesMemo ? "desarchiver" : "archiver"))
-                            .setTooltip(Tooltip.create(Component.literal(archivesMemo ? "La remettre dans le courrier." : "La garder de côté : « Tout effacer » n'y touche pas.")));
-                    bouton("Jeter", x0 + 358, y0 + 222, 52, b -> surLettre("supprimer"));
-                }
-            }
+            recherche = new EditBox(font, x0 + 8, y0 + 52, 200, 16, Component.literal("Chercher"));
+            recherche.setMaxLength(40);
+            recherche.setValue(rechercheMemo);
+            recherche.setHint(Component.literal("Chercher un objet…").withStyle(s -> s.withColor(0x777777)));
+            recherche.setResponder(v -> { rechercheMemo = v; defilement = 0; });
+            addRenderableWidget(recherche);
+            bouton("Ouvrir les coffres", x0 + largeur - 128, y0 + 50, 120, b -> envoyer("stock", new CompoundTag()))
+                    .setTooltip(Tooltip.create(Component.literal("Pour prendre ou poser des objets au dépôt, et des pièces dans la caisse.")));
         }
 
         @Override
         public boolean mouseScrolled(double mx, double my, double dx, double dy) {
-            if (confirmer) { confirmer = false; rebuildWidgets(); } // « Sûr ? » se désarme
-            if (ongletMemo.equals("lettres") && mx < x0 + 160) { defilement -= (int) Math.signum(dy); rebuildWidgets(); return true; }
+            if (f.getBoolean("poste") && my > y0 + 26) { defiler(-(int) Math.signum(dy)); return true; }
             return super.mouseScrolled(mx, my, dx, dy);
         }
 
-        /** Tout autre clic que le second sur « Sûr ? » (une lettre, une liste, un bouton, à côté) le désarme. */
         @Override
-        public boolean mouseClicked(double mx, double my, int bouton) {
-            boolean arme = confirmer;
-            boolean r = super.mouseClicked(mx, my, bouton);
-            if (arme && confirmer) { confirmer = false; rebuildWidgets(); }
-            return r;
+        public boolean mouseClicked(double mx, double my, int b) {
+            // Onglet Ouvriers : un clic sur une ligne de la liste choisit cet ouvrier.
+            if (f.getBoolean("poste") && ongletMemo.equals("ouvriers") && mx >= x0 + 8 && mx < x0 + largeur - 8) {
+                int r = (int) Math.floor((my - (y0 + 44)) / LIGNE_OUVRIER);
+                if (my >= y0 + 44 && r >= 0 && r < LIGNES_OUVRIERS && defilement + r < ouvriers.size()) {
+                    CompoundTag o = ouvriers.get(defilement + r);
+                    choisiMemo = o.getString("uuid");
+                    choisi = o;
+                    debut = o.getInt("debut");
+                    fin = o.getInt("fin");
+                    jours = Math.max(1, o.getInt("joursExpedition"));
+                    rebuildWidgets();
+                    return true;
+                }
+            }
+            return super.mouseClicked(mx, my, b);
         }
 
         @Override
         public void render(GuiGraphics g, int mx, int my, float pt) {
             super.render(g, mx, my, pt);
-            texte(g, title.getString(), x0 + 8, y0 + 10, OR);
+            texte(g, title.getString(), x0 + 2, y0 - 11, OR);
             if (!f.getBoolean("poste")) {
                 if (f.contains("ailleurs")) {
                     paragraphe(g, "Ton poste de travail est en " + f.getString("ailleurs") + ". Ce bureau n'est plus qu'un coffre : vide sa caisse et son dépôt, puis casse-le.", x0 + 10, y0 + 34, largeur - 20, BLANC, 6);
                 } else {
-                    paragraphe(g, "Depuis la 0.5.0, chaque joueur a un seul poste de travail, commun à tous ses ouvriers : ils s'y rattachent tous, y touchent leur paie, y déposent leur travail et leurs lettres.", x0 + 10, y0 + 34, largeur - 20, BLANC, 6);
+                    paragraphe(g, "Chaque chef a un seul poste de travail, commun à tous ses ouvriers : ils s'y rattachent tous, y touchent leur paie et y déposent leur ouvrage.", x0 + 10, y0 + 34, largeur - 20, BLANC, 6);
                     paragraphe(g, "Tes autres bureaux ne seront plus que des coffres.", x0 + 10, y0 + 70, largeur - 20, GRIS, 2);
                 }
                 return;
             }
-            if (ongletMemo.equals("lettres")) renderLettres(g); else renderOuvriers(g);
+            switch (ongletMemo) {
+                case "missions" -> renderMissions(g);
+                case "depot" -> renderDepot(g, mx, my);
+                case "caisse" -> renderCaisse(g);
+                case "journal" -> renderJournal(g, mx, my);
+                default -> renderOuvriers(g, mx, my);
+            }
+            int[] t = tailleListe();
+            if (t[0] > t[1]) texte(g, (defilement + 1) + "–" + Math.min(t[0], defilement + t[1]) + " / " + t[0] + " ⇕", x0 + largeur - 90, y0 + hauteur - 11, GRIS);
         }
 
-        void renderOuvriers(GuiGraphics g) {
+        void renderOuvriers(GuiGraphics g, int mx, int my) {
             if (ouvriers.isEmpty()) {
-                paragraphe(g, "Tu n'as encore aucun ouvrier. Les chercheurs d'emploi passent près de toi : clic droit sur l'un d'eux pour l'entretien d'embauche.", x0 + 136, y0 + 34, 274, GRIS, 6);
+                paragraphe(g, "Tu n'as encore aucun ouvrier. Les chercheurs d'emploi passent près de toi : clic droit sur l'un d'eux pour l'embaucher.", x0 + 10, y0 + 34, largeur - 20, GRIS, 6);
                 return;
+            }
+            int xs = x0 + 128, xm = x0 + 262;
+            texte(g, "OUVRIER", x0 + 10, y0 + 32, OR);
+            texte(g, "ÉTAT", xs, y0 + 32, OR);
+            texte(g, "MISSION", xm, y0 + 32, OR);
+            for (int r = 0; r < Math.min(LIGNES_OUVRIERS, ouvriers.size() - defilement); r++) {
+                CompoundTag o = ouvriers.get(defilement + r);
+                int y = y0 + 44 + r * LIGNE_OUVRIER;
+                boolean sel = choisi != null && choisi.getString("uuid").equals(o.getString("uuid"));
+                boolean survol = mx >= x0 + 8 && mx < x0 + largeur - 8 && my >= y && my < y + LIGNE_OUVRIER;
+                if (sel || survol) g.fill(x0 + 6, y - 2, x0 + largeur - 6, y + LIGNE_OUVRIER - 2, sel ? 0x50F2C14E : 0x28FFFFFF);
+                texte(g, couper(o.getString("nom") + " " + "★".repeat(o.getInt("niveau")), xs - x0 - 16), x0 + 10, y, BLANC);
+                texte(g, couper(o.getString("statut"), xm - xs - 6), xs, y, couleur(o));
+                texte(g, couper(missionEnCours(o), x0 + largeur - 10 - xm), xm, y, GRIS);
             }
             if (choisi == null) return;
-            int x = x0 + 136, w = 276;
-            texte(g, choisi.getString("nom") + " — " + choisi.getString("metier") + " " + "★".repeat(choisi.getInt("niveau")), x, y0 + 30, OR);
-            String st = choisi.getString("statut");
+            int x = x0 + 8, y = y0 + 166;
+            g.fill(x0 + 6, y - 6, x0 + largeur - 6, y - 5, 0xFF8A6A2A);
+            texte(g, choisi.getString("nom") + " — " + choisi.getString("metier") + " " + "★".repeat(choisi.getInt("niveau")), x, y, OR);
             if (choisi.getBoolean("absent")) {
-                texte(g, st, x, y0 + 44, ROUGE);
-                paragraphe(g, choisi.getString("detail"), x, y0 + 58, w, GRIS, 3);
+                paragraphe(g, choisi.getString("detail"), x, y + 12, largeur - 16, GRIS, 2);
                 return;
             }
-            int cst = st.equals("En grève") || st.equals("À terre") ? ROUGE : st.equals("En expédition") ? OR : st.equals("Au travail") ? VERT : BLANC;
-            texte(g, st, x, y0 + 42, cst);
-            texte(g, " · " + choisi.getString("distance") + (choisi.getString("sortie").isEmpty() ? "" : ", " + choisi.getString("sortie")), x + font.width(st), y0 + 42, GRIS);
-            texte(g, "Fatigue " + choisi.getInt("fatigue") + "/100   Faim " + choisi.getInt("faim") + "/20   Vie " + choisi.getInt("vie") + "/" + choisi.getInt("vieMax")
-                    + (choisi.getInt("impayes") > 0 ? "   Paies en retard : " + choisi.getInt("impayes") : ""), x, y0 + 54, GRIS);
-            int y = y0 + 66;
-            if (!choisi.getString("besoin").isEmpty()) y = paragraphe(g, "Il demande : " + choisi.getString("besoin"), x, y, w, ORANGE, 2);
-            texte(g, "MISSIONS", x, y0 + 90, OR);
-            ListTag ms = choisi.getList("missions", Tag.TAG_STRING);
-            if (ms.isEmpty()) texte(g, "Aucune : écris-lui ce que tu veux, ci-dessous.", x, y0 + 102, GRIS);
-            for (int k = 0; k < Math.min(3, ms.size()); k++) texte(g, (k + 1) + ". " + ms.getString(k), x, y0 + 102 + k * 11, BLANC);
-            if (ms.size() > 3) texte(g, "… et " + (ms.size() - 3) + " autre(s)", x + 200, y0 + 90, GRIS);
-            if (choisi.getInt("aLire") > 0) texte(g, choisi.getInt("aLire") + " lettre(s) de toi l'attendent au poste.", x, y0 + 130, 0x9FB4C7);
-            texte(g, "HORAIRES", x, y0 + 166, OR);
-            texte(g, "à", x + 70, y0 + 184, GRIS);
-            texte(g, "EXPÉDITION MAX", x + 166, y0 + 166, OR);
-            texte(g, "PAIE (en bronzes)", x, y0 + 202, OR);
-            texte(g, "Il demande " + choisi.getLong("salaireDemande"), x + 60, y0 + 218, GRIS);
-            texte(g, choisi.getString("paie"), x + 96, y0 + 202, GRIS);
+            String ou = choisi.getString("distance") + (choisi.getString("sortie").isEmpty() ? "" : ", " + choisi.getString("sortie"));
+            texte(g, couper(choisi.getString("statut") + (ou.isEmpty() ? "" : " · " + ou), largeur - 16), x, y + 11, couleur(choisi));
+            texte(g, "Vie " + choisi.getInt("vie") + "/" + choisi.getInt("vieMax") + "   Faim " + choisi.getInt("faim") + "/20"
+                    + (choisi.getInt("impayes") > 0 ? "   Paies en retard : " + choisi.getInt("impayes") : "")
+                    + (choisi.getString("besoin").isEmpty() ? "" : "   Il demande : " + choisi.getString("besoin")), x, y + 21, GRIS);
+            texte(g, "HORAIRES", x, y + 31, OR);
+            texte(g, "à", x + 70, y + 46, GRIS);
+            texte(g, "EXPÉDITION MAX", x + 160, y + 31, OR);
+            texte(g, "PAIE (bronzes)", x + 250, y + 31, OR);
+            texte(g, couper(choisi.getString("paie") + " · il demande " + choisi.getLong("salaireDemande"), largeur - 16), x, y + 64, GRIS);
         }
 
-        void renderLettres(GuiGraphics g) {
-            if (liste().isEmpty() && !ecrire) texte(g, archivesMemo ? "Aucune lettre aux archives." : "Aucune lettre pour l'instant.", x0 + 10, y0 + 34, GRIS);
-            if (ecrire) return;
-            int x = x0 + 164, w = 248;
-            if (lue == null) {
-                if (archivesMemo) paragraphe(g, "Les archives : les lettres que tu as gardées de côté. « Tout effacer » n'y touche pas.", x, y0 + 34, w, GRIS, 8);
-                else paragraphe(g, "Tes ouvriers t'écrivent ici : leurs besoins, leurs missions, leurs expéditions. Les lettres marquées « ! » sont importantes. "
-                        + "Une même nouvelle qui revient ne fait pas une lettre de plus : elle compte une fois de plus (×2, ×3…).", x, y0 + 34, w, GRIS, 10);
+        void renderMissions(GuiGraphics g) {
+            List<int[]> l = lignesMissions();
+            if (l.isEmpty()) { texte(g, "Aucun ouvrier.", x0 + 10, y0 + 34, GRIS); return; }
+            for (int r = 0; r < Math.min(LIGNES_MISSIONS, l.size() - defilement); r++) {
+                int[] ligne = l.get(defilement + r);
+                CompoundTag o = ouvriers.get(ligne[0]);
+                int y = y0 + 36 + r * 19;
+                if (ligne[1] < 0) {
+                    ListTag ms = o.getList("missions", Tag.TAG_STRING);
+                    texte(g, o.getString("nom") + " — " + o.getString("metier"), x0 + 10, y, OR);
+                    texte(g, couper(ms.isEmpty() ? "aucune mission" : o.getString("statut"), largeur - 200), x0 + 190, y, ms.isEmpty() ? GRIS : couleur(o));
+                } else {
+                    String m = o.getList("missions", Tag.TAG_STRING).getString(ligne[1]);
+                    texte(g, couper((ligne[1] + 1) + ". " + m, largeur - 100), x0 + 22, y, ligne[1] == 0 ? BLANC : GRIS);
+                }
+            }
+        }
+
+        void renderDepot(GuiGraphics g, int mx, int my) {
+            List<Integer> v = visibles();
+            int gx = x0 + 9, gy = y0 + 74;
+            for (int r = 0; r < RANGEES; r++)
+                for (int c = 0; c < COLONNES; c++) {
+                    int x = gx + c * CASE, y = gy + r * CASE;
+                    g.fill(x, y, x + CASE - 1, y + CASE - 1, 0xFF2A2E2B);
+                    g.renderOutline(x, y, CASE - 1, CASE - 1, 0xFF4A3E28);
+                }
+            ItemStack survol = null;
+            long nSurvol = 0;
+            for (int k = 0; k < Math.min(RANGEES * COLONNES, v.size() - defilement * COLONNES); k++) {
+                int i = v.get(defilement * COLONNES + k);
+                int x = gx + (k % COLONNES) * CASE, y = gy + (k / COLONNES) * CASE;
+                ItemStack s = objets.get(i);
+                long n = nombres.get(i);
+                g.renderItem(s, x, y);
+                g.renderItemDecorations(font, s, x, y, n <= 1 ? null : n < 1000 ? String.valueOf(n) : n < 100_000 ? (n / 1000) + "k" : "∞");
+                if (mx >= x && mx < x + CASE - 1 && my >= y && my < y + CASE - 1) { survol = s; nSurvol = n; }
+            }
+            if (objets.isEmpty()) texte(g, "Le dépôt est vide.", gx + 2, gy + 4, GRIS);
+            else if (v.isEmpty()) texte(g, "Rien ne correspond.", gx + 2, gy + 4, GRIS);
+            if (survol != null) {
+                List<Component> l = new ArrayList<>(Screen.getTooltipFromItem(minecraft, survol));
+                l.add(Component.literal("× " + nSurvol + " au dépôt").withStyle(s -> s.withColor(OR)));
+                g.renderComponentTooltip(font, l, mx, my);
+            }
+        }
+
+        void renderCaisse(GuiGraphics g) {
+            CompoundTag c = f.getCompound("caisse");
+            int x = x0 + 10, y = y0 + 32;
+            texte(g, "DANS LA CAISSE", x, y, OR);
+            texte(g, c.getString("solde"), x + 140, y, c.getBoolean("assez") ? VERT : ROUGE);
+            texte(g, "UNE PAIE DE TOUS", x, y + 13, OR);
+            texte(g, c.getString("salaires"), x + 140, y + 13, BLANC);
+            texte(g, "PROCHAINE PAIE", x, y + 26, OR);
+            texte(g, c.getString("prochaine"), x + 140, y + 26, BLANC);
+            if (c.getInt("retards") > 0) texte(g, "Paies en retard : " + c.getInt("retards") + " (sans paie, ils se mettent en grève)", x, y + 39, ROUGE);
+            else if (!c.getBoolean("assez")) texte(g, "La caisse ne suffit pas pour la prochaine paie.", x, y + 39, ORANGE);
+            int yl = y + 56;
+            texte(g, "OUVRIER", x, yl, OR);
+            texte(g, "SALAIRE", x + 140, yl, OR);
+            texte(g, "PAIE", x + 230, yl, OR);
+            for (int r = 0; r < Math.min(12, ouvriers.size() - defilement); r++) {
+                CompoundTag o = ouvriers.get(defilement + r);
+                int y2 = yl + 12 + r * 11;
+                texte(g, couper(o.getString("nom"), 130), x, y2, o.getBoolean("absent") ? GRIS : BLANC);
+                if (o.getBoolean("absent")) continue;
+                texte(g, couper(o.getString("salaire") + " " + (o.getString("periode").isEmpty() ? "" : o.getString("periode")), 86), x + 140, y2, BLANC);
+                texte(g, couper(o.getString("paie"), largeur - 250), x + 230, y2, o.getInt("impayes") > 0 ? ROUGE : GRIS);
+            }
+        }
+
+        void renderJournal(GuiGraphics g, int mx, int my) {
+            if (journal.isEmpty()) {
+                paragraphe(g, "Rien encore. Chaque événement de la colonie s'inscrit ici, en une ligne : une mission finie, un ouvrier bloqué, une attaque repoussée.", x0 + 10, y0 + 34, largeur - 20, GRIS, 4);
                 return;
             }
-            texte(g, lue.getString("objet"), x, y0 + 30, lue.getBoolean("importante") ? ORANGE : OR);
-            String suite = " · " + lue.getString("date") + (lue.getInt("nombre") > 1 ? " (la dernière)" : ""), de = "De " + lue.getString("de");
-            if (font.width(de + suite) > w) de = font.plainSubstrByWidth(de, Math.max(40, w - font.width(suite) - font.width("…"))) + "…"; // jamais hors du cadre
-            texte(g, de + suite, x, y0 + 42, GRIS);
-            paragraphe(g, lue.getString("texte"), x, y0 + 58, w, BLANC, 16);
+            CompoundTag survol = null;
+            for (int r = 0; r < Math.min(LIGNES_JOURNAL, journal.size() - defilement); r++) {
+                CompoundTag l = journal.get(defilement + r);
+                int y = y0 + 32 + r * 11;
+                String date = l.getString("date");
+                texte(g, date, x0 + 10, y, GRIS);
+                texte(g, couper(l.getString("ligne"), largeur - 110), x0 + 100, y, l.getBoolean("importante") ? ORANGE : BLANC);
+                if (mx >= x0 + 8 && mx < x0 + largeur - 8 && my >= y - 1 && my < y + 10) survol = l;
+            }
+            if (survol != null && !survol.getString("texte").isBlank())
+                g.renderTooltip(font, font.split(Component.literal(survol.getString("texte")), 260), mx, my);
         }
     }
 

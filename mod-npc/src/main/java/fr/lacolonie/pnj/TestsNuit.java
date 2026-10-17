@@ -77,14 +77,14 @@ public class TestsNuit {
         Travailleur t = s.t();
         String[] reponse = {null};
         long[] endormi = {-1};
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{t},
+        Essais.etapes(h, s.chef(), new Travailleur[]{t},
                 () -> {
                     reponse[0] = t.appliquer(Ordres.lire("Travaille de nuit", "bucheron"), s.chef());
                     h.assertTrue(t.debut == 20 && t.fin == 6, "heures de nuit (" + t.debut + "-" + t.fin + ", réponse " + reponse[0] + ")");
                     h.assertTrue(reponse[0] != null && reponse[0].contains("nuit"), "il répond qu'il fera les nuits : " + reponse[0]);
                     h.assertTrue(t.enService(), "à minuit, il est en service");
                 },
-                TestsIA.attendre(h, 100),
+                Essais.attendre(h, 100),
                 () -> {
                     h.assertFalse(t.action instanceof Actions.Reposer || t.isSleeping(), "la nuit, il ne dort pas (" + TestsJeu.etat(t, s.base()) + ")");
                     h.assertFalse(t.memoire.contains("abri"), "pas d'abri : il travaille");
@@ -95,7 +95,7 @@ public class TestsNuit {
                     h.assertTrue(t.isSleeping(), "à midi, il dort dans son lit (" + TestsJeu.etat(t, s.base()) + ")");
                     if (endormi[0] < 0) endormi[0] = h.getTick();
                 },
-                TestsIA.attendre(h, 800),
+                Essais.attendre(h, 800),
                 () -> {
                     h.assertTrue(t.isSleeping() && t.action instanceof Actions.Reposer, "toujours endormi 40 s plus tard (" + TestsJeu.etat(t, s.base()) + ")");
                     h.assertTrue(t.statut().startsWith("Dort le jour"), "statut : " + t.statut());
@@ -103,7 +103,7 @@ public class TestsNuit {
                 });
     }
 
-    /** La nuit, au travail : une heure de travail le fatigue de 7 (5 de jour). */
+    /** Refonte 1.0.0 : une heure de travail, même de nuit, ne le fatigue plus (ce sont les horaires qui le font rentrer). */
     @GameTest(template = "vide", batch = "nuit_minuit", timeoutTicks = 1200)
     public static void laNuitFatiguePlus(GameTestHelper h) {
         Scene s = scene(h, 411, "bucheron", new ItemStack(Items.IRON_AXE), false);
@@ -120,7 +120,7 @@ public class TestsNuit {
                 lance[0] = true;
             }
             h.assertTrue(t.fatigueCompteur < 999, "l'heure est passée");
-            h.assertTrue(t.fatigue == 7, "une heure de nuit : +7 de fatigue (" + t.fatigue + ", " + TestsJeu.etat(t, s.base()) + ")");
+            h.assertTrue(t.fatigue == 0, "une heure de nuit : pas de fatigue (" + t.fatigue + ", " + TestsJeu.etat(t, s.base()) + ")");
             fin(t);
         });
     }
@@ -168,7 +168,6 @@ public class TestsNuit {
             if (etape[0] == 1) {
                 h.assertTrue(t.memoire.getInt("nuits") == 3, "trois nuits d'affilée (" + t.memoire + ")");
                 h.assertTrue(t.getMaxHealth() == vie - 2, "−2 points de vie max (" + t.getMaxHealth() + " au lieu de " + vie + ")");
-                h.assertTrue(Moral.bilan(Humeur.etat(t)).de(Moral.Cause.NUIT) == -2, "les nuits pèsent sur son moral");
                 t.memoire.putInt("nuits", 6);
                 t.fatigueCompteur = 999;
                 etape[0] = 2;
@@ -186,7 +185,6 @@ public class TestsNuit {
             }
             h.assertTrue(t.memoire.getInt("nuits") == 0, "deux jours de repos : plus de nuits comptées (" + t.memoire + ")");
             h.assertTrue(t.getMaxHealth() == vie, "sa vie max revient (" + t.getMaxHealth() + ")");
-            h.assertTrue(Moral.bilan(Humeur.etat(t)).de(Moral.Cause.NUIT) == 0, "les nuits ne pèsent plus");
             fin(t);
         });
     }
@@ -200,7 +198,7 @@ public class TestsNuit {
         t.debut = 20;
         t.fin = 6;
         h.succeedWhen(() -> {
-            h.assertTrue(TestsCaractere.aDit(t, "nuit_sans_ouvrage"), "il dit qu'il n'a rien à faire de nuit (" + t.paroles + ")");
+            h.assertTrue(Essais.aDit(t, "nuit_sans_ouvrage"), "il dit qu'il n'a rien à faire de nuit (" + t.paroles + ")");
             h.assertTrue(TestsJeu.distance(t, s.base()) <= 8, "il reste au poste (" + TestsJeu.etat(t, s.base()) + ")");
             h.assertTrue(t.paroles.stream().filter(p -> Vie.vient("nuit_sans_ouvrage", p)).count() == 1, "une seule fois");
             fin(t);

@@ -41,8 +41,9 @@ import java.util.UUID;
 
 /**
  * Le poste de travail : un seul par joueur, commun à tous ses ouvriers (0.5.0). Une caisse (les salaires), un dépôt
- * (agrandi par les coffres collés au bureau), le courrier, et l'écran du chef : ses ouvriers, leurs missions, leurs
- * horaires, leur paie et leurs expéditions, et les lettres.
+ * (agrandi par les coffres collés au bureau), et l'écran du chef à 5 onglets (1.0.0) : Ouvriers (état et mission de
+ * chacun, horaires, paie), Missions (toutes les files, à réordonner ou annuler), Dépôt (grille par catégories),
+ * Caisse (la paie) et Journal (une ligne par événement, à la place des lettres).
  * <p>
  * Avant la 0.5.0, chaque PNJ avait son bureau. Le premier bureau qu'un joueur ouvre après la mise à jour lui propose
  * d'en faire son poste ; les autres ne sont plus que des coffres (caisse et dépôt), à vider.
@@ -477,27 +478,84 @@ public final class Bureau {
                 ouvriers.add(x);
             });
             f.put("ouvriers", ouvriers);
-
-            // Triées (importantes non lues, non lues, lues), avec le compteur dans l'objet : un ancien écran les montre
-            // aussi dans cet ordre. Les archives à part, sous une clé qu'un ancien écran ignore.
-            List<Courrier.Lettre> boite = c.boite(p.getUUID());
-            f.put("lettres", lettres(Boite.affichees(boite, false)));
-            f.put("archives", lettres(Boite.affichees(boite, true)));
-            f.putLong("nonLues", c.nonLues(p.getUUID()));
-            // Au-delà des 60 envoyées : y a-t-il des lues à effacer, de la routine à marquer lue ?
-            f.putInt("lues", (int) boite.stream().filter(l -> l.lue && !l.archivee).count());
-            f.putInt("aMarquer", (int) boite.stream().filter(l -> !l.lue && !l.archivee && !l.importante).count());
+            f.put("journal", journal(c.boite(p.getUUID())));
+            f.put("depot", depotTag(p.registryAccess()));
+            f.put("caisse", caisseTag(p));
             return f;
         }
 
-        static ListTag lettres(List<Courrier.Lettre> ls) {
+        /** Le journal du poste, la ligne la plus récente en tête : la ligne courte, son détail, l'heure du jeu, importante ou non. */
+        static ListTag journal(List<Courrier.Lettre> ls) {
             ListTag t = new ListTag();
-            for (int i = 0; i < Math.min(60, ls.size()); i++) {
-                CompoundTag x = ls.get(i).sauver();
-                x.putString("objet", Boite.objet(ls.get(i)));
+            for (int i = 0; i < Math.min(Courrier.MAX_LIGNES, ls.size()); i++) {
+                Courrier.Lettre l = ls.get(i);
+                CompoundTag x = new CompoundTag();
+                x.putString("ligne", Boite.ligne(l));
+                x.putString("texte", l.texte);
+                x.putString("date", l.date);
+                x.putBoolean("importante", l.importante);
                 t.add(x);
             }
             return t;
+        }
+
+        /** Au-delà, l'onglet Dépôt ne montre pas les autres sortes (un paquet borné). */
+        static final int DEPOT_MAX = 400;
+        static final Actions.Filtre MINERAIS = Actions.Filtre.de(SORTES.get(0) + "|#c:ingots|#c:gems|#c:nuggets|#c:dusts");
+        static final Actions.Filtre BOIS = Actions.Filtre.de("#minecraft:logs|#minecraft:planks|#minecraft:saplings|#minecraft:wooden_slabs"
+                + "|#minecraft:wooden_stairs|#minecraft:wooden_fences|minecraft:stick|#c:rods/wooden");
+
+        /** La catégorie d'un objet dans l'onglet Dépôt. */
+        static String categorie(ItemStack s) {
+            if (s.isDamageableItem()) return "outils";
+            if (s.has(net.minecraft.core.component.DataComponents.FOOD)) return "nourriture";
+            if (MINERAIS.objet(s)) return "minerais";
+            if (BOIS.objet(s)) return "bois";
+            if (s.getItem() instanceof net.minecraft.world.item.BlockItem) return "blocs";
+            return "divers";
+        }
+
+        /** Le dépôt visible (le bureau et les coffres collés), une ligne par sorte : l'objet, le nombre, sa catégorie. La réserve n'est jamais montrée. */
+        ListTag depotTag(HolderLookup.Provider reg) {
+            List<ItemStack> sortes = new ArrayList<>();
+            List<Long> nombres = new ArrayList<>();
+            java.util.function.Consumer<ItemStack> compter = s -> {
+                if (s.isEmpty()) return;
+                for (int i = 0; i < sortes.size(); i++)
+                    if (ItemStack.isSameItemSameComponents(sortes.get(i), s)) { nombres.set(i, nombres.get(i) + s.getCount()); return; }
+                if (sortes.size() < DEPOT_MAX) { sortes.add(s.copyWithCount(1)); nombres.add((long) s.getCount()); }
+            };
+            for (int i = 0; i < depot.getContainerSize(); i++) compter.accept(depot.getItem(i));
+            for (IItemHandler h : voisins()) for (int i = 0; i < h.getSlots(); i++) compter.accept(h.getStackInSlot(i));
+            ListTag t = new ListTag();
+            for (int i = 0; i < sortes.size(); i++) {
+                CompoundTag x = new CompoundTag();
+                x.put("objet", sortes.get(i).save(reg));
+                x.putLong("n", nombres.get(i));
+                x.putString("cat", categorie(sortes.get(i)));
+                t.add(x);
+            }
+            return t;
+        }
+
+        /** La paie : ce qu'il y a dans la caisse, ce que coûte une paie de tous, les retards, et la prochaine. */
+        CompoundTag caisseTag(ServerPlayer p) {
+            CompoundTag x = new CompoundTag();
+            long solde = Reglages.valeur(caisse), du = 0, prochaine = Long.MAX_VALUE;
+            int retards = 0;
+            for (Travailleur t : ColoniePnj.pnjDe(p.server, p.getUUID())) {
+                du += t.salaireVerse();
+                retards += t.impayes;
+                prochaine = Math.min(prochaine, t.prochainePaie);
+            }
+            x.putString("solde", Reglages.texte(solde));
+            x.putString("salaires", Reglages.texte(du));
+            x.putBoolean("assez", solde >= du);
+            x.putInt("retards", retards);
+            long reste = prochaine == Long.MAX_VALUE ? -1 : prochaine - System.currentTimeMillis();
+            x.putString("prochaine", reste < 0 ? (prochaine == Long.MAX_VALUE ? "Personne à payer." : "Maintenant : ils viennent la chercher.")
+                    : "Dans " + (reste >= 3_600_000 ? reste / 3_600_000 + " h " : "") + (reste / 60_000 % 60) + " min");
+            return x;
         }
 
         static CompoundTag ficheOuvrier(Travailleur t) {
@@ -517,7 +575,6 @@ public final class Bureau {
             ListTag ms = new ListTag();
             for (Travailleur.Mission m : t.missions) ms.add(net.minecraft.nbt.StringTag.valueOf(Metier.avancementTexte(t, m)));
             e.put("missions", ms);
-            e.putInt("aLire", t.lettresALire.size() + t.lettresAuCalme.size());
             return e;
         }
 
@@ -542,30 +599,30 @@ public final class Bureau {
                     long s = d.getLong("salaire");
                     t.salaire = s < 0 || s == t.salaireDemande() ? -1 : Math.min(s, 1_000_000);
                 }
-                case "ecrire" -> {
-                    Travailleur t = ouvrier(p, d.getString("uuid"));
-                    String texte = d.getString("texte").strip();
-                    if (t == null || texte.isEmpty() || texte.length() > 1000) return;
-                    Courrier.ecrireAuPnj(p, t, texte);
-                    Travailleur.signaler(p, t.chezLui(t.blockPosition()) ? "Lettre posée au poste : " + t.prenom + " passera la prendre."
-                            : "Un corbeau s'envole vers " + t.prenom + ".");
+                // Les files de missions (onglet Missions) : monter, descendre ou annuler la mission n° « i » de cet ouvrier.
+                // « n » : la taille de la file que l'écran a vue ; si elle a changé entre-temps, on ne touche à rien.
+                case "mission_monter", "mission_descendre", "mission_annuler" -> {
+                    if (!mission(ouvrier(p, d.getString("uuid")), action, d.getInt("i"), d.getInt("n"))) return;
                 }
-                // Le courrier : seulement la boîte de celui qui agit (le propriétaire, vérifié plus haut).
-                case "lue" -> c.boite(p.getUUID()).stream().filter(l -> l.id == d.getLong("id")).forEach(l -> { l.lue = true; c.setDirty(); });
-                case "supprimer" -> { if (c.boite(p.getUUID()).removeIf(l -> l.id == d.getLong("id"))) c.setDirty(); }
-                case "tout_lu" -> { if (Boite.toutLu(c.boite(p.getUUID()))) c.setDirty(); }
-                case "archiver" -> { if (Boite.archiver(c.boite(p.getUUID()), d.getLong("id"), true)) c.setDirty(); }
-                case "desarchiver" -> { if (Boite.archiver(c.boite(p.getUUID()), d.getLong("id"), false)) c.setDirty(); }
-                case "tout_effacer" -> { if (Boite.effacerLues(c.boite(p.getUUID()))) c.setDirty(); }
                 case "retirer" -> {
                     try { c.retirer(p.getUUID(), UUID.fromString(d.getString("uuid"))); } catch (IllegalArgumentException ignore) { return; }
                 }
-                // La guerre et la paix (refonte, partie 6) : « qui » est l'identifiant d'un chef de la liste (Armee.adversaires) ou son pseudo.
-                case "declarer_guerre" -> Travailleur.signaler(p, Armee.declarer(p, d.getString("qui")));
-                case "paix" -> Travailleur.signaler(p, Armee.paix(p, d.getString("qui")));
+                // La guerre et la paix (refonte, partie 6) : « cible » est le pseudo d'un chef (ou son identifiant, de Armee.adversaires).
+                case "declarer_guerre" -> Travailleur.signaler(p, Armee.declarer(p, d.contains("cible") ? d.getString("cible") : d.getString("qui")));
+                case "paix" -> Travailleur.signaler(p, Armee.paix(p, d.contains("cible") ? d.getString("cible") : d.getString("qui")));
                 default -> { return; }
             }
             if (p.connection != null && p.connection.hasChannel(Reseau.Poste.TYPE)) PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
+        }
+
+        /** Change la file de missions de cet ouvrier ; vrai si elle a changé. Annuler la première : il passe à la suivante. */
+        static boolean mission(Travailleur t, String action, int i, int vue) {
+            if (t == null || vue != t.missions.size() || i < 0 || i >= t.missions.size()) return false;
+            return switch (action) {
+                case "mission_monter" -> Boite.deplacer(t.missions, i, -1);
+                case "mission_descendre" -> Boite.deplacer(t.missions, i, 1);
+                default -> { t.missions.remove(i); yield true; }
+            };
         }
 
         static Travailleur ouvrier(ServerPlayer p, String uuid) {

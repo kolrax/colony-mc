@@ -61,13 +61,13 @@ public class TestsMachines {
         d.depot.setItem(0, new ItemStack(Items.RAW_IRON, 8));
         d.depot.setItem(1, new ItemStack(Items.COBBLESTONE, 8));
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(f));
                     g.parler(chef, "Remplis le four avec le fer");
                 },
                 () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).source() == Trajets.DEPOT && Transporteur.lire(g).get(0).dest() == f.asLong()
-                        && Transporteur.machineDe(g, f.asLong()).equals("minecraft:furnace"), "le trajet dépôt → four est retenu : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                        && Transporteur.machineDe(g, f.asLong()).equals("minecraft:furnace"), "le trajet dépôt → four est retenu : " + Transporteur.lire(g) + " / " + Paroles.echange(g)),
                 () -> {
                     FurnaceBlockEntity four = (FurnaceBlockEntity) l.getBlockEntity(f);
                     h.assertTrue(four.getItem(0).is(Items.RAW_IRON) && four.getItem(0).getCount() == 8, "le fer brut dans l'entrée du four : " + four.getItem(0) + " (" + TestsJeu.etat(g, g.bureau) + ")");
@@ -90,13 +90,13 @@ public class TestsMachines {
         Bureau.Entite d = TestsBucheron.depot(g);
         d.depot.setItem(0, new ItemStack(Items.IRON_INGOT, 10));
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(presse));
                     g.parler(chef, "Mets le fer sous la presse");
                 },
                 () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).dest() == p.asLong(),
-                        "le trajet va à ce qui est sous la presse : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                        "le trajet va à ce qui est sous la presse : " + Transporteur.lire(g) + " / " + Paroles.echange(g)),
                 () -> h.assertTrue(compte(poignee(l, p), Items.IRON_INGOT) == 10, "le fer sous la presse (" + TestsJeu.etat(g, g.bureau) + ")"),
                 () -> { Machines.ESSAIS.remove("minecraft:lodestone"); TestsRepertoire.fin(e); });
     }

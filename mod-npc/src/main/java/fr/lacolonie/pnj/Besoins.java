@@ -61,8 +61,17 @@ final class Besoins {
         v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
         if (nom != null) v.put("nom", nom);
         if (t.memoire.contains("guerre_nom")) v.put("ennemi", t.memoire.getString("guerre_nom")); // le chef ennemi (Armee)
-        if (t.memoire.contains("deuil_nom")) v.put("mort", t.memoire.getString("deuil_nom")); // deuil_tristesse (Humeur.deuil)
         return Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
+    }
+
+    /**
+     * La satisfaction (refonte 1.0.0) : une seule jauge (le champ {@code moral}, 0 à 100), qui ne dépend que de la paie et de
+     * la nourriture. Elle va vers sa cible de 2 points toutes les 5 s ; sous 50, il travaille moins vite ({@link Travailleur#facteurTravail}).
+     * La paie qui manque mène à la grève (Cerveau, {@code paies_impayees_avant_greve}).
+     */
+    static void satisfaction(Travailleur t) {
+        if (t.mode == Travailleur.Mode.CHOMEUR || t.chef == null) return;
+        t.moral = Obeissance.rapprocher(t.moral, Obeissance.cible(t.impayes, t.faim));
     }
 
     /** Toutes les 5 s environ : ce que son corps et son humeur lui font dire. Rien à terre, endormi, en combat ou en fuite. */
@@ -88,7 +97,6 @@ final class Besoins {
     /** Son lit n'est plus là (cassé, ou le poste a changé) et il n'en trouve pas d'autre : moral −3 et « pas de lit » (une fois par 10 minutes). */
     static void litPerdu(Travailleur t) {
         if (!Cerveau.parfois(t, "lit_perdu", DELAI)) return;
-        t.changerMoral(Obeissance.LIT_VOLE);
         parler(t, "sans_lit", null);
     }
 
@@ -98,9 +106,8 @@ final class Besoins {
      */
     static void litVole(Travailleur t, LivingEntity qui) {
         String nom = qui instanceof Travailleur o ? o.prenom : qui instanceof Player p ? p.getName().getString() : null;
-        if (qui instanceof Travailleur o && t.lit != null) { t.litRefuse = t.lit; t.lit = null; Relations.lit(t, o); }
+        if (qui instanceof Travailleur o && t.lit != null) { t.litRefuse = t.lit; t.lit = null; }
         if (!Cerveau.parfois(t, "lit_perdu", DELAI)) return;
-        t.changerMoral(Obeissance.LIT_VOLE);
         parler(t, "lit_vole", nom);
     }
 
@@ -109,50 +116,5 @@ final class Besoins {
         for (LivingEntity e : t.level().getEntitiesOfClass(LivingEntity.class, new AABB(lit).inflate(2), e -> e != t && lit.equals(e.getSleepingPos().orElse(null))))
             return e;
         return null;
-    }
-
-    /**
-     * Juste avant de travailler : moral moyen ou bas et longtemps au travail, il prend une courte pause au poste. Le cerveau
-     * n'y arrive qu'après les combats, les consignes, les ordres (suivre, attendre, rentrer) et le repos : rien de tout ça
-     * n'est quitté pour une pause. Vrai s'il la prend.
-     */
-    static boolean pause(Travailleur t) {
-        if (t.mode != Travailleur.Mode.TRAVAIL || t.bureau == null || t.consigne != null || !t.chezLui(t.blockPosition())
-                || !Vie.veutPause(t.moral, t.travailSansPause)) return false;
-        // Le chef vient de lui donner un ordre (« au travail ! » en pleine pause) : pas de pause avant longtemps.
-        if (t.ordreChef > 0 && t.level().getGameTime() - t.ordreChef < Vie.PAUSE_APRES) return false;
-        t.travailSansPause = 0; // une pause coupée (ordre, coup, danger) ne recommence pas aussitôt
-        Cerveau.lancer(t, new Flaner(Vie.PAUSE_MIN + t.getRandom().nextInt(Vie.PAUSE_MAX - Vie.PAUSE_MIN + 1)));
-        parler(t, "envie_pause", null);
-        return true;
-    }
-
-    /** La pause : il va près du poste, s'assied un moment, puis reprend (moral + 2 à la fin ; le compte de travail est remis à zéro dès le début). */
-    static final class Flaner extends Actions.Action {
-        final int duree;
-        int assis = -1;
-
-        Flaner(int duree) { super("pause"); this.duree = duree; }
-
-        Actions.Etat tick(Travailleur t) {
-            if (t.bureau == null) return Actions.Etat.ECHEC;
-            Vec3 poste = Vec3.atBottomCenterOf(t.bureau);
-            if (assis < 0) {
-                if (t.position().distanceToSqr(poste) > 4 * 4 && !coince()) { marcher(t, poste, 0.8); return Actions.Etat.EN_COURS; }
-                t.getNavigation().stop();
-                t.getLookControl().setLookAt(poste);
-                t.setGeste("assis");
-                assis = age;
-            }
-            if (age - assis < duree) return Actions.Etat.EN_COURS;
-            t.changerMoral(Obeissance.PAUSE);
-            return Actions.Etat.OK;
-        }
-
-        @Override
-        void fin(Travailleur t) {
-            super.fin(t);
-            t.setGeste("");
-        }
     }
 }

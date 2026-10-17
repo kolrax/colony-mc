@@ -83,17 +83,17 @@ public class TestsAutresJoueurs {
     @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
     public static void autoriseObeit(GameTestHelper h) {
         Scene s = scene(h, 420, 3);
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), s.nom() + " peut te donner des ordres."),
                 () -> h.assertTrue(Courrier.de(h.getLevel().getServer()).commande(s.chef().getUUID(), s.nom()), "l'autorisation est retenue : " + vu(s)),
-                () -> h.assertTrue(TestsCaractere.aDit(s.t(), "commande_permis"), "il le dit : " + vu(s)),
+                () -> h.assertTrue(Essais.aDit(s.t(), "commande_permis"), "il le dit : " + vu(s)),
                 () -> s.t().parler(s.autre(), "Attends ici."),
                 () -> h.assertTrue(s.t().mode == Travailleur.Mode.ATTENDRE, "il attend sur l'ordre de l'autre : " + vu(s)),
-                TestsIA.attendre(h, 25),
+                Essais.attendre(h, 25),
                 () -> s.t().parler(s.autre(), "Je te renvoie."),
                 () -> {
                     h.assertTrue(s.t().memoire.getLong("renvoi") == 0 && s.t().chef.equals(s.chef().getUUID()), "pas de renvoi par l'autre : " + vu(s));
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_reserve"), "c'est au chef d'en décider : " + vu(s));
+                    h.assertTrue(Essais.aDit(s.t(), "etranger_reserve"), "c'est au chef d'en décider : " + vu(s));
                 },
                 () -> fin(s));
     }
@@ -102,30 +102,15 @@ public class TestsAutresJoueurs {
     @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
     public static void nonAutoriseRefuse(GameTestHelper h) {
         Scene s = scene(h, 421, 3);
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.autre(), "Attends ici."),
                 () -> {
                     h.assertTrue(s.t().mode == Travailleur.Mode.TRAVAIL, "il n'attend pas : " + vu(s));
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_refus"), "il refuse poliment : " + vu(s));
+                    h.assertTrue(Essais.aDit(s.t(), "etranger_refus"), "il refuse poliment : " + vu(s));
                 },
-                TestsIA.attendre(h, 25),
+                Essais.attendre(h, 25),
                 () -> s.t().parler(s.autre(), "Bonjour !"),
-                () -> h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_salut"), "il répond au salut : " + vu(s)),
-                () -> fin(s));
-    }
-
-    /** « Tiens, 10 pièces : attends ici. » (la moitié de sa paie au moins) : les pièces passent dans son sac, il obéit à cet ordre-là. */
-    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
-    public static void payePourUnOrdre(GameTestHelper h) {
-        Scene s = scene(h, 425, 3);
-        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 15));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."),
-                () -> {
-                    h.assertTrue(s.t().mode == Travailleur.Mode.ATTENDRE, "il attend : " + vu(s));
-                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 5, "5 pièces gardées : " + TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT));
-                    h.assertTrue(TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT) == 10, "10 pièces dans son sac : " + TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT));
-                },
+                () -> h.assertTrue(Essais.aDit(s.t(), "etranger_salut"), "il répond au salut : " + vu(s)),
                 () -> fin(s));
     }
 
@@ -133,111 +118,9 @@ public class TestsAutresJoueurs {
     @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
     public static void clicDroitDUnAutre(GameTestHelper h) {
         Scene s = scene(h, 426, 3);
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().interact(s.autre(), net.minecraft.world.InteractionHand.MAIN_HAND),
-                () -> h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_salut"), "il salue l'autre au clic droit : " + vu(s)),
-                () -> fin(s));
-    }
-
-    /** Relecture : un ordre payé qu'il ne fera pas (réservé au chef, en grève, en guerre) ne coûte rien au joueur. */
-    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
-    public static void ordrePayeRefuseRienPris(GameTestHelper h) {
-        Scene s = scene(h, 427, 3);
-        Courrier c = Courrier.de(h.getLevel().getServer());
-        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 30));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> s.t().parler(s.autre(), "Tiens, 10 pièces : travaille de nuit."),
-                () -> h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30, "réservé au chef : aucune pièce prise, " + vu(s)),
-                TestsIA.attendre(h, 25),
-                () -> { s.t().mode = Travailleur.Mode.GREVE; s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
-                () -> h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30 && s.t().mode == Travailleur.Mode.GREVE,
-                        "en grève : rien pris, " + vu(s)),
-                TestsIA.attendre(h, 25),
-                () -> { s.t().mode = Travailleur.Mode.TRAVAIL; c.declarer(s.chef().getUUID(), "chef", s.autre().getUUID(), "autre"); s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
-                () -> {
-                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30 && s.t().mode == Travailleur.Mode.TRAVAIL, "en guerre : rien pris, " + vu(s));
-                    c.paix(s.chef().getUUID(), s.autre().getUUID());
-                },
-                () -> fin(s));
-    }
-
-    /** « Viens travailler pour moi, je te paie 20 pièces » (sa paie : 10) : 20 pièces exactes passent dans son sac, il change de chef, l'ancien reçoit une lettre. */
-    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
-    public static void debaucheReussie(GameTestHelper h) {
-        Scene s = scene(h, 422, 14);
-        Courrier c = Courrier.de(h.getLevel().getServer());
-        c.definirPoste(s.autre().getUUID(), h.getLevel(), s.base().west(3));
-        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 25));
-        s.t().inventaire.addItem(new ItemStack(Items.COBBLESTONE, 5));
-        Bureau.Entite depot = Bureau.entite(s.t());
-        int renom = c.reputation(s.chef().getUUID());
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> s.t().parler(s.autre(), "Viens travailler pour moi, je te paie 20 pièces."),
-                () -> {
-                    h.assertTrue(s.autre().getUUID().equals(s.t().chef), "il passe chez l'autre : " + vu(s));
-                    h.assertTrue(s.t().salaireVerse() == 20, "à la paie promise : " + s.t().salaireVerse());
-                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 5, "5 pièces gardées : " + TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT));
-                    h.assertTrue(TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT) == 20, "20 pièces dans son sac : " + TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT));
-                    h.assertTrue(lettre(s, s.chef().getUUID()), "une lettre pour l'ancien chef : " + vu(s));
-                    h.assertTrue(c.reputation(s.chef().getUUID()) == renom, "la réputation de l'ancien chef ne bouge pas");
-                    h.assertFalse(c.effectifs.getOrDefault(s.chef().getUUID(), new java.util.LinkedHashMap<>()).containsKey(s.t().getUUID()), "il quitte l'effectif de l'ancien");
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_accepte"), "il le dit : " + vu(s));
-                    h.assertTrue(TestsBoutique.compte(s.t().inventaire, Items.COBBLESTONE) == 0 && depot != null && depot.compter((java.util.function.Predicate<ItemStack>) x -> x.is(Items.COBBLESTONE)) == 5,
-                            "ce qu'il portait reste au dépôt de l'ancien chef : sac " + TestsBoutique.compte(s.t().inventaire, Items.COBBLESTONE));
-                },
-                () -> fin(s));
-    }
-
-    /** Un calme heureux (moral 90) à qui l'on offre 11 pièces (sa paie : 10) : il refuse, rien ne bouge ; le même joueur, revenu tout de suite, se fait éconduire. */
-    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
-    public static void debaucheRefusee(GameTestHelper h) {
-        Scene s = scene(h, 423, 14);
-        s.t().temperament = "calme";
-        s.t().moral = 90;
-        Courrier c = Courrier.de(h.getLevel().getServer());
-        c.definirPoste(s.autre().getUUID(), h.getLevel(), s.base().west(3));
-        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 64));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> s.t().parler(s.autre(), "Je te donne 11 pièces pour que tu me rejoignes."),
-                () -> {
-                    h.assertTrue(s.chef().getUUID().equals(s.t().chef), "il reste chez son chef : " + vu(s));
-                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 64 && TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT) == 0, "aucune pièce ne bouge");
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_fidele"), "il dit qu'il est bien chez son chef : " + vu(s));
-                    h.assertTrue(lettre(s, s.chef().getUUID()), "son chef l'apprend : " + vu(s));
-                },
-                TestsIA.attendre(h, 25),
-                () -> s.t().parler(s.autre(), "Viens travailler pour moi, je te paie 50 pièces."),
-                () -> {
-                    h.assertTrue(s.chef().getUUID().equals(s.t().chef), "pas une deuxième fois le même jour : " + vu(s));
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_rancune"), "il lui a déjà répondu : " + vu(s));
-                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 64, "aucune pièce ne bouge");
-                },
-                () -> fin(s));
-    }
-
-    /** Lot 13-14 : un enfant ne se débauche pas, un apprenti ne se loue pas pour un ordre payé ; aucune pièce prise, le chef ne change pas. */
-    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
-    public static void mineurNiDebaucheNiPaye(GameTestHelper h) {
-        Scene s = scene(h, 428, 14);
-        s.t().age = 8;
-        Courrier c = Courrier.de(h.getLevel().getServer());
-        c.definirPoste(s.autre().getUUID(), h.getLevel(), s.base().west(3));
-        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 64));
-        Runnable rienPris = () -> {
-            h.assertTrue(s.chef().getUUID().equals(s.t().chef), "il reste chez son chef : " + vu(s));
-            h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 64 && TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT) == 0,
-                    "aucune pièce ne bouge : " + TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT));
-        };
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> s.t().parler(s.autre(), "Viens travailler pour moi, je te paie 50 pièces."),
-                () -> { rienPris.run(); h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_mineur"), "l'enfant est trop jeune : " + vu(s)); },
-                TestsIA.attendre(h, 25),
-                () -> { s.t().age = 14; s.t().paroles.clear(); s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
-                () -> {
-                    rienPris.run();
-                    h.assertTrue(s.t().mode == Travailleur.Mode.TRAVAIL, "l'apprenti n'attend pas : " + vu(s));
-                    h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_mineur"), "l'apprenti est trop jeune : " + vu(s));
-                },
+                () -> h.assertTrue(Essais.aDit(s.t(), "etranger_salut"), "il salue l'autre au clic droit : " + vu(s)),
                 () -> fin(s));
     }
 

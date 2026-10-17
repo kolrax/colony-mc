@@ -94,8 +94,8 @@ public class TestsChef {
             h.assertFalse(vu[0], "il ne doit pas attaquer l'autre joueur");
             h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'autre ne prend aucun coup (vie " + s.autre().getHealth() + ")");
             h.assertTrue(vu[1], "il se met entre le chef et l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ", x " + s.g().getX() + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "chef_interpose"), "il le met en garde (" + s.g().paroles + ")");
-            for (Travailleur o : autres) h.assertTrue(TestsCaractere.aDit(o, "chef_frappe_vu"), "l'ouvrier réagit (" + o.paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "chef_interpose"), "il le met en garde (" + s.g().paroles + ")");
+            for (Travailleur o : autres) h.assertTrue(Essais.aDit(o, "chef_frappe_vu"), "l'ouvrier réagit (" + o.paroles + ")");
             TestsGuerrier.fin(s.g());
             TestsGuerrier.fin(autres);
             s.partir();
@@ -136,7 +136,7 @@ public class TestsChef {
         h.succeedWhen(() -> {
             h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ", attaque lancée " + vu[0]
                     + ", " + s.g().paroles + ", " + s.g().resultat + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "chef_riposte"), "il le dit (" + s.g().paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "chef_riposte"), "il le dit (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
             s.partir();
         });
@@ -156,7 +156,7 @@ public class TestsChef {
         h.runAtTickTime(h.getTick() + 120, () -> {
             h.assertFalse(vu[0] || bouge[0], "il ne doit rien faire à " + nom);
             h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'autre ne prend aucun coup");
-            h.assertFalse(TestsCaractere.aDit(s.g(), "chef_interpose") || TestsCaractere.aDit(s.g(), "chef_riposte"), "pas un mot (" + s.g().paroles + ")");
+            h.assertFalse(Essais.aDit(s.g(), "chef_interpose") || Essais.aDit(s.g(), "chef_riposte"), "pas un mot (" + s.g().paroles + ")");
             TestsGuerrier.fin(s.g());
             s.partir();
             h.succeed();

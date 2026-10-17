@@ -79,7 +79,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
       <button data-tab="metiers">Métiers</button>
       <button data-tab="actions">Actions</button>
       <button data-tab="economie">Économie</button>
-      <button data-tab="ia">IA</button>
       <button data-tab="journal">Journal</button>
     </nav>
 
@@ -114,9 +113,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <section id="actions" hidden>
       <div class="card">
         <h2>Répertoire d'actions</h2>
-        <p class="sub">Tout ce qu'un ouvrier sait faire quand tu le lui demandes, en plus de son travail : dans sa fenêtre de conversation ou au micro.
-          Sans IA, il reconnaît les phrases données en exemple (et leurs variantes : « danse », « dansez », « tu peux danser ? ») ; avec l'IA, il comprend
-          aussi les tournures libres (« mets-toi droit comme un piquet »). Une action « jusqu'à nouvel ordre » dure jusqu'à « repos », « au travail » ou un autre ordre.</p>
+        <p class="sub">Tout ce qu'un ouvrier sait faire quand tu le lui demandes, en plus de son travail. Il reconnaît les phrases données en exemple
+          (et leurs variantes : « danse », « dansez », « tu peux danser ? »). Une action « jusqu'à nouvel ordre » dure jusqu'à « repos », « au travail » ou un autre ordre.</p>
         <div class="row" style="margin:10px 0 4px">
           <input id="act-cherche" type="search" placeholder="Chercher (ex. : danse, épée, poste…)" style="flex:1;min-width:200px" aria-label="Chercher une action">
           <select id="act-metier" aria-label="Métier">
@@ -127,17 +125,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <div class="tablewrap"><table>
           <thead><tr><th>Action</th><th>Qui</th><th>Ce qu'on peut dire</th><th>Durée</th></tr></thead>
           <tbody id="act-liste"></tbody>
-        </table></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <h2>Phrases non comprises</h2>
-        <p class="sub">Ce que les chefs ont dit et que l'interpréteur n'a pas compris, des plus fréquentes aux plus rares : de quoi enrichir le répertoire.
-          « Personne » : ni l'interpréteur ni l'IA ; « IA seule » : l'IA y a vu une action ; « IA, paroles » : l'IA a seulement répondu.
-          Sans nom de joueur. Gardé dans <code>config/colonie_pnj/incompris.json</code> (500 phrases au plus) ; <code>/pnj incompris vider</code> pour repartir de zéro.</p>
-        <p id="inc-compte" class="sub"></p>
-        <div class="tablewrap"><table>
-          <thead><tr><th>Fois</th><th>Phrase</th><th>Compris par</th><th>Métiers</th><th>Dernière fois</th></tr></thead>
-          <tbody id="inc-liste"></tbody>
         </table></div>
       </div>
     </section>
@@ -167,55 +154,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
           <tr><td>Au plus … chercheurs autour d'un même joueur</td><td><input type="number" min="0" id="c-max"></td></tr>
         </tbody></table></div>
         <div class="row" style="margin-top:12px"><button id="eco-enregistrer" class="go">Enregistrer l'économie</button><span id="eco-msg" class="sub"></span></div>
-      </div>
-    </section>
-
-    <section id="ia" hidden>
-      <div class="grid2">
-        <div class="card">
-          <h2>Les clés</h2>
-          <p class="sub">Les clés ne passent jamais par ce panneau. Elles sont dans le fichier <code>config/colonie_pnj/ia.json</code> du serveur :
-            ouvre-le avec le gestionnaire de fichiers de l'hébergeur, colle chaque clé entre les guillemets de <code>"groq_cle"</code> et
-            <code>"gemini_cle"</code>, enregistre, puis clique « Relire ia.json ».</p>
-          <table><tbody>
-            <tr><td>Groq (conversation, micro)</td><td id="ia-groq"></td></tr>
-            <tr><td>Gemini (voix des PNJ)</td><td id="ia-gemini"></td></tr>
-            <tr><td>Simple Voice Chat</td><td id="ia-svc"></td></tr>
-          </tbody></table>
-          <div class="row" style="margin-top:12px"><button id="ia-tester" class="go">Tester les clés</button><button id="ia-relire">Relire ia.json</button></div>
-          <pre id="ia-test" class="journal" style="margin-top:10px"></pre>
-          <p class="sub">Clé Groq : <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> ·
-            clé Gemini : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
-        </div>
-        <div class="card">
-          <h2>Réglages</h2>
-          <table><tbody>
-            <tr><td><label><input type="checkbox" id="ia-active"> IA active</label></td><td class="sub">Interrupteur général. Sans IA, les PNJ comprennent quand même les ordres simples.</td></tr>
-            <tr><td><label><input type="checkbox" id="ia-conversation"> Conversation et lettres</label></td><td class="sub">Groq répond à leur place et choisit leurs actions.</td></tr>
-            <tr><td><label><input type="checkbox" id="ia-voix"> Voix des PNJ</label></td><td class="sub">Ils répondent à voix haute (Gemini, via Simple Voice Chat).</td></tr>
-            <tr><td><label><input type="checkbox" id="ia-ecoute"> Leur parler au micro</label></td><td class="sub">Regarder un de ses ouvriers et parler (transcription par Groq).</td></tr>
-            <tr><td>Modèle de conversation</td><td><input id="ia-m-conv" style="width:100%"></td></tr>
-            <tr><td>Modèle qui juge à qui tu parles</td><td><input id="ia-m-ecoute" style="width:100%"></td></tr>
-            <tr><td>Modèle de transcription</td><td><input id="ia-m-trans" style="width:100%"></td></tr>
-            <tr><td>Modèle de voix</td><td><input id="ia-m-voix" style="width:100%"></td></tr>
-            <tr><td>Modèles de voix de secours<div class="sub">quand le quota gratuit du précédent est atteint (il se compte par modèle)</div></td><td><input id="ia-m-secours" style="width:100%"></td></tr>
-            <tr><td>Conversations par jour, au plus</td><td><input type="number" min="0" id="ia-max-conv"></td></tr>
-            <tr><td>Transcriptions par jour, au plus</td><td><input type="number" min="0" id="ia-max-trans"></td></tr>
-            <tr><td>Phrases dites à voix haute par jour, au plus</td><td><input type="number" min="0" id="ia-max-voix"></td></tr>
-            <tr><td>Distance pour leur parler au micro (blocs)</td><td><input type="number" min="2" max="16" step="0.5" id="ia-dist"></td></tr>
-          </tbody></table>
-          <div class="row" style="margin-top:12px"><button id="ia-enregistrer" class="go">Enregistrer</button><span id="ia-msg" class="sub"></span></div>
-          <h3>Aujourd'hui</h3>
-          <div class="tablewrap"><table><thead><tr><th>Service</th><th>Demandes</th><th>Réussies</th><th>Jetons</th><th>État</th></tr></thead><tbody id="ia-conso"></tbody></table></div>
-          <p class="sub">Quand un quota est atteint ou qu'un service refuse, les PNJ continuent sans lui (interpréteur, bulles) jusqu'au lendemain ou à la fin de la pause.</p>
-        </div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <h2>Écoute : à qui parlais-tu ?</h2>
-        <p class="sub">Les dernières phrases entendues (au micro ou écrites), et pour chaque ouvrier la probabilité qu'elle lui soit adressée :
-          celle du code, celle de l'IA (si elle a été consultée), et la finale. Gardé en mémoire seulement (60 phrases), effacé au redémarrage.</p>
-        <div class="tablewrap"><table><thead><tr><th>Heure</th><th>Phrase</th><th>Ouvriers (code / IA / final)</th><th>Décision</th></tr></thead>
-          <tbody id="ia-journal-ecoute"></tbody></table></div>
       </div>
     </section>
 
@@ -387,63 +325,9 @@ async function chargerActions() {
   }
   $("#act-liste").replaceChildren(...lignes);
 }
-async function chargerIncompris() {
-  const r = await api("/api/incompris"), MOTIF = { rien: "Personne", ia_seule: "IA seule", ia_parole: "IA, paroles" };
-  $("#inc-compte").textContent = r.total ? r.total + " phrase" + (r.total > 1 ? "s" : "") : "Aucune phrase non comprise pour l'instant.";
-  $("#inc-liste").replaceChildren(...r.entrees.map(x => el("tr", {},
-    el("td", { class: "num", text: x.nombre }),
-    el("td", { text: "« " + x.phrase + " »" }),
-    el("td", {}, el("span", { class: "pill" + (x.motif === "rien" ? " ko" : x.motif === "ia_seule" ? " or" : ""), text: MOTIF[x.motif] || x.motif })),
-    el("td", { class: "sub", text: x.metiers.map(m => METIER_NOM[m] || m).join(", ") }),
-    el("td", { class: "sub", text: new Date(x.derniere).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) }))));
-}
-document.querySelector('[data-tab="actions"]').addEventListener("click", () => { chargerActions().catch(e => flash(e.message)); chargerIncompris().catch(e => flash(e.message)); });
+document.querySelector('[data-tab="actions"]').addEventListener("click", () => { chargerActions().catch(e => flash(e.message)); });
 $("#act-cherche").addEventListener("input", () => chargerActions().catch(() => {}));
 $("#act-metier").addEventListener("change", () => chargerActions().catch(() => {}));
-
-// IA
-let iaRempli = false;
-function cle(c) { return c ? el("span", { class: "pill ok", text: "présente " + c }) : el("span", { class: "pill ko", text: "absente" }); }
-async function chargerIA() {
-  const e = await api("/api/ia"), r = e.reglages;
-  $("#ia-groq").replaceChildren(cle(r.groq_cle)); $("#ia-gemini").replaceChildren(cle(r.gemini_cle));
-  $("#ia-svc").replaceChildren(el("span", { class: "pill " + (e.simpleVoiceChat ? "ok" : "ko"), text: e.simpleVoiceChat ? "prêt" : "absent" }));
-  if (!iaRempli) {
-    $("#ia-active").checked = r.active; $("#ia-conversation").checked = r.conversation; $("#ia-voix").checked = r.voix; $("#ia-ecoute").checked = r.ecoute;
-    $("#ia-m-conv").value = r.modele_conversation; $("#ia-m-ecoute").value = r.modele_ecoute; $("#ia-m-trans").value = r.modele_transcription; $("#ia-m-voix").value = r.modele_voix; $("#ia-m-secours").value = r.modeles_voix_secours;
-    $("#ia-max-conv").value = r.max_conversations_jour; $("#ia-max-trans").value = r.max_transcriptions_jour; $("#ia-max-voix").value = r.max_voix_jour; $("#ia-dist").value = r.distance_ecoute;
-    iaRempli = true;
-  }
-  const ec = await api("/api/ia/ecoute");
-  $("#ia-journal-ecoute").replaceChildren(...ec.journal.map(x => el("tr", {},
-    el("td", { class: "num", text: x.heure }),
-    el("td", {}, el("div", { text: "« " + x.texte + " »" }), el("div", { class: "sub", text: x.joueur + " · " + x.mode + (x.autres_joueurs ? " · " + x.autres_joueurs + " autre(s) joueur(s) près" : "") })),
-    el("td", {}, ...x.ouvriers.map(o => el("div", { class: o.choisi ? "" : "sub" },
-      el("b", { text: (o.choisi ? "→ " : "") + o.prenom + " " }),
-      el("span", { text: o.code + " % / " + (o.ia === null ? "–" : o.ia + " %") + " / " + o.final + " %" }),
-      o.lien ? el("div", { class: "sub", text: o.lien }) : null))),
-    el("td", { class: "sub", text: x.decision }))));
-  const NOMS = { conversation: "Conversation (Groq)", ecoute: "À qui tu parles (Groq)", transcription: "Micro (Whisper, Groq)", voix: "Voix (Gemini)", openrouter: "Conversation payante (OpenRouter, clé " + (r.openrouter_cle ? "présente" : "absente") + ")" };
-  $("#ia-conso").replaceChildren(...["conversation", "ecoute", "transcription", "voix", "openrouter"].filter(k => e[k]).map(k => { const s = e[k];
-    return el("tr", {}, el("td", { text: NOMS[k] }), el("td", { class: "num", text: s.demandes + " / " + s.max }), el("td", { class: "num", text: s.reussites }),
-      el("td", { class: "num", text: (s.jetons || "") + (k === "openrouter" ? " · " + s.depense_mois.toFixed(3) + " $ / " + s.budget_mois + " $ ce mois" : "") }),
-      el("td", {}, s.pause > 0 ? el("span", { class: "pill ko", text: "pause " + s.pause + " s" }) : null, el("div", { class: "sub", text: s.erreur || "" }))); }));
-}
-document.querySelector('[data-tab="ia"]').addEventListener("click", () => chargerIA().catch(e => flash(e.message)));
-$("#ia-enregistrer").addEventListener("click", async () => {
-  const c = { active: $("#ia-active").checked, conversation: $("#ia-conversation").checked, voix: $("#ia-voix").checked, ecoute: $("#ia-ecoute").checked,
-    modele_conversation: $("#ia-m-conv").value.trim(), modele_ecoute: $("#ia-m-ecoute").value.trim(), modele_transcription: $("#ia-m-trans").value.trim(), modele_voix: $("#ia-m-voix").value.trim(), modeles_voix_secours: $("#ia-m-secours").value,
-    max_conversations_jour: +$("#ia-max-conv").value, max_transcriptions_jour: +$("#ia-max-trans").value, max_voix_jour: +$("#ia-max-voix").value, distance_ecoute: +$("#ia-dist").value };
-  try { const x = await api("/api/ia/reglages", c); $("#ia-msg").textContent = x.ok ? "Enregistré." : x.erreur; iaRempli = false; await chargerIA(); }
-  catch (e) { $("#ia-msg").textContent = e.message; }
-});
-$("#ia-tester").addEventListener("click", async () => {
-  $("#ia-test").textContent = "Essai en cours (jusqu'à 30 secondes)…";
-  try { const x = await api("/api/ia/tester", {}); $("#ia-test").textContent = x.resultats.join("\n"); await chargerIA(); }
-  catch (e) { $("#ia-test").textContent = "Essai impossible : " + e.message; }
-});
-$("#ia-relire").addEventListener("click", async () => { try { await api("/api/recharger", {}); iaRempli = false; await chargerIA(); flash("ia.json relu."); } catch (e) { flash(e.message); } });
-setInterval(() => { if (!$("#ia").hidden && !document.hidden) chargerIA().catch(() => {}); }, 5000);
 
 $("#recharger").addEventListener("click", async () => { try { await api("/api/recharger", {}); flash("Réglages rechargés."); await charger(); } catch (e) { flash(e.message); } });
 

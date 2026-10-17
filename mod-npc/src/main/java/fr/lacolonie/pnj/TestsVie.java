@@ -66,43 +66,9 @@ public class TestsVie {
             h.assertTrue(dites(autre, "sans_lit") == 1, "l'autre dit une fois qu'il n'a pas de lit (" + autre.paroles + ")");
             h.assertTrue(casse[0], "lit cassé");
             h.assertTrue(dites(o, "sans_lit") == 1 && dites(o, "lit_vole") == 0, "son lit cassé, il dit une fois qu'il n'a plus de lit (" + o.paroles + ")");
-            h.assertTrue(o.lit == null && o.moral <= moralAvant[0] - 3, "lit perdu, moral " + moralAvant[0] + " → " + o.moral);
+            h.assertTrue(o.lit == null, "lit perdu");
             a.discard();
             b.discard();
-        });
-    }
-
-    /** Moral moyen et longtemps au travail : il s'assied un moment près du poste (moral + 2), puis il reprend et mine le filon. */
-    @GameTest(template = "vide", timeoutTicks = 1500)
-    public static void pausePrisePuisTravailRepris(GameTestHelper h) {
-        BlockPos base = TestsJeu.sol(h, 111 * 400, 60000);
-        Travailleur t = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
-        t.forcerChunk();
-        t.mission("charbon", "stock", 64);
-        t.moral = 50;
-        t.travailSansPause = Vie.PAUSE_APRES;
-        BlockPos filon = base.west(2).south(2);
-        ServerLevel l = h.getLevel();
-        l.setBlockAndUpdate(filon, Blocks.COAL_ORE.defaultBlockState());
-        boolean[] pause = {false}, assis = {false}, finie = {false}, mine = {false}, mineApres = {false};
-        int[] moral = {0, 0};
-        h.onEachTick(() -> {
-            if (t.action instanceof Besoins.Flaner f) {
-                if (!pause[0]) { pause[0] = true; moral[0] = t.moral; }
-                if (f.assis >= 0 && t.geste().equals("assis") && t.distanceToSqr(Vec3.atBottomCenterOf(base)) <= 25) assis[0] = true;
-            } else if (pause[0] && !finie[0]) { finie[0] = true; moral[1] = t.moral; }
-            if (!mine[0] && !l.getBlockState(filon).is(Blocks.COAL_ORE)) { mine[0] = true; mineApres[0] = finie[0]; }
-        });
-        h.succeedWhen(() -> {
-            h.assertTrue(pause[0], "il prend une pause (" + TestsJeu.etat(t, base) + ")");
-            h.assertTrue(assis[0], "assis près du poste");
-            h.assertTrue(dites(t, "envie_pause") == 1, "il dit qu'il fait une pause (" + t.paroles + ")");
-            h.assertTrue(finie[0], "la pause finit (" + TestsJeu.etat(t, base) + ")");
-            h.assertTrue(moral[1] >= moral[0] + Obeissance.PAUSE, "moral " + moral[0] + " → " + moral[1]);
-            h.assertTrue(mine[0], "puis il reprend le travail : le filon miné (" + TestsJeu.etat(t, base) + ")");
-            h.assertTrue(mineApres[0], "miné après la pause, pas avant");
-            h.assertTrue(t.travailSansPause < Vie.PAUSE_APRES, "le compte de travail repart de zéro");
-            t.discard();
         });
     }
 
@@ -145,27 +111,4 @@ public class TestsVie {
         });
     }
 
-    /** En pleine pause, le chef dit « au travail » : il se lève, et ne se rassoit pas aussitôt (rien pendant 200 ticks). */
-    @GameTest(template = "vide", timeoutTicks = 800)
-    public static void ordreCoupeLaPause(GameTestHelper h) {
-        BlockPos base = TestsJeu.sol(h, 114 * 400, 60000);
-        Travailleur t = TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.IRON_PICKAXE));
-        t.forcerChunk();
-        t.mission("charbon", "stock", 64);
-        t.moral = 50;
-        t.travailSansPause = Vie.PAUSE_APRES;
-        long[] ordre = {-1};
-        boolean[] rassis = {false};
-        h.onEachTick(() -> {
-            boolean pause = t.action instanceof Besoins.Flaner;
-            if (ordre[0] < 0 && pause) { t.appliquer(Ordres.lire("au travail", "mineur"), null); ordre[0] = h.getTick(); }
-            else if (ordre[0] >= 0 && pause) rassis[0] = true;
-        });
-        h.succeedWhen(() -> {
-            h.assertTrue(ordre[0] >= 0, "la pause commence (" + TestsJeu.etat(t, t.bureau) + ")");
-            h.assertFalse(rassis[0], "il ne se rassoit pas après l'ordre (" + TestsJeu.etat(t, t.bureau) + ")");
-            h.assertTrue(h.getTick() >= ordre[0] + 200, "200 ticks sans pause");
-            t.discard();
-        });
-    }
 }

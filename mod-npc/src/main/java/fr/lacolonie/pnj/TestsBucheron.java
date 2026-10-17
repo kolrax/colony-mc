@@ -109,7 +109,7 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void foretEnRangs(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 72);
+        Travailleur[] e = Essais.equipe(h, chef, 72);
         Travailleur odon = e[2];
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
@@ -119,7 +119,7 @@ public class TestsBucheron {
         l.setBlockAndUpdate(planche, Blocks.OAK_PLANKS.defaultBlockState());
         List<BlockPos> places = new ArrayList<>();
         for (int f = -3; f <= 3; f += 3) for (int c = -3; c <= 3; c += 3) places.add(centre.offset(f, 1, c));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     odon.parler(chef, "Plante des bouleaux en rangs, 7 sur 7");
@@ -143,12 +143,12 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void planchesAuPoste(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 73);
+        Travailleur[] e = Essais.equipe(h, chef, 73);
         Travailleur odon = e[2];
         odon.inventaire.addItem(new ItemStack(Items.OAK_LOG, 2));
         Bureau.Entite d = depot(odon);
         d.depot.setItem(0, new ItemStack(Items.BIRCH_LOG, 4));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> odon.parler(chef, "Fais des planches"),
                 () -> h.assertTrue(compte(d, Items.OAK_PLANKS) == 8 && compte(d, Items.BIRCH_PLANKS) == 16,
                         "planches au dépôt : chêne " + compte(d, Items.OAK_PLANKS) + ", bouleau " + compte(d, Items.BIRCH_PLANKS) + " (" + TestsRepertoire.c(odon) + ", " + TestsJeu.etat(odon, odon.bureau) + ")"),
@@ -163,7 +163,7 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 1800)
     public static void charbonDeBoisAuFourneau(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 74);
+        Travailleur[] e = Essais.equipe(h, chef, 74);
         Travailleur odon = e[2];
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
@@ -171,7 +171,7 @@ public class TestsBucheron {
         Bureau.Entite d = depot(odon);
         d.depot.setItem(0, new ItemStack(Items.OAK_LOG, 4));
         d.depot.setItem(1, new ItemStack(Items.COAL, 1));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> odon.parler(chef, "Fais du charbon de bois"),
                 () -> h.assertTrue(compte(d, Items.CHARCOAL) == 4, "4 charbons de bois au dépôt : " + compte(d, Items.CHARCOAL) + " (" + TestsRepertoire.c(odon) + ", " + TestsJeu.etat(odon, odon.bureau) + ")"),
                 () -> h.assertTrue(odon.consigne == null && compte(d, Items.OAK_LOG) == 0, "fini, bûches cuites (" + TestsRepertoire.c(odon) + ")"),
@@ -182,12 +182,12 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void charbonSansFourneau(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 75);
+        Travailleur[] e = Essais.equipe(h, chef, 75);
         Travailleur odon = e[2];
         Bureau.Entite d = depot(odon);
         d.depot.setItem(0, new ItemStack(Items.OAK_LOG, 4));
         String[] dit = {null};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> dit[0] = Consignes.ordonner(odon, new Ordres.Faire("charbon_bois", "", 0, 0, false), chef, "Fais du charbon de bois", 0, 1),
                 () -> {
                     h.assertTrue(dit[0] != null && dit[0].contains("fourneau"), "il doit dire qu'il lui faut un fourneau : " + dit[0]);
@@ -203,7 +203,7 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void defricheSansAbimer(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 76);
+        Travailleur[] e = Essais.equipe(h, chef, 76);
         Travailleur odon = e[2];
         odon.inventaire.addItem(new ItemStack(Items.IRON_AXE));
         odon.inventaire.addItem(new ItemStack(Items.OAK_SAPLING, 4));
@@ -227,7 +227,7 @@ public class TestsBucheron {
         net.minecraft.world.entity.item.ItemEntity pain = new net.minecraft.world.entity.item.ItemEntity(l, centre.getX() + 0.5, centre.getY() + 1, centre.getZ() - 13.5, new ItemStack(Items.BREAD));
         pain.setUnlimitedLifetime();
         l.addFreshEntity(pain);
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     odon.parler(chef, "Défriche ici 9 sur 9");
@@ -277,7 +277,7 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void fourneauDUnAutre(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 78);
+        Travailleur[] e = Essais.equipe(h, chef, 78);
         Travailleur odon = e[2];
         ServerLevel l = h.getLevel();
         BlockPos four = chef.blockPosition().offset(3, 0, -3);
@@ -288,9 +288,9 @@ public class TestsBucheron {
         d.depot.setItem(0, new ItemStack(Items.OAK_LOG, 4));
         d.depot.setItem(1, new ItemStack(Items.COAL, 1));
         String[] dit = {null};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> dit[0] = Consignes.ordonner(odon, new Ordres.Faire("charbon_bois", "", 0, 0, false), chef, "Fais du charbon de bois", 0, 1),
-                TestsIA.attendre(h, 300),
+                Essais.attendre(h, 300),
                 () -> {
                     h.assertTrue(f.getItem(0).is(Items.BIRCH_LOG) && f.getItem(0).getCount() == 3 && f.getItem(1).isEmpty(), "le fourneau du joueur est intact : " + f.getItem(0) + " / " + f.getItem(1));
                     h.assertTrue(compte(d, Items.OAK_LOG) == 4 && compte(d, Items.COAL) == 1 && odon.compter(Actions.Filtre.de("#minecraft:logs")) == 0, "rien n'est pris");
@@ -303,7 +303,7 @@ public class TestsBucheron {
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void defricheSacPleinSansPoste(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 79);
+        Travailleur[] e = Essais.equipe(h, chef, 79);
         Travailleur odon = e[2];
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
@@ -312,12 +312,12 @@ public class TestsBucheron {
         odon.bureau = null;
         BlockPos centre = o.offset(7, -1, 0);
         List<BlockPos> tronc = arbre(l, centre.offset(1, 1, 1), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     odon.parler(chef, "Défriche ici 5 sur 5");
                 },
-                TestsIA.attendre(h, 400),
+                Essais.attendre(h, 400),
                 () -> {
                     var par = l.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(centre).inflate(16),
                             x -> x.getItem().is(net.minecraft.tags.ItemTags.LOGS));
