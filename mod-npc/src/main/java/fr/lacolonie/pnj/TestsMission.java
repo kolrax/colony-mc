@@ -14,7 +14,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * La mission (refonte 1.0.0, parties 1 et 4) : donnée par la même fonction que la fiche ({@link Missions#donner}), elle
  * s'ajoute à la file, le statut au-dessus de la tête la suit, un blocage s'y lit avec sa solution, et la file survit à une
- * sauvegarde. Chaque test dans son coin du monde plat (coins 731 à 734), au ciel ouvert.
+ * sauvegarde. Chaque test dans son coin du monde plat (coins 731 à 735), au ciel ouvert.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -103,6 +103,51 @@ public class TestsMission {
         h.assertFalse(r.ok(), "refusée (" + r.texte() + ")");
         h.assertTrue(t.missions.isEmpty(), "la file reste vide");
         h.assertTrue(Missions.donner(chef, t, "fer", "fois", 20, "toujours", null).ok(), "son chef, lui, peut");
+        t.discard();
+        h.succeed();
+    }
+
+    /**
+     * Les boutons de la fiche : un joueur autorisé donne une mission mais ne se fait pas suivre, et plus rien s'il est en guerre
+     * avec le chef ; « annuler » sur une file qui a changé ne fait rien ; le renvoi pèse sur la réputation du chef.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void boutonsDeLaFiche(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        ServerPlayer ami = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "mineur", 735, new ItemStack(Items.IRON_PICKAXE));
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        String nomAmi = ami.getGameProfile().getName();
+        c.autoriser(chef.getUUID(), java.util.List.of(nomAmi), java.util.List.of());
+        try {
+            h.assertTrue(Missions.donner(ami, t, "fer", "fois", 5, "toujours", null).ok(), "autorisé : il donne une mission");
+            Missions.action(ami, t, "suivre", new CompoundTag());
+            h.assertTrue(t.mode == Travailleur.Mode.TRAVAIL, "autorisé, mais il ne se fait pas suivre (" + t.mode + ")");
+
+            CompoundTag vieille = new CompoundTag();
+            vieille.putInt("index", 0);
+            vieille.putInt("n", 3); // l'écran voyait 3 missions : la file a changé depuis
+            Missions.action(chef, t, "annuler", vieille);
+            h.assertTrue(t.missions.size() == 1, "file changée : rien d'annulé (" + t.missions.size() + ")");
+            CompoundTag juste = new CompoundTag();
+            juste.putInt("index", 0);
+            juste.putInt("n", 1);
+            Missions.action(chef, t, "annuler", juste);
+            h.assertTrue(t.missions.isEmpty(), "la bonne file : annulée");
+
+            c.declarer(chef.getUUID(), "chef", ami.getUUID(), nomAmi);
+            h.assertFalse(Missions.autorise(ami, t), "en guerre avec le chef : il ne commande plus");
+            h.assertFalse(Missions.donner(ami, t, "fer", "fois", 5, "toujours", null).ok(), "en guerre : mission refusée");
+
+            int avant = c.reputation(chef.getUUID());
+            Missions.action(chef, t, "licencier", new CompoundTag());
+            h.assertTrue(t.mode == Travailleur.Mode.CHOMEUR, "renvoyé");
+            h.assertTrue(c.reputation(chef.getUUID()) < avant, "le renvoi pèse sur sa réputation (" + avant + " → " + c.reputation(chef.getUUID()) + ")");
+        } finally {
+            c.autoriser(chef.getUUID(), java.util.List.of(), java.util.List.of(nomAmi));
+            c.guerres.remove(chef.getUUID());
+            c.guerres.remove(ami.getUUID());
+        }
         t.discard();
         h.succeed();
     }
