@@ -534,3 +534,15 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Feuille de tests v2** : 25 essais V01 à V25 dans le panneau (8 importants).
 - Relecture : 0 bloquant ; 4 importants et 5 moyens corrigés (droits en guerre, « Suis-moi » au chef, annulation contrôlée, statut toutes les 5 s, paquet du dépôt allégé, mission annulée qui s'arrête, renvoi compté).
 - Mesures : **292/292 JUnit, 320/320 en jeu** sur `main` 933ab90 (passe précédente : 319/320, `enRang` instable). Tests neufs pas tous vus rouges sur l'ancien code (classes nouvelles) ; lieux : 4 sur 5 vus rouges.
+
+## 2026-10-17 22 h 50 UTC : livraison 1.0.1 (ouvriers plus productifs), serveur seul
+- **Ce qui change en jeu** :
+  - le mineur ne se bloque plus lui-même avec ses torches : au joueur fantôme, il passe de **0 à 46/64 charbon** ;
+  - « Travaille ici » débloque tout de suite un mineur en « Aucun lieu sûr » (un nouveau chantier aussi) ;
+  - près de sa mine, il respecte les coffres, rails et torches posés par un joueur (seuls ses propres torches et son pavé sont sans tampon) ;
+  - le fermier dit « Plus de graines au dépôt », et ce statut s'efface dès qu'il y en a (ou qu'il n'y a plus rien à semer) ;
+  - le trou se bouche à la terre, jamais avec le pavé à livrer.
+- **1.0.1 installée** (`main` `26cab12`, `mod_version=1.0.1`) : **292/292 JUnit, 326/326 en jeu** sur ce jar. Personne connecté (0/10, revérifié à 22 h 49), pas de préavis. `colonie_pnj-1.0.1.jar` (1 704 292 octets, sha1 `afc642ef786a…`, même taille dans `/mods-off` qu'en local) envoyé dans `/mods-off`, puis 1.0.0 rangé dans `/mods-off` et 1.0.1 mis dans `/mods` coup sur coup : un seul jar du mod.
+- Redémarrage à 22 h 49 : « colonie_pnj (version 1.0.0 -> 1.0.1) », « Preparing level "essai-v2" », « Done (2.712s) » à 22 h 50 min 06 s, panneau des PNJ ouvert (port habituel). Aucune erreur ni avertissement du mod (les 282 erreurs de tables de butin et le mixin client de create_sa sont ceux d'avant). Aucun monde touché.
+- **Pas de modpack** : rien ne change côté client (canal, données synchronisées, rendu, écrans) ; le modpack 1.0.0 reste valable. Pas d'annonce publique.
+- Rien essayé avec un vrai joueur sur le serveur. Reste au plan : feuille v2, tests instables, charge à 50 ouvriers.

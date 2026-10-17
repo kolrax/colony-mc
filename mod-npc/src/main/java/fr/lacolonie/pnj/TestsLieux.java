@@ -133,23 +133,57 @@ public class TestsLieux {
         });
     }
 
+    /** Un mineur dans son coin du monde plat, poste en {@code base}, à l'entrée e de sa mine (40 blocs à l'est) ; chunks chargés. */
+    static Travailleur mineurASaMine(GameTestHelper h, BlockPos base, BlockPos e) {
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) h.getLevel().getChunk((e.getX() >> 4) + dx, (e.getZ() >> 4) + dz);
+        return TestsJeu.employe(h, "mineur", base, Vec3.atBottomCenterOf(e), new ItemStack(Items.IRON_PICKAXE));
+    }
+
     /**
-     * Ses propres torches ne l'arrêtent pas : dans la mine qu'il a ouverte ({@link Lieux#saMine}), une torche à 2 blocs ne
-     * l'empêche pas de creuser ; hors de sa mine, elle crée bien le tampon. Avant : ses torches et son pavé comptaient comme
-     * des constructions, et le fantôme a vu un mineur à 0 charbon en 2 jours.
+     * Ses propres torches et son pavé ne l'arrêtent pas : dans la mine qu'il a ouverte ({@link Lieux#saMine}), une torche à
+     * 2 blocs et un pavé à 3 blocs qu'il a posés ({@link Lieux#pose}) ne l'empêchent pas de creuser ; hors de sa mine, ils
+     * créent bien le tampon. Avant : ils comptaient comme des constructions, et le fantôme a vu un mineur à 0 charbon en 2 jours.
      */
     @GameTest(template = "vide", timeoutTicks = 100, batch = "lieux")
     public static void mineurCreuseMalgreSesTorches(GameTestHelper h) {
-        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
-        h.setBlock(6, 2, 4, Blocks.TORCH);
-        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 2, new ItemStack(Items.IRON_PICKAXE));
-        BlockPos p = h.absolutePos(new BlockPos(4, 1, 4));
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 139000), e = base.east(40);
+        Travailleur t = mineurASaMine(h, base, e);
+        BlockPos torche = e.offset(2, 0, 4), pave = e.offset(3, -1, 4), p = e.offset(0, -1, 4);
+        l.setBlockAndUpdate(torche, Blocks.TORCH.defaultBlockState());
+        l.setBlockAndUpdate(pave, Blocks.COBBLESTONE.defaultBlockState());
         boolean sansMine = Lieux.peutCasser(t, p);
-        t.memoire.putLong("mine", h.absolutePos(new BlockPos(4, 2, 4)).asLong());
+        t.memoire.putLong("mine", e.asLong());
+        Lieux.pose(t, torche);
+        Lieux.pose(t, pave);
         boolean avecMine = Lieux.peutCasser(t, p);
         t.discard();
         h.assertFalse(sansMine, "hors de sa mine, la torche crée le tampon");
-        h.assertTrue(avecMine, "dans sa mine, sa torche ne l'empêche pas de creuser");
+        h.assertTrue(avecMine, "dans sa mine, sa torche et son pavé ne l'empêchent pas de creuser");
+        h.succeed();
+    }
+
+    /**
+     * Dans sa mine, ce qu'un joueur a posé garde son tampon : un coffre à 10 blocs de l'entrée, une torche et des rails qu'il
+     * n'a pas posés, chacun à 2 blocs du bloc à creuser : il n'y touche pas ; plus loin, il creuse. Avant : dans 32 blocs
+     * autour de l'entrée, aucune construction n'avait plus de tampon.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "lieux")
+    public static void mineurRespecteLeCoffreDansSaMine(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 142000), e = base.east(40);
+        Travailleur t = mineurASaMine(h, base, e);
+        t.memoire.putLong("mine", e.asLong());
+        l.setBlockAndUpdate(e.offset(10, 0, 0), Blocks.CHEST.defaultBlockState());
+        l.setBlockAndUpdate(e.offset(-10, 0, 0), Blocks.TORCH.defaultBlockState());
+        l.setBlockAndUpdate(e.offset(0, 0, -10), Blocks.RAIL.defaultBlockState());
+        boolean coffre = Lieux.peutCasser(t, e.offset(8, -1, 0)), torche = Lieux.peutCasser(t, e.offset(-8, -1, 0)),
+                rails = Lieux.peutCasser(t, e.offset(0, -1, -8)), loin = Lieux.peutCasser(t, e.offset(0, -1, 20));
+        t.discard();
+        h.assertFalse(coffre, "le coffre d'un joueur garde son tampon, même dans sa mine");
+        h.assertFalse(torche, "la torche d'un joueur garde son tampon, même dans sa mine");
+        h.assertFalse(rails, "les rails d'un joueur gardent leur tampon, même dans sa mine");
+        h.assertTrue(loin, "loin de tout, il creuse");
         h.succeed();
     }
 

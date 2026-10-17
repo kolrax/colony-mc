@@ -234,8 +234,9 @@ public class TestsFermier {
         d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
         g.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
         BlockPos centre = o.offset(7, -1, 0);
-        l.setBlockAndUpdate(centre.east(), Blocks.AIR.defaultBlockState()); // un trou à côté du centre
-        l.setBlockAndUpdate(centre.east().below(), Blocks.AIR.defaultBlockState());
+        // Un fossé de chaque côté du rang du milieu : aucune case n'est de niveau (avant, un trou à côté du centre suffisait ;
+        // il met maintenant l'eau sur une autre case de niveau).
+        for (int z = -1; z <= 1; z++) for (int x : new int[]{-1, 1}) for (int y = 0; y >= -2; y--) l.setBlockAndUpdate(centre.offset(x, y, z), Blocks.AIR.defaultBlockState());
         Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
@@ -247,6 +248,161 @@ public class TestsFermier {
                     int eau = 0;
                     for (BlockPos q : BlockPos.betweenClosed(centre.offset(-3, -3, -3), centre.offset(3, 1, 3))) if (!l.getFluidState(q).isEmpty()) eau++;
                     h.assertTrue(eau == 0, "pas d'eau versée : " + eau + " blocs d'eau");
+                    h.assertTrue(g.compter(Fermier.SEAU) == 1, "le seau reste plein");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /**
+     * Son champ de 3 sur 3 à semer, sans une graine sur lui ni au dépôt : « ⚠ Plus de graines au dépôt ». Puis {@code ensuite}
+     * (des graines au dépôt, ou le champ semé par quelqu'un d'autre) et un nouvel entretien : le statut s'efface.
+     */
+    static void plusDeGraines(GameTestHelper h, int coin, boolean auDepot) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, coin, b);
+        ServerLevel l = h.getLevel();
+        BlockPos centre = b[0].offset(4, -1, 0);
+        marquer(t, centre, 3, 3, "ble");
+        Cerveau.lancer(t, Fermier.Champ.de(t.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND).getCompound(0)));
+        h.runAtTickTime(h.getTick() + 60, () -> {
+            String avant = t.blocageActuel() + " / " + t.memoire.get("sans_graines");
+            if (!Statut.SANS_GRAINES.equals(t.blocageActuel())) { t.discard(); h.fail("sans graines, il le dit au-dessus de sa tête : " + avant); }
+            if (auDepot) TestsBucheron.depot(t).depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 9));
+            else {
+                for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) culture(l, centre.offset(x, 1, z), Blocks.WHEAT, 2);
+                Cerveau.lancer(t, Fermier.Champ.de(t.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND).getCompound(0)));
+            }
+            // Il peut être en pause (rien de mûr : 20 à 30 secondes) : il le voit à sa décision suivante.
+            h.runAtTickTime(h.getTick() + 660, () -> {
+                String apres = t.blocageActuel() + " / " + t.memoire.get("sans_graines") + " (" + TestsJeu.etat(t, t.bureau) + ")";
+                t.discard();
+                h.assertTrue(!Statut.SANS_GRAINES.equals(t.blocageActuel()) && !t.memoire.contains("sans_graines"),
+                        (auDepot ? "des graines au dépôt" : "plus rien à semer") + " : « Plus de graines » s'efface : " + apres);
+                h.succeed();
+            });
+        });
+    }
+
+    /** Relecture : des graines arrivent au dépôt, « Plus de graines au dépôt » s'efface. Avant : il le disait jusqu'au prochain semis. */
+    @GameTest(template = "vide", timeoutTicks = 1000)
+    public static void plusDeGrainesSEffaceAvecLeDepot(GameTestHelper h) { plusDeGraines(h, 128, true); }
+
+    /** Relecture : son champ est tout semé, « Plus de graines au dépôt » s'efface. Avant : il le disait pour toujours. */
+    @GameTest(template = "vide", timeoutTicks = 1000)
+    public static void plusDeGrainesSEffaceChampSeme(GameTestHelper h) { plusDeGraines(h, 129, false); }
+
+    /**
+     * Fantôme : 16 graines, un champ de 9 sur 9 loin de l'eau et pas de seau, 0 blé en 2 jours (sur une terre sèche et serré,
+     * le blé met une semaine à mûrir). Maintenant : il creuse une mare au milieu, sème une case sur deux en tout sens (aucun
+     * plant n'en touche un autre, même en coin), laboure les autres cases : toute la terre du champ est arrosée.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void champSansSeauNiAssezDeGraines(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 119);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 16));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        BlockPos centre = o.offset(9, -1, 0);
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    h.assertTrue(l.getFluidState(centre).is(net.minecraft.tags.FluidTags.WATER), "une mare au milieu du champ : " + l.getBlockState(centre));
+                    List<BlockPos> ble = new ArrayList<>();
+                    List<String> pasLaboure = new ArrayList<>();
+                    for (int x = -4; x <= 4; x++)
+                        for (int z = -4; z <= 4; z++) {
+                            BlockPos q = centre.offset(x, 0, z);
+                            if (l.getBlockState(q.above()).is(Blocks.WHEAT)) ble.add(q);
+                            if ((x != 0 || z != 0) && !l.getBlockState(q).is(Blocks.FARMLAND)) pasLaboure.add(x + " " + z);
+                        }
+                    h.assertTrue(ble.size() == 16, "16 cases semées : " + ble.size());
+                    for (BlockPos q : ble) for (BlockPos r : ble)
+                        h.assertTrue(q == r || Math.abs(q.getX() - r.getX()) > 1 || Math.abs(q.getZ() - r.getZ()) > 1,
+                                "deux plants se touchent : " + q.subtract(centre).toShortString() + " et " + r.subtract(centre).toShortString());
+                    h.assertTrue(pasLaboure.isEmpty(), "toute la terre du champ labourée : " + pasLaboure);
+                    h.assertTrue(l.getBlockState(centre.offset(5, 0, 0)).is(Blocks.GRASS_BLOCK) && l.getBlockState(centre.offset(0, 0, -5)).is(Blocks.GRASS_BLOCK), "rien hors du champ");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /**
+     * Fantôme : le champ fait sur un terrain en marches, le milieu au bord d'une marche ; avant, pas d'eau (« le milieu n'est
+     * pas de niveau »), même avec un seau. Maintenant : l'eau du seau sur la case de niveau qui arrose le plus de cases, sans
+     * couler, et le seau vide lui reste.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void mareSurUnTerrainEnMarches(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 118);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        g.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
+        BlockPos centre = o.offset(9, -1, 0);
+        for (int x = -5; x <= 5; x++) for (int z = -5; z <= -1; z++) l.setBlockAndUpdate(centre.offset(x, 0, z), Blocks.AIR.defaultBlockState()); // la marche, au nord du milieu
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    List<BlockPos> eau = new ArrayList<>();
+                    for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -2, -6), centre.offset(6, 1, 6))) if (!l.getFluidState(q).isEmpty()) eau.add(q.immutable());
+                    h.assertTrue(eau.size() == 1, "un seul bloc d'eau, qui ne coule pas : " + eau.stream().map(q -> q.subtract(centre).toShortString()).toList());
+                    BlockPos m = eau.get(0);
+                    int arrosees = 0;
+                    for (int x = -4; x <= 4; x++)
+                        for (int z = -4; z <= 4; z++) {
+                            BlockPos q = centre.offset(x, z < 0 ? -1 : 0, z);
+                            if (l.getBlockState(q).is(Blocks.FARMLAND) && Fermier.arrose(l, q)) arrosees++;
+                        }
+                    h.assertTrue(arrosees >= 70, "la terre du champ arrosée : " + arrosees + " cases sur 80 (eau en " + m.subtract(centre).toShortString() + ")");
+                    h.assertTrue(g.compter(Actions.Filtre.de("minecraft:bucket")) == 1 && g.compter(Fermier.SEAU) == 0, "le seau vide lui reste");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /**
+     * Relecture : le champ collé à des constructions d'un joueur (des planches de chaque côté) : tout le champ est dans leur
+     * tampon, il n'y creuse pas de mare (le seau reste plein) et sème quand même. Avant : l'eau au milieu. Lot « lieux ».
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000, batch = "lieux")
+    public static void pasDeMarePresDUneConstruction(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 117);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        g.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
+        BlockPos centre = o.offset(9, -1, 0);
+        l.setBlockAndUpdate(centre.offset(0, 1, 5), Blocks.OAK_PLANKS.defaultBlockState());
+        l.setBlockAndUpdate(centre.offset(0, 1, -5), Blocks.OAK_PLANKS.defaultBlockState());
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null && l.getBlockState(centre.above()).is(Blocks.WHEAT),
+                        "le champ est semé, le milieu aussi (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    int eau = 0;
+                    for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -2, -6), centre.offset(6, 1, 6))) if (!l.getFluidState(q).isEmpty()) eau++;
+                    h.assertTrue(eau == 0, "pas de mare dans le tampon des constructions : " + eau + " blocs d'eau");
                     h.assertTrue(g.compter(Fermier.SEAU) == 1, "le seau reste plein");
                 },
                 () -> TestsRepertoire.fin(e));
