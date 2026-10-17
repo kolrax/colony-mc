@@ -17,8 +17,7 @@ Mise à jour : 17/10/2026, 04 h 20 UTC. Une page à lire en début de session, a
 - **Décision de KOLRAX (16/10, 17 h 12 UTC)** : le serveur n'ouvre que quand le mod est fini ; le chantier continue ; monde de test encore jetable (régénération permise).
 
 ## Branches à reprendre
-- **`autres-joueurs`** (lot 14, cases « autoriser un joueur / débauche » et « nom, métier, chef visibles », 0.9.41) : 1re passe verte (bf89bcf : 345 JUnit, 387/387), puis relecture : **1 bloquant** (en jeu, un autre joueur ne peut ni ouvrir la fenêtre de conversation ni parler au micro : `Travailleur.mobInteract` 1549-1558, `Voix.viser` 296, `Voix.traiter` 343) et 4 importants (pièces encaissées avant la décision d'obéir ; une paie achète des trajets durables = vol du dépôt ; un joueur payeur/autorisé ordonne la retraite de l'armée ; la débauche emporte le sac) + mineurs. Corrections en cours à la fin de la session : voir le dernier commit de la branche et `docs/journal.md`. Ensuite : fusionner `main` (familles : un enfant ne se débauche pas), passe complète, livrer 0.9.41.
-  - Liste complète à corriger (relecture 17/10) : 1) fenêtre et micro ouverts à tout joueur (si ça exige un changement client : modpack obligatoire, le dire) ; 2) `Commandement.reserver` et décision d'obéir avant d'encaisser (`Etranger` 56-59) ; 3) une paie n'achète qu'un ordre ponctuel (pas trajets, champs, construire, missions quotidiennes, règles : `Commandement.GESTES_AU_CHEF`) ; 4) refuser paie/ordres d'un joueur en guerre avec le chef, sauter `Guerre.repli`/`Armee.finir` si ce n'est pas le chef (`Travailleur` 1966, 1971) ; 5) débauche : il laisse au dépôt de l'ancien chef tout sauf ses pièces ; mineurs : OUI d'un autre ne confirme pas un renvoi (1928), un ordre d'un autre n'arrête pas la formation (1924), refus de débauche pendant la formation, sac plein = refus de paie (pas de pièces au sol), « viens me rejoindre au four » n'est pas une débauche, `Commandement.PERMIS` seulement pour des joueurs connus, `metiers_inactifs` vérifié, ordre d'étranger refusé pas gardé dans `enAttente`, enfant/apprenti ni débauché ni payé pour un ordre.
+- **`autres-joueurs`** (lot 14, cases « autoriser un joueur / débauche » et « nom, métier, chef visibles », `mod_version` 0.9.41) : **sha 408d166, vert sur sa base** (345/345 JUnit, 389/389 en jeu), relecture corrigée (clic droit et voix d'un autre joueur, rien d'encaissé avant la décision, trajets/champs/construire réservés au chef, rien d'un ennemi en guerre, la débauche laisse le sac au dépôt, mineurs). **Reste à faire, dans l'ordre** : 1) `git checkout -B autres-joueurs origin/autres-joueurs ; git merge origin/main` (familles 0.9.40 ; garder 0.9.41) ; 2) dans `Etranger.debaucher` et l'ordre payé de `Etranger.repondre` : refuser pour un enfant ou un apprenti (`Famille.mineur`) ; test vu rouge ; 3) build + passe complète ; 4) fusion sur main, livrer 0.9.41, cocher les 2 cases. Pas fait (dans plus-tard) : `Commandement.PERMIS` accepte n'importe quel nom. Rien d'essayé avec un vrai client (fenêtre ouverte par le même paquet que la boutique : pas de modpack).
 - `en-cours` = ancien `main` (suppression refusée depuis le cloud).
 
 ## Ce que le mod sait faire aujourd'hui
@@ -57,6 +56,9 @@ Mise à jour : 17/10/2026, 04 h 20 UTC. Une page à lire en début de session, a
 - Chemins : `Itineraire.java` (`avancer`, `choisirEtape`, `jeton`, `suivreSortie`), `Travailleur.java` (`createNavigation`, compteurs, `blocsInaccessibles`, `coupVu`), `Charge.java`, `TestsCharge.java`.
 - Combat : `Cerveau.java` (`decider`), `Monde.java` (`cibles`), `Guerrier.java`.
 - `docs/carte-du-code.md` pour le reste.
+
+## Serveur
+- Avant les redémarrages du 17/10, le journal montrait « Can't keep up » (34 min puis 70 min de retard) sans personne connecté. Non analysé : à mesurer (`spark tps`, `pnj charge`) en début de session.
 
 ## Session en cours
 - aucune (session 02 h - 04 h 30 UTC du 17/10 terminée).
