@@ -546,3 +546,13 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Redémarrage à 22 h 49 : « colonie_pnj (version 1.0.0 -> 1.0.1) », « Preparing level "essai-v2" », « Done (2.712s) » à 22 h 50 min 06 s, panneau des PNJ ouvert (port habituel). Aucune erreur ni avertissement du mod (les 282 erreurs de tables de butin et le mixin client de create_sa sont ceux d'avant). Aucun monde touché.
 - **Pas de modpack** : rien ne change côté client (canal, données synchronisées, rendu, écrans) ; le modpack 1.0.0 reste valable. Pas d'annonce publique.
 - Rien essayé avec un vrai joueur sur le serveur. Reste au plan : feuille v2, tests instables, charge à 50 ouvriers.
+
+## 2026-10-17 23 h 54 UTC : livraison 1.0.2 (fermier qui produit), serveur seul
+- **Ce qui change en jeu** :
+  - le fermier sans eau près de son champ creuse une petite mare d'un bloc dans son champ, jamais près d'une construction ;
+  - quand il a peu de graines, il les espace au lieu de tout planter au même endroit ;
+  - au joueur fantôme (monde généré, 2 jours) : **15 blés au lieu de 1**.
+- **1.0.2 installée** (`main` `d18999c`, `mod_version=1.0.2`) : **292/292 JUnit, 329/329 en jeu** sur ce jar (mesures du chef, 23 h 52). Personne connecté (0/10, revérifié juste avant le redémarrage), pas de préavis. `colonie_pnj-1.0.2.jar` (1 707 937 octets, sha1 `3d974e500e83…`, même taille dans `/mods-off` qu'en local) envoyé dans `/mods-off`, puis 1.0.1 rangé dans `/mods-off` et 1.0.2 mis dans `/mods` coup sur coup : un seul jar du mod.
+- Redémarrage à 23 h 53 : « colonie_pnj (version 1.0.1 -> 1.0.2) », « Preparing level "essai-v2" », « Done (2.151s) » à 23 h 54 min 08 s, panneau des PNJ ouvert (port habituel). Aucune erreur ni avertissement du mod (les 282 erreurs de tables de butin et le mixin client de create_sa sont ceux d'avant). Aucun monde touché.
+- **Pas de modpack** : rien ne change côté client ; le modpack 1.0.0 reste valable. Pas d'annonce publique.
+- Rien essayé avec un vrai joueur sur le serveur.
