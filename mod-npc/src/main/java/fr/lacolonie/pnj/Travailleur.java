@@ -1132,7 +1132,7 @@ public class Travailleur extends PathfinderMob {
                 travaille = !(action instanceof Actions.Attendre)
                         && !(action instanceof Actions.LireLettres) && !(action instanceof Actions.ToucherPaie)
                         && !(action instanceof Actions.Aller a && bureau != null && a.cible.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 25);
-                fatigue += Talents.fatigue(Nuit.fatigue(dehors ? 7 : 5, laNuit && travaille, rg.nuit_fatigue), talents);
+                // Le travail ne fatigue plus (refonte 1.0.0) : ce sont les horaires de la mission qui le font rentrer, pas la fatigue.
             }
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);

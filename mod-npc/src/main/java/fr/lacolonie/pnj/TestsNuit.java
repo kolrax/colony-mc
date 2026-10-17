@@ -103,7 +103,7 @@ public class TestsNuit {
                 });
     }
 
-    /** La nuit, au travail : une heure de travail le fatigue de 7 (5 de jour). */
+    /** Refonte 1.0.0 : une heure de travail, même de nuit, ne le fatigue plus (ce sont les horaires qui le font rentrer). */
     @GameTest(template = "vide", batch = "nuit_minuit", timeoutTicks = 1200)
     public static void laNuitFatiguePlus(GameTestHelper h) {
         Scene s = scene(h, 411, "bucheron", new ItemStack(Items.IRON_AXE), false);
@@ -120,7 +120,7 @@ public class TestsNuit {
                 lance[0] = true;
             }
             h.assertTrue(t.fatigueCompteur < 999, "l'heure est passée");
-            h.assertTrue(t.fatigue == 7, "une heure de nuit : +7 de fatigue (" + t.fatigue + ", " + TestsJeu.etat(t, s.base()) + ")");
+            h.assertTrue(t.fatigue == 0, "une heure de nuit : pas de fatigue (" + t.fatigue + ", " + TestsJeu.etat(t, s.base()) + ")");
             fin(t);
         });
     }
