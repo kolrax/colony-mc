@@ -384,9 +384,10 @@ public class TestsIA {
                 Voix.entendre(s, chef, t, son(48_000, 40)); // presque silencieux
                 h.assertTrue((int) IA.TRANSCRIPTION.etat(9999).get("demandes") == avantDemandes, "un bruit ne doit pas partir chez Whisper");
                 parle[0] = true;
+                regarder(chef, t); // d'autres tests du lot ont leur chef à moins de 32 blocs : sans regard, l'adressage peut croire qu'il leur parle
                 Voix.entendre(s, chef, t, son(48_000, 6000));
             }
-            h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, "il doit l'avoir entendu (" + t.mode + ")");
+            h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, "il doit l'avoir entendu (" + t.mode + ", " + Dialogue.journal().stream().filter(e -> String.valueOf(e.get("texte")).contains("Suis-moi, s")).findFirst().orElse(null) + ")");
             h.assertTrue(IA.echange(t).contains("Chef : Suis-moi, s'il te plaît.") && IA.echange(t).contains("J'arrive, chef"), "échange : " + IA.echange(t));
             t.discard();
         });
