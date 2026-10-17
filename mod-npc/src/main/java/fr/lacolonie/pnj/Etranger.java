@@ -63,7 +63,7 @@ final class Etranger {
         if (!c.commande(t.chef, nom)) {
             if (paye == null) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
             // Ce qu'il ne fera pas de toute façon (réservé au chef, grève, ordre mortel, hors métier, moral trop bas) : rien n'est pris.
-            if (l.vide() || !accepterait(t, l)) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
+            if (reserve || l.vide() || !accepterait(t, l)) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
             if (!Debauche.assez(paye.pieces(), t.salaireVerse()))
                 return texte(t, "etranger_trop_peu", nom, (int) paye.pieces(), "C'est trop peu pour laisser l'ouvrage de " + t.chefNom + ".");
             if (!encaisser(t, p, paye.pieces())) return texte(t, "etranger_sans_pieces", nom, (int) paye.pieces(), "Montre-moi d'abord les pièces.");
