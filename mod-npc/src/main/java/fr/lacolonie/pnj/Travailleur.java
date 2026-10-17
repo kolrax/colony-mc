@@ -2318,7 +2318,7 @@ public class Travailleur extends PathfinderMob {
      * {@code salaireFixe} : le salaire promis (-1 : celui qu'il demande).
      */
     void entrerAuService(ServerPlayer p, long prime, long salaireFixe) {
-        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
+        int payes = payes(p); // avant qu'il ne soit des leurs (les enfants ne comptent pas, lot 13)
         // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
         Transporteur.oublier(this);
         Macon.oublier(this);
