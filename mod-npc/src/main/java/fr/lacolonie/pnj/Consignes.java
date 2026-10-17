@@ -151,6 +151,7 @@ final class Consignes {
                 if (t.isSleeping()) t.stopSleeping();
                 return reponse(t, e, "Bien, chef.");
             }
+            case "former" -> { return Apprentissage.commencer(t, chef); } // formation payée : une étoile de plus (lot 13)
             case "silence" -> {
                 t.memoire.putLong("muet", maintenant + Math.max(1, e.duree()) * 20L);
                 return "";

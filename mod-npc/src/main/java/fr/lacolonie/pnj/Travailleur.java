@@ -508,7 +508,7 @@ public class Travailleur extends PathfinderMob {
     public double facteurTravail() { return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
 
     /** Ce qu'il demande pour son niveau, et selon la taille de la colonie à son embauche. */
-    public long salaireDemande() { return Cout.salaire(Reglages.salaire(niveau), surcout); }
+    public long salaireDemande() { return Cout.salaire(Apprentissage.salaireDeBase(this), surcout); }
 
     /** Ce qu'on lui verse vraiment (fixé dans le bureau). */
     public long salaireVerse() { return salaire < 0 ? salaireDemande() : salaire; }
@@ -990,7 +990,7 @@ public class Travailleur extends PathfinderMob {
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());
         if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser
-                || action instanceof Actions.Attaquer || action != null && action.travail)) coince.travail();
+                || action instanceof Actions.Attaquer || action != null && action.travail)) { coince.travail(); Apprentissage.travail(this); }
         if (action instanceof Actions.Attaquer || action instanceof Actions.Fuir || action instanceof Actions.Echapper) finDanger = level().getGameTime();
         if (action != null) action.fin(this);
         action = null;
@@ -2215,6 +2215,7 @@ public class Travailleur extends PathfinderMob {
         salaire = -1; // un nouveau marché : ni le salaire fixé par l'ancien chef…
         int renom = Courrier.de(p.getServer()).reputation(p.getUUID());
         surcout = surcout(nb, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
+        memoire.remove("etoiles_gagnees"); // ses étoiles d'avant sont les siennes : il en demande le prix (Apprentissage)
         enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();

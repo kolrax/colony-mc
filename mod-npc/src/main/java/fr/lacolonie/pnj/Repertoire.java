@@ -35,7 +35,7 @@ final class Repertoire {
     static {
         for (String c : List.of("geste", "aller", "suivre", "regarder", "son", "musique", "donner", "jeter", "prendre", "tenir", "utiliser",
                 "combat", "travail", "info", "parler", "vitesse", "formation", "message")) COMPORTEMENTS.put(c, true);
-        for (String c : List.of("arret", "deposer", "manger", "dormir", "ranger", "silence", "parole", "annuler")) COMPORTEMENTS.put(c, false);
+        for (String c : List.of("arret", "deposer", "manger", "dormir", "ranger", "silence", "parole", "annuler", "former")) COMPORTEMENTS.put(c, false);
     }
 
     /** Les gestes que sait dessiner le client ({@link Poses}). */

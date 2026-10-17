@@ -72,6 +72,8 @@ public class Reglages {
     public int ouvriers_sans_surcout = 3;
     public double surcout_par_ouvrier = 0.15;
     public Chercheurs chercheurs = new Chercheurs();
+    /** Les étoiles qui montent (lot 13) : expérience, formation payée, hausse de paie ({@link Etoiles}). */
+    public Etoiles.Reglage etoiles = new Etoiles.Reglage();
     public List<String> metiers_inactifs = new ArrayList<>();
     /** Une conversation entre deux ouvriers d'un même chef au plus toutes les N secondes, par colonie (0 = jamais). */
     public int secondes_entre_conversations = 180;
@@ -165,6 +167,7 @@ public class Reglages {
         achat_distance = Math.clamp(achat_distance, 0, 64);
         if (prime_par_niveau == null || prime_par_niveau.length != 5) prime_par_niveau = new int[]{8, 12, 24, 48, 96};
         if (chercheurs == null) chercheurs = new Chercheurs();
+        etoiles = Etoiles.Reglage.valide(etoiles);
         if (metiers_inactifs == null) metiers_inactifs = new ArrayList<>();
         minutes_entre_paies = Math.max(1, minutes_entre_paies);
         paies_impayees_avant_greve = Math.max(1, paies_impayees_avant_greve);

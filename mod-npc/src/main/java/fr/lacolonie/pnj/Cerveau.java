@@ -142,6 +142,9 @@ final class Cerveau {
             return;
         }
 
+        // En formation (payée par le chef) : il étudie au poste jusqu'au terme, puis une étoile de plus (Apprentissage).
+        if (Apprentissage.etudier(t)) return;
+
         // Ce que le chef lui a demandé passe avant le reste (le courrier, la paie, le travail) : il le fait, ou le tient jusqu'à nouvel ordre.
         if (Consignes.executer(t)) return;
 
