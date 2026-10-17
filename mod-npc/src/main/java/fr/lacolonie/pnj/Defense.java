@@ -120,8 +120,14 @@ final class Defense {
             LivingEntity a = w.getLastHurtByMob();
             if (contre == null && d2 <= 6 * 6 && a != null && vus.contains(a) && Monde.recent(w, w.getLastHurtByMobTimestamp())) contre = a;
         }
-        // Plus de caractère (refonte 1.0.0) : debout, il riposte s'il est frappé ou si un collègue l'est tout près ; sinon il signale.
-        return !faible(t) && contre != null && attaquer(t, contre, "monstre_riposte");
+        // Plus de caractère (refonte 1.0.0), une règle fixe : frappé, celui qui ne se bat pas (ou trop blessé) fuit s'il a où aller ;
+        // debout, un combattant riposte à qui frappe (lui ou un collègue tout près) ; sinon il signale.
+        boolean faible = faible(t);
+        if (frappe && (faible || !Armee.arme(t))) {
+            Vec3 loin = refuge(t, m);
+            if (loin != null) return fuir(t, m, loin) && noterFuite(t, m);
+        }
+        return !faible && (frappe || Armee.arme(t)) && contre != null && attaquer(t, contre, "monstre_riposte");
     }
 
     /** Il frappe le monstre avec ce qu'il a en main, sans quitter son espace de vie ni le poursuivre loin ; pas un monstre qu'il n'a pas pu atteindre tout à l'heure. */
