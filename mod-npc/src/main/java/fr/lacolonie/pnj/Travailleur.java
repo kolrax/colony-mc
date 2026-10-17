@@ -75,6 +75,8 @@ public class Travailleur extends PathfinderMob {
     public static final EntityDataAccessor<String> ROLE = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
     /** Son icône d'état au-dessus de la tête (faim, attente, grève… {@link Insignes#etat}) ; vide : aucune. */
     public static final EntityDataAccessor<String> ETAT = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
+    /** Son statut unique (refonte 1.0.0), écrit au-dessus de sa tête à la place de l'icône d'état ({@link Statut}) ; vide pour un chercheur d'emploi. */
+    public static final EntityDataAccessor<String> STATUT = SynchedEntityData.defineId(Travailleur.class, EntityDataSerializers.STRING);
 
     public enum Mode {
         CHOMEUR("chomeur"), SUIVRE("suivre"), ATTENDRE("attendre"), TRAVAIL("travail"), GREVE("greve");
@@ -145,6 +147,12 @@ public class Travailleur extends PathfinderMob {
         /** « Tous les jours » : une fois livrée, elle attend le jour suivant (jourFait : le jour du jeu où elle l'a été, -1 sinon). */
         public boolean quotidienne;
         public long jourFait = -1;
+        /** Où (refonte, partie 1) : la position imposée par « Travaille ici », ou null (il choisit son lieu lui-même). */
+        public BlockPos lieu;
+        /** Quand : « jour », « nuit », « toujours » ou une plage « 8-12 » ({@link Statut#dansHoraires}). */
+        public String horaires = "toujours";
+        /** Une seule fois : remplie, elle quitte la file (même un stock). */
+        public boolean uneFois;
 
         public Mission(String id, String mode, int nombre) {
             this.id = id;
@@ -161,6 +169,9 @@ public class Travailleur extends PathfinderMob {
             t.putInt("nombre", nombre);
             t.putInt("livre", livre);
             if (quotidienne) { t.putBoolean("quotidienne", true); t.putLong("jourFait", jourFait); }
+            if (lieu != null) t.putLong("lieu", lieu.asLong());
+            if (!horaires.equals("toujours")) t.putString("horaires", horaires);
+            if (uneFois) t.putBoolean("uneFois", true);
             return t;
         }
 
@@ -169,7 +180,14 @@ public class Travailleur extends PathfinderMob {
             m.livre = t.getInt("livre");
             m.quotidienne = t.getBoolean("quotidienne");
             m.jourFait = t.contains("jourFait") ? t.getLong("jourFait") : -1;
+            m.lieu = t.contains("lieu") ? BlockPos.of(t.getLong("lieu")) : null; // champs absents (avant la 1.0.0) : les défauts
+            m.horaires = Statut.horairesValides(t.getString("horaires")) ? t.getString("horaires") : "toujours";
+            m.uneFois = t.getBoolean("uneFois");
             return m;
+        }
+
+        /** Dans ses horaires à cette heure du jeu (0 à 23) ? */
+        public boolean enHoraires(int heure) { return Statut.dansHoraires(horaires, heure);
         }
     }
 
@@ -179,10 +197,52 @@ public class Travailleur extends PathfinderMob {
         if (id != null && !id.isEmpty()) missions.add(new Mission(id, mode, nombre));
     }
 
-    /** La mission sur laquelle il travaille : la première qui n'est pas remplie, ou null. */
+    /** La mission sur laquelle il travaille : la première qui n'est pas remplie et qui est dans ses horaires, ou null. */
     public Mission missionActive() {
-        for (Mission m : missions) if (!Metier.remplie(this, m)) return m;
+        if (missions.isEmpty()) return null;
+        int h = heure();
+        for (Mission m : missions) if (m.enHoraires(h) && !Metier.remplie(this, m)) return m;
         return null;
+    }
+
+    // --- Le statut unique (refonte 1.0.0, partie 1) ---------------------------------------------------
+
+    /** Ce qui le bloque, avec la solution (« Pas de pioche au dépôt ») ; null : rien. Posé par les métiers, oublié après une minute sans rappel. */
+    public String blocage;
+    long blocageJusqua;
+    /** « Travaille ici » : le lieu imposé par le chef (null : il choisit lui-même). */
+    public BlockPos lieuImpose;
+
+    /** Un métier signale ce qui l'empêche de travailler ; à redire au moins chaque minute, sinon c'est oublié. */
+    public void bloquer(String raison) {
+        blocage = raison;
+        blocageJusqua = level().getGameTime() + 1200;
+    }
+
+    public void debloquer() { blocage = null; }
+
+    /** Ce qui le bloque encore (null si rien, ou si plus personne ne l'a redit depuis une minute). */
+    String blocageActuel() {
+        if (blocage != null && level().getGameTime() > blocageJusqua) blocage = null;
+        return blocage;
+    }
+
+    /** « Travaille ici » : sa mission en cours (et les suivantes qui n'ont pas de lieu) prend cette position. */
+    public void travailleIci(BlockPos p) {
+        lieuImpose = p == null ? null : p.immutable();
+        for (Mission m : missions) if (m.lieu == null || p == null) m.lieu = lieuImpose;
+    }
+
+    /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */
+    public String statutUnique() {
+        if (mode == Mode.CHOMEUR) return "Cherche du travail";
+        String bloc = bureau == null ? Statut.SANS_POSTE : blocageActuel();
+        Mission m = missionActive();
+        Metier.Commande c = m == null ? null : Metier.catalogue(metier, m.id);
+        int fait = c == null || c.objet == null ? 0 : Metier.avancement(this, m);
+        boolean hors = m == null && !missions.isEmpty() && missions.stream().noneMatch(x -> x.enHoraires(heure()));
+        return Statut.texte(new Statut.Etat(metier, aTerre, mode == Mode.GREVE, mode == Mode.ATTENDRE, mode == Mode.SUIVRE, bloc,
+                !missions.isEmpty(), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
     }
 
     /** Retire les quantités livrées et les missions qui n'existent plus dans son métier ; prévient son chef. */
@@ -191,6 +251,7 @@ public class Travailleur extends PathfinderMob {
             Mission m = it.next();
             Metier.Commande c = Metier.catalogue(metier, m.id);
             if (c == null) { it.remove(); continue; }
+            if (m.uneFois && !m.quantite() && c.objet != null && Metier.remplie(this, m)) { it.remove(); continue; } // un stock « une fois » : fait
             if (m.quantite() && !m.quotidienne && m.livre >= m.nombre) {
                 it.remove();
                 memoire.putLong("fini_le", level().getGameTime()); // « travail fini » (Remarques)
@@ -470,6 +531,7 @@ public class Travailleur extends PathfinderMob {
         b.define(TENUE, Tenues.CHOMEUR);
         b.define(ROLE, "");
         b.define(ETAT, "");
+        b.define(STATUT, "");
     }
 
     @Override
@@ -738,13 +800,16 @@ public class Travailleur extends PathfinderMob {
 
     public String etat() { return entityData.get(ETAT); }
 
+    /** Le statut lu au-dessus de sa tête ({@link #statutUnique}, revu chaque seconde). */
+    public String statutTete() { return entityData.get(STATUT); }
+
     /** Côté client : vu par le joueur (rien de plein entre leurs yeux), revu toutes les 10 ticks ({@link Insignes#arevoir}, {@code Client.Rendu}). */
     long vueLe = Long.MIN_VALUE;
     boolean vue;
     /** Côté client : son prénom, tiré du nom du jeu tant que celui-ci ne change pas (pas de découpe à chaque image). */
     Component nomLu;
-    String prenomLu = "", roleLu = "";
-    int largeurPrenom, largeurRole;
+    String prenomLu = "", roleLu = "", statutLu = "";
+    int largeurPrenom, largeurRole, largeurStatut;
 
     /**
      * Ce qu'on lit au-dessus de sa tête ({@link Insignes}) : son rôle et son état. Toutes les secondes et à chaque
@@ -756,6 +821,7 @@ public class Travailleur extends PathfinderMob {
         boolean repos = isSleeping() || memoire.getBoolean("epuise") || fatigue >= 90;
         entityData.set(ETAT, Insignes.etat(new Insignes.Corps(aTerre, getHealth(), peur, mode == Mode.GREVE, faim,
                 !besoin.isEmpty(), impayes, moral, repos)));
+        entityData.set(STATUT, mode == Mode.CHOMEUR ? "" : statutUnique());
     }
 
     /** Son nom affiché et sa tenue, à rappeler à chaque changement de mode ou de métier. */
@@ -1567,7 +1633,8 @@ public class Travailleur extends PathfinderMob {
             PacketDistributor.sendToPlayer(sp, new Reseau.Fiche(getId(), fiche(true)));
             return InteractionResult.CONSUME;
         }
-        if (!player.getUUID().equals(chef)) {
+        boolean commandant = !player.getUUID().equals(chef) && Missions.autorise(sp, this); // autorisé par son chef (Commandement)
+        if (!player.getUUID().equals(chef) && !commandant) {
             // Il tient la boutique de son chef : un client peut lui parler (« qu'est-ce que tu vends ? », « je t'achète 2 pains »).
             if (Boutiquier.tient(this)) {
                 getLookControl().setLookAt(player);
@@ -1580,7 +1647,7 @@ public class Travailleur extends PathfinderMob {
             else signaler(sp, prenom + " travaille pour " + chefNom + ".");
             return InteractionResult.CONSUME;
         }
-        if (player.isShiftKeyDown() && !enMain.isEmpty()) {
+        if (!commandant && player.isShiftKeyDown() && !enMain.isEmpty()) {
             // De quoi travailler ou manger : il remercie. Autre chose (un diamant…) : il s'en souvient et demande quoi en faire.
             boolean utile = enMain.getFoodProperties(this) != null || enMain.isDamageableItem() || enMain.getItem() instanceof net.minecraft.world.item.BlockItem;
             ItemStack reste = inventaire.addItem(enMain.copy());
@@ -1595,7 +1662,7 @@ public class Travailleur extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         getLookControl().setLookAt(player);
-        PacketDistributor.sendToPlayer(sp, new Reseau.Conversation(getId(), fiche(false)));
+        Missions.montrer(sp, this); // sa fiche (refonte 1.0.0) : sa mission, sa file, ses boutons ; plus de conversation libre
         return InteractionResult.CONSUME;
     }
 
@@ -1635,7 +1702,7 @@ public class Travailleur extends PathfinderMob {
         t.putInt("impayes", impayes);
         t.putString("besoin", besoin);
         t.putString("action", action != null ? action.nom : "");
-        t.putString("statut", statut());
+        t.putString("statut", statutUnique()); // le statut unique (refonte 1.0.0) : la fiche et le poste le montrent
         t.putString("ou", Messages.ou(this));
         return t;
     }
