@@ -9,6 +9,9 @@ fantome donne minecraft:gold_ingot 32
 fantome embauche mineur 2
 fantome embauche bucheron 2
 fantome embauche fermier 2
+# Un ouvrier tout juste embauché ne connaît son poste qu'à sa seconde suivante (Travailleur.tickCourrier) :
+# sans cette pause, la mission est refusée (« n'a pas de poste de travail »).
+ticks 40
 # Leurs outils, des graines et du pain au dépôt (par l'écran du dépôt), le reste de l'or à la caisse.
 fantome donne minecraft:iron_pickaxe 2
 fantome donne minecraft:iron_axe 2
