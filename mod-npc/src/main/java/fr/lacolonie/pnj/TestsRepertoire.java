@@ -71,11 +71,14 @@ public class TestsRepertoire {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         Travailleur[] e = equipe(h, chef, 23);
         Travailleur bertrand = e[0];
+        // Ses deux collègues attendent sur place, pour ne mesurer que lui : en allant et venant autour du poste, ils peuvent le bousculer.
+        e[1].mode = e[2].mode = Travailleur.Mode.ATTENDRE;
         Vec3[] avant = new Vec3[1];
         TestsMorts.Suivi s = TestsMorts.suivre(h, bertrand);
         etapes(h, chef, e,
                 () -> { regarder(chef, bertrand); bertrand.parler(chef, "Fige-toi !"); },
                 () -> h.assertTrue(c(bertrand).equals("arret") && bertrand.action instanceof Consignes.Faire, "figé : " + c(bertrand) + " " + bertrand.action),
+                attendre(h, 10), // l'élan d'un pas en cours, qui le porte encore un peu après l'ordre (jusqu'à 0,3 bloc en courant)
                 () -> avant[0] = bertrand.position(),
                 attendre(h, 100),
                 () -> h.assertTrue(bertrand.position().distanceTo(avant[0]) < 0.3, "il ne bouge plus : de " + avant[0] + " à " + bertrand.position()

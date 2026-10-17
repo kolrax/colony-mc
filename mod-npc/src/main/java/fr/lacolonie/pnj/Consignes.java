@@ -1335,7 +1335,13 @@ final class Consignes {
             // Arrivé : il tient la place, face au chef (ou dans la direction du rang).
             t.getNavigation().stop();
             String regard = e.comportement().equals("formation") && Set.of("file", "derriere").contains(e.arg()) ? "devant" : e.opt("regard", "chef");
-            if (e.comportement().equals("formation") && Vec3.atBottomCenterOf(c.lieu).distanceToSqr(t.position()) > 4) { arrive = false; return Actions.Etat.EN_COURS; }
+            if (e.comportement().equals("formation")) {
+                Vec3 place = Vec3.atBottomCenterOf(c.lieu);
+                double ecart = place.distanceToSqr(t.position());
+                if (ecart > 4) { arrive = false; return Actions.Etat.EN_COURS; }
+                // Bousculé par un voisin qui gagnait sa place : il y revient d'un pas (sinon il restait à un bloc et demi du rang).
+                if (ecart > 0.25) t.getMoveControl().setWantedPosition(place.x, place.y, place.z, 0.6);
+            }
             regarder(t, regard);
             String g = e.opt("geste", "");
             if (e.comportement().equals("formation") && g.equals("garde_a_vous") && !t.metier.equals("guerrier") && e.id().equals("haie_honneur")) g = "salut_militaire";

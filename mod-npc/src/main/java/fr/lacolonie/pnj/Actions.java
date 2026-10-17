@@ -536,6 +536,12 @@ public final class Actions {
             if (t.position().distanceToSqr(c) < 0.5) { if (!peril) return Etat.OK; }
             else if (toutDroit) t.getMoveControl().setWantedPosition(c.x, c.y, c.z, 1.3);
             if (nage && refuge.getY() >= t.getBlockY()) t.getJumpControl().jump();
+            // Dans un trou de lave (ou d'eau), le bord à côté de lui : il s'y hisse, comme un homme prend appui des mains.
+            // Sinon il sautait contre le bord sans avancer, retombait, et la lave l'achevait.
+            if (nage && t.horizontalCollision && refuge.getY() > t.getY() - 0.5 && Math.abs(c.x - t.getX()) < 1.6 && Math.abs(c.z - t.getZ()) < 1.6) {
+                Vec3 vers = c.subtract(t.position()).multiply(1, 0, 1).normalize().scale(0.15);
+                t.setDeltaMovement(vers.x, Math.max(t.getDeltaMovement().y, 0.4), vers.z);
+            }
             return age > 200 ? echec("perdu") : Etat.EN_COURS;
         }
     }
