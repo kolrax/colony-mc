@@ -33,7 +33,8 @@ public final class Missions {
     public static boolean autorise(ServerPlayer p, Travailleur t) {
         if (t.chef == null || t.mode == Travailleur.Mode.CHOMEUR) return false;
         if (p.getUUID().equals(t.chef)) return true;
-        return Courrier.de(p.server).commande(t.chef, p.getGameProfile().getName());
+        Courrier c = Courrier.de(p.server);
+        return c.commande(t.chef, p.getGameProfile().getName()) && !c.enGuerre(t.chef, p.getUUID()); // un ennemi déclaré ne commande plus
     }
 
     /**
@@ -113,6 +114,7 @@ public final class Missions {
                 Travailleur.signaler(p, t.prenom + " travaillera ici : " + p.blockPosition().toShortString() + ".");
             }
             case "suivre" -> {
+                if (!chef) { Travailleur.signaler(p, t.prenom + " ne suit que " + t.chefNom + "."); break; }
                 if (t.mode == Travailleur.Mode.GREVE) { Travailleur.signaler(p, t.prenom + " est en grève : paie-le d'abord."); break; }
                 Consignes.annuler(t);
                 t.memoire.remove("rappel");
@@ -139,7 +141,9 @@ public final class Missions {
             }
             case "annuler" -> {
                 int k = d.getInt("index");
-                if (k >= 0 && k < t.missions.size()) {
+                // La file vue par l'écran (« n ») doit être celle d'aujourd'hui : sinon l'index viserait une autre mission.
+                if (d.getInt("n") != t.missions.size()) Travailleur.signaler(p, "Sa file a changé : rouvre sa fiche.");
+                else if (k >= 0 && k < t.missions.size()) {
                     Travailleur.Mission m = t.missions.remove(k);
                     if (t.action != null) t.finirAction("ordre");
                     Travailleur.signaler(p, "Mission annulée : " + Metier.nomMission(t.metier, m) + ".");
@@ -148,6 +152,7 @@ public final class Missions {
             case "licencier" -> {
                 if (!chef) { Travailleur.signaler(p, "Seul " + t.chefNom + " peut le renvoyer."); break; }
                 t.dire("Adieu, chef.");
+                Courrier.reputer(t, Recrutement.RENVOI); // comme l'ancien renvoi : la colonie le sait
                 t.licencier();
                 Travailleur.signaler(p, t.prenom + " ne travaille plus pour toi.");
                 return; // plus de fiche à montrer

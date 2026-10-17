@@ -533,6 +533,7 @@ public final class Client {
             for (int k = 0; k < Math.min(LIGNES, file.size()); k++) {
                 CompoundTag d = new CompoundTag();
                 d.putInt("index", k);
+                d.putInt("n", file.size());
                 addRenderableWidget(Button.builder(Component.literal("✖"), b -> envoyer(id, "annuler", d))
                         .bounds(x0 + largeur - 24, y0 + 92 + k * 14, 14, 12).tooltip(Tooltip.create(Component.literal("Annuler cette mission"))).build());
             }

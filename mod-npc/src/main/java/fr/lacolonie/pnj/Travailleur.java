@@ -829,8 +829,13 @@ public class Travailleur extends PathfinderMob {
         boolean repos = isSleeping() || memoire.getBoolean("epuise") || fatigue >= 90;
         entityData.set(ETAT, Insignes.etat(new Insignes.Corps(aTerre, getHealth(), peur, mode == Mode.GREVE, faim,
                 !besoin.isEmpty(), impayes, moral, repos)));
-        entityData.set(STATUT, mode == Mode.CHOMEUR ? "" : statutUnique());
     }
+
+    /**
+     * Le statut au-dessus de sa tête ({@link #statutUnique}) : à chaque changement de mode ({@link #majNom}), sinon toutes les
+     * 5 secondes (un stock à garder compte le dépôt : pas chaque seconde pour 50 ouvriers).
+     */
+    void majStatut() { entityData.set(STATUT, mode == Mode.CHOMEUR ? "" : statutUnique()); }
 
     /** Son nom affiché et sa tenue, à rappeler à chaque changement de mode ou de métier. */
     public void majNom() {
@@ -843,6 +848,7 @@ public class Travailleur extends PathfinderMob {
         if (aTerre) suffixe = " · à terre";
         setCustomName(Component.literal(prenom + suffixe));
         majTete();
+        majStatut();
     }
 
     // --- Tick serveur ---------------------------------------------------------------------------
@@ -912,6 +918,7 @@ public class Travailleur extends PathfinderMob {
         long h = System.nanoTime();
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
         if ((tickCount + getId()) % 20 == 3) majTete();
+        if ((tickCount + getId()) % 100 == 3) majStatut();
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         Sons.sommeil(this);
