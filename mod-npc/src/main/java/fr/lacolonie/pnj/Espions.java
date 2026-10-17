@@ -30,6 +30,8 @@ final class Espions {
     /** L'espion : arrivé à tant de blocs du poste, il guette tant de ticks. */
     static final double ARRIVE = 12;
     static final int GUET = 400;
+    /** Il renonce au bout de tant de ticks de marche vers là-bas (pas le temps passé à dormir ou à attendre demain). Les tests le raccourcissent. */
+    static long LIMITE = Armee.LIMITE;
     /** Entre deux échanges avec un ouvrier d'une autre colonie (ticks), et la distance pour bavarder. */
     static final long ECHANGE = 6000;
     static final double PRES = 6;
@@ -51,6 +53,21 @@ final class Espions {
         if (p != null) return p.getGameProfile().getName();
         for (Travailleur w : ColoniePnj.tous(s)) if (chef.equals(w.chef) && !w.chefNom.isEmpty()) return w.chefNom;
         return null;
+    }
+
+    /** Un nom de chef qu'il connaît : il en a entendu parler, ou ce chef a un poste ou des ouvriers (Armee.chefNomme). */
+    static Predicate<String> connu(Travailleur t) {
+        return nom -> !t.rumeurs.sur(nom).isEmpty() || nom.equalsIgnoreCase(t.chefNom) || t.getServer() != null && Armee.chefNomme(t.getServer(), nom) != null;
+    }
+
+    /** La paix entre deux colonies : leurs ouvriers oublient la guerre entre elles. */
+    static void paix(MinecraftServer s, UUID a, String nomA, UUID b, String nomB) {
+        if (a == null || b == null || nomA == null || nomB == null) return;
+        for (UUID u : new UUID[]{a, b})
+            for (Travailleur w : ColoniePnj.pnjDe(s, u)) {
+                w.rumeurs.oublier(nomA, Rumeurs.Genre.GUERRE, nomB);
+                w.rumeurs.oublier(nomB, Rumeurs.Genre.GUERRE, nomA);
+            }
     }
 
     // --- Ce qu'il voit en passant ---------------------------------------------------------------------------------
@@ -172,6 +189,10 @@ final class Espions {
         if (!(t.level() instanceof ServerLevel sl) || t.chef == null) return;
         Map<String, String> v = Map.of("nom", nom);
         if (Famille.mineur(t)) { r.add(dire(t, "espion_refus_enfant", v)); return; }
+        // En grève, ou mis à le suivre ou à attendre : il ne part pas (« au travail » d'abord).
+        if (t.mode == Travailleur.Mode.GREVE) { r.add("Je suis en grève, chef. Paie-moi d'abord, on verra ensuite."); return; }
+        if (t.mode == Travailleur.Mode.SUIVRE) { r.add("Je te suis, chef. Renvoie-moi au travail d'abord, et j'irai."); return; }
+        if (t.mode == Travailleur.Mode.ATTENDRE) { r.add("Tu m'as dit d'attendre ici, chef. Renvoie-moi au travail d'abord, et j'irai."); return; }
         Map.Entry<UUID, String> x = Armee.chefNomme(sl.getServer(), nom);
         if (x != null && x.getKey().equals(t.chef)) { r.add("C'est notre propre colonie, chef."); return; }
         Courrier.Poste po = x == null ? null : Courrier.de(sl.getServer()).postes.get(x.getKey());
@@ -179,7 +200,6 @@ final class Espions {
         CompoundTag e = new CompoundTag();
         e.putString("chef", x.getKey().toString());
         e.putString("nom", x.getValue());
-        e.putLong("depuis", sl.getGameTime());
         e.putString("etape", "aller");
         t.memoire.put("espion", e);
         if (t.action instanceof Actions.Reposer || t.action instanceof Actions.Attendre || t.action instanceof Actions.Aller) t.finirAction("espion");
@@ -187,6 +207,15 @@ final class Espions {
     }
 
     static void finir(Travailleur t) { t.memoire.remove("espion"); }
+
+    /** Pendant une action (depuis le cerveau, toutes les 10 ticks) : en marche vers la colonie à espionner, le temps compte. */
+    static void compter(Travailleur t) {
+        if (!(t.action instanceof Actions.Aller) || !t.memoire.contains("espion")) return;
+        CompoundTag e = t.memoire.getCompound("espion");
+        if (!e.getString("etape").equals("aller")) return;
+        e.putLong("marche", e.getLong("marche") + 10);
+        t.memoire.put("espion", e);
+    }
 
     /** Sa mission d'espion, depuis le cerveau (pendant ses heures de travail) : aller, guetter, rentrer, rapporter. Vrai s'il a de quoi faire. */
     static boolean mission(Travailleur t) {
@@ -205,7 +234,7 @@ final class Espions {
         UUID u = Armee.uuid(e.getString("chef"));
         Courrier.Poste po = u == null ? null : Courrier.de(sl.getServer()).postes.get(u);
         if (po == null || po.monde() != t.level().dimension()) { finir(t); return false; }
-        if (maintenant - e.getLong("depuis") > Armee.LIMITE) {
+        if (e.getLong("marche") > LIMITE) { // seulement le temps passé à marcher vers là-bas
             t.dire("Impossible d'arriver jusque chez " + nom + ", chef. Je rentre.");
             finir(t);
             return false;
@@ -222,7 +251,8 @@ final class Espions {
         Vec3 cible = Vec3.atBottomCenterOf(po.pos());
         if (t.distanceToSqr(cible) > ARRIVE * ARRIVE) {
             Cerveau.Portee p = Cerveau.portee(t, po.pos());
-            if (p == Cerveau.Portee.DEMAIN || p == Cerveau.Portee.TROP_LOIN) {
+            if (p == Cerveau.Portee.DEMAIN) return false; // il partira demain, de bon matin : en attendant, il travaille
+            if (p == Cerveau.Portee.TROP_LOIN) {
                 t.dire("La colonie de " + nom + " est trop loin pour mes jambes, chef.");
                 finir(t);
                 return false;

@@ -161,3 +161,4 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - La mort de vieillesse n'est pas mise en scène (pas de lit, pas d'adieux des proches) ; l'enfant n'a pas de lit à lui réservé (il prend un lit libre, sinon dort près du poste).
 - Rien au panneau web : `familles` et `ages` se règlent dans `reglages.json` seulement.
 - Lot 14 (autres joueurs) : « apprends le métier de X » n'est pas réservé au chef (`Commandement.reserver`) : un joueur autorisé peut changer le métier qu'apprend un enfant ou un apprenti.
+- Lot 14 (rumeurs) : un étranger qui demande des nouvelles peut entendre « chef » dans la réponse (répliques écrites pour le chef, {chef} = le chef de l'ouvrier) ; des répliques propres à l'étranger seraient plus justes. Pas de test en jeu pour l'échange entre deux colonies en paix, ni pour les faits de mort, naissance et débauche ; un seul fait GUERRE par colonie (la dernière guerre vue).

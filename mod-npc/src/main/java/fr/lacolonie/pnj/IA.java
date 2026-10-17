@@ -281,7 +281,7 @@ final class IA {
                 .append(actions(enFace));
         String souvenirs = t.souvenirs.pourIA(t.jour(), heure(t));
         if (!souvenirs.isEmpty()) b.append("\nTes souvenirs : ").append(souvenirs).append('.');
-        String rumeurs = t.rumeurs.pourIA(t.jour());
+        String rumeurs = t.rumeurs.pourIA(t.jour(), f -> !f.sujet().equalsIgnoreCase(t.chefNom)); // pas sa propre colonie : il la connaît, et un étranger pourrait lire la réponse
         // Il ne dit des autres colonies que ce qu'il a vu ou entendu (cahier 7.6).
         b.append(rumeurs.isEmpty() ? "\nTu ne sais rien des autres colonies : n'invente rien à leur sujet."
                 : "\nCe que tu sais des autres colonies (ne dis rien d'autre sur elles) : " + rumeurs + '.');

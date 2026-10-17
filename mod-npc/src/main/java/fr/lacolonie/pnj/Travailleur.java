@@ -1713,16 +1713,17 @@ public class Travailleur extends PathfinderMob {
         reactionSuffit = false;
         if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
         // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : il ne dit que ce qu'il a vu ou entendu (Rumeurs) ; ni ragot inventé, ni l'IA à sa place.
-        Rumeurs.Question rumeur = Rumeurs.question(l.texte);
+        // Un sujet nommé ne compte que si c'est un chef connu (« quoi de neuf du côté de la forge ? » reste une question sur le travail).
+        Rumeurs.Question rumeur = Rumeurs.question(l.texte, Espions.connu(this));
         // « Raconte un ragot » : de vraies nouvelles, jamais un ragot inventé sur le monde (cahier 7.6).
         if (rumeur == null && l.faire.stream().anyMatch(f -> f.id().equals("ragot"))) rumeur = new Rumeurs.Question(null);
+        String nouvelles = null; // dites en tête ; l'insulte et les ordres longs de la même phrase comptent quand même
         if (rumeur != null) {
             l.faire.removeIf(f -> f.id().equals("ragot"));
             l.intentions.remove(Ordres.Intention.AVANCEMENT);
-            reactionSuffit = reponseImposee = true;
-            return rumeurs.raconter(rumeur, j, Espions.textes(this), f -> true);
+            nouvelles = rumeurs.raconter(rumeur, j, Espions.textes(this), f -> true);
         }
-        String famille = Famille.question(this, l.texte); // son âge, ses parents, ses enfants (lot 13)
+        String famille = nouvelles != null ? null : Famille.question(this, l.texte); // son âge, ses parents, ses enfants (lot 13)
         if (famille != null) { reactionSuffit = reponseImposee = true; return famille; }
         // Les ordres longs : leur phrase est retirée de l.texte (« s'il pleut, rentre au poste » ne laisse rien) ; chacun est noté.
         for (OrdresLongs.Regle x : l.regles) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, Souvenirs.CONSIGNE + OrdresLongs.quand(x) + ", " + quoi(x));
@@ -1762,6 +1763,7 @@ public class Travailleur extends PathfinderMob {
                 default -> {}
             }
         }
+        if (nouvelles != null) { r.add(0, nouvelles); reactionSuffit = reponseImposee = true; }
         return String.join(" ", r);
     }
 
@@ -2249,6 +2251,7 @@ public class Travailleur extends PathfinderMob {
         Apprentissage.annuler(this, chefJoueur()); // sa formation s'arrête, le prix rendu à l'ancien chef s'il est en ligne
         Macon.oublier(this); // son chantier était celui de ce chef-là
         Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
+        Espions.finir(this); // il n'espionne plus pour ce chef-là
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());
         chef = null;
         chefNom = "";

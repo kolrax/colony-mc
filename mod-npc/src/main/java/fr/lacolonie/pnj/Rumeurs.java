@@ -56,7 +56,12 @@ final class Rumeurs {
         liste.removeIf(x -> x.meme(f));
         liste.add(f);
         while (liste.size() > MAX) liste.remove(liste.stream().min(Comparator.comparingLong(Fait::jour)).orElseThrow()); // le plus ancien
-        return true;
+        return liste.contains(f); // liste pleine de plus récents : c'est lui qui part
+    }
+
+    /** Oublie le fait de ce genre sur ce chef s'il vaut {@code valeur} (la paix faite : plus de guerre). Vrai s'il l'a oublié. */
+    boolean oublier(String sujet, Genre g, String valeur) {
+        return liste.removeIf(f -> f.genre == g && f.sujet.equalsIgnoreCase(sujet) && f.valeur.equalsIgnoreCase(valeur));
     }
 
     /** Un fait vu de ses yeux, ce jour. */
@@ -110,37 +115,73 @@ final class Rumeurs {
             "ces", "tout", "rien", "quoi", "qui", "travail", "chantier", "mission", "missions", "metier", "mine", "foret", "journee", "hier", "aujourd", "demain",
             "nouveau", "neuf", "autres", "voisins", "colonies", "personne", "quelqu", "quelque");
 
-    /** Une question sur les autres colonies, ou null. */
-    static Question question(String phrase) {
-        String n = Ordres.normaliser(phrase);
+    /** « _ » des pseudos (« Raoul_42 »), que {@link Ordres#normaliser} efface : gardé sous cette marque le temps de la lecture. */
+    static final String SOULIGNE = "qxsoulq";
+
+    /** La phrase lue comme {@link Ordres#normaliser}, les « _ » gardés (sous {@link #SOULIGNE}). */
+    static String plat(String phrase) { return Ordres.normaliser(phrase.replace("_", SOULIGNE)); }
+
+    /**
+     * Une question sur les autres colonies, ou null. Un sujet nommé ne compte que si {@code connu} le reconnaît (un chef
+     * qui a un poste ou des ouvriers, ou un chef dont il a entendu parler) : « quoi de neuf du côté de la forge ? »,
+     * « parle-moi de Lucie » restent aux autres réponses.
+     */
+    static Question question(String phrase, Predicate<String> connu) {
+        String n = plat(phrase);
         Matcher m = SUR.matcher(n);
         while (m.find()) {
-            if (!PAS_UN_NOM.contains(m.group(1))) return new Question(nomTel(phrase, m.group(1)));
+            String nom = m.group(1).replace(SOULIGNE, "_");
+            if (!PAS_UN_NOM.contains(nom)) {
+                String tel = nomTel(phrase, nom);
+                if (connu.test(tel)) return new Question(tel);
+            }
         }
-        return Ordres.dit(n, NOUVELLES) ? new Question(null) : null;
+        return Ordres.dit(Ordres.normaliser(phrase), NOUVELLES) ? new Question(null) : null;
     }
 
-    /** Le nom tel qu'il est écrit dans la phrase (« raoul » → « Raoul »). */
+    /** Sans rien savoir des chefs : tout nom compte (pour les tests). */
+    static Question question(String phrase) { return question(phrase, x -> true); }
+
+    /** Le nom tel qu'il est écrit dans la phrase (« raoul_42 » → « Raoul_42 »). */
     static String nomTel(String phrase, String normalise) {
-        for (String mot : phrase.split("[^\\p{L}0-9_]+")) if (!mot.isEmpty() && Ordres.normaliser(mot).strip().equals(normalise)) return mot;
+        for (String mot : phrase.split("[^\\p{L}0-9_]+"))
+            if (!mot.isEmpty() && plat(mot).strip().replace(SOULIGNE, "_").equals(normalise)) return mot;
         return Character.toUpperCase(normalise.charAt(0)) + normalise.substring(1);
     }
 
-    static final Pattern ESPIONNER = Pattern.compile(" (?:espionn\\w*|epie|epies|epiez|epier) (?:la colonie |le poste |le village |le camp |les gens |les terres |chez )?(?:de |d |du )?([a-z0-9_]+) ");
-    static final Pattern NEGATION = Pattern.compile(" (?:ne|n|pas|jamais|plus) ");
+    /**
+     * L'ordre d'espionner, en tête de proposition : « espionne(z) X », « va / allez / pars espionner X », « épie X », avec
+     * « la colonie de », « chez »… devant le nom. Un sujet devant (« Edgar espionne Raoul », « Raoul nous espionne ») ou
+     * une négation (« n'espionne pas », « espionne pas X ») : ce n'est pas un ordre.
+     */
+    static final Pattern ESPIONNER = Pattern.compile("^ (?:(?:alors|bon|bien|vite|maintenant|toi|chef|donc|et|puis|s il te plait|je veux que tu|il faut) )*"
+            + "(?:(?:va|vas|allez|pars|partez|file|filez|cours|courez|tu vas|tu iras) (?:donc |vite |discretement |en douce )?(?:espionner|epier)|espionne|espionnez|epie|epiez)"
+            + " (?:la colonie |le poste |le village |le camp |les gens |les terres |chez )?(?:de |d |du )?([a-z0-9]+) ");
+    static final Set<String> NEGATIONS = Set.of("pas", "plus", "jamais", "point", "personne", "rien");
+    /** Les propositions d'une phrase (la virgule, le point, « ; », « : », « ! »). */
+    static final Pattern PROPOSITIONS = Pattern.compile("[,.;:!\\n]+");
 
-    /** « Va espionner la colonie de Raoul », « espionne Raoul » : le chef à espionner ; null sinon (question, négation, sans nom). */
+    /** « Va espionner la colonie de Raoul », « espionne Raoul » : le chef à espionner ; null sinon (question, négation, récit, sans nom). */
     static String espionner(String phrase) {
         if (phrase.contains("?")) return null;
-        String n = Ordres.normaliser(phrase);
-        Matcher m = ESPIONNER.matcher(n);
-        if (!m.find() || PAS_UN_NOM.contains(m.group(1)) || NEGATION.matcher(n.substring(0, m.start() + 1)).find()) return null;
-        return nomTel(phrase, m.group(1));
+        for (String p : PROPOSITIONS.split(phrase)) {
+            Matcher m = ESPIONNER.matcher(plat(p));
+            if (!m.find()) continue;
+            String nom = m.group(1).replace(SOULIGNE, "_");
+            if (PAS_UN_NOM.contains(nom) || NEGATIONS.contains(nom)) return null;
+            return nomTel(phrase, nom);
+        }
+        return null;
     }
 
-    /** Le reste de la phrase sans l'ordre d'espionner (pour les autres ordres). */
+    /** L'ordre lui-même, dans la phrase d'origine (« va espionner la colonie de Raoul ») : retiré pour lire les autres ordres. */
+    static final Pattern ORDRE_ESPION = Pattern.compile("(?iu)(?<![\\p{L}0-9_])(?:(?:va|vas|allez|pars|partez|file|filez|cours|courez)\\s+(?:donc\\s+|vite\\s+|discrètement\\s+|en douce\\s+)?)?"
+            + "(?:espionn(?:e|ez|er)|[ée]pi(?:e|ez|er))\\s+(?:(?:la colonie|le poste|le village|le camp|les gens|les terres|chez)\\s+)?(?:(?:de|du)\\s+|d['’]\\s*)?[\\p{L}0-9_]+");
+
+    /** Le reste de la phrase sans l'ordre d'espionner (« Espionne Raoul et ramène du fer » → « ramène du fer »). */
     static String sansEspionner(String phrase) {
-        return phrase.replaceAll("(?iu)\\b(?:va |allez |pars |file )?(?:espionn\\p{L}*|épie[rz]?|epie[rz]?|épies|epies)\\b[^.;!,]*", " ").replaceAll("\\s{2,}", " ").strip();
+        String r = ORDRE_ESPION.matcher(phrase).replaceFirst(" ");
+        return r.replaceAll("\\s{2,}", " ").strip().replaceFirst("(?iu)^(?:[,;:.!]\\s*)?(?:(?:et|puis|ensuite)\\b)?\\s*", "").strip();
     }
 
     // --- Raconter --------------------------------------------------------------------------------------------------
@@ -252,10 +293,10 @@ final class Rumeurs {
         return String.join(" ", r);
     }
 
-    /** Pour l'IA : 5 faits au plus, courts (vide s'il ne sait rien). */
-    String pourIA(long jour) {
-        if (liste.isEmpty()) return "";
-        List<Fait> l = new ArrayList<>(liste);
+    /** Pour l'IA : 5 faits au plus, courts, parmi ceux que {@code permis} laisse dire (vide s'il ne sait rien). */
+    String pourIA(long jour, Predicate<Fait> permis) {
+        List<Fait> l = new ArrayList<>(liste.stream().filter(permis).toList());
+        if (l.isEmpty()) return "";
         l.sort(Comparator.comparingLong(Fait::jour).reversed());
         List<String> r = new ArrayList<>();
         for (Fait f : l.subList(0, Math.min(5, l.size()))) {

@@ -175,6 +175,7 @@ final class Armee {
             if (qui.isEmpty()) r.add("Nous ne sommes pas en guerre" + (g.paix != null ? " avec " + g.paix : "") + ", chef.");
             for (UUID u : qui) {
                 c.paix(t.chef, u);
+                Espions.paix(s, t.chef, moi, u, en.get(u)); // plus de guerre entre eux : le fait est oublié des deux côtés (Rumeurs)
                 for (Travailleur w : armee(s, t.chef)) if (u.toString().equals(w.memoire.getString("guerre_assaut"))) finir(w);
                 r.add(texte(t, "guerre_paix", en.get(u), null, "La paix avec " + en.get(u) + ". Enfin."));
                 Courrier.avis(s, u, "guerre", true, "La paix", moi + " fait la paix avec toi. La guerre est finie.");

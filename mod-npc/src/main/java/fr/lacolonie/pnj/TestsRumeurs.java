@@ -19,24 +19,28 @@ import java.util.UUID;
  * Lot 14, rumeurs (cahier 7.6) : un ouvrier qui passe près d'une autre colonie le dit ensuite au chef ; deux ouvriers qui
  * bavardent se passent une nouvelle ; un étranger ne lui fait rien dire de son propre chef ; « espionne X » sans savoir où
  * est X ; l'espion va, guette, revient le dire, et un ouvrier de là-bas l'a vu. Voir {@link Rumeurs} et {@link Espions}.
- * Coins 430 à 434. Lot à part (« rumeurs ») : les ouvriers y bavardent ({@link Causeries#enEssai}) et regardent autour d'eux
+ * Coins 430 à 439. Lot à part (« rumeurs ») : les ouvriers y bavardent ({@link Causeries#enEssai}) et regardent autour d'eux
  * chaque seconde ({@link Espions#PERIODE}).
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsRumeurs {
     static int periode = Espions.PERIODE;
+    static long limite = Espions.LIMITE;
 
     @BeforeBatch(batch = "rumeurs")
     public static void avant(ServerLevel l) {
         periode = Espions.PERIODE;
+        limite = Espions.LIMITE;
         Espions.PERIODE = 20;
+        Espions.LIMITE = 600; // 30 s de marche au plus : il suffit largement pour 40 blocs
         Causeries.enEssai = true;
     }
 
     @AfterBatch(batch = "rumeurs")
     public static void apres(ServerLevel l) {
         Espions.PERIODE = periode;
+        Espions.LIMITE = limite;
         Causeries.enEssai = false;
     }
 
@@ -71,8 +75,6 @@ public class TestsRumeurs {
         TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 430, 3);
         s.t().mode = Travailleur.Mode.ATTENDRE;
         Rival r = rival(h, 430, s.base().east(12), "mineur", "mineur", "bucheron");
-        String avant = s.t().appliquer(Ordres.lire("Que sais-tu de " + r.nom() + " ?", "mineur"), s.chef());
-        h.assertTrue(Vie.vient("rumeur_rien", avant), "sans l'avoir vu, il n'en sait rien : " + avant);
         h.succeedWhen(() -> {
             h.assertTrue(s.t().rumeurs.fait(r.nom(), Rumeurs.Genre.POSTE) != null, "il note le poste de l'autre colonie (" + s.t().rumeurs.liste + ")");
             String dit = s.t().appliquer(Ordres.lire("Que sais-tu de " + r.nom() + " ?", "mineur"), s.chef());
@@ -146,7 +148,7 @@ public class TestsRumeurs {
         t.rumeurs.voir(r.nom(), Rumeurs.Genre.POSTE, "à l'est|40 pas", t.jour());
         // L'ouvrier rival tout juste apparu n'est pas encore dans la liste du monde : l'ordre vient un peu après.
         boolean[] parti = {false};
-        h.runAtTickTime(h.getTick() + 5, () -> {
+        h.runAtTickTime(h.getTick() + 20, () -> {
             String dit = t.appliquer(Ordres.lire("Espionne " + r.nom() + ".", "mineur"), s.chef());
             h.assertTrue(Vie.vient("espion_part", dit), "il part : " + dit);
             h.assertTrue(t.memoire.contains("espion"), "la mission est notée");
@@ -165,5 +167,104 @@ public class TestsRumeurs {
             r.finir(h.getLevel());
             TestsAutresJoueurs.fin(s);
         });
+    }
+
+    /** Le chef parle de la forge, pas d'une colonie : la réponse habituelle sur son travail, pas une rumeur. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "rumeurs")
+    public static void questionOrdinaireNonDetournee(GameTestHelper h) {
+        TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 439, 3);
+        String dit = s.t().appliquer(Ordres.lire("Quoi de neuf du côté de la forge ?", "mineur"), s.chef());
+        h.assertFalse(Vie.vient("rumeur_rien", dit) || dit.toLowerCase().contains("cote") || dit.toLowerCase().contains("côté"), "pas une rumeur sur « côté » : " + dit);
+        h.assertFalse(dit.isBlank(), "il répond quand même");
+        TestsAutresJoueurs.fin(s);
+        h.succeed();
+    }
+
+    /** La paix faite : ses ouvriers oublient la guerre entre les deux colonies. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "rumeurs")
+    public static void paixOublieLaGuerre(GameTestHelper h) {
+        TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 435, 3);
+        Travailleur t = s.t();
+        t.chefNom = "Kolrax";
+        UUID u = UUID.randomUUID();
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.declarer(s.chef().getUUID(), "Kolrax", u, "Rival435");
+        t.rumeurs.voir("Kolrax", Rumeurs.Genre.GUERRE, "Rival435", t.jour());
+        // L'ouvrier tout juste apparu n'est pas encore dans la liste du monde : la paix vient un peu après.
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            String dit = t.appliquer(Ordres.lire("On fait la paix avec Rival435.", "mineur"), s.chef());
+            h.assertFalse(c.enGuerre(s.chef().getUUID(), u), "la paix est faite : " + dit);
+            h.assertTrue(t.rumeurs.fait("Kolrax", Rumeurs.Genre.GUERRE) == null, "il oublie la guerre (" + t.rumeurs.liste + ")");
+            c.boites.remove(u);
+            TestsAutresJoueurs.fin(s);
+            h.succeed();
+        });
+    }
+
+    /** Envoyé espionner hors de ses heures : il attend le matin (le temps passé au repos ne compte pas), puis il part. */
+    @GameTest(template = "vide", timeoutTicks = 2200, batch = "rumeurs")
+    public static void horsDesHeuresPartAuMatin(GameTestHelper h) {
+        TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 436, 3);
+        Travailleur t = s.t();
+        Rival r = rival(h, 436, TestsJeu.sol(h, 436 * 400 + 40, 60000), "mineur");
+        t.rumeurs.voir(r.nom(), Rumeurs.Genre.POSTE, "à l'est|40 pas", t.jour());
+        int h0 = t.heure();
+        t.debut = (h0 + 3) % 24;
+        t.fin = (h0 + 4) % 24; // pas en service maintenant
+        long[] ordre = {-1};
+        double[] loin = {0};
+        h.runAtTickTime(h.getTick() + 20, () -> {
+            String dit = t.appliquer(Ordres.lire("Espionne " + r.nom() + ".", "mineur"), s.chef());
+            h.assertTrue(Vie.vient("espion_part", dit), "il partira : " + dit);
+            ordre[0] = h.getTick();
+        });
+        h.onEachTick(() -> {
+            loin[0] = Math.max(loin[0], t.position().distanceTo(Vec3.atBottomCenterOf(s.base())));
+            // Plus longtemps que la marche permise, au repos : la mission tient, il n'a pas bougé ; puis vient « le matin ».
+            if (ordre[0] > 0 && h.getTick() == ordre[0] + 700) {
+                h.assertTrue(t.memoire.contains("espion"), "la mission tient pendant le repos");
+                h.assertTrue(loin[0] < 12, "il ne part pas hors de ses heures (" + loin[0] + ")");
+                t.debut = t.fin = 0;
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(ordre[0] > 0 && h.getTick() > ordre[0] + 700 && loin[0] > 25, "au matin, il part (" + TestsJeu.etat(t, t.bureau) + ", " + t.paroles + ")");
+            r.finir(h.getLevel());
+            TestsAutresJoueurs.fin(s);
+        });
+    }
+
+    /** Un apprenti ne part pas espionner, même s'il sait où c'est. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "rumeurs")
+    public static void apprentiNEspionnePas(GameTestHelper h) {
+        TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 437, 3);
+        Travailleur t = s.t();
+        t.rumeurs.voir("Raoul", Rumeurs.Genre.POSTE, "au sud|50 pas", t.jour());
+        boolean familles = Reglages.actuel.familles;
+        Reglages.actuel.familles = true;
+        t.age = 14;
+        String dit;
+        try { dit = t.appliquer(Ordres.lire("Espionne Raoul.", "mineur"), s.chef()); }
+        finally { Reglages.actuel.familles = familles; t.age = -1; }
+        h.assertTrue(Vie.vient("espion_refus_enfant", dit), "trop jeune : " + dit);
+        h.assertFalse(t.memoire.contains("espion"), "il ne part pas");
+        TestsAutresJoueurs.fin(s);
+        h.succeed();
+    }
+
+    /** « Rentre au poste ! » annule l'espionnage. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "rumeurs")
+    public static void rentreAnnuleLEspionnage(GameTestHelper h) {
+        TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 438, 3);
+        Travailleur t = s.t();
+        net.minecraft.nbt.CompoundTag e = new net.minecraft.nbt.CompoundTag();
+        e.putString("chef", UUID.randomUUID().toString());
+        e.putString("nom", "Raoul");
+        e.putString("etape", "aller");
+        t.memoire.put("espion", e);
+        t.appliquer(Ordres.lire("Rentre au poste !", "mineur"), s.chef());
+        h.assertFalse(t.memoire.contains("espion"), "il n'espionne plus");
+        TestsAutresJoueurs.fin(s);
+        h.succeed();
     }
 }

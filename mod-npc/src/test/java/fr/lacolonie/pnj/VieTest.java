@@ -81,7 +81,7 @@ class VieTest {
     @Test
     void rumeursSeLit() {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/rumeurs.txt"));
-        assertEquals(19, banque.size());
+        assertEquals(20, banque.size());
         for (var e : banque.entrySet()) {
             assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
             assertTrue(Rumeurs.SECOURS.containsKey(e.getKey()), e.getKey() + " : une clé que le code dit");

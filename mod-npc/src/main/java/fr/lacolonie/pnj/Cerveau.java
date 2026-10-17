@@ -81,6 +81,7 @@ final class Cerveau {
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         // Très grave en plein combat (sans consigne du chef) : il rompt et recule ; sinon, il ne cherche pas de nouveau combat.
         if (t.action != null) {
+            Espions.compter(t); // en route pour espionner : le temps de marche compte
             if (!Blessures.horsDeCombat(t)) m.vigilance(t);
             else if (t.action instanceof Actions.Attaquer a) {
                 dire(t, "fuite", 30, "Je suis trop mal en point pour me battre !");

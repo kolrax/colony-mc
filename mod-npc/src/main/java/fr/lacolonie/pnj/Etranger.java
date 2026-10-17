@@ -53,7 +53,7 @@ final class Etranger {
         Debauche.Offre offre = Debauche.lire(dit);
         if (offre != null) return debaucher(t, p, nom, offre);
         // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : ce qu'il sait des autres colonies, pas de la sienne (Espions).
-        Rumeurs.Question rumeur = Rumeurs.question(dit);
+        Rumeurs.Question rumeur = Rumeurs.question(dit, Espions.connu(t));
         if (rumeur != null) return Espions.repondreEtranger(t, rumeur);
         Debauche.Pourboire paye = Debauche.pourboire(dit);
         Ordres.Lecture l = Ordres.lire(paye != null ? paye.reste() : dit, t.metier);

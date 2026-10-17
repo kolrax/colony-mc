@@ -35,7 +35,45 @@ class RumeursTest {
         assertNull(Rumeurs.espionner("N'espionne pas Raoul."));
         assertNull(Rumeurs.espionner("Tu as espionné Raoul ?"));
         assertNull(Rumeurs.espionner("Va miner du fer."));
-        assertEquals("puis ramène du fer.", Rumeurs.sansEspionner("Espionne Raoul, puis ramène du fer.").replaceFirst("^,\\s*", ""));
+        assertEquals("ramène du fer.", Rumeurs.sansEspionner("Espionne Raoul, puis ramène du fer."));
+        // Seulement l'ordre, en tête de proposition : ni un récit, ni un sujet devant, ni une négation.
+        for (String p : List.of("On m'a dit qu'Edgar espionne Raoul, coupe du bois.", "Raoul nous espionne, garde le dépôt.", "espionne pas Raoul",
+                "Edgar, il espionne Raoul.", "Je crois qu'ils épient Raoul."))
+            assertNull(Rumeurs.espionner(p), p);
+        assertEquals("Raoul", Rumeurs.espionner("Bertrand, va espionner chez Raoul."));
+        assertEquals("Raoul", Rumeurs.espionner("Coupe du bois, puis épie Raoul."));
+        // Le reste de la phrase reste aux autres ordres.
+        assertEquals("ramène du fer", Rumeurs.sansEspionner("Espionne Raoul et ramène du fer"));
+        assertEquals("ramène du fer", Rumeurs.sansEspionner("Épie la colonie de Raoul et ramène du fer"));
+    }
+
+    /** Les pseudos à « _ » (« Raoul_42 ») : lus tels quels. */
+    @Test
+    void pseudosASouligne() {
+        assertEquals(new Rumeurs.Question("Raoul_42"), Rumeurs.question("Que sais-tu de Raoul_42 ?"));
+        assertEquals("Raoul_42", Rumeurs.espionner("Espionne la colonie de Raoul_42."));
+        assertEquals("ramène du fer", Rumeurs.sansEspionner("Espionne Raoul_42 et ramène du fer"));
+    }
+
+    /** Un nom inconnu (ni chef, ni dont il a entendu parler) : la question va aux autres réponses. */
+    @Test
+    void sujetInconnu() {
+        java.util.function.Predicate<String> chefs = n -> n.equals("Raoul");
+        assertNull(Rumeurs.question("Quoi de neuf du côté de la forge ?", chefs));
+        assertNull(Rumeurs.question("Des nouvelles du four ?", chefs));
+        assertNull(Rumeurs.question("Parle-moi de Lucie.", chefs));
+        assertEquals(new Rumeurs.Question("Raoul"), Rumeurs.question("Parle-moi de Raoul.", chefs));
+        assertEquals(new Rumeurs.Question(null), Rumeurs.question("Quelles nouvelles ?", chefs));
+    }
+
+    /** La paix : le fait de guerre s'oublie. */
+    @Test
+    void oublierLaGuerre() {
+        Rumeurs r = new Rumeurs();
+        r.voir("Raoul", GUERRE, "Nielscutt", 2);
+        assertFalse(r.oublier("Raoul", GUERRE, "Ysolde"), "pas cette guerre-là");
+        assertTrue(r.oublier("Raoul", GUERRE, "Nielscutt"));
+        assertNull(r.fait("Raoul", GUERRE));
     }
 
     @Test
@@ -63,8 +101,8 @@ class RumeursTest {
         r.voir("Raoul", GUERRE, "Nielscutt", 2);
         // Ce qu'il ne peut pas dire (sur son propre chef, à un étranger) : comme s'il n'en savait rien.
         assertEquals("Raoul ? Je ne sais rien de lui.", r.raconter(new Rumeurs.Question("Raoul"), 3, SECOURS, f -> !f.sujet().equals("Raoul")));
-        assertEquals("", new Rumeurs().pourIA(3));
-        assertTrue(r.pourIA(3).contains("Raoul et Nielscutt sont en guerre"), r.pourIA(3));
+        assertEquals("", new Rumeurs().pourIA(3, f -> true));
+        assertTrue(r.pourIA(3, f -> true).contains("Raoul et Nielscutt sont en guerre"), r.pourIA(3, f -> true));
     }
 
     @Test
@@ -82,6 +120,9 @@ class RumeursTest {
         assertEquals(Rumeurs.MAX, r.liste.size());
         assertNull(r.fait("Raoul", NOMBRE), "le plus ancien part");
         assertNotNull(r.fait("Chef29", MORT));
+        // Liste pleine de plus récents : le fait ajouté part aussitôt, et noter le dit.
+        assertFalse(r.voir("Vieux", MORT, "X", 0));
+        assertNull(r.fait("Vieux", MORT));
     }
 
     @Test
