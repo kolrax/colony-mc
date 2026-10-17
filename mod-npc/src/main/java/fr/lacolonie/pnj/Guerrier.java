@@ -45,7 +45,7 @@ final class Guerrier extends Metier {
     static final int POINTS_MAX = 16;
 
     Guerrier() {
-        super("guerrier", "Guerrier", "Garde le bureau, fait la ronde autour ou escorte son chef, et tue les monstres. Il ne lève son arme sur un homme que sur l'ordre de son chef ; si quelqu'un le frappe, il recule sans rendre le coup. Il ne touche jamais aux villageois ni aux bêtes.",
+        super("guerrier", "Guerrier", "Défend la colonie, escorte son chef ou attaque l'ennemi, et tue les monstres. Il ne lève son arme sur un homme qu'en guerre déclarée au poste, pour défendre ou attaquer ; il marche en rangs, se replie quand il est trop blessé et lève son bouclier s'il en a un. Il ne touche jamais aux villageois ni aux bêtes.",
                 true, "nourriture", "#minecraft:swords", "#minecraft:axes", "minecraft:bow|minecraft:crossbow", "#minecraft:arrows", "soin", "soin");
         // Les trois missions des gardes (refonte, partie 6), puis la garde du bureau et la ronde d'avant.
         commandes.add(new Commande(Guerre.DEFENDRE, Statut.DEFENDRE, null));
