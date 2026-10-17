@@ -1,0 +1,267 @@
+# Les rumeurs et l'espionnage : ce que les ouvriers savent des autres colonies (cahier 7.5 et 7.6). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+# Chaque section a au moins quatre répliques pour tous.
+#
+# QUI PARLE, À QUI
+# - L'ouvrier parle à son chef (tutoiement, « chef » ou {chef}) ; à un étranger, il le tutoie aussi.
+# - Aucun fait inventé : l'ouvrier ne dit que ce que les variables lui donnent. Quand le code ajoute
+#   l'information après la réplique (rumeur_entendu_intro, rumeur_trahit_chef, espion_retour),
+#   la réplique finit par « : » et n'annonce rien d'autre.
+# - Pas d'accord de genre sur celui qui parle (« on m'a repéré » plutôt que « j'ai été repéré »).
+#
+# VARIABLES
+#   {chef}      nom du chef de l'ouvrier (partout)
+#   {nom}       le chef d'une autre colonie, celui dont on parle
+#   {nombre}    nombre d'ouvriers vus (écrit « {nombre} ouvriers » : « 1 ouvriers » est à corriger par le code)
+#   {metiers}   les métiers vus, déjà en texte : « deux mineurs et un bûcheron »
+#   {jours}     quand, déjà en texte : « hier », « il y a 3 jours » (en tête de phrase : majuscule par le code)
+#   {direction} où, déjà en texte avec sa préposition : « au nord », « au sud-est »
+#   {distance}  à quelle distance, nombre et unité : « 300 pas »
+#   {autre}     le chef d'une autre colonie, en guerre contre {nom}
+#   {de}        prénom de l'ouvrier qui a raconté la nouvelle
+#   {a}, {b}    rumeur_passe : {a} dit la bulle à {b} (seul {b} est nommé dans le texte)
+#
+# CLÉS
+#   rumeur_vu_nombre        il a vu {nombre} ouvriers chez {nom}, {jours}
+#   rumeur_vu_metiers       il a vu les métiers de chez {nom}, {jours}
+#   rumeur_vu_poste         il sait où est le poste de {nom}
+#   rumeur_guerre           {nom} est en guerre contre {autre}
+#   rumeur_mort             un ouvrier de {nom} est mort
+#   rumeur_naissance        un enfant est né chez {nom}
+#   rumeur_debauche         {nom} débauche les ouvriers des autres
+#   rumeur_boutique         {nom} tient boutique, vend et achète
+#   rumeur_entendu_intro    avant une nouvelle de seconde main : {de} la lui a dite
+#   rumeur_rien             il ne sait rien sur {nom}
+#   rumeur_rien_du_tout     il n'a aucune nouvelle de personne
+#   rumeur_tais_chef        un étranger lui demande des nouvelles de {chef} : il se tait
+#   rumeur_trahit_chef      fourbe ou mécontent : il lâche quand même une info sur {chef}, à voix basse
+#   espion_part             il part espionner la colonie de {nom}
+#   espion_inconnu          il ne sait pas où est la colonie de {nom}
+#   espion_retour           il revient de chez {nom} ; ce qu'il a vu suit
+#   espion_repere           un ouvrier de {nom} l'a repéré
+#   espion_refus_enfant     un enfant à qui l'on demande d'espionner
+#   rumeur_passe            bulle : il passe une nouvelle sur {nom} à un collègue
+
+[rumeur_vu_nombre]
+{jours}, j'ai vu {nombre} ouvriers chez {nom}.
+{jours}, en passant chez {nom}, j'ai compté {nombre} ouvriers, à peu près.
+Chez {nom}, j'ai compté {nombre} ouvriers. C'était {jours}.
+{nom} a {nombre} ouvriers. Je les ai vus de mes yeux, {jours}.
+{jours}, chez {nom}, j'ai vu {nombre} ouvriers à l'ouvrage.
+{nombre} ouvriers chez {nom}, chef. Vus {jours}.
+calme: J'ai bien compté, chef : {nombre} ouvriers chez {nom}, {jours}.
+peureux: {jours}, chez {nom}… {nombre} ouvriers. Je n'ai pas traîné.
+fourbe: {jours}, j'ai jeté un œil chez {nom}. {nombre} ouvriers, pas un de plus.
+colerique: {nom} ? {nombre} ouvriers, vus {jours}. Rien de quoi trembler.
+
+[rumeur_vu_metiers]
+{jours}, chez {nom}, j'ai vu {metiers}.
+Chez {nom}, il y a {metiers}. Je les ai vus {jours}.
+{nom} emploie {metiers}. C'était {jours}.
+{jours}, j'ai croisé les gens de {nom} : {metiers}.
+Les ouvriers de {nom} ? {metiers}, d'après ce que j'ai vu {jours}.
+{jours}, j'ai vu chez {nom} {metiers}, chacun à son ouvrage.
+calme: Chez {nom}, chef : {metiers}. Je les ai vus {jours}.
+peureux: {jours}, de loin… chez {nom}, j'ai vu {metiers}.
+fourbe: Bon à savoir, chef : {nom} a {metiers}. Vu {jours}.
+
+[rumeur_vu_poste]
+Le poste de {nom} est {direction}, à {distance} d'ici.
+{nom} a son poste {direction}. Compte {distance}.
+Je sais où est {nom} : {direction}, à {distance}.
+Va {direction}, sur {distance} : tu trouveras le poste de {nom}.
+Le poste de {nom} ? {direction}, à {distance} environ.
+{nom} a son poste {direction}, à {distance} de chez nous.
+calme: Le poste de {nom} est {direction}, à {distance}. J'ai bien noté la route.
+peureux: {nom} est {direction}… à {distance} seulement. C'est près.
+fourbe: Je connais le chemin de chez {nom} : {direction}, à {distance}.
+colerique: {nom} ? {direction}, à {distance}. Pas si loin, si on doit y aller.
+
+[rumeur_guerre]
+{nom} et {autre} sont en guerre.
+On dit que {nom} fait la guerre à {autre}.
+Ça se bat entre {nom} et {autre}.
+{nom} a déclaré la guerre à {autre}. Ou l'inverse.
+Entre {nom} et {autre}, c'est la guerre.
+Gare aux routes : {nom} et {autre} se font la guerre.
+calme: {nom} et {autre} sont en guerre. Mieux vaut rester hors de ça.
+peureux: {nom} et {autre} se battent… pourvu que ça ne vienne pas jusqu'ici.
+fourbe: {nom} et {autre} s'usent l'un l'autre. Ça pourrait nous servir.
+colerique: {nom} contre {autre} ! Qu'ils se cognent, tant que c'est loin d'ici.
+
+[rumeur_mort]
+Un ouvrier de {nom} est mort.
+Chez {nom}, on a perdu un des leurs.
+{nom} a un ouvrier de moins. Il est mort.
+On enterre quelqu'un chez {nom}.
+Il y a un deuil chez {nom}.
+Mauvaise nouvelle chez {nom} : un ouvrier est mort.
+calme: Un des gens de {nom} nous a quittés. Paix à son âme.
+peureux: Un mort chez {nom}… ça fait froid dans le dos.
+fourbe: {nom} a perdu un ouvrier. Ça lui fait un bras de moins.
+
+[rumeur_naissance]
+Un enfant est né chez {nom}.
+Chez {nom}, la famille s'agrandit.
+{nom} a une bouche de plus à nourrir : un enfant est né.
+On fête une naissance chez {nom}.
+Il y a un petit de plus chez {nom}.
+Bonne nouvelle chez {nom} : un enfant est né.
+calme: Un enfant est né chez {nom}. C'est toujours une bonne chose.
+peureux: Un bébé chez {nom} ! Ça doit pleurer, la nuit.
+colerique: Chez {nom}, ça fait des enfants. Il faudra bien les nourrir.
+
+[rumeur_debauche]
+{nom} essaie de débaucher les ouvriers des autres.
+On dit que {nom} paie pour voler les ouvriers d'autrui.
+Méfie-toi de {nom} : il attire les ouvriers avec des pièces.
+{nom} fait des offres aux ouvriers des autres.
+Il paraît que {nom} débauche. Garde un œil sur les nôtres.
+{nom} va de colonie en colonie, la bourse ouverte.
+calme: {nom} débauche, chef. Moi, je reste. Mais tous ne diront pas pareil.
+peureux: {nom} vient chercher des ouvriers… pas ici, au moins ?
+fourbe: {nom} paie bien, à ce qu'on dit. Je dis ça, je ne dis rien.
+colerique: {nom} vole les ouvriers des autres. Qu'il vienne, je l'attends !
+
+[rumeur_boutique]
+{nom} tient boutique.
+On peut acheter chez {nom}. Il a une boutique.
+{nom} vend et achète. Ça peut servir.
+Il y a une boutique chez {nom}.
+{nom} fait commerce, à ce qu'on dit.
+Si on manque de quelque chose, {nom} a une boutique.
+calme: {nom} a ouvert boutique. Bon à savoir, si on manque de quelque chose.
+fourbe: {nom} tient boutique. Reste à voir s'il fait de bons prix.
+colerique: {nom} vend, oui. Mais je parie qu'il vend cher.
+
+[rumeur_entendu_intro]
+{de} m'a raconté ceci :
+D'après {de} :
+C'est {de} qui me l'a dit :
+J'ai entendu {de} en parler :
+Je le tiens de {de} :
+{de} me l'a dit, je te le répète :
+calme: Je ne l'ai pas vu moi-même, mais {de} me l'a dit :
+peureux: C'est {de} qui le dit, hein, pas moi :
+fourbe: Un petit bruit, venu de {de} :
+colerique: Si c'est faux, prends-t'en à {de}. Voilà ce qu'on m'a dit :
+
+[rumeur_rien]
+{nom} ? Je ne sais rien de lui.
+Je n'ai rien entendu sur {nom}.
+Personne ne m'a parlé de {nom}.
+{nom}, connais pas. Je n'en sais rien.
+Je n'ai pas de nouvelles de {nom}.
+Sur {nom}, rien. Pas un mot.
+calme: Je ne sais rien de {nom}. Je préfère ne pas inventer.
+peureux: {nom} ? Non… je ne sais rien. Rien du tout.
+fourbe: Sur {nom} ? Rien. Pour l'instant.
+colerique: {nom} ? Comment veux-tu que je sache ? Je n'en sais rien.
+
+[rumeur_rien_du_tout]
+Je n'ai aucune nouvelle.
+Rien de neuf. Je n'ai rien entendu.
+Pas de nouvelles des autres colonies.
+Je ne sais rien de ce qui se passe ailleurs.
+Personne ne m'a rien raconté.
+Rien à dire. Je ne quitte pas mon ouvrage.
+calme: Aucune nouvelle. Le monde est calme, ou je suis sourd.
+peureux: Rien… et c'est tant mieux. Les nouvelles, ça fait peur.
+fourbe: Rien de neuf. Mais j'ouvre l'oreille.
+colerique: Des nouvelles ? Je travaille, moi. Je n'en ai pas.
+
+[rumeur_tais_chef]
+Ce qui se passe chez {chef} ne te regarde pas.
+Demande donc à {chef}.
+Je ne parle pas de {chef}.
+Les affaires de {chef} restent chez {chef}.
+Je n'ai rien à te dire là-dessus.
+Tu poses trop de questions.
+calme: Je sers {chef}. Je ne parle pas de ses affaires.
+peureux: Je… je ne sais rien. Demande à quelqu'un d'autre.
+colerique: Tu veux des nouvelles de {chef} ? Passe ton chemin.
+
+[rumeur_trahit_chef]
+À voix basse : ne dis pas que ça vient de moi.
+Bon… entre nous, alors :
+Je ne devrais pas, mais tant pis :
+Approche. Personne ne doit savoir que je te l'ai dit :
+Tout bas, hein. Je n'ai rien dit :
+Puisque {chef} ne m'écoute jamais, écoute-moi, toi :
+fourbe: Une pièce aurait aidé. Allez, je suis bon prince :
+fourbe: Ça reste entre nous, d'accord ? Voilà :
+colerique: {chef} me traite mal. Alors tant pis pour lui :
+
+[espion_part]
+J'y vais, chef. Je reviens avec des nouvelles de {nom}.
+Entendu. Je vais voir ce qui se passe chez {nom}.
+Je pars chez {nom}. Je garderai les yeux ouverts.
+Compris, chef. Personne ne me verra chez {nom}.
+J'irai traîner du côté de {nom}. Tu sauras tout.
+Bien, chef. Je file en douce chez {nom}.
+calme: Je pars chez {nom}. Je regarderai bien, sans me presser.
+peureux: Chez {nom} ? Bon… j'y vais. Mais je reviens vite.
+fourbe: Voir sans être vu : c'est mon métier, chef. J'y vais.
+colerique: J'y vais. Et si {nom} me cherche, il me trouvera.
+
+[espion_inconnu]
+Je ne sais pas où est la colonie de {nom}.
+{nom} ? Je ne connais pas le chemin.
+Où vit {nom} ? Je n'en ai aucune idée.
+Il faudrait d'abord savoir où est {nom}.
+Je veux bien y aller, mais où ? Je ne sais pas où est {nom}.
+Personne ne m'a dit où était {nom}.
+peureux: Partir sans savoir où ? Je me perdrais, chef.
+fourbe: Dis-moi où est {nom}, et j'irai voir.
+colerique: Où ça ? Je ne vais pas marcher au hasard !
+
+[espion_retour]
+Me voilà, chef. J'arrive de chez {nom}.
+Je reviens de chez {nom}. Écoute :
+J'ai fait un tour chez {nom}. Voilà ce que j'ai vu :
+De retour, chef. Chez {nom}, j'ai vu ceci :
+Personne ne m'a vu chez {nom}. Voilà ce que je sais :
+J'ai fait le tour de chez {nom}. Écoute bien :
+calme: Je reviens de chez {nom}. J'ai bien regardé :
+peureux: Ouf, me revoilà… Chez {nom}, j'ai vu ceci :
+fourbe: Chez {nom}, ils ne se doutent de rien. Voilà :
+
+[espion_repere]
+Un ouvrier de {nom} m'a repéré. J'ai dû filer.
+On m'a vu chez {nom}. J'ai pris mes jambes à mon cou.
+Les gens de {nom} m'ont repéré, chef. Ils savent qu'on les guette.
+Raté : un ouvrier de {nom} m'a vu.
+On m'a surpris chez {nom}. J'ai rebroussé chemin.
+Chez {nom}, on m'a remarqué. Ils vont se méfier.
+calme: On m'a vu chez {nom}. J'ai préféré rentrer.
+peureux: Ils m'ont vu ! Chez {nom}, ils m'ont vu ! J'ai couru, chef.
+fourbe: Un ouvrier de {nom} m'a vu. Je lui ai dit que je m'étais perdu.
+colerique: Un gars de {nom} m'a repéré. Il a de la chance que j'aie filé.
+
+[espion_refus_enfant]
+Je suis trop jeune pour ça.
+Maman dit que je ne dois pas aller si loin.
+Espionner ? Mais je n'ai pas l'âge, moi.
+On me verrait tout de suite, à mon âge.
+Plus tard, je le ferai. Pas maintenant.
+Je n'ai pas le droit de quitter le poste.
+peureux: Partir si loin, sans personne ? Non, j'ai trop peur.
+fourbe: Et tu me donnes quoi ? Non, je plaisante. Je n'ai pas le droit.
+colerique: Je ne suis plus un bébé ! Mais on m'a défendu d'y aller.
+
+[rumeur_passe]
+Dis, {b}, tu connais la nouvelle sur {nom} ?
+{b}, écoute ça. C'est à propos de {nom}.
+Tu as entendu, {b} ? Il se passe des choses chez {nom}.
+{b}, j'ai des nouvelles de {nom}.
+Viens par là, {b}. Je sais quelque chose sur {nom}.
+Tu ne devineras jamais, {b}. C'est sur {nom}.
+calme: {b}, une nouvelle de chez {nom}. Écoute.
+peureux: {b}, tu sais ce qu'on dit sur {nom} ? Ça m'inquiète.
+fourbe: {b}, approche. Sur {nom}, j'en sais une bonne.
+colerique: {b} ! Tu sais ce que fait {nom} ?

@@ -77,7 +77,7 @@ final class Causeries {
             t.getNavigation().stop();
             t.getLookControl().setLookAt(o);
             if (t != c.a || age < c.prochaine) return Actions.Etat.EN_COURS;
-            if (c.suivante >= c.textes.size()) { c.fini = true; Relations.causerie(c.a, c.b); return Actions.Etat.OK; }
+            if (c.suivante >= c.textes.size()) { c.fini = true; Relations.causerie(c.a, c.b); Espions.causerie(c.a, c.b); return Actions.Etat.OK; }
             Travailleur qui = c.conv.repliques().get(c.suivante).deA() ? c.a : c.b;
             String texte = c.textes.get(c.suivante++);
             qui.dire(texte);

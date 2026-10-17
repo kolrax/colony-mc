@@ -52,6 +52,9 @@ final class Etranger {
     static String repondre(Travailleur t, ServerPlayer p, String nom, String dit) {
         Debauche.Offre offre = Debauche.lire(dit);
         if (offre != null) return debaucher(t, p, nom, offre);
+        // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : ce qu'il sait des autres colonies, pas de la sienne (Espions).
+        Rumeurs.Question rumeur = Rumeurs.question(dit);
+        if (rumeur != null) return Espions.repondreEtranger(t, rumeur);
         Debauche.Pourboire paye = Debauche.pourboire(dit);
         Ordres.Lecture l = Ordres.lire(paye != null ? paye.reste() : dit, t.metier);
         Courrier c = Courrier.de(p.getServer());
@@ -127,6 +130,7 @@ final class Etranger {
         if (raison == Debauche.Raison.ACCEPTE) {
             if (!encaisser(t, p, o.pieces())) return texte(t, "debauche_pieces", nom, prix, "Montre-moi d'abord les pièces, et on en reparlera.");
             rendre(t);
+            Espions.evenement(serveur, t.chef, nom, Rumeurs.Genre.DEBAUCHE, t.prenom); // ses compagnons présents savent qui débauche (Rumeurs)
             Courrier.ecrireTexte(t, "Mon départ", texte(t, "debauche_lettre_depart", nom, prix,
                     nom + " m'offre " + Boutique.pieces(o.pieces()) + " : je pars à son service. Sans rancune, " + t.chefNom + "."), true);
             Cerveau.journal(t.prenom + " quitte " + t.chefNom + " pour " + nom + " (" + o.pieces() + " pièces)");

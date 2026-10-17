@@ -158,6 +158,8 @@ final class Armee {
             if (x == null || x.getKey().equals(t.chef)) r.add("Je ne connais pas de colonie à ce nom, chef. Contre qui donc ?");
             else {
                 c.declarer(t.chef, moi, x.getKey(), x.getValue());
+                Espions.evenement(s, t.chef, moi, Rumeurs.Genre.GUERRE, x.getValue()); // les ouvriers présents des deux côtés le savent (Rumeurs)
+                Espions.evenement(s, x.getKey(), x.getValue(), Rumeurs.Genre.GUERRE, moi);
                 r.add(texte(t, "guerre_declaree", x.getValue(), null, "C'est donc la guerre contre " + x.getValue() + "."));
                 // Le chef ennemi l'apprend par une lettre à son poste.
                 Map<String, String> v = new HashMap<>(Map.of("ennemi", moi, "chef", x.getValue()));

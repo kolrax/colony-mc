@@ -347,6 +347,8 @@ public class Travailleur extends PathfinderMob {
     boolean reponseImposee;
     /** Sa mémoire longue : promesses, insultes, compliments, cadeaux, coups, ordres longs, marchés (NBT « Souvenirs »). */
     final Souvenirs souvenirs = new Souvenirs();
+    /** Ce qu'il sait des autres colonies, vu ou entendu (Rumeurs, Espions ; lot 14). */
+    final Rumeurs rumeurs = new Rumeurs();
     /** Ce qu'il répond tout de suite à ce qui le marque dans la phrase du chef (le temps d'appliquer un ordre). */
     String reaction = "";
     /** La réaction dit tout (récit, phrase courte) : pas de « je n'ai pas compris » en plus. */
@@ -1355,6 +1357,7 @@ public class Travailleur extends PathfinderMob {
             if (!vieux && !memoire.getBoolean("tombe_autrui") && !dAutrui(src.getEntity(), chef)) Courrier.reputer(this, Recrutement.MORT);
             Humeur.deuil(this); // ses compagnons du même chef en deuil
             Deuil.mort(this, tombe != null ? tombe : blockPosition()); // sa tombe, et la lettre au chef absent
+            Espions.evenement(sl.getServer(), chef, chefNom, Rumeurs.Genre.MORT, prenom); // ses compagnons présents le savent (Rumeurs)
             Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
                     + ") est mort" + (vieux ? " de vieillesse, à " + Ages.ansTexte(age) + "," : "") + " en " + blockPosition().toShortString() + ", "
                     + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
@@ -1709,6 +1712,14 @@ public class Travailleur extends PathfinderMob {
         int h = IA.heure(this);
         reactionSuffit = false;
         if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
+        // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : il ne dit que ce qu'il a vu ou entendu (Rumeurs) ; ni ragot inventé, ni l'IA à sa place.
+        Rumeurs.Question rumeur = Rumeurs.question(l.texte);
+        if (rumeur != null) {
+            l.faire.removeIf(f -> f.id().equals("ragot"));
+            l.intentions.remove(Ordres.Intention.AVANCEMENT);
+            reactionSuffit = reponseImposee = true;
+            return rumeurs.raconter(rumeur, j, Espions.textes(this), f -> true);
+        }
         String famille = Famille.question(this, l.texte); // son âge, ses parents, ses enfants (lot 13)
         if (famille != null) { reactionSuffit = reponseImposee = true; return famille; }
         // Les ordres longs : leur phrase est retirée de l.texte (« s'il pleut, rentre au poste » ne laisse rien) ; chacun est noté.
@@ -2001,7 +2012,9 @@ public class Travailleur extends PathfinderMob {
             g.retraite = true;
             Armee.ordre(this, g, r, true);
         }
-        if (duChef && l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
+        if (duChef && l.intentions.contains(Ordres.Intention.RENTRER)) { Armee.finir(this); Espions.finir(this); }
+        // « Va espionner la colonie de Raoul » : le chef seulement (Espions) ; c'est le mod qui répond.
+        if (!parRegle && duChef && l.espion != null && l.rang == 0) { Espions.ordre(this, l.espion, r); reponseImposee = true; }
         // La boutique (Boutique, Boutiquier) : l'ouvrir, la fermer, ses prix ; c'est le mod qui répond.
         if (!parRegle && l.boutique != null) { Boutiquier.ordre(this, l.boutique, r); reponseImposee = true; }
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.
@@ -2416,6 +2429,9 @@ public class Travailleur extends PathfinderMob {
         souvenirs.enTextes().forEach(x -> sv.add(StringTag.valueOf(x)));
         t.put("Souvenirs", sv);
         t.putLong("SouvenirsBonus", souvenirs.jourBonus);
+        ListTag ru = new ListTag();
+        rumeurs.enTextes().forEach(x -> ru.add(StringTag.valueOf(x)));
+        t.put("Rumeurs", ru);
         if (consigne != null) t.put("Consigne", consigne.sauver());
         if (consigneFond != null) t.put("ConsigneFond", consigneFond.sauver());
         ListTag ad = new ListTag(), al = new ListTag();
@@ -2484,6 +2500,10 @@ public class Travailleur extends PathfinderMob {
         for (int i = 0; i < sv.size(); i++) lignes.add(sv.getString(i));
         souvenirs.lireTextes(lignes);
         souvenirs.jourBonus = t.contains("SouvenirsBonus") ? t.getLong("SouvenirsBonus") : -1;
+        ListTag ru = t.getList("Rumeurs", Tag.TAG_STRING);
+        List<String> faits = new ArrayList<>();
+        for (int i = 0; i < ru.size(); i++) faits.add(ru.getString(i));
+        rumeurs.lireTextes(faits);
         consigne = t.contains("Consigne") ? Consignes.Consigne.lire(t.getCompound("Consigne")) : null;
         consigneFond = t.contains("ConsigneFond") ? Consignes.Consigne.lire(t.getCompound("ConsigneFond")) : null;
         lettresADeposer.clear();

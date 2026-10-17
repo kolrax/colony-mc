@@ -73,7 +73,9 @@ final class Cerveau {
         // le calme frappé se défend ici, avant la fuite plus bas (Defense).
         if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
-        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque
+        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); Espions.echanger(t); } // de loin en loin, le bilan de son moral et une remarque
+        // Une fois par minute : ce qu'il voit des autres colonies autour de lui (Espions, Rumeurs).
+        if ((t.tickCount + t.getId()) % Espions.PERIODE == 0) Espions.observer(t);
         // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
         if (Causeries.essayer(t)) return;
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
@@ -222,6 +224,9 @@ final class Cerveau {
         }
         mem.remove("sacVide");
         mem.remove("camp");
+
+        // Envoyé espionner une autre colonie (Espions) : il y va, guette, revient le dire.
+        if (Espions.mission(t)) return;
 
         // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {

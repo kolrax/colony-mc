@@ -210,6 +210,7 @@ final class Famille {
         Courrier.de(sl.getServer()).inscrire(e);
         Besoins.dire(mere, "naissance", e.prenom);
         Courrier.ecrire(mere, "naissance", e.prenom, autre.prenom);
+        Espions.evenement(sl.getServer(), mere.chef, mere.chefNom, Rumeurs.Genre.NAISSANCE, e.prenom); // ses compagnons présents le savent (Rumeurs)
         return e;
     }
 

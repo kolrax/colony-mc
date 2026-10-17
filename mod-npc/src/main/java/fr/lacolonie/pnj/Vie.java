@@ -20,7 +20,8 @@ import java.util.regex.Pattern;
 final class Vie {
     private Vie() {}
 
-    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "prix", "ennemi", "machine"); // {plan} : l'ouvrage du maçon (macon.txt) ; {prix} : economie.txt ; {ennemi} : le chef ennemi (guerre.txt)
+    static final Set<String> VARIABLES = Set.of("chef", "nom", "objet", "mort", "plan", "prix", "ennemi", "machine",
+            "nombre", "metiers", "jours", "direction", "distance", "autre", "de", "a", "b"); // rumeurs.txt : {nombre} {metiers} {jours} {direction} {distance} {autre} {de} {a} {b} ; {plan} : l'ouvrage du maçon (macon.txt) ; {prix} : economie.txt ; {ennemi} : le chef ennemi (guerre.txt)
     static final Pattern CLE = Pattern.compile("\\[([a-z0-9_]+)]");
     /** Un préfixe en tête de réplique : « mot: texte ». Le mot doit être un tempérament connu. */
     static final Pattern PREFIXE = Pattern.compile("([a-z]+): (.*)");
@@ -56,6 +57,8 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/machines.txt"), e -> System.err.println("[colonie_pnj] Section de machines.txt ignorée : " + e.getMessage())));
         // Un autre que le chef parle à l'ouvrier, lui donne des ordres ou veut le débaucher (lot 14, Etranger) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/etrangers.txt"), e -> System.err.println("[colonie_pnj] Section de etrangers.txt ignorée : " + e.getMessage())));
+        // Les rumeurs et l'espionnage (lot 14, Rumeurs, Espions) : même format.
+        TOUTES.putAll(lire(Repertoire.lignes("/rumeurs.txt"), e -> System.err.println("[colonie_pnj] Section de rumeurs.txt ignorée : " + e.getMessage())));
         TOUTES.putAll(lire(Repertoire.lignes("/famille.txt"), e -> System.err.println("[colonie_pnj] Section de famille.txt ignorée : " + e.getMessage()))); // lot 13
     }
 

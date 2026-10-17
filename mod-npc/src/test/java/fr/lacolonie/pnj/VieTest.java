@@ -18,7 +18,8 @@ class VieTest {
                 + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/chef.txt")).size() + Vie.lire(Repertoire.lignes("/macon.txt")).size()
                 + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size() + Vie.lire(Repertoire.lignes("/guerre.txt")).size()
                 + Vie.lire(Repertoire.lignes("/recrutement.txt")).size()
-                + Vie.lire(Repertoire.lignes("/machines.txt")).size() + Vie.lire(Repertoire.lignes("/etrangers.txt")).size() + Vie.lire(Repertoire.lignes("/famille.txt")).size());
+                + Vie.lire(Repertoire.lignes("/machines.txt")).size() + Vie.lire(Repertoire.lignes("/etrangers.txt")).size() + Vie.lire(Repertoire.lignes("/famille.txt")).size()
+                + Vie.lire(Repertoire.lignes("/rumeurs.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
@@ -68,6 +69,22 @@ class VieTest {
         assertEquals(23, banque.size());
         for (var e : banque.entrySet()) {
             assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
+            assertTrue(e.getValue().stream().filter(r -> r.temperament().isEmpty()).count() >= 4, e.getKey() + " : quatre répliques communes");
+            for (Vie.Replique r : e.getValue()) {
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+                assertTrue(r.texte().length() <= 90, r.texte());
+            }
+        }
+    }
+
+    /** Lot 14 : les rumeurs et l'espionnage (Rumeurs, Espions), au moins quatre répliques communes par situation. */
+    @Test
+    void rumeursSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/rumeurs.txt"));
+        assertEquals(19, banque.size());
+        for (var e : banque.entrySet()) {
+            assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
+            assertTrue(Rumeurs.SECOURS.containsKey(e.getKey()), e.getKey() + " : une clé que le code dit");
             assertTrue(e.getValue().stream().filter(r -> r.temperament().isEmpty()).count() >= 4, e.getKey() + " : quatre répliques communes");
             for (Vie.Replique r : e.getValue()) {
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
