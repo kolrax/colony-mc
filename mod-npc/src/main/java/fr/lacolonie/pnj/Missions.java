@@ -79,7 +79,7 @@ public final class Missions {
         if (lieu != null) {
             if (lieu.distManhattan(t.bureau) > LOIN * 2 || Math.abs(lieu.getX() - t.bureau.getX()) > LOIN || Math.abs(lieu.getZ() - t.bureau.getZ()) > LOIN)
                 return non("Ce lieu est trop loin du poste : " + t.prenom + " n'en reviendrait pas.");
-            if (lieu.getY() <= t.level().getMinBuildHeight() + 4 || t.level().isLoaded(lieu) && t.level().getFluidState(lieu).is(FluidTags.LAVA))
+            if (lieu.getY() < t.level().getMinBuildHeight() || lieu.getY() >= t.level().getMaxBuildHeight() || t.level().isLoaded(lieu) && t.level().getFluidState(lieu).is(FluidTags.LAVA))
                 return non("Ce lieu est mortel : choisis-en un autre.");
         }
         return new Reponse(true, Statut.confirmation(t.prenom, t.metier, c.nom, c.objet != null, repetition, nombre, horaires, lieu != null));
