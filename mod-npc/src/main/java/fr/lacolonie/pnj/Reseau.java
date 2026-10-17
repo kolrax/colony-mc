@@ -88,12 +88,39 @@ public final class Reseau {
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** La fiche d'un de ses ouvriers, au clic droit (refonte 1.0.0, serveur vers joueur) : sa mission, sa file, ses boutons. */
+    public record FicheOuvrier(int id, CompoundTag infos) implements CustomPacketPayload {
+        static final Type<FicheOuvrier> TYPE = typeDe("fiche_ouvrier");
+        static final StreamCodec<RegistryFriendlyByteBuf, FicheOuvrier> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, FicheOuvrier::id, ByteBufCodecs.COMPOUND_TAG, FicheOuvrier::infos, FicheOuvrier::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Un bouton de la fiche (nouvelle mission confirmée, travaille ici, suis-moi…), joueur vers serveur ({@link Missions#action}). */
+    public record OrdreOuvrier(int id, String action, CompoundTag donnees) implements CustomPacketPayload {
+        static final Type<OrdreOuvrier> TYPE = typeDe("ordre_ouvrier");
+        static final StreamCodec<RegistryFriendlyByteBuf, OrdreOuvrier> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, OrdreOuvrier::id, ByteBufCodecs.stringUtf8(32), OrdreOuvrier::action,
+                ByteBufCodecs.COMPOUND_TAG, OrdreOuvrier::donnees, OrdreOuvrier::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     static void enregistrer(RegisterPayloadHandlersEvent e) {
         // 2 : écran du bureau (0.2.0) ; 3 : sorties (0.3.0) ; 4 : statut au bureau (0.4.0) ; 5 : poste commun, lettres, conversation (0.5.0) ;
         // 6 : les gestes des ouvriers (0.8.0, une donnée de plus sur l'entité : un ancien client ne pourrait pas la lire)
         // 7 : la tenue des ouvriers (lot 8, après la 0.9.6 : encore une donnée sur l'entité)
         // 8 : rôle et état au-dessus des têtes (lot 8 : deux données de plus sur l'entité)
-        var r = e.registrar("8");
+        // 9 : refonte 1.0.0 (statut unique au-dessus des têtes, fiche de l'ouvrier, missions)
+        var r = e.registrar("9");
+        r.playToClient(FicheOuvrier.TYPE, FicheOuvrier.CODEC, (p, ctx) -> Client.ouvrirFicheOuvrier(p));
+        r.playToServer(OrdreOuvrier.TYPE, OrdreOuvrier.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t && sp.distanceToSqr(t) <= 16 * 16 && !t.aTerre)
+                Missions.action(sp, t, p.action(), p.donnees());
+        });
         r.playToClient(Fiche.TYPE, Fiche.CODEC, (p, ctx) -> Client.ouvrirFiche(p));
         r.playToClient(Conversation.TYPE, Conversation.CODEC, (p, ctx) -> Client.ouvrirConversation(p));
         r.playToClient(Parole.TYPE, Parole.CODEC, (p, ctx) -> Client.parole(p));

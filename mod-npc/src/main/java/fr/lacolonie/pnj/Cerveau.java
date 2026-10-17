@@ -233,6 +233,7 @@ final class Cerveau {
         if (Monde.libres(t) == 0) {
             if ("depot_plein".equals(t.resultat)) {
                 ecrire(t, "depot", UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN); // le statut : « ⚠ Sac plein, dépôt plein » (oublié une minute après)
                 attendre(t, 30);
                 return;
             }
