@@ -129,6 +129,38 @@ public class TestsAutresJoueurs {
                 () -> fin(s));
     }
 
+    /** Relecture : un clic droit d'un autre joueur (comme en jeu, par interact → mobInteract) : il le salue, sans erreur. */
+    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
+    public static void clicDroitDUnAutre(GameTestHelper h) {
+        Scene s = scene(h, 426, 3);
+        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+                () -> s.t().interact(s.autre(), net.minecraft.world.InteractionHand.MAIN_HAND),
+                () -> h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_salut"), "il salue l'autre au clic droit : " + vu(s)),
+                () -> fin(s));
+    }
+
+    /** Relecture : un ordre payé qu'il ne fera pas (réservé au chef, en grève, en guerre) ne coûte rien au joueur. */
+    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
+    public static void ordrePayeRefuseRienPris(GameTestHelper h) {
+        Scene s = scene(h, 427, 3);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 30));
+        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+                () -> s.t().parler(s.autre(), "Tiens, 10 pièces : travaille de nuit."),
+                () -> h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30, "réservé au chef : aucune pièce prise, " + vu(s)),
+                TestsIA.attendre(h, 25),
+                () -> { s.t().mode = Travailleur.Mode.GREVE; s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
+                () -> h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30 && s.t().mode == Travailleur.Mode.GREVE,
+                        "en grève : rien pris, " + vu(s)),
+                TestsIA.attendre(h, 25),
+                () -> { s.t().mode = Travailleur.Mode.TRAVAIL; c.declarer(s.chef().getUUID(), "chef", s.autre().getUUID(), "autre"); s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
+                () -> {
+                    h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 30 && s.t().mode == Travailleur.Mode.TRAVAIL, "en guerre : rien pris, " + vu(s));
+                    c.paix(s.chef().getUUID(), s.autre().getUUID());
+                },
+                () -> fin(s));
+    }
+
     /** « Viens travailler pour moi, je te paie 20 pièces » (sa paie : 10) : 20 pièces exactes passent dans son sac, il change de chef, l'ancien reçoit une lettre. */
     @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
     public static void debaucheReussie(GameTestHelper h) {
@@ -136,6 +168,8 @@ public class TestsAutresJoueurs {
         Courrier c = Courrier.de(h.getLevel().getServer());
         c.definirPoste(s.autre().getUUID(), h.getLevel(), s.base().west(3));
         s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 25));
+        s.t().inventaire.addItem(new ItemStack(Items.COBBLESTONE, 5));
+        Bureau.Entite depot = Bureau.entite(s.t());
         int renom = c.reputation(s.chef().getUUID());
         TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.autre(), "Viens travailler pour moi, je te paie 20 pièces."),
@@ -148,6 +182,8 @@ public class TestsAutresJoueurs {
                     h.assertTrue(c.reputation(s.chef().getUUID()) == renom, "la réputation de l'ancien chef ne bouge pas");
                     h.assertFalse(c.effectifs.getOrDefault(s.chef().getUUID(), new java.util.LinkedHashMap<>()).containsKey(s.t().getUUID()), "il quitte l'effectif de l'ancien");
                     h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_accepte"), "il le dit : " + vu(s));
+                    h.assertTrue(TestsBoutique.compte(s.t().inventaire, Items.COBBLESTONE) == 0 && depot != null && depot.compter((java.util.function.Predicate<ItemStack>) x -> x.is(Items.COBBLESTONE)) == 5,
+                            "ce qu'il portait reste au dépôt de l'ancien chef : sac " + TestsBoutique.compte(s.t().inventaire, Items.COBBLESTONE));
                 },
                 () -> fin(s));
     }

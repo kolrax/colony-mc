@@ -99,6 +99,11 @@ final class Commandement {
     /** Les actions du répertoire que seul le chef peut demander : donner ou jeter ses affaires, se battre, aller se former (payé par le chef). */
     static final Set<String> GESTES_AU_CHEF = Set.of("donner", "jeter", "combat", "former");
 
+    /** Les ouvrages durables que seul le chef installe : trajets du transporteur, champs du fermier, chantiers du maçon. */
+    static boolean ouvrageDuChef(String id) {
+        return id.startsWith("trajet") || id.equals("oublier_trajets") || id.equals("champ") || id.equals("oublier_champ") || id.equals("construire");
+    }
+
     /**
      * Un autre que le chef lui parle : les ordres que seul le chef peut donner (renvoi, horaires et expéditions, règles,
      * gardes, dépôt, guerre, boutique et prix, autorisations, gestes de {@link #GESTES_AU_CHEF}) sont retirés de la
@@ -123,7 +128,7 @@ final class Commandement {
         l.boutique = null;
         l.commandants.clear();
         l.destitues.clear();
-        r |= l.faire.removeIf(f -> { String c = comportement.apply(f.id()); return c == null || GESTES_AU_CHEF.contains(c); });
+        r |= l.faire.removeIf(f -> { String c = comportement.apply(f.id()); return c == null || GESTES_AU_CHEF.contains(c) || ouvrageDuChef(f.id()); });
         return r;
     }
 }

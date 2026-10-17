@@ -295,7 +295,7 @@ final class Voix {
                 Travailleur meilleur = null;
                 double meilleurCos = 0;
                 List<Travailleur> autour = p.serverLevel().getEntitiesOfClass(Travailleur.class, p.getBoundingBox().inflate(d),
-                        x -> p.getUUID().equals(x.chef) && !x.aTerre && x.isAlive());
+                        x -> x.chef != null && !x.aTerre && x.isAlive()); // ceux d'un autre chef aussi, s'il les regarde (lot 14)
                 for (Travailleur t : autour) {
                     Vec3 v = t.getEyePosition().subtract(oeil);
                     double dist = v.length();
@@ -304,7 +304,7 @@ final class Voix {
                     if (c > (dist < 2.5 ? 0.7 : 0.9) && c > meilleurCos) { meilleurCos = c; meilleur = t; }
                 }
                 if (meilleur != null) n.put(p.getUUID(), meilleur.getId());
-                else if (!autour.isEmpty() && p.serverLevel().players().stream().noneMatch(x -> x != p && !x.isSpectator() && x.distanceTo(p) < SEUL))
+                else if (autour.stream().anyMatch(x -> p.getUUID().equals(x.chef)) && p.serverLevel().players().stream().noneMatch(x -> x != p && !x.isSpectator() && x.distanceTo(p) < SEUL))
                     n.put(p.getUUID(), -1);
             }
         cibles = n;
@@ -314,7 +314,7 @@ final class Voix {
     static void traiter(MinecraftServer s, UUID joueur, Enonce e) {
         ServerPlayer p = s.getPlayerList().getPlayer(joueur);
         if (p == null) return;
-        Travailleur vise = e.cible >= 0 && p.level().getEntity(e.cible) instanceof Travailleur t && joueur.equals(t.chef) ? t : null;
+        Travailleur vise = e.cible >= 0 && p.level().getEntity(e.cible) instanceof Travailleur t && t.chef != null ? t : null; // l'ouvrier d'un autre : Etranger
         if (e.cible >= 0 && vise == null) return;
         List<byte[]> trames;
         synchronized (e.trames) { trames = new ArrayList<>(e.trames); }
@@ -327,7 +327,7 @@ final class Voix {
      */
     static void entendre(MinecraftServer s, ServerPlayer p, Travailleur vise, short[] pcm) {
         if (pcm.length < Audio.FREQ_VOIX * 0.35 || Audio.rms(pcm) < 250) return; // un bruit, pas une phrase
-        List<Travailleur> autour = Dialogue.autour(p, vise);
+        List<Travailleur> autour = vise != null && !p.getUUID().equals(vise.chef) ? List.of(vise) : Dialogue.autour(p, vise);
         if (autour.isEmpty()) return;
         if (!IA.ecouteDisponible()) {
             if (vise != null) Travailleur.signaler(p, vise.prenom + " ne peut pas t'écouter pour l'instant (quota du jour ou service en pause) : écris-lui (clic droit).");

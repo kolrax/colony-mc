@@ -34,6 +34,7 @@
 #   debauche_fidele            il est bien chez son chef
 #   debauche_lettre_depart     la lettre à l'ancien chef : il part chez {nom} pour {prix} pièces
 #   debauche_lettre_tentative  la lettre au chef : {nom} a voulu le débaucher, il a dit non
+#   debauche_formation         il est en formation payée par son chef : il ne part pas
 
 [commande_permis]
 Entendu, {chef} : j'obéirai aussi à {nom}. Je le dirai aux autres.
@@ -187,3 +188,9 @@ Une meilleure paie m'attend chez {nom}. Je pars. Sans rancune.
 Sache que {nom} est venu m'offrir des pièces pour te quitter. J'ai refusé.
 {nom} a tenté de m'attirer chez lui. Je reste avec toi, {chef}.
 On m'a fait une offre : {nom}, qui voulait que je le serve. C'est non.
+
+[debauche_formation]
+Je suis en apprentissage, payé par {chef}. Pas maintenant.
+Ma formation n'est pas finie. On en reparlera après.
+{chef} paie mon apprentissage. Je ne pars pas en plein milieu.
+Pas tant que j'apprends, {nom}.

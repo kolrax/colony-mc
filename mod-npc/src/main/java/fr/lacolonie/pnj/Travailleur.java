@@ -1554,7 +1554,9 @@ public class Travailleur extends PathfinderMob {
                 PacketDistributor.sendToPlayer(sp, new Reseau.Conversation(getId(), fiche(false)));
                 return InteractionResult.CONSUME;
             }
-            signaler(sp, prenom + " travaille pour " + chefNom + ".");
+            // Un autre joueur (lot 14) : il le salue et la fenêtre de conversation s'ouvre ; ce qu'il écrit va à Etranger.
+            if (!player.isShiftKeyDown()) Etranger.aborder(this, sp);
+            else signaler(sp, prenom + " travaille pour " + chefNom + ".");
             return InteractionResult.CONSUME;
         }
         if (player.isShiftKeyDown() && !enMain.isEmpty()) {
@@ -1827,7 +1829,7 @@ public class Travailleur extends PathfinderMob {
             case NEGOCIE, REFUSE -> {
                 Sons.grogne(this);
                 reponseImposee = true;
-                enAttente = l;
+                enAttente = enFace == null || enFace.getUUID().equals(chef) ? l : null; // l'ordre refusé d'un autre ne reste pas en suspens
                 attenteFin = maintenant + 1200;
                 attenteMarche = v == Obeissance.Verdict.NEGOCIE;
                 return attenteMarche ? Messages.corps(this, "negocie", Reglages.texte(Obeissance.prime(salaireVerse())))
@@ -1921,18 +1923,19 @@ public class Travailleur extends PathfinderMob {
 
     private String appliquerOrdre(Ordres.Lecture l, ServerPlayer enFace) {
         List<String> r = new ArrayList<>();
-        String finFormation = Apprentissage.interrompre(this, l, enFace); // tout ordre met fin à sa formation, le prix rendu (lot 13)
+        boolean duChef = enFace == null || enFace.getUUID().equals(chef); // un autre joueur (Etranger) : ni renvoi, ni formation, ni armée
+        String finFormation = duChef ? Apprentissage.interrompre(this, l, enFace) : null; // tout ordre du chef met fin à sa formation, le prix rendu (lot 13)
         if (finFormation != null) r.add(finFormation);
         long maintenant = level().getGameTime();
         boolean confirmation = memoire.getLong("renvoi") > maintenant;
-        if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
+        if (enFace != null && duChef && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
             memoire.remove("renvoi");
             String adieu = Messages.corps(this, "dit_renvoye");
             Courrier.reputer(this, Recrutement.RENVOI);
             licencier();
             return adieu;
         }
-        if (confirmation && l.intentions.contains(Ordres.Intention.NON)) { memoire.remove("renvoi"); return Messages.corps(this, "dit_garde"); }
+        if (duChef && confirmation && l.intentions.contains(Ordres.Intention.NON)) { memoire.remove("renvoi"); return Messages.corps(this, "dit_garde"); }
         if (l.intentions.contains(Ordres.Intention.RENVOYER)) {
             if (enFace == null) return "Si tu veux te passer de moi, dis-le-moi en face, chef.";
             memoire.putLong("renvoi", maintenant + 600);
@@ -1963,12 +1966,12 @@ public class Travailleur extends PathfinderMob {
         // La guerre entre colonies (Guerre, Armee) : déclaration, paix, levée, retraite ; « rentre » ramène aussi l'armée.
         if (!parRegle && l.guerre != null) { Armee.ordre(this, l.guerre, r, l.rang == 0); reponseImposee = true; }
         // « Repliez-vous », « rentrez » : en guerre, c'est aussi la retraite de l'armée (la phrase reste à la consigne « repli »).
-        else if (!parRegle && l.rang == 0 && Guerre.repli(l.texte) && !Armee.ennemis(this).isEmpty()) {
+        else if (!parRegle && duChef && l.rang == 0 && Guerre.repli(l.texte) && !Armee.ennemis(this).isEmpty()) {
             Guerre.Lu g = new Guerre.Lu();
             g.retraite = true;
             Armee.ordre(this, g, r, true);
         }
-        if (l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
+        if (duChef && l.intentions.contains(Ordres.Intention.RENTRER)) Armee.finir(this);
         // La boutique (Boutique, Boutiquier) : l'ouvrir, la fermer, ses prix ; c'est le mod qui répond.
         if (!parRegle && l.boutique != null) { Boutiquier.ordre(this, l.boutique, r); reponseImposee = true; }
         // Pas de son métier (« va me chercher du fer », au bûcheron) : il propose d'aller prévenir celui dont c'est le travail.

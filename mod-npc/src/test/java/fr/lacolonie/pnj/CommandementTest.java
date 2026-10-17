@@ -71,6 +71,14 @@ class CommandementTest {
         assertTrue(r.vide());
         Ordres.Lecture t = lu("Coupe du bouleau.");
         assertFalse(Commandement.reserver(t, id -> null), "un ordre de travail passe tel quel");
+        // Les ouvrages durables (trajets, champs, chantiers) restent au chef.
+        Ordres.Lecture tr = lu("Coupe du bouleau.");
+        tr.faire.add(new Ordres.Faire("trajet_deposer", "", 0, 0, false));
+        tr.faire.add(new Ordres.Faire("champ", "", 0, 0, false));
+        tr.faire.add(new Ordres.Faire("construire", "", 0, 0, false));
+        tr.faire.add(new Ordres.Faire("oublier_trajets", "", 0, 0, false));
+        assertTrue(Commandement.reserver(tr, id -> "travail"));
+        assertTrue(tr.faire.isEmpty() && !tr.missions.isEmpty(), tr.faire.toString());
         Ordres.Lecture f = lu("Va te former.");
         assertTrue(Commandement.reserver(f, Map.of("se_former", "former")::get));
         assertTrue(f.faire.isEmpty());
@@ -82,6 +90,9 @@ class CommandementTest {
         assertEquals(30, Debauche.lire("Je te donne 30 pièces pour que tu me rejoignes").pieces());
         assertEquals(-1, Debauche.lire("Quitte ton chef, viens chez moi !").pieces());
         assertNull(Debauche.lire("Coupe du bois pour moi."));
+        assertNull(Debauche.lire("Viens me rejoindre au four."), "un rendez-vous n'est pas une débauche");
+        assertEquals(-1, Debauche.lire("Viens travailler pour moi.").pieces());
+        assertEquals(15, Debauche.lire("Rejoins-moi, 15 pièces par jour.").pieces());
         assertNull(Debauche.lire("Je te paie 20 pièces"));
         Debauche.Pourboire p = Debauche.pourboire("Tiens, 10 pièces : coupe du bouleau.");
         assertEquals(10, p.pieces());

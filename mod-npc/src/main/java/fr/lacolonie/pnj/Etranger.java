@@ -23,6 +23,14 @@ final class Etranger {
     /** Après un refus, le même joueur attend un jour du jeu avant de retenter sa chance. */
     static final long RANCUNE = 24000;
 
+    /** Un autre joueur lui fait un clic droit : il le salue, et la fenêtre de conversation s'ouvre (comme pour un client de la boutique). */
+    static void aborder(Travailleur t, ServerPlayer p) {
+        t.getLookControl().setLookAt(p);
+        if (Cerveau.parfois(t, "etranger_accueil", 20)) t.dire(texte(t, "etranger_salut", p.getName().getString(), 0, "Le bonjour."));
+        if (p.connection != null && p.connection.hasChannel(Reseau.Conversation.TYPE))
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new Reseau.Conversation(t.getId(), t.fiche(false)));
+    }
+
     /** Un autre que son chef lui parle. */
     static void parler(Travailleur t, ServerPlayer p, String dit) {
         if (t.chef == null || t.mode == Travailleur.Mode.CHOMEUR || t.aTerre || !t.isAlive() || p.level() != t.level()
@@ -48,18 +56,29 @@ final class Etranger {
         Ordres.Lecture l = Ordres.lire(paye != null ? paye.reste() : dit, t.metier);
         Courrier c = Courrier.de(p.getServer());
         if (!Commandement.ordre(l)) return bavarder(t, l, nom);
+        // En guerre avec son chef : ni ordre ni pièce de lui.
+        if (c.enGuerre(t.chef, p.getUUID())) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
+        boolean reserve = Commandement.reserver(l, id -> { var e = Repertoire.PAR_ID.get(id); return e == null ? null : e.comportement(); });
         String paie = "";
         if (!c.commande(t.chef, nom)) {
             if (paye == null) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
+            // Ce qu'il ne fera pas de toute façon (réservé au chef, grève, ordre mortel, hors métier, moral trop bas) : rien n'est pris.
+            if (l.vide() || !accepterait(t, l)) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
             if (!Debauche.assez(paye.pieces(), t.salaireVerse()))
                 return texte(t, "etranger_trop_peu", nom, (int) paye.pieces(), "C'est trop peu pour laisser l'ouvrage de " + t.chefNom + ".");
             if (!encaisser(t, p, paye.pieces())) return texte(t, "etranger_sans_pieces", nom, (int) paye.pieces(), "Montre-moi d'abord les pièces.");
             paie = texte(t, "etranger_paye", nom, (int) paye.pieces(), "Marché conclu.");
         }
-        boolean reserve = Commandement.reserver(l, id -> { var e = Repertoire.PAR_ID.get(id); return e == null ? null : e.comportement(); });
         String fait = l.vide() ? "" : t.appliquer(l, p);
         String non = reserve ? texte(t, "etranger_reserve", nom, 0, "Ça, c'est à " + t.chefNom + " d'en décider.") : "";
         return String.join(" ", java.util.stream.Stream.of(paie, non, fait).filter(s -> !s.isBlank()).toList());
+    }
+
+    /** Obéirait-il à cet ordre payé, avant de prendre les pièces ? Pas en grève, pas un ordre mortel ni hors de son métier, et son moral le permet. */
+    static boolean accepterait(Travailleur t, Ordres.Lecture l) {
+        if (t.mode == Travailleur.Mode.GREVE || Obeissance.mortel(l.texte) != null || !l.horsMetier.isEmpty() || !l.pourAutres.isEmpty()) return false;
+        Obeissance.Verdict v = Obeissance.decider(t.moral, t.temperament, Obeissance.peine(l, t.metier, !t.enService()), false);
+        return v == Obeissance.Verdict.OBEIT || v == Obeissance.Verdict.RALE;
     }
 
     /** Une question ou une politesse d'un inconnu : il répond, sans rien dire de plus que ce que tout le monde voit. */
@@ -72,6 +91,9 @@ final class Etranger {
 
     /** Le joueur lui verse {@code pieces} de ses pièces : elles passent dans son sac (la monnaie rendue des siennes). Faux si rien n'a bougé. */
     static boolean encaisser(Travailleur t, ServerPlayer p, long pieces) {
+        boolean libre = false; // la monnaie rendue doit pouvoir entrer dans son sac : sinon, rien ne se fait
+        for (int i = 0; i < t.inventaire.getContainerSize() && !libre; i++) libre = t.inventaire.getItem(i).isEmpty();
+        if (!libre) return false;
         int[] v = Reglages.valeurs(), bourse = Reglages.quantites(p.getInventory()), sac = Reglages.quantites(t.inventaire);
         Boutique.Reglement rg = Boutique.regler(v, bourse, sac, pieces);
         if (rg == null) return false;
@@ -93,7 +115,10 @@ final class Etranger {
         CompoundTag refus = t.memoire.getCompound("debauche_refus");
         String cle = p.getUUID().toString();
         boolean rancune = refus.contains(cle) && maintenant - refus.getLong(cle) < RANCUNE && maintenant >= refus.getLong(cle);
-        boolean place = c.poste(p.getUUID()) != null && ColoniePnj.pnjDe(serveur, p.getUUID()).size() < Reglages.actuel.pnj_max_par_joueur;
+        // Pendant sa formation payée par son chef, il ne part pas (lot 13).
+        if (t.memoire.getLong("formation_fin") > 0)
+            return texte(t, "debauche_formation", nom, 0, "Je suis en apprentissage, payé par " + t.chefNom + ". Pas maintenant.");
+        boolean place = !Reglages.actuel.metiers_inactifs.contains(t.metier) && c.poste(p.getUUID()) != null && ColoniePnj.pnjDe(serveur, p.getUUID()).size() < Reglages.actuel.pnj_max_par_joueur;
         Liens liens = Relations.de(t);
         Debauche.Cas cas = new Debauche.Cas(o.pieces(), t.salaireVerse(), t.moral, t.temperament, c.reputation(t.chef), c.reputation(p.getUUID()),
                 liens.conjoint() != null, liens.amis().size(), c.enGuerre(t.chef, p.getUUID()), rancune, place);
@@ -101,6 +126,7 @@ final class Etranger {
         int prix = (int) Math.min(Integer.MAX_VALUE, Math.max(0, o.pieces()));
         if (raison == Debauche.Raison.ACCEPTE) {
             if (!encaisser(t, p, o.pieces())) return texte(t, "debauche_pieces", nom, prix, "Montre-moi d'abord les pièces, et on en reparlera.");
+            rendre(t);
             Courrier.ecrireTexte(t, "Mon départ", texte(t, "debauche_lettre_depart", nom, prix,
                     nom + " m'offre " + Boutique.pieces(o.pieces()) + " : je pars à son service. Sans rancune, " + t.chefNom + "."), true);
             Cerveau.journal(t.prenom + " quitte " + t.chefNom + " pour " + nom + " (" + o.pieces() + " pièces)");
@@ -124,6 +150,20 @@ final class Etranger {
             case FIDELE -> "Je suis bien chez " + t.chefNom + ".";
             default -> "C'est à peine plus que ce que j'ai. Non.";
         });
+    }
+
+    /** Avant de partir : tout ce qu'il porte, sauf ses pièces, va au dépôt de son ancien chef (au sol, à ses pieds, sans dépôt). */
+    static void rendre(Travailleur t) {
+        Bureau.Entite b = Bureau.entite(t);
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = t.inventaire.getItem(i);
+            if (s.isEmpty() || Reglages.piece(s) >= 0) continue;
+            t.inventaire.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            net.minecraft.world.item.ItemStack reste = b == null ? s : b.ranger(s);
+            if (!reste.isEmpty()) t.spawnAtLocation(reste);
+        }
+        if (b != null) b.setChanged();
+        t.inventaire.setChanged();
     }
 
     /** La réplique {@code cle} (etrangers.txt), avec {nom} celui qui parle et {prix} ; {@code secours} si elle manque. */

@@ -23,6 +23,10 @@ final class Debauche {
             + "|rejoins moi|rejoignez moi|me rejoindre|me rejoignes|me rejoigniez|viens chez moi|venez chez moi|(?:entre|passe|entrer|passer) a mon service"
             + "|quitte (?:ton|ta|votre) (?:chef|maitre|maitresse|patron|colonie)|je t embauche|je vous embauche|je te prends a mon service"
             + "|deviens mon ouvrier|change de (?:chef|maitre|patron))\\b");
+    /** Une embauche dite sans somme : travailler pour lui, entrer à son service, quitter son chef. */
+    static final Pattern SERVICE = Pattern.compile("\\b(?:viens? (?:travailler|bosser|trimer) (?:pour|chez) moi|travaille pour moi|travaillez pour moi"
+            + "|(?:entre|passe|entrer|passer) a mon service|quitte (?:ton|ta|votre) (?:chef|maitre|maitresse|patron|colonie)|je t embauche|je vous embauche"
+            + "|je te prends a mon service|deviens mon ouvrier|change de (?:chef|maitre|patron))\\b");
     /** « 20 pièces », « 20 pieces d'or » : la somme (en pièces, comme les prix de la boutique). */
     static final Pattern SOMME = Pattern.compile("\\b(\\d{1,5}) ?(?:pieces?|sous|ecus|deniers)\\b");
     /** « Tiens, 10 pièces pour couper ce bois » : de l'argent donné avec la phrase. */
@@ -33,7 +37,9 @@ final class Debauche {
         String n = Ordres.normaliser(texte);
         if (!PROPOSE.matcher(n).find()) return null;
         Matcher m = SOMME.matcher(n);
-        return new Offre(m.find() ? Long.parseLong(m.group(1)) : -1);
+        if (m.find()) return new Offre(Long.parseLong(m.group(1)));
+        // Sans somme, il faut que ce soit clairement une embauche (« viens me rejoindre au four » n'en est pas une).
+        return SERVICE.matcher(n).find() ? new Offre(-1) : null;
     }
 
     /** De l'argent proposé pour un ordre (pas une débauche), ou null. */
