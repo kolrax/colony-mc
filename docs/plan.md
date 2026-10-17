@@ -90,7 +90,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 14. Autres joueurs
 - [x] Autoriser un joueur : il peut parler aux ouvriers et leur donner des ordres ; un autre joueur peut tenter de les convaincre ou de les corrompre (paie plus élevée)
 - [x] Tout le monde voit le nom, le métier et le chef d'un ouvrier
-- [ ] Rumeurs : un PNJ peut révéler ce qu'il a appris par espionnage ou bouche à oreille
+- [x] Rumeurs : un PNJ peut révéler ce qu'il a appris par espionnage ou bouche à oreille
 
 ## Bonus (après tout le reste)
 Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, scribe, éclaireur (important), quêtes et histoires, marchands ambulants et bandits, panneau web (admin seulement).
