@@ -89,7 +89,11 @@ final class Defense {
         if (creeper != null) {
             // Il fuit seulement s'il a où aller (sinon il ne lâcherait son travail que pour rien) ; il appelle la garde de toute façon.
             // Loin de son souffle, avec de la marge : un seul tirage au hasard pouvait ne l'écarter que de deux pas.
-            Vec3 loin = refuge(t, creeper, VUE + 4, 6);
+            // Sans refuge la dernière fois : il ne refait ses tirages que toutes les 3 s.
+            boolean rate = t.memoire.getBoolean("refuge_creeper_rate");
+            Vec3 loin = rate && !Cerveau.parfois(t, "refuge_creeper", 3) ? null : refuge(t, creeper, VUE + 4, 6);
+            if (!rate || loin != null) t.memoire.putBoolean("refuge_creeper_rate", loin == null);
+            if (loin == null && !rate) Cerveau.parfois(t, "refuge_creeper", 3); // le délai part de cet échec
             if (fuir(t, creeper, loin)) return true;
         }
         if (t.action instanceof Actions.Attaquer) return false; // il se bat déjà

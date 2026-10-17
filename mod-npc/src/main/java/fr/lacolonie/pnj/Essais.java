@@ -79,7 +79,9 @@ public class Essais {
         if (noms == null || noms.isBlank() || choisis || !(l.getServer() instanceof net.minecraft.gametest.framework.GameTestServer s)) return;
         choisis = true; // un seul tri : chaque dimension chargée repasse ici
         java.util.Set<String> voulus = new java.util.HashSet<>(java.util.Arrays.asList(noms.toLowerCase().split(",")));
-        int fois = Math.max(1, Integer.parseInt(System.getenv().getOrDefault("COLONIE_FOIS", "1")));
+        int fois;
+        try { fois = Math.max(1, Integer.parseInt(System.getenv().getOrDefault("COLONIE_FOIS", "1").trim())); }
+        catch (NumberFormatException ex) { fois = 1; }
         try {
             var f = net.minecraft.gametest.framework.GameTestServer.class.getDeclaredField("testFunctions");
             f.setAccessible(true);

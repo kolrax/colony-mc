@@ -538,7 +538,9 @@ public final class Actions {
             if (nage && refuge.getY() >= t.getBlockY()) t.getJumpControl().jump();
             // Dans un trou de lave (ou d'eau), le bord à côté de lui : il s'y hisse, comme un homme prend appui des mains.
             // Sinon il sautait contre le bord sans avancer, retombait, et la lave l'achevait.
-            if (nage && t.horizontalCollision && refuge.getY() > t.getY() - 0.5 && Math.abs(c.x - t.getX()) < 1.6 && Math.abs(c.z - t.getZ()) < 1.6) {
+            // Seulement un bord à moins de 1,2 bloc au-dessus de ses pieds, avec la place libre sur le bord.
+            if (nage && t.horizontalCollision && refuge.getY() > t.getY() - 0.5 && refuge.getY() - t.getY() < 1.2
+                    && Math.abs(c.x - t.getX()) < 1.6 && Math.abs(c.z - t.getZ()) < 1.6 && Monde.libre(l, refuge) && Monde.libre(l, refuge.above())) {
                 Vec3 vers = c.subtract(t.position()).multiply(1, 0, 1).normalize().scale(0.15);
                 t.setDeltaMovement(vers.x, Math.max(t.getDeltaMovement().y, 0.4), vers.z);
             }
