@@ -3,7 +3,8 @@
 Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 0.9.37** (00 h 38 UTC le 17/10), un seul jar dans `/mods`. `reglages.json` du serveur : `pnj_max_par_joueur` = 30, chercheurs 0,35 / 15 min (`plus_rares`).
+- **Serveur : 0.9.38** (01 h 34 UTC le 17/10), un seul jar dans `/mods`. `reglages.json` du serveur : `pnj_max_par_joueur` = 30, chercheurs 0,35 / 15 min (`plus_rares`).
+- 0.9.38 = **étoiles** (`Etoiles` pur, `Apprentissage`, `TestsEtoiles`, `EtoilesTest` ; « va te former » : formation payée, arrêtée par tout ordre avec remboursement).
 - 0.9.37 = **recrutement** (`Talents`, `Recrutement`, réputation dans `Courrier`, affiche, cloche de village ; `TestsRecrutement`, `RecrutementTest`). 0.9.36 = **machines de Create** par le transporteur (`Machines`, `TestsMachines` coins 390-398, `machines.txt`) ; jamais essayé avec le vrai Create (il plante le serveur de test : paquets aux faux joueurs).
 - 0.9.35 = **boutiques** (`Boutique` pur, `Boutiquier`, `TestsBoutique` coins 380-387, lots `boutique` et `boutique_nuit`). 0.9.34 = **coût des ouvriers** (`Cout`, `TestsCout` lot `cout`). 0.9.33 = **économie entre PNJ** (`Economie`, `Achats`, `TestsEconomie` coins 370-374).
 - 0.9.32 = **guerre entre colonies** 1re passe (`Guerre` pur, `Armee`, `Courrier.guerres`, `TestsGuerre` coins 320-323, `guerre.txt`), relue, 3 bloquants et 5 importants corrigés ; mineurs dans plus-tard.
@@ -14,8 +15,7 @@ Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, a
 - **Décision de KOLRAX (16/10, 17 h 12 UTC)** : le serveur n'ouvre que quand le mod est fini ; le chantier continue ; monde de test encore jetable (régénération permise).
 
 ## Branches à reprendre
-- `origin/etoiles` : étoiles qui montent (lot 13), verte sur 0.9.37 (325/325 JUnit, 375/375 en jeu), relecture lancée en fin de session (voir le journal pour ses résultats). À faire : corriger la relecture, fusionner `main`, passe complète, livrer en 0.9.38.
-- `en-cours` = `main` (sa suppression est refusée depuis le cloud).
+- Aucune : `create`, `recrutement`, `etoiles` sont fusionnées. `en-cours` = `main` (sa suppression est refusée depuis le cloud).
 
 ## Ce que le mod sait faire aujourd'hui
 - **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
@@ -34,8 +34,7 @@ Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » et « Graphify » dans CLAUDE.md.**
-1. Finir `etoiles` (voir Branches) et livrer 0.9.38 ; cocher « Étoiles » au plan.
-2. Lot 13 : familles, enfants, vieillesse, apprenti ; travailleurs de nuit. Puis lot 14 (autoriser un joueur, débauche/corruption ; nom, métier, chef visibles ; rumeurs).
+1. Lot 13 : familles, enfants, vieillesse, apprenti ; travailleurs de nuit. Puis lot 14 (autoriser un joueur, débauche/corruption ; nom, métier, chef visibles ; rumeurs).
 3. Avant l'ouverture : banc de charge avec 30 ouvriers par joueur ; essai réel des machines de Create sur le serveur (moulin, presse, bassin, tapis) ; rendre fiables les tests instables.
 4. Restes : `docs/plus-tard.md` (crieur, débauche, achat d'équipement, guerre, boutiques, machines…).
 5. Instables connus (passent à la relance) : `bucheronPresDeLaLave`, `compagnonsEnParlent`, `chasseSurOrdreLEspeceDite`, `coupsDArme`, `peureuxFuitDeLoin`, `fourbeSEclipse`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `tondUnMouton`, `calmeFrappeSeDefend`, `figeToiPuisAuTravail`, `iavoix`, `sortDeLaLave`, `chasseDeNuit` (vu le 17/10).
