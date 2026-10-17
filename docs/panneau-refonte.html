@@ -109,6 +109,11 @@ h1{font:700 clamp(28px,4.4vw,42px)/1.05 var(--display);margin:0;text-wrap:balanc
 .items li.f::before{content:"✓";color:var(--copper);font-weight:700}
 .items li.f{color:var(--muted)}
 
+.bar.dbl{display:flex}
+.bar.dbl span{flex:none}
+.bar.dbl span.b{background:var(--brass)}
+.bar.dbl span.c{background:color-mix(in srgb,var(--copper) 35%,transparent)}
+.steps .pill{vertical-align:2px;margin-left:4px}
 .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .steps li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding-block:10px;border-top:1px solid var(--line);min-width:0;overflow-wrap:anywhere}
 .steps li:first-child{border-top:0;padding-top:0}
@@ -223,7 +228,7 @@ const AGENTS = {"chef-de-chantier":"Chef de chantier",developpeur:"Développeur"
 const TYPES = {session:"Session",livraison:"Livraison",incident:"Incident",decision:"Décision",rapport:"Point du jour",info:"Info"};
 const LIVRAISON = new Date("2026-10-17T22:00:00Z"), OUVERTURE = new Date("2026-10-19T18:00:00+02:00");
 
-let E = null, P = null, J = [], D = [], C = [], S = [], T = [];
+let E = null, P = null, EP = null, J = [], D = [], C = [], S = [], T = [];
 let filtreEssai = "a_faire", essaiDiffere = false;
 let tab = "accueil", filtre = "tout", db = null, demandeDiffere = false;
 const brouillons = {}, choix = {};
@@ -274,9 +279,16 @@ const court = (s) => { const x = String(s || "").replace(/[`*]/g, "").split(/ [:
 function avancement() {
   const l = P && P.lots && P.lots.find((x) => x.num === REFONTE);
   if (!l) return null;
-  const items = l.items.map((i, k) => ({ ...i, n: k + 1 }));
-  return { f: items.filter((i) => i.fait).length, t: items.length, items, next: items.find((i) => !i.fait) || null };
+  const et = (EP && EP.etapes) || {};
+  const items = l.items.map((i, k) => { const e = et[k + 1] || {}; return { ...i, n: k + 1, st: i.fait ? "valide" : (ST_ETAPE[e.statut] ? e.statut : "a_faire"), note: e.note || "" }; });
+  const n = (s) => items.filter((i) => i.st === s).length;
+  const pct = Math.round(100 * items.reduce((x, i) => x + ST_ETAPE[i.st][2], 0) / Math.max(1, items.length));
+  return { f: n("valide"), as: n("assemble"), ec: n("en_cours"), t: items.length, items, pct, next: items.find((i) => !i.fait) || null };
 }
+// statut d'une étape : pastille, libellé, part du travail compté dans l'avancement
+const ST_ETAPE = { valide: ["ok", "validé", 1], assemble: ["brass", "fait, à valider", 0.75], en_cours: ["run", "en cours", 0.35], a_faire: ["", "à faire", 0] };
+const barre = (a) => `<div class="bar dbl"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span><span class="b" style="width:${(100 * a.as / Math.max(1, a.t)).toFixed(1)}%"></span><span class="c" style="width:${(100 * a.ec / Math.max(1, a.t)).toFixed(1)}%"></span></div>`;
+const resume = (a) => `${a.f} validées · ${a.as} faites à valider · ${a.ec} en cours · ${a.t - a.f - a.as - a.ec} à faire`;
 const ouvertes = () => D.filter((d) => d.pour !== "admin" && d.statut === "ouverte");
 
 /* ---------- Onglets ---------- */
@@ -317,8 +329,8 @@ function renderAccueil() {
       ${lienS ? `<p class="next"><a href="${esc(lienS)}" target="_blank" rel="noopener">Ouvrir la session dans claude.ai</a></p>` : ""}
     </div></div>
     <div class="tiles">
-      <div class="tile"><p class="k">Avancement</p><p class="v">${a ? Math.round(100 * a.f / Math.max(1, a.t)) + " %" : "—"}</p><p class="s">${a ? `${a.f} étapes sur ${a.t}` : "Plan pas encore chargé"}</p>${a ? `<div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div>` : ""}</div>
-      <div class="tile"><p class="k">Étape suivante</p><p class="v">${a && a.next ? "Étape " + a.next.n : a ? "Toutes faites" : "—"}</p><p class="s">${a && a.next ? esc(court(a.next.texte)) : ""}</p></div>
+      <div class="tile"><p class="k">Avancement</p><p class="v">${a ? "≈ " + a.pct + " %" : "—"}</p><p class="s">${a ? esc(resume(a)) : "Plan pas encore chargé"}</p>${a ? barre(a) : ""}</div>
+      <div class="tile"><p class="k">En cours</p><p class="v">${a ? a.ec + (a.ec > 1 ? " étapes" : " étape") : "—"}</p><p class="s">${a ? esc(a.items.filter((i) => i.st === "en_cours").map((i) => i.n).join(", ")) || "aucune" : ""}</p></div>
       <div class="tile"><p class="k">Version</p><p class="v">${esc(v.mod || "0.9.43")}</p><p class="s">Modpack ${esc(v.modpack || "—")}${v.modpack_obligatoire ? " · <strong>obligatoire</strong>" : ""}</p></div>
       <div class="tile"><p class="k">Tests</p><p class="v">${esc(te.jeu || "—")}</p><p class="s">${te.junit ? `en jeu · ${esc(te.junit)} sans le jeu` : "en jeu"}${te.date ? " · " + esc(quand(te.date)) : ""}</p></div>
     </div>
@@ -346,8 +358,8 @@ function renderAccueil() {
 function renderPlan() {
   const a = avancement();
   if (!a) { $("#t-plan").innerHTML = `<div class="card"><h2>Les étapes</h2><p class="empty">Les 13 étapes de la refonte apparaîtront ici dès que la session aura chargé le plan.</p></div>`; return; }
-  $("#t-plan").innerHTML = `<div class="card"><h2>Les étapes de la refonte<small>${a.f} / ${a.t} · mis à jour ${esc(quand(P.maj))}</small></h2><div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div><p class="muted" style="margin:10px 0 0">Livraison ce soir avant minuit sur un monde d'essai neuf, ouverture lundi 19 octobre sur un monde neuf. Les étapes vont de la plus importante à la moins importante : ce qui est fini à 23 h 30 est livré.</p></div>
-    <div class="card"><ol class="steps">${a.items.map((i) => `<li class="${i.fait ? "f" : a.next === i ? "cur" : ""}"><span class="sn">${i.fait ? "✓" : i.n}</span><span>${inline(esc(i.texte))}${a.next === i ? ' <span class="pill brass">prochaine</span>' : ""}</span></li>`).join("")}</ol></div>`;
+  $("#t-plan").innerHTML = `<div class="card"><h2>Les étapes de la refonte<small>≈ ${a.pct} % · mis à jour ${esc(quand((EP && EP.maj) || P.maj))}</small></h2>${barre(a)}<p class="muted" style="margin:10px 0 0">${esc(resume(a))}. Une étape est « validée » quand tout est vérifié ensemble sur la version officielle ; « fait, à valider » veut dire que le morceau est codé et assemblé, en attente de cette vérification. Livraison ce soir avant minuit sur un monde d'essai neuf, ouverture lundi 19 octobre sur un monde neuf.</p></div>
+    <div class="card"><ol class="steps">${a.items.map((i) => { const s = ST_ETAPE[i.st]; return `<li class="${i.st === "valide" ? "f" : i.st === "a_faire" ? "" : "cur"}"><span class="sn">${i.st === "valide" ? "✓" : i.n}</span><span>${inline(esc(i.texte))} ${pill(s[0], s[1])}${i.note ? `<span class="muted" style="display:block;font-size:14px;margin-top:2px">${esc(i.note)}</span>` : ""}</span></li>`; }).join("")}</ol></div>`;
   return;
   $("#t-plan").innerHTML = `<div class="card"><h2>Avancement global<small>${a.f} / ${a.t} · mis à jour ${esc(quand(P.maj))}</small></h2><div class="bar"><span style="width:${(100 * a.f / Math.max(1, a.t)).toFixed(1)}%"></span></div><p class="muted" style="margin:10px 0 0">Livraison visée : ce soir, pour l'ouverture du serveur.</p></div>
     <div class="card">${P.lots.map((l) => {
@@ -507,6 +519,7 @@ setInterval(() => { renderCompte(); renderAccueil(); if (tab === "sessions") ren
   db = d; live("on", "En direct");
   db.doc("etat/courant").onSnapshot((s) => { E = s.exists ? s.data() : null; renderTabs(); renderAccueil(); }, erreur);
   db.doc("plan/lots").onSnapshot((s) => { P = s.exists ? s.data() : null; renderAccueil(); renderPlan(); }, erreur);
+  db.doc("plan/etapes").onSnapshot((s) => { EP = s.exists ? s.data() : null; renderAccueil(); renderPlan(); }, erreur);
   db.collection("journal").orderBy("date", "desc").limit(200).onSnapshot((q) => { J = enListe(q); renderAccueil(); renderJournal(); }, erreur);
   db.collection("demandes").orderBy("date", "desc").limit(100).onSnapshot((q) => { D = enListe(q); renderTabs(); renderAccueil(); renderDemandes(); }, erreur);
   db.collection("consignes").orderBy("date", "desc").limit(100).onSnapshot((q) => { C = enListe(q); renderTabs(); renderConsignes(); }, erreur);

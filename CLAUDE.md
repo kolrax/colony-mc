@@ -123,6 +123,7 @@ Artefact **https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ** (source : `docs/p
 Documents :
 - `etat/courant` : `{maj, session:{statut: en_cours|terminee|coupee, debut, fin, lot, objectif, resume, prochaine_etape, lien}, agents:[{nom, tache, statut: en_cours|fini|echec, debut, fin}], versions:{mod, modpack, modpack_obligatoire}, tests:{junit:"52/52", jeu:"65/65", date}}`. `nom` = le nom de fichier de l'agent (`developpeur`, `testeur`…). `tache` = une phrase claire pour KOLRAX.
 - `plan/lots` : `python3 tools/suivi.py plan /tmp/plan.json`, puis `set` avec `file_path`.
+- `plan/etapes` : `{maj, etapes: {"1": {statut: a_faire|en_cours|assemble|valide, note}, …}}`, une entrée par case du lot 16 (numérotées dans l'ordre). Mets-la à jour **à chaque morceau fini ou commencé**, sans attendre `main` : KOLRAX y voit l'avancement réel. `assemble` = codé et fusionné, pas encore vérifié ensemble ; `valide` = case cochée sur `main`. Une phrase simple dans `note`.
 - `journal/<AAAAMMJJ-HHMM-mot>` : `{date, type: session|livraison|incident|decision|rapport|info, titre, texte, lien}`.
 - `sessions/<AAAAMMJJ-HHMM>` : `{debut, fin, statut: en_cours|terminee|coupee|sautee|echec, lot, resume, lien}`.
 - `demandes/<mot>` : `{date, titre, texte, pour: kolrax|admin, importance: haute|normale, options:[…], statut: ouverte|repondue|traitee, reponse, note}`.
