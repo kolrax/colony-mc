@@ -35,6 +35,9 @@ public class TestsLieux {
     public static void apres(ServerLevel l) {
         Lieux.enEssai = false;
         Reglages.actuel.rayon_colonie = rayonAvant;
+        // La fausse structure du test des villages : défaite à rebours, comme dans TestsMineur.
+        for (int i = TestsMineur.A_DEFAIRE.size() - 1; i >= 0; i--) TestsMineur.A_DEFAIRE.get(i).run();
+        TestsMineur.A_DEFAIRE.clear();
     }
 
     /** Un bûcheron seul dans son coin du monde plat, poste en {@code base}, posé à {@code dx} blocs à l'est. */
@@ -63,6 +66,27 @@ public class TestsLieux {
             String e = TestsJeu.etat(t, t.bureau);
             t.discard();
             for (int y = 0; y < 5; y++) h.assertTrue(l.getBlockState(pied.above(y)).is(Blocks.OAK_LOG), "l'arbre de décoration ne doit pas être coupé (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Un arbre naturel hors de la colonie, mais dans l'emprise d'une structure générée (un village) : il n'y touche pas.
+     * Avant : seul le bloc du pied était regardé, et seulement pour le mineur ; le joueur fantôme a vu 40 bûches coupées
+     * dans un village.
+     */
+    @GameTest(template = "vide", timeoutTicks = 500, batch = "lieux")
+    public static void arbreDeVillagePasCoupe(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 136000);
+        BlockPos pied = base.east(30);
+        TestsBucheron.arbre(l, pied, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        TestsMineur.puitsDeMine(l, pied.offset(-6, -1, -6), pied.offset(6, 8, 6));
+        Travailleur t = bucheron(h, base, 26);
+        h.runAtTickTime(h.getTick() + 400, () -> {
+            String e = TestsJeu.etat(t, t.bureau);
+            t.discard();
+            for (int y = 0; y < 5; y++) h.assertTrue(l.getBlockState(pied.above(y)).is(Blocks.OAK_LOG), "l'arbre du village ne doit pas être coupé (" + e + ")");
             h.succeed();
         });
     }

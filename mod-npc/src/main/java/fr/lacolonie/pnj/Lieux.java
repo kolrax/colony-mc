@@ -134,6 +134,18 @@ final class Lieux {
         return false;
     }
 
+    /**
+     * p est dans l'emprise entière d'une structure générée (tout le village, pas seulement une de ses maisons : un arbre entre
+     * deux maisons en fait partie). Bon marché sans structure : le chunk n'a alors aucune référence.
+     */
+    static boolean dansStructure(Level l, BlockPos p) {
+        if (!(l instanceof ServerLevel sl) || !l.isLoaded(p)) return false;
+        var refs = sl.getChunk(p).getAllReferences();
+        if (refs.isEmpty()) return false;
+        for (var s : refs.keySet()) if (sl.structureManager().getStructureAt(p, s).isValid()) return true;
+        return Monde.structure(l, p) != null;
+    }
+
     /** p est dans sa colonie (le rayon autour de son poste) ; sans poste, nulle part. */
     static boolean dansColonie(Travailleur t, BlockPos p) {
         return t.bureau != null && LieuxRegles.dansColonie(t.bureau.getX(), t.bureau.getZ(), Reglages.actuel.rayon_colonie, p.getX(), p.getZ());
@@ -169,7 +181,7 @@ final class Lieux {
     static boolean arbrePermis(Travailleur t, BlockPos p) {
         Level l = t.level();
         if (!regles(l)) return true;
-        if (Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
+        if (dansStructure(l, p) || Mineur.baseVoisine(t, p) != null) return false;
         if (ici(t, p)) return true;
         return !dansColonie(t, p) && !zoneConstruite(l, p);
     }
