@@ -82,7 +82,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ; ils sont la main-d'œuvre de l'industrie (0.9.36, 1re passe : par le transporteur ; pas encore essayé avec le vrai Create)
 
 ## 13. Familles, recrutement, progression
-- [ ] Recrutement : PNJ plus rares, avec des compétences propres ; arrivées depuis les villages, débauche d'un autre joueur, réputation, affiche ou crieur
+- [x] Recrutement : PNJ plus rares, avec des compétences propres ; arrivées depuis les villages, débauche d'un autre joueur, réputation, affiche ou crieur (0.9.37, 1re passe : rareté, talents, réputation, affiche, villages ; débauche au lot 14, crieur dans plus-tard)
 - [ ] Étoiles qui montent avec l'expérience ou une formation payée
 - [ ] Familles, enfants qui grandissent, vieillesse lente mais perceptible ; apprenti
 - [ ] Travailleurs de nuit (fatigue, santé, moral)
