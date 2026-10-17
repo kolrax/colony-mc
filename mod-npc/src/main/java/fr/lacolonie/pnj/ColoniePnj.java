@@ -70,8 +70,6 @@ public class ColoniePnj {
 
     public static final DeferredHolder<EntityType<?>, EntityType<Travailleur>> TRAVAILLEUR = ENTITES.register("travailleur",
             () -> EntityType.Builder.of(Travailleur::new, MobCategory.MISC).sized(0.6f, 1.8f).eyeHeight(1.62f).clientTrackingRange(10).build("travailleur"));
-    public static final DeferredHolder<EntityType<?>, EntityType<Corbeau>> CORBEAU = ENTITES.register("corbeau",
-            () -> EntityType.Builder.<Corbeau>of(Corbeau::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).updateInterval(2).noSave().build("corbeau"));
     public static final DeferredBlock<Bureau.Bloc> BUREAU = BLOCS.register("bureau",
             () -> new Bureau.Bloc(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).ignitedByLava()));
     public static final DeferredItem<BlockItem> BUREAU_OBJET = OBJETS.registerSimpleBlockItem(BUREAU);
@@ -145,10 +143,6 @@ public class ColoniePnj {
                 for (Travailleur t : tous(e.getServer())) t.forcerChunk();
                 h = mesure.mesurer(Charge.Partie.FILET, h);
             }
-            if (e.getServer().getTickCount() % 20 == 0) { // les corbeaux arrivés livrent leur lettre
-                Courrier.tick(e.getServer());
-                h = mesure.mesurer(Charge.Partie.COURRIER, h);
-            }
             if (e.getServer().getTickCount() % 600 == 0) // les phrases non comprises, si elles ont changé (écrites en arrière-plan)
                 Incompris.JOURNAL.sauver(fichierIncompris(), false, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
             Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
@@ -176,8 +170,6 @@ public class ColoniePnj {
         });
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
-            long n = Courrier.de(p.server).nonLues(p.getUUID());
-            if (n > 0) Travailleur.signaler(p, "✉ " + n + (n > 1 ? " lettres t'attendent" : " lettre t'attend") + " à ton poste de travail.");
             // Une fois par joueur : on peut parler à ses ouvriers au micro, et ce que ça implique (sa voix part vers un service en ligne).
             var donnees = p.getPersistentData();
             if (Voix.pret && ReglagesIA.actuel.ecoutePossible() && !donnees.getBoolean("colonie_pnj_micro2")) {
@@ -525,7 +517,7 @@ public class ColoniePnj {
 
     /**
      * Retire les ouvriers du banc (eux seuls), puis leurs postes vidés, leurs lettres et leur effectif. Les ouvriers
-     * partent d'abord : sinon chacun écrirait que son poste est détruit (une volée de corbeaux).
+     * partent d'abord : sinon chacun écrirait que son poste est détruit (trente lignes au journal).
      */
     static int finBanc(MinecraftServer s) {
         Courrier c = Courrier.de(s);
@@ -550,7 +542,6 @@ public class ColoniePnj {
         c.boites.remove(CHEF_BANC);
         c.reserves.remove(CHEF_BANC);
         c.effectifs.remove(CHEF_BANC);
-        c.vols.removeIf(v -> CHEF_BANC.equals(v.chef));
         c.setDirty();
         return n;
     }
