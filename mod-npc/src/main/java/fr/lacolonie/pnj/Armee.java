@@ -190,7 +190,7 @@ final class Armee {
             if (u == null) { r.add(texte(t, "guerre_refus_hors_guerre", null, null, "Nous ne sommes pas en guerre, chef. Je ne frapperai personne.")); return; }
             String ennemi = c.ennemis(t.chef).get(u);
             List<Travailleur> armee = armee(s, t.chef);
-            if ("guerrier".equals(t.metier) && !armee.contains(t)) armee.add(t); // tout juste arrivé, il n'est pas encore dans la liste du monde
+            if ("guerrier".equals(t.metier) && !armee.contains(t) && !Famille.mineur(t)) armee.add(t); // tout juste arrivé, il n'est pas encore dans la liste du monde
             for (Travailleur w : armee) {
                 w.memoire.putString("guerre_assaut", u.toString());
                 w.memoire.putString("guerre_nom", ennemi);
@@ -212,7 +212,7 @@ final class Armee {
     /** Les guerriers de ce chef (dans les mondes chargés). */
     static List<Travailleur> armee(MinecraftServer s, UUID chef) {
         List<Travailleur> l = new ArrayList<>();
-        for (Travailleur w : ColoniePnj.tous(s)) if (chef.equals(w.chef) && "guerrier".equals(w.metier) && w.mode != Travailleur.Mode.CHOMEUR) l.add(w);
+        for (Travailleur w : ColoniePnj.tous(s)) if (chef.equals(w.chef) && "guerrier".equals(w.metier) && w.mode != Travailleur.Mode.CHOMEUR && !Famille.mineur(w)) l.add(w); // jamais un enfant ni un apprenti (lot 13)
         return l;
     }
 

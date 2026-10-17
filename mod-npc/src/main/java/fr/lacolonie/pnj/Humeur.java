@@ -80,7 +80,7 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot, Relations.actifs() ? Relations.de(t).moral() : 0);
+                !pluie && l.isDay(), coup, ouvriers, depot, (Relations.actifs() ? Relations.de(t).moral() : 0) + Famille.moral(t)); // la famille réunie (lot 13)
     }
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */
@@ -229,7 +229,7 @@ final class Humeur {
             // double, l'être aimé triple : Relations), quel que soit l'ordre des morts.
             boolean memeJour = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour();
             int deja = memeJour ? t.memoire.getInt("deuil_coup") : 0, brut = memeJour ? t.memoire.getInt("deuil_brut") : 0;
-            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Relations.deuil(t, mort);
+            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Math.max(Relations.deuil(t, mort), Famille.poidsDeuil(t, mort)); // un parent, un enfant : comme l'être aimé (lot 13)
             if (memeJour && !t.memoire.contains("deuil_brut")) brut = deja; // mémoire d'avant les liens
             brut += Moral.DEUIL_COUP * poids;
             poidsMax = Math.max(poidsMax, poids);

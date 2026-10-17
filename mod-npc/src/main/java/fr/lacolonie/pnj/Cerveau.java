@@ -36,6 +36,7 @@ final class Cerveau {
         Metier m = Metier.de(t.metier);
         if (m == null) return;
         try {
+            if (Famille.penser(t)) return; // un enfant joue, mange, dort et fuit les monstres : il ne travaille pas (lot 13)
             decider(t, m);
         } catch (RuntimeException e) {
             journal("[" + t.prenom + " / " + t.metier + "] erreur : " + e);

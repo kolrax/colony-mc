@@ -283,6 +283,31 @@ final class Messages {
                 "Une nouvelle au poste : {0} et moi, nous sommes ensemble. C'est ici, à ton service, que notre histoire a commencé.");
         t("couple", "peureux", "Je n'osais pas te le dire… {0} et moi, nous sommes ensemble. J'espère que tu n'y vois pas d'objection, chef.");
         t("couple", "colerique", "Autant que tu l'apprennes de ma bouche : {0} et moi, c'est sérieux. Que personne n'y trouve à redire.");
+        // Familles (lot 13, Famille) : une naissance, l'apprenti, l'ouvrier de seize ans, la vieillesse.
+        m("naissance", "Une naissance",
+                "Grande joie au poste, chef : {1} et moi avons un enfant. Son nom : {0}. Nous veillerons sur l'enfant sans négliger l'ouvrage.",
+                "Je t'écris le cœur léger : un enfant nous est né, à {1} et à moi. Son nom : {0}.",
+                "Un nouveau venu dans ta colonie, chef : {0}, notre enfant, à {1} et à moi. L'enfant ne mange pas encore beaucoup !",
+                "Notre enfant, {0}, a vu le jour. {1} et moi te le présenterons quand tu passeras au poste.");
+        t("naissance", "peureux", "Pardonne-moi de t'écrire pour si peu… {1} et moi avons eu un enfant, {0}. L'enfant ne te gênera pas, c'est promis.");
+        t("naissance", "colerique", "Que tout le poste le sache : {1} et moi avons un enfant de notre sang, {0}. Gare à qui le bousculera !");
+        t("naissance", "fourbe", "Bonne nouvelle, chef : la colonie compte une bouche de plus, {0}, à {1} et à moi. Un futur ouvrier, qui sait ?");
+        m("apprenti", "Je suis en âge d'apprendre",
+                "J'ai douze ans, chef ! Je commence à apprendre le métier de {0}. Je n'irai pas bien vite au début, mais je ferai de mon mieux.",
+                "Me voici en apprentissage, au métier de {0}. On m'a dit que je toucherais une demi-paie : je tâcherai de la mériter.",
+                "J'ai l'âge de l'ouvrage, désormais : j'apprends le métier de {0}. Si tu veux m'en apprendre un autre, dis-le-moi.");
+        t("apprenti", "peureux", "J'ai douze ans… J'apprends le métier de {0}. J'espère ne pas trop me tromper au début.");
+        m("adulte", "J'ai seize ans",
+                "J'ai seize ans, chef : mon apprentissage est fini. Le métier de {0} est le mien pour de bon, et je demande la paie qui va avec. {1}",
+                "Me voici à l'ouvrage comme les autres : le métier de {0} n'a plus de secret pour moi. {1}",
+                "Seize ans aujourd'hui ! Je connais le métier de {0}, et je compte bien te le montrer. {1}");
+        t("adulte", "colerique", "Seize ans ! Fini de me traiter en enfant : le métier de {0}, je le connais, et je vaux bien les autres. {1}");
+        m("vieux", "Le poids des ans",
+                "J'ai {0} ans, chef. Mes bras ne sont plus ce qu'ils étaient : je travaille un peu moins vite, mais je ne renonce pas.",
+                "Les années pèsent, chef : {0} ans. Je fais encore ma part, à mon pas. Pense à former les jeunes.",
+                "Les ans me rattrapent : {0} déjà. Le dos me tire le matin, et l'ouvrage avance moins vite qu'avant.");
+        t("vieux", "colerique", "{0} ans, et toujours debout ! Mais je l'avoue, chef, je n'ai plus la vigueur d'antan.");
+        t("vieux", "peureux", "J'ai {0} ans, chef… Je crains de n'être plus aussi utile. Garde-moi encore un peu, s'il te plaît.");
         m("reprise_greve", "Je reprends le travail",
                 "J'ai touché mon dû ({0}). Merci, je reprends le travail.",
                 "Paie reçue : {0}. Je retourne à l'ouvrage.");

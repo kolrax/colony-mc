@@ -54,7 +54,7 @@ final class Apprentissage {
         long m = Etoiles.minute(t.level().getGameTime()) + 1; // + 1 : 0 veut dire « jamais »
         if (t.memoire.getLong("xp_minute") == m) return;
         t.memoire.putLong("xp_minute", m);
-        int xp = t.memoire.getInt("experience") + 1;
+        int xp = t.memoire.getInt("experience") + (Famille.apprenti(t) ? Ages.experience(t.age, m) : 1); // l'apprenti apprend plus vite (lot 13)
         t.memoire.putInt("experience", xp);
         if (Etoiles.monte(t.niveau, xp, reglage().minutes_de_travail)) monter(t, false);
     }

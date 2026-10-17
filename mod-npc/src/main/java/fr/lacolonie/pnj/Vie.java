@@ -54,6 +54,7 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/recrutement.txt"), e -> System.err.println("[colonie_pnj] Section de recrutement.txt ignorée : " + e.getMessage())));
         // Les machines que le transporteur remplit et vide (lot 12, Transporteur, Machines) : même format, {machine} en plus.
         TOUTES.putAll(lire(Repertoire.lignes("/machines.txt"), e -> System.err.println("[colonie_pnj] Section de machines.txt ignorée : " + e.getMessage())));
+        TOUTES.putAll(lire(Repertoire.lignes("/famille.txt"), e -> System.err.println("[colonie_pnj] Section de famille.txt ignorée : " + e.getMessage()))); // lot 13
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */
