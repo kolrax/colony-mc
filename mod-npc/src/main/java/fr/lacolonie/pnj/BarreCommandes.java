@@ -55,7 +55,6 @@ public final class BarreCommandes {
         /** Au plus tant de propositions. */
         static final int MAX = 8;
 
-
         /** Une ligne proposée : l'action {@code id}, ce qu'on lit ({@code libelle}, {@code detail}) et ce où l'on cherche ({@code textes}, aplatis). */
         record Ligne(String id, String libelle, String detail, Set<String> metiers, List<String> textes) {
             boolean pour(String metier) { return metiers.isEmpty() || metiers.contains(metier); }
