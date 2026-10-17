@@ -251,6 +251,11 @@ final class Cerveau {
             return;
         }
 
+        // Aucune mission dans ses horaires (d'ordinaire déjà pris plus haut, au repos) : il attend au poste, sans rien écrire.
+        if (mission == null && horsHoraires(t)) {
+            if (dehors || t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) rentrer(t); else attendre(t, 10);
+            return;
+        }
         // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse.
         if (mission == null && !t.missions.isEmpty() && !m.enCours(t)) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
