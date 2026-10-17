@@ -1,7 +1,10 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,9 +55,14 @@ final class Armee {
 
     static String nom(Entity e) { return e instanceof Travailleur w ? w.prenom : e instanceof ServerPlayer p ? p.getGameProfile().getName() : "?"; }
 
-    /** Un ennemi de son chef : un ouvrier ennemi debout, ou le chef ennemi en survie ; jamais un joueur qu'on lui a dit d'épargner. */
+    /**
+     * Un ennemi de son chef : un ouvrier ennemi debout, ou le chef ennemi en survie ; jamais un joueur qu'on lui a dit d'épargner.
+     * Un garde ne s'en prend à un homme que sur mission « défendre » ou « attaquer » (refonte, partie 6) ; les autres ouvriers
+     * ne font que le voir (pour fuir et prévenir la garde).
+     */
     static boolean ennemi(Travailleur t, Map<UUID, String> en, Entity e) {
         if (!(e instanceof LivingEntity l) || !l.isAlive() || !en.containsKey(camp(e))) return false;
+        if ("guerrier".equals(t.metier) && !aOrdre(t, true)) return false;
         if (e instanceof Travailleur w && w.aTerre) return false; // on n'achève pas un homme à terre
         if (e instanceof ServerPlayer p && (p.isCreative() || p.isSpectator() || GardeChef.epargne(t.memoire.getString("epargnes"), p.getGameProfile().getName()))) return false;
         return true;
@@ -340,5 +348,257 @@ final class Armee {
         for (BlockPos p : BlockPos.betweenClosed(poste.offset(-PORTES, -2, -PORTES), poste.offset(PORTES, 3, PORTES)))
             if (estPorte(l.getBlockState(p)) && (mieux == null || p.distSqr(poste) < mieux.distSqr(poste))) mieux = p.immutable();
         return mieux;
+    }
+
+    // --- Refonte 1.0.0, partie 6 : la guerre se déclare au poste ; les missions des gardes ------------------
+
+    /** Sa mission en cours (son identifiant), ou null. */
+    static String mission(Travailleur t) {
+        Travailleur.Mission m = t.missionActive();
+        return m == null ? null : m.id;
+    }
+
+    /** L'ordre de frapper un homme : la guerre, et la mission « défendre » ou « attaquer » (ou l'assaut levé de l'ancienne façon). */
+    static boolean aOrdre(Travailleur t, boolean enGuerre) {
+        return Guerre.frappeHomme(enGuerre, mission(t)) || enGuerre && t.memoire.contains("guerre_assaut");
+    }
+
+    /** Le pseudo d'un chef : en jeu, dans une guerre, ou porté par ses ouvriers ; null si on ne le connaît pas. */
+    static String nomDe(MinecraftServer s, UUID u) {
+        ServerPlayer p = s.getPlayerList().getPlayer(u);
+        if (p != null) return p.getGameProfile().getName();
+        for (Map<UUID, String> m : Courrier.de(s).guerres.values()) if (m.containsKey(u)) return m.get(u);
+        for (Travailleur w : ColoniePnj.tous(s)) if (u.equals(w.chef) && !w.chefNom.isEmpty()) return w.chefNom;
+        return null;
+    }
+
+    /** Le chef désigné à l'écran du poste : son identifiant (la liste des postes) ou son pseudo ; null s'il n'a ni poste ni ouvriers. */
+    static Map.Entry<UUID, String> chefDe(MinecraftServer s, String qui) {
+        if (qui == null || qui.isBlank()) return null;
+        UUID u = uuid(qui.strip());
+        if (u == null) return chefNomme(s, qui.strip());
+        String nom = nomDe(s, u);
+        if (!Courrier.de(s).postes.containsKey(u) && nom == null) return null;
+        return Map.entry(u, nom == null ? "un inconnu" : nom);
+    }
+
+    /** Les deux chefs le lisent : tout de suite s'ils sont là, et au journal de leur poste. */
+    static void prevenir(MinecraftServer s, UUID a, UUID b, String objet, String texte) {
+        for (UUID u : List.of(a, b)) {
+            ServerPlayer j = s.getPlayerList().getPlayer(u);
+            if (j != null) j.sendSystemMessage(Component.literal(texte).withStyle(ChatFormatting.RED));
+            Courrier.avis(s, u, "guerre", true, objet, texte);
+        }
+    }
+
+    /** Au poste : le chef déclare la guerre à un autre ({@code qui} : identifiant ou pseudo). Renvoie ce qu'il lit. */
+    public static String declarer(ServerPlayer p, String qui) {
+        MinecraftServer s = p.server;
+        Courrier c = Courrier.de(s);
+        Map.Entry<UUID, String> x = chefDe(s, qui);
+        if (x == null) return "Aucune colonie de ce nom.";
+        if (x.getKey().equals(p.getUUID())) return "On ne se fait pas la guerre à soi-même.";
+        if (c.enGuerre(p.getUUID(), x.getKey())) return "Tu es déjà en guerre contre " + x.getValue() + ".";
+        String moi = p.getGameProfile().getName(), texte = Guerre.declaration(moi, x.getValue());
+        c.declarer(p.getUUID(), moi, x.getKey(), x.getValue());
+        prevenir(s, p.getUUID(), x.getKey(), "La guerre", texte);
+        return texte;
+    }
+
+    /** Au poste : la paix avec {@code qui} (identifiant ou pseudo ; vide : le seul ennemi). Les gardes des deux camps baissent les armes. */
+    public static String paix(ServerPlayer p, String qui) {
+        MinecraftServer s = p.server;
+        Courrier c = Courrier.de(s);
+        Map<UUID, String> en = c.ennemis(p.getUUID());
+        if (en.isEmpty()) return "Tu n'es en guerre contre personne.";
+        UUID u = qui == null || qui.isBlank() ? (en.size() == 1 ? en.keySet().iterator().next() : null)
+                : uuid(qui.strip()) != null ? uuid(qui.strip()) : ennemiNomme(en, qui.strip());
+        if (u == null || !en.containsKey(u)) return "Tu n'es pas en guerre contre " + (qui == null || qui.isBlank() ? "lui" : qui.strip()) + ".";
+        String moi = p.getGameProfile().getName(), nom = en.get(u), texte = Guerre.paixFaite(moi, nom);
+        c.paix(p.getUUID(), u);
+        for (UUID camp : List.of(p.getUUID(), u))
+            for (Travailleur w : armee(s, camp)) {
+                finir(w);
+                if (w.action instanceof Actions.Attaquer a && a.guerre) w.finirAction("paix");
+            }
+        prevenir(s, p.getUUID(), u, "La paix", texte);
+        return texte;
+    }
+
+    /** Pour l'écran du poste : les autres chefs qui ont un poste, avec « uuid », « nom » et « guerre » (en guerre avec lui). */
+    public static ListTag adversaires(ServerPlayer p) {
+        Courrier c = Courrier.de(p.server);
+        ListTag l = new ListTag();
+        for (UUID u : c.postes.keySet()) {
+            if (u.equals(p.getUUID())) continue;
+            String nom = nomDe(p.server, u);
+            if (nom == null) continue;
+            CompoundTag x = new CompoundTag();
+            x.putString("uuid", u.toString());
+            x.putString("nom", nom);
+            x.putBoolean("guerre", c.enGuerre(p.getUUID(), u));
+            l.add(x);
+        }
+        return l;
+    }
+
+    // --- La mission « attaquer » : la troupe marche en rangs derrière son chef de file -----------------------
+
+    /** Où il attaque : le lieu de sa mission (« Travaille ici », ou le poste choisi dans la liste), sinon le poste ennemi le plus proche du sien. */
+    static BlockPos but(Travailleur t, Travailleur.Mission m) {
+        if (m == null) return null;
+        if (m.lieu != null) return m.lieu;
+        if (t.chef == null || !(t.level() instanceof ServerLevel sl)) return null;
+        Courrier c = Courrier.de(sl.getServer());
+        BlockPos chez = t.bureau != null ? t.bureau : t.blockPosition(), mieux = null;
+        for (UUID u : c.ennemis(t.chef).keySet()) {
+            Courrier.Poste po = c.postes.get(u);
+            if (po != null && po.monde() == t.level().dimension() && (mieux == null || po.pos().distSqr(chez) < mieux.distSqr(chez))) mieux = po.pos();
+        }
+        return mieux;
+    }
+
+    /** Une troupe : les gardes d'un chef qui attaquent le même but, triés (le premier mène). Revue au plus toutes les 20 ticks. */
+    record Troupe(long quand, List<Travailleur> gardes) {}
+
+    static final Map<String, Troupe> TROUPES = new HashMap<>();
+
+    static List<Travailleur> troupe(Travailleur t, BlockPos but) {
+        String cle = t.chef + "@" + but.asLong();
+        long maintenant = t.level().getGameTime();
+        Troupe x = TROUPES.get(cle);
+        if (x == null || maintenant - x.quand() >= 20 || maintenant < x.quand()) {
+            List<Travailleur> l = new ArrayList<>();
+            if (t.level() instanceof ServerLevel sl)
+                for (Travailleur w : sl.getEntities(ColoniePnj.TRAVAILLEUR.get(), w -> w.isAlive() && t.chef.equals(w.chef) && "guerrier".equals(w.metier)))
+                    if (Guerre.ATTAQUER.equals(mission(w)) && but.equals(but(w, w.missionActive()))) l.add(w);
+            l.sort(Comparator.comparingInt(Entity::getId));
+            TROUPES.values().removeIf(v -> maintenant - v.quand() > 200 || maintenant < v.quand());
+            TROUPES.put(cle, x = new Troupe(maintenant, l));
+        }
+        return x.gardes();
+    }
+
+    /** Le chef ennemi dont le poste est à ce but (à 8 blocs), ou null. */
+    static UUID posteEnnemi(Travailleur t, Courrier c, BlockPos but) {
+        for (UUID u : c.ennemis(t.chef).keySet()) {
+            Courrier.Poste po = c.postes.get(u);
+            if (po != null && po.monde() == t.level().dimension() && po.pos().distSqr(but) <= 64) return u;
+        }
+        return null;
+    }
+
+    /**
+     * La mission « attaquer » (depuis {@link Guerrier#travailler}) : sans but (ni lieu, ni guerre déclarée), elle est bloquée et
+     * il garde la colonie (faux). Sinon la troupe marche en rangs vers le but ; arrivée au poste ennemi, en guerre, elle en
+     * enfonce les portes (jamais le bureau), puis tient la place. Les ennemis rencontrés, la vigilance les charge.
+     */
+    static boolean campagne(Travailleur t) {
+        if (!(t.level() instanceof ServerLevel sl)) return false;
+        BlockPos but = but(t, t.missionActive());
+        if (but == null) { t.bloquer(Statut.SANS_GUERRE); return false; }
+        List<Travailleur> troupe = troupe(t, but);
+        int rang = troupe.indexOf(t);
+        Travailleur tete = rang <= 0 ? t : troupe.get(0);
+        Vec3 cible = Vec3.atBottomCenterOf(but);
+        if (t.distanceToSqr(cible) <= 8 * 8) {
+            if (enfoncer(t, sl, but)) return true;
+            if (t.distanceToSqr(cible) > ARRIVE * ARRIVE) Cerveau.lancer(t, new Actions.Aller(cible, ARRIVE - 1));
+            else Cerveau.attendre(t, 2); // il tient la place
+            return true;
+        }
+        if (Cerveau.parfois(t, "guerre_en_marche", 90)) t.dire(rang <= 0 ? "En avant ! Suivez-moi !" : "En rang, et du pas !");
+        Cerveau.lancer(t, new Rang(tete == t ? null : tete, rang < 0 ? troupe.size() : rang, cible));
+        return true;
+    }
+
+    /** Au poste ennemi, en guerre, sur mission « attaquer » : il enfonce une porte (jamais le bureau). Vrai s'il s'en occupe. */
+    static boolean enfoncer(Travailleur t, ServerLevel sl, BlockPos but) {
+        Courrier c = Courrier.de(sl.getServer());
+        UUID camp = posteEnnemi(t, c, but);
+        // Pas de Lieux.peutCasser dans le code : la seule casse permise ici est celle des portes d'un poste ennemi, en guerre.
+        if (camp == null || !Guerre.casse(c.enGuerre(t.chef, camp), mission(t))) return false;
+        BlockPos poste = c.postes.get(camp).pos();
+        CompoundTag mem = t.memoire;
+        BlockPos porte = mem.contains("guerre_porte") ? BlockPos.of(mem.getLong("guerre_porte")) : null;
+        if (porte == null || !estPorte(sl.getBlockState(porte))) {
+            if (mem.getLong("guerre_portes_vues") > sl.getGameTime()) return false; // aucune porte tout à l'heure : pas d'autre recherche avant 30 s
+            porte = porte(sl, poste);
+        }
+        if (porte == null) { mem.remove("guerre_porte"); mem.putLong("guerre_portes_vues", sl.getGameTime() + 600); return false; }
+        mem.putLong("guerre_porte", porte.asLong());
+        if (t.distanceToSqr(Vec3.atCenterOf(porte)) > 3 * 3) { Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(porte), 2)); return true; }
+        t.getLookControl().setLookAt(Vec3.atCenterOf(porte));
+        t.swing(InteractionHand.MAIN_HAND);
+        Sons.coup(t, porte, sl.getBlockState(porte));
+        sl.destroyBlock(porte, true, t); // en guerre déclarée, sur mission « attaquer » : la casse est permise (CLAUDE.md, refonte partie 6)
+        Cerveau.dire(t, "guerre_casse", 10, "Enfoncez-moi cette porte !");
+        Cerveau.attendre(t, 1);
+        return true;
+    }
+
+    /**
+     * La marche en rangs. Le chef de file ({@code tete} null) marche droit au but ; les autres prennent leur place derrière lui
+     * ({@link Guerre#place}), revue toutes les 20 ticks seulement. Chacun suit son {@link Itineraire} (refait seulement quand sa
+     * place a bougé de plus de 4 blocs). Au bout de 5 s, l'action finit : sa place dans la troupe est revue.
+     */
+    static final class Rang extends Actions.Action {
+        final Travailleur tete;
+        final int rang;
+        final Vec3 but;
+        Vec3 place;
+
+        Rang(Travailleur tete, int rang, Vec3 but) {
+            super("rang");
+            this.tete = tete;
+            this.rang = rang;
+            this.but = but;
+            mobile = tete != null;
+        }
+
+        Actions.Etat tick(Travailleur t) {
+            if (age >= 100) return Actions.Etat.OK;
+            if (tete == null) {
+                if (t.position().distanceToSqr(but) <= ARRIVE * ARRIVE) return Actions.Etat.OK;
+                if (coince()) return echec("bloque");
+                marcher(t, but, 0.9); // un peu moins vite que les autres : la troupe le suit
+                return Actions.Etat.EN_COURS;
+            }
+            if (!tete.isAlive() || tete.level() != t.level()) return Actions.Etat.OK;
+            if (place == null || age % 20 == 0) {
+                double[] d = Guerre.place(rang, but.x - tete.getX(), but.z - tete.getZ(), Guerre.FRONT);
+                place = new Vec3(tete.getX() + d[0], tete.getY(), tete.getZ() + d[1]);
+            }
+            double d2 = t.position().distanceToSqr(place);
+            if (d2 < 1.5 * 1.5) { t.getNavigation().stop(); return Actions.Etat.EN_COURS; }
+            marcher(t, place, d2 > 8 * 8 ? 1.25 : 1.0);
+            return Actions.Etat.EN_COURS;
+        }
+    }
+
+    /** Sous 30 % de sa vie, il rompt le combat et rentre au poste, où il reste jusqu'à la moitié de sa vie (une minute au plus). */
+    static final class Repli extends Actions.Action {
+        Repli() { super("repli"); }
+
+        Actions.Etat tick(Travailleur t) {
+            if (t.bureau == null || age > 20 * 60) return Actions.Etat.OK;
+            Vec3 b = Vec3.atBottomCenterOf(t.bureau);
+            if (t.position().distanceToSqr(b) > 3 * 3) {
+                if (coince()) return echec("bloque");
+                marcher(t, b, 1.3);
+                return Actions.Etat.EN_COURS;
+            }
+            t.getNavigation().stop();
+            return t.getHealth() >= t.getMaxHealth() * 0.5 ? Actions.Etat.OK : Actions.Etat.EN_COURS;
+        }
+    }
+
+    /** Trop blessé : il se replie vers le poste (vrai s'il part). */
+    static boolean replier(Travailleur t) {
+        if (t.bureau == null || !Guerre.repli(t.getHealth(), t.getMaxHealth()) || t.action instanceof Repli) return false;
+        Cerveau.dire(t, "repli", 20, "Je suis touché ! Je me replie au poste !");
+        if (t.isUsingItem()) t.stopUsingItem();
+        Cerveau.lancer(t, new Repli());
+        return true;
     }
 }

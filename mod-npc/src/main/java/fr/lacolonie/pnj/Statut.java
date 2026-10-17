@@ -48,6 +48,7 @@ public final class Statut {
     public static String enCours(String metier, String nomCommande, int fait, int nombre) {
         String debut = icone(metier) + " " + verbe(metier);
         if (nomCommande == null || nomCommande.isEmpty()) return debut;
+        if (nombre <= 0 && GARDES.containsKey(nomCommande)) return icone(metier) + " " + GARDES.get(nomCommande); // « ⚔ Défend la colonie »
         String nom = minuscule(nomCommande);
         if (nombre <= 0) return debut + " · " + nom;
         return debut + " · " + (fait < 0 ? "?" : String.valueOf(fait)) + "/" + nombre + " " + nom;
@@ -155,4 +156,12 @@ public final class Statut {
         if (s == null || s.isEmpty()) return "";
         return s.substring(0, 1).toLowerCase(Locale.ROOT) + s.substring(1);
     }
+
+    // --- Les missions des gardes (refonte, partie 6) ---------------------------------------------------
+
+    /** Le nom des trois missions des gardes au catalogue (Guerrier), et ce qu'on lit au-dessus de leur tête. */
+    public static final String DEFENDRE = "Défendre la colonie", ESCORTER = "Escorter son chef", ATTAQUER = "Attaquer l'ennemi";
+    static final Map<String, String> GARDES = Map.of(DEFENDRE, "Défend la colonie", ESCORTER, "Escorte son chef", ATTAQUER, "À l'attaque");
+    /** « Attaquer » sans lieu ni guerre déclarée : il garde la colonie en attendant. */
+    public static final String SANS_GUERRE = "Pas de guerre déclarée : déclare-la au poste, ou dis-lui « Travaille ici »";
 }
