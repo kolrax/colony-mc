@@ -336,6 +336,16 @@ final class Courrier extends SavedData {
         setDirty();
     }
 
+    /** Le dernier jour du jeu où une paie a compté pour chaque chef (pas sauvegardé : au pire un +1 de plus après un redémarrage). */
+    final Map<UUID, Long> paieNotee = new HashMap<>();
+
+    /** Une paie versée : +1 au plus une fois par jour du jeu et par chef, quel que soit le nombre d'ouvriers. */
+    void reputerPaie(UUID chef, long jour) {
+        if (chef == null || Long.valueOf(jour).equals(paieNotee.get(chef))) return;
+        paieNotee.put(chef, jour);
+        reputer(chef, Recrutement.PAIE);
+    }
+
     /** Ce qui arrive à cet ouvrier compte pour la réputation de son chef. */
     static void reputer(Travailleur t, int delta) {
         if (t.chef != null && t.level() instanceof ServerLevel sl) de(sl.getServer()).reputer(t.chef, delta);
@@ -376,7 +386,6 @@ final class Courrier extends SavedData {
 
     void marquerMort(Travailleur t, String quand) {
         if (t.chef == null) return;
-        reputer(t.chef, Recrutement.MORT); // un ouvrier mort à son service : ça se sait (lot 13)
         inscrire(t);
         effectifs.get(t.chef).get(t.getUUID()).mort = quand;
         setDirty();

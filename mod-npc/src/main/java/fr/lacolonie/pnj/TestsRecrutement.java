@@ -78,7 +78,7 @@ public class TestsRecrutement {
         TestsCout.fin(h, tous);
     }
 
-    /** Ce qui arrive aux ouvriers fait la réputation du chef : paie versée, grève, mort. */
+    /** Ce qui arrive aux ouvriers fait la réputation du chef : paie versée, grève (la mort : {@link #paieUneFoisMortsDAutruiPardonnees}). */
     @GameTest(template = "vide", timeoutTicks = 100, batch = "recrutement")
     public static void reputationSuitLaColonie(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
@@ -91,11 +91,36 @@ public class TestsRecrutement {
         h.assertTrue(c.reputation(chef.getUUID()) == Recrutement.PAIE, "paie versée : +1 (" + c.reputation(chef.getUUID()) + ")");
         t.commencerGreve();
         h.assertTrue(c.reputation(chef.getUUID()) == Recrutement.PAIE + Recrutement.GREVE, "grève : −3 (" + c.reputation(chef.getUUID()) + ")");
-        c.marquerMort(t, "aujourd'hui");
-        int attendu = Recrutement.PAIE + Recrutement.GREVE + Recrutement.MORT;
-        h.assertTrue(c.reputation(chef.getUUID()) == attendu, "un mort à son service : −5 (" + c.reputation(chef.getUUID()) + ")");
+        int attendu = Recrutement.PAIE + Recrutement.GREVE;
         CompoundTag sauve = c.save(new CompoundTag(), h.getLevel().registryAccess());
         h.assertTrue(Courrier.charger(sauve, h.getLevel().registryAccess()).reputation(chef.getUUID()) == attendu, "gardée à la sauvegarde");
+        TestsCout.fin(h, tous);
+    }
+
+    /**
+     * Relecture : la paie compte une fois par jour et par chef (pas par ouvrier) ; un ouvrier achevé par un autre joueur
+     * ne coûte rien à son chef, un ouvrier mort d'une chute, si.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "recrutement")
+    public static void paieUneFoisMortsDAutruiPardonnees(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel(), autre = h.makeMockServerPlayerInLevel();
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        List<Travailleur> tous = new ArrayList<>();
+        Travailleur a = TestsCout.pnj(h, null, tous), b = TestsCout.pnj(h, null, tous);
+        a.embaucher(chef);
+        b.embaucher(chef);
+        a.paye(100, true);
+        b.paye(100, true);
+        h.assertTrue(c.reputation(chef.getUUID()) == Recrutement.PAIE, "deux paies le même jour : +1 seulement (" + c.reputation(chef.getUUID()) + ")");
+        a.hurt(h.getLevel().damageSources().playerAttack(autre), 1000);
+        h.assertTrue(a.aTerre, "a est à terre");
+        a.hurt(h.getLevel().damageSources().playerAttack(autre), 2000); // l'autre l'achève (plus fort : le coup passe malgré l'invulnérabilité)
+        h.assertTrue(!a.isAlive(), "a est mort");
+        h.assertTrue(c.reputation(chef.getUUID()) == Recrutement.PAIE, "tué par un autre joueur : rien ne change (" + c.reputation(chef.getUUID()) + ")");
+        b.hurt(h.getLevel().damageSources().fall(), 1000);
+        h.assertTrue(b.aTerre, "b est à terre");
+        b.kill();
+        h.assertTrue(c.reputation(chef.getUUID()) == Recrutement.PAIE + Recrutement.MORT, "mort d'une chute : −5 (" + c.reputation(chef.getUUID()) + ")");
         TestsCout.fin(h, tous);
     }
 
@@ -138,8 +163,13 @@ public class TestsRecrutement {
 
         BlockPos avantCloche = ColoniePnj.village(l, chef);
         h.setBlock(cloche, Blocks.BELL);
+        h.assertTrue(ColoniePnj.village(l, chef) == null, "une cloche posée chez soi, près du poste, n'est pas un village (" + ColoniePnj.village(l, chef) + ")");
+        Courrier.de(l.getServer()).definirPoste(chef.getUUID(), l, poste.offset(60, 0, 0)); // le poste loin de la cloche (une simple position)
+        h.assertTrue(ColoniePnj.village(l, chef) == null, "une cloche sans villageois n'est pas un village (" + ColoniePnj.village(l, chef) + ")");
+        var villageois = h.spawnWithNoFreeWill(net.minecraft.world.entity.EntityType.VILLAGER, new BlockPos(3, 2, 3));
         BlockPos v = ColoniePnj.village(l, chef);
         h.assertTrue(v != null && v.equals(h.absolutePos(cloche)), "la cloche du village est trouvée (" + v + ", avant : " + avantCloche + ")");
+        villageois.discard();
         double c = Recrutement.chance(Reglages.actuel.chercheurs.chance, 0, true, true);
         h.assertTrue(c > Reglages.actuel.chercheurs.chance, "plus de chances d'une arrivée (" + c + ")");
         h.assertTrue(ColoniePnj.annonce("Mineur", true, true).equals("On dit qu'un mineur du village voisin a vu ton affiche et cherche du travail dans les environs…"), ColoniePnj.annonce("Mineur", true, true));

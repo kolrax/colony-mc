@@ -79,9 +79,13 @@ class RecrutementTest {
         assertEquals(0.35, Recrutement.chance(0.35, 0, false, false), 1e-9);
         assertEquals(0.525, Recrutement.chance(0.35, 50, false, false), 1e-9, "bonne réputation : +50 %");
         assertEquals(0.175, Recrutement.chance(0.35, -50, false, false), 1e-9, "mauvaise : moitié moins");
-        assertEquals(0.70, Recrutement.chance(0.35, 0, true, false), 1e-9, "affiche : deux fois plus");
+        assertEquals(0.455, Recrutement.chance(0.35, 0, true, false), 1e-9, "affiche : +30 %");
         assertEquals(0.525, Recrutement.chance(0.35, 0, false, true), 1e-9, "village : une fois et demie");
-        assertEquals(Recrutement.CHANCE_MAX, Recrutement.chance(0.35, 50, true, true), 1e-9, "borné");
+        // Relecture : tous les bonus ensemble ne rendent jamais plus d'une fois et demie la chance de base (la rareté tient).
+        assertEquals(0.525, Recrutement.chance(0.35, 50, true, true), 1e-9, "bonus plafonnés à ×1,5");
+        assertEquals(0.525, Recrutement.chance(0.35, 20, true, false), 1e-9, "affiche et bonne réputation : plafonnées aussi");
+        assertEquals(0.2275, Recrutement.chance(0.35, -50, true, false), 1e-9, "une affiche ne rachète qu'un peu une mauvaise réputation");
+        assertEquals(Recrutement.CHANCE_MAX, Recrutement.chance(0.9, 50, true, true), 1e-9, "borné");
         assertEquals(0, Recrutement.chance(0, 50, true, true), 1e-9, "arrivées coupées : rien ne les rallume");
         assertEquals(0, Recrutement.chance(Double.NaN, 0, false, false), 1e-9);
     }

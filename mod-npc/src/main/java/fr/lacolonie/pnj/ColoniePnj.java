@@ -254,10 +254,16 @@ public class ColoniePnj {
     /**
      * La cloche du village le plus proche, ou null. Seulement les points d'intérêt que le jeu connaît déjà (aucune
      * recherche de structure), et seulement au moment d'une arrivée possible : une fois toutes les 15 minutes par joueur.
+     * Une cloche posée chez soi ne compte pas : à plus de 48 blocs du poste du joueur, et un villageois chargé à moins de
+     * 32 blocs d'elle.
      */
     static BlockPos village(ServerLevel l, ServerPlayer p) {
-        return l.getPoiManager().findClosest(h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.MEETING), p.blockPosition(), RAYON_VILLAGE,
-                net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).orElse(null);
+        Courrier.Poste poste = Courrier.de(l.getServer()).poste(p.getUUID());
+        BlockPos chezLui = poste != null && poste.monde().equals(l.dimension()) ? poste.pos() : null;
+        return l.getPoiManager().findClosest(h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.MEETING),
+                b -> (chezLui == null || b.distSqr(chezLui) > 48 * 48)
+                        && !l.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, new net.minecraft.world.phys.AABB(b).inflate(32)).isEmpty(),
+                p.blockPosition(), RAYON_VILLAGE, net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).orElse(null);
     }
 
     /**

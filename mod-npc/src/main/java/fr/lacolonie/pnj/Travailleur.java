@@ -1163,7 +1163,7 @@ public class Travailleur extends PathfinderMob {
         memoire.putLong("paie_le", jour()); // « paie_recue » des conversations
         changerMoral(Obeissance.PAIE);
         Sons.paie(this);
-        if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; Courrier.reputer(this, Recrutement.PAIE); }
+        if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).reputerPaie(chef, jour()); }
         if (mode == Mode.GREVE) {
             mode = bureau != null ? Mode.TRAVAIL : Mode.SUIVRE;
             majNom();
@@ -1253,7 +1253,8 @@ public class Travailleur extends PathfinderMob {
             // À terre : seuls un joueur (qui l'achève) ou la mort absolue (vide, /kill) peuvent l'atteindre.
             if (!(src.getEntity() instanceof Player) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false;
             mortDefinitive = true;
-        }
+            if (dAutrui(src.getEntity(), chef)) memoire.putBoolean("tombe_autrui", true); // achevé par un autre joueur
+        } else if (!level().isClientSide) memoire.putBoolean("tombe_autrui", dAutrui(src.getEntity(), chef)); // le dernier coup reçu debout
         // La gravité du coup (vie vraiment perdue, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
         boolean debout = !aTerre && !level().isClientSide;
         if (debout) { vieAvantCoup = getHealth(); sourceCoup = Blessures.source(src); }
@@ -1280,11 +1281,19 @@ public class Travailleur extends PathfinderMob {
         super.die(src);
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
+            // Lot 13 : une mort bête ou au travail se sait et coûte au chef ; pas celle d'un ouvrier tué par un autre joueur ou ses hommes (guerre).
+            if (!memoire.getBoolean("tombe_autrui") && !dAutrui(src.getEntity(), chef)) Courrier.reputer(this, Recrutement.MORT);
             Humeur.deuil(this); // ses compagnons du même chef en deuil
             Deuil.mort(this, tombe != null ? tombe : blockPosition()); // sa tombe, et la lettre au chef absent
             Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
                     + ") est mort en " + blockPosition().toShortString() + ", " + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
         }
+    }
+
+    /** Le coup vient d'un autre que son chef et ses gens : un autre joueur, ou l'ouvrier d'un autre chef (un ennemi en guerre). */
+    static boolean dAutrui(net.minecraft.world.entity.Entity e, UUID chef) {
+        if (e instanceof Player p) return !p.getUUID().equals(chef);
+        return e instanceof Travailleur t && t.chef != null && !t.chef.equals(chef);
     }
 
     /** Le coffre de ses affaires, posé à sa mort : sa tombe ({@link Deuil}). */

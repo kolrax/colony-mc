@@ -14,8 +14,11 @@ final class Recrutement {
     static final int MIN = -50, MAX = 50;
     /** Ce qui fait bouger la réputation. */
     static final int PAIE = 1, IMPAYE = -2, GREVE = -3, RENVOI = -2, DEPART = -4, MORT = -5;
-    /** Une affiche double les chances d'une arrivée ; un village voisin les multiplie par 1,5. */
-    static final double AFFICHE = 2, VILLAGE = 1.5, CHANCE_MAX = 0.95;
+    /**
+     * Une affiche donne 30 % de chances en plus, un village voisin 50 % ; tous les bonus ensemble (réputation comprise)
+     * ne dépassent jamais une fois et demie la chance de base, pour que les chercheurs restent rares.
+     */
+    static final double AFFICHE = 1.3, VILLAGE = 1.5, BONUS_MAX = 1.5, CHANCE_MAX = 0.95;
     /** Au plus bas, un candidat demande 30 % de plus. */
     static final double EXIGENCE_MAX = 0.3;
 
@@ -26,8 +29,8 @@ final class Recrutement {
     /** La chance qu'un chercheur vienne vers un joueur à chaque passage. */
     static double chance(double base, int reputation, boolean affiche, boolean village) {
         if (!(base > 0)) return 0;
-        double c = base * (1 + Math.clamp(reputation, MIN, MAX) / 100.0) * (affiche ? AFFICHE : 1) * (village ? VILLAGE : 1);
-        return Math.clamp(c, 0, CHANCE_MAX);
+        double bonus = (1 + Math.clamp(reputation, MIN, MAX) / 100.0) * (affiche ? AFFICHE : 1) * (village ? VILLAGE : 1);
+        return Math.clamp(base * Math.min(bonus, BONUS_MAX), 0, CHANCE_MAX);
     }
 
     /** Le facteur de salaire en plus demandé à un chef mal réputé (1 tant que la réputation n'est pas mauvaise). */
