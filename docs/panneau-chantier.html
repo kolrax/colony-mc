@@ -190,6 +190,7 @@ textarea:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:va
       <div class="card"><h2>Tes consignes</h2><div id="consignes-liste"></div></div>
     </section>
     <section class="panel" id="t-sessions" role="tabpanel" hidden></section>
+    <section class="panel" id="t-essais" role="tabpanel" hidden></section>
   </main>
 
   <div class="foot" id="foot">
@@ -205,14 +206,16 @@ const ICON = {
   journal:'<path d="M5 4h11l3 3v13H5zM9 9h6M9 13h6M9 17h4"/>',
   demandes:'<path d="M12 21a9 9 0 1 0-9-9c0 1.8.5 3.4 1.4 4.8L3 21l4.3-1.4A9 9 0 0 0 12 21zM12 8v5M12 16v.5"/>',
   consignes:'<path d="M4 10v4h3l6 5V5L7 10zM17 9a4 4 0 0 1 0 6"/>',
-  sessions:'<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/>'
+  sessions:'<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/>',
+  essais:'<path d="M9 5h10M9 12h10M9 19h10M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/>'
 };
-const TABS = [["accueil","Accueil"],["plan","Avancement"],["journal","Journal"],["demandes","Demandes"],["consignes","Consignes"],["sessions","Sessions"]];
+const TABS = [["accueil","Accueil"],["essais","Tests"],["plan","Avancement"],["journal","Journal"],["demandes","Demandes"],["consignes","Consignes"],["sessions","Sessions"]];
 const AGENTS = {"chef-de-chantier":"Chef de chantier",developpeur:"Développeur",testeur:"Testeur",relecteur:"Relecteur",auteur:"Auteur",artiste:"Artiste",livreur:"Livreur"};
 const TYPES = {session:"Session",livraison:"Livraison",incident:"Incident",decision:"Décision",rapport:"Point du jour",info:"Info"};
 const OUVERTURE = new Date("2026-10-16T18:00:00+02:00");
 
-let E = null, P = null, J = [], D = [], C = [], S = [];
+let E = null, P = null, J = [], D = [], C = [], S = [], T = [];
+let filtreEssai = "a_faire", essaiDiffere = false;
 let tab = "accueil", filtre = "tout", db = null, demandeDiffere = false;
 const brouillons = {}, choix = {};
 try { const t = localStorage.getItem("chantier-onglet"); if (TABS.some(x => x[0] === t)) tab = t; } catch (e) {}
@@ -267,9 +270,9 @@ const ouvertes = () => D.filter((d) => d.pour !== "admin" && d.statut === "ouver
 
 /* ---------- Onglets ---------- */
 function renderTabs() {
-  const nd = ouvertes().length, nc = C.filter((c) => c.statut === "nouvelle").length;
+  const nd = ouvertes().length, nc = C.filter((c) => c.statut === "nouvelle").length, ne = T.filter((x) => x.statut === "a_faire" || x.statut === "corrige").length;
   $("#tabs").innerHTML = TABS.map(([id, nom]) => {
-    const n = id === "demandes" && nd ? `<span class="n">${nd}</span>` : id === "consignes" && nc ? `<span class="n calm">${nc}</span>` : "";
+    const n = id === "demandes" && nd ? `<span class="n">${nd}</span>` : id === "consignes" && nc ? `<span class="n calm">${nc}</span>` : id === "essais" && ne ? `<span class="n calm">${ne}</span>` : "";
     return `<button class="tab" role="tab" id="tab-${id}" aria-controls="t-${id}" aria-selected="${id === tab}" data-tab="${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[id]}</svg><span class="lbl">${nom}</span>${n}</button>`;
   }).join("");
   for (const [id] of TABS) $("#t-" + id).hidden = id !== tab;
@@ -288,6 +291,7 @@ function renderAccueil() {
   if (!E) { titre = "En attente de la première session"; sous = nx ? `Elle démarre à ${heure(nx)}, puis toutes les 3 heures.` : ""; }
   else if (perime) { cls = "cut"; titre = "Session interrompue"; sous = `Plus de nouvelles depuis ${quand(E.maj)}. Le quota est sans doute épuisé : la session suivante reprendra.`; }
   else if (enCours) { cls = "work"; titre = "Au travail"; sous = `Depuis ${duree(s.debut)}${s.lot ? " · " + s.lot : ""}`; }
+  else if (avancement() && avancement().f === avancement().t) { titre = "Mod terminé"; sous = T.length ? `Tests en jeu : ${T.filter((x) => x.statut === "ok").length} réussis sur ${T.length}, ${T.filter((x) => x.statut === "ko").length} à corriger` : "Prochaine étape : les tests en jeu (onglet Tests)."; }
   else if (s.fin) sous = `Dernière session terminée ${quand(s.fin)}${nx ? ` · prochaine à ${heure(nx)}` : ""}`;
   const a = avancement(), v = (E && E.versions) || {}, te = (E && E.tests) || {};
   const ag = (E && E.agents) || [], lienS = lien(s.lien);
@@ -384,7 +388,32 @@ function renderSessions() {
       : `<p class="empty">Aucune session pour l'instant. La première démarre à ${(() => { const n = prochaine(); return n ? heure(n) : "l'heure prévue"; })()}.</p>`}</div>`;
 }
 
-function renderAll() { renderTabs(); renderAccueil(); renderPlan(); renderJournal(); renderDemandes(); renderConsignes(); renderSessions(); }
+const ST_ESSAI = { a_faire: ["", "à faire"], ok: ["ok", "réussi"], ko: ["bad", "à corriger"], bloque: ["warn", "bloqué"], corrige: ["brass", "corrigé, à revérifier"] };
+function renderEssais() {
+  const act = document.activeElement;
+  if (act && act.closest && act.closest("[data-essai]")) { essaiDiffere = true; return; }
+  essaiDiffere = false;
+  const n = (s) => T.filter((x) => x.statut === s).length;
+  const filtres = [["a_faire", "À faire"], ["corrige", "À revérifier"], ["ko", "À corriger"], ["bloque", "Bloqués"], ["ok", "Réussis"], ["tous", "Tous"]];
+  const liste = filtreEssai === "tous" ? T : T.filter((x) => x.statut === filtreEssai);
+  const groupes = [...new Set(liste.map((x) => x.groupe || "Divers"))];
+  const fait = n("ok") + n("ko") + n("bloque");
+  $("#t-essais").innerHTML = `<div class="card"><h2>Tests en jeu<small>${n("ok")} réussis · ${n("ko")} à corriger · ${n("a_faire") + n("corrige")} à faire</small></h2>
+    <p class="muted" style="margin:0 0 10px">Fais chaque test sur le serveur, puis touche <strong>Réussi</strong>, <strong>À corriger</strong> ou <strong>Bloqué</strong>. Si ça ne va pas, écris ce que tu as vu : les agents corrigent à partir de ta remarque, puis le test revient en « à revérifier ».</p>
+    <div class="bar"><span style="width:${(100 * fait / Math.max(1, T.length)).toFixed(1)}%"></span></div>
+    <div class="filters" role="group" aria-label="Filtrer les tests" style="margin-top:12px">${filtres.map(([k, l]) => `<button class="chip" data-filtre-essai="${k}" aria-pressed="${k === filtreEssai}">${l}${k === "tous" ? "" : " · " + n(k)}</button>`).join("")}</div></div>
+    ${!T.length ? `<div class="card"><p class="empty">La feuille de tests va arriver ici.</p></div>` : !liste.length ? `<div class="card"><p class="empty">Aucun test dans cette catégorie.</p></div>` :
+      groupes.map((g) => `<div class="card"><h2>${esc(g)}</h2><div class="panel">${liste.filter((x) => (x.groupe || "Divers") === g).map((x) => { const st = ST_ESSAI[x.statut] || ["", x.statut || ""]; return `<article class="dem${x.statut === "a_faire" || x.statut === "corrige" ? " open" : ""}" data-essai="${esc(x.id)}">
+        <div class="head"><span class="when">${esc(x.num || "")}</span>${pill(st[0], st[1])}${x.important ? pill("bad", "important") : ""}</div>
+        <h3>${esc(x.titre)}</h3>
+        ${x.preparation ? `<div class="body"><p><strong>Préparer :</strong> ${inline(esc(x.preparation))}</p></div>` : ""}
+        <div class="body"><p><strong>Faire :</strong></p>${md(x.etapes)}<p><strong>Attendu :</strong> ${inline(esc(x.attendu))}</p></div>
+        ${x.note ? `<div class="reply"><strong>Réponse de l'équipe :</strong> ${esc(x.note)}</div>` : ""}
+        <div class="ans"><textarea id="rem-${esc(x.id)}" data-remarque="${esc(x.id)}" placeholder="Ce que tu as vu (obligatoire si « À corriger » ou « Bloqué »)" aria-label="Remarque">${esc(x.remarque || "")}</textarea>
+        <div class="opts"><button class="btn" data-verdict="ok">Réussi</button><button class="btn ghost" data-verdict="ko">À corriger</button><button class="btn ghost" data-verdict="bloque">Bloqué</button></div><p class="msg" role="status"></p></div>
+      </article>`; }).join("")}</div></div>`).join("")}`;
+}
+function renderAll() { renderTabs(); renderEssais(); renderAccueil(); renderPlan(); renderJournal(); renderDemandes(); renderConsignes(); renderSessions(); }
 function renderCompte() {
   const j = Math.ceil((OUVERTURE - Date.now()) / 864e5);
   $("#countdown").textContent = j > 1 ? `Ouverture dans ${j} jours` : j === 1 ? "Ouverture demain" : j === 0 ? "Ouverture aujourd'hui" : "Serveur ouvert";
@@ -395,13 +424,26 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-tab]"); if (t) { go(t.dataset.tab); return; }
   const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
   const f = e.target.closest("[data-filtre]"); if (f) { filtre = f.dataset.filtre; renderJournal(); return; }
+  const fe = e.target.closest("[data-filtre-essai]"); if (fe) { filtreEssai = fe.dataset.filtreEssai; renderEssais(); return; }
+  const v = e.target.closest("[data-verdict]");
+  if (v) {
+    const card = v.closest("[data-essai]"), id = card.dataset.essai, msg = card.querySelector(".msg");
+    const rem = card.querySelector("textarea").value.trim(), verdict = v.dataset.verdict;
+    if (verdict !== "ok" && !rem) { msg.className = "msg err"; msg.textContent = "Écris ce que tu as vu : les agents en ont besoin pour corriger."; return; }
+    if (!db) { msg.className = "msg err"; msg.textContent = "Pas de connexion à la base : ouvre ce panneau depuis claude.ai."; return; }
+    msg.className = "msg"; msg.textContent = "Envoi…";
+    db.doc("essais/" + id).update({ statut: verdict, remarque: rem, maj: new Date().toISOString() })
+      .then(() => { if (document.activeElement) document.activeElement.blur(); })
+      .catch((err) => { msg.className = "msg err"; msg.textContent = "Non enregistré (" + ((err && err.code) || "erreur") + "). Réessaie."; });
+    return;
+  }
   const o = e.target.closest("[data-opt]");
   if (o) { const id = o.closest("[data-demande]").dataset.demande, k = +o.dataset.opt; choix[id] = choix[id] === k ? undefined : k; o.parentElement.querySelectorAll("[data-opt]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.opt === choix[id]))); return; }
   const an = e.target.closest("[data-annuler]");
   if (an && db) db.doc("consignes/" + an.dataset.annuler).update({ statut: "annulee" }).catch(() => {});
 });
 document.addEventListener("input", (e) => { const id = e.target.dataset && e.target.dataset.brouillon; if (id) brouillons[id] = e.target.value; });
-document.addEventListener("focusout", () => { setTimeout(() => { const a = document.activeElement; if (demandeDiffere && !(a && a.closest && a.closest("[data-demande]"))) renderDemandes(); }, 0); });
+document.addEventListener("focusout", () => { setTimeout(() => { const a = document.activeElement; if (demandeDiffere && !(a && a.closest && a.closest("[data-demande]"))) renderDemandes(); if (essaiDiffere && !(a && a.closest && a.closest("[data-essai]"))) renderEssais(); }, 0); });
 document.addEventListener("submit", async (e) => {
   const f = e.target.closest("[data-demande]"); if (!f) return;
   e.preventDefault();
@@ -449,5 +491,6 @@ setInterval(() => { renderCompte(); renderAccueil(); if (tab === "sessions") ren
   db.collection("demandes").orderBy("date", "desc").limit(100).onSnapshot((q) => { D = enListe(q); renderTabs(); renderAccueil(); renderDemandes(); }, erreur);
   db.collection("consignes").orderBy("date", "desc").limit(100).onSnapshot((q) => { C = enListe(q); renderTabs(); renderConsignes(); }, erreur);
   db.collection("sessions").orderBy("debut", "desc").limit(60).onSnapshot((q) => { S = enListe(q); renderSessions(); }, erreur);
+  db.collection("essais").orderBy("ordre", "asc").limit(400).onSnapshot((q) => { T = enListe(q); renderTabs(); renderAccueil(); renderEssais(); }, erreur);
 }, () => live("off", "Hors ligne : ouvre ce panneau depuis claude.ai"));
 </script>

@@ -94,3 +94,20 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 
 ## Bonus (après tout le reste)
 Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, scribe, éclaireur (important), quêtes et histoires, marchands ambulants et bandits, panneau web (admin seulement).
+
+## 15. Manques relevés au contrôle du 17/10 (cases cochées mais faites en partie)
+- [ ] **Risque d'abord** : au déblocage, un ouvrier coincé peut casser des blocs construits par un joueur (rondins, pierre taillée, béton, pierres polies, terre cuite, carters de Create absents de `Monde.construit`) et ne vérifie pas la base voisine. Il ne doit jamais casser une construction pour sortir
+- [ ] Persistance : après un redémarrage, le relais en cours, la cérémonie de deuil et certaines règles d'ordres longs se perdent sans rien dire
+- [ ] Emploi du temps à deux métiers : « le matin tu mines, l'après-midi tu coupes » (exemple du cahier des charges) ne garde que le matin
+- [ ] Guerre complète : le chef PNJ propose de lever les fermiers en renfort ; « brûlez » met vraiment le feu ; la casse ne se limite pas aux portes près du bureau ennemi ; victoire et défaite branchées
+- [ ] Équipes : plusieurs ouvriers sur un même chantier (« va aider Raoul » fait vraiment travailler ensemble)
+- [ ] Besoins : loisirs (taverne, fête) et maladies, notés « Indispensable »
+- [ ] Blessures : types de blessure (brûlure, morsure, fracture…), en plus des gravités
+- [ ] Économie : les ouvriers achètent aussi de l'équipement ; écran de boutique pour le joueur
+- [ ] Recrutement : le crieur
+- [ ] Cadeau d'un diamant : selon son caractère, il peut le revendre ou s'en faire un outil
+- [ ] Éclaireur ou cartographe (noté « Important »)
+- [ ] Mesure de charge à jour : 50 PNJ avec tous les systèmes ajoutés depuis la 0.8.5 ; comprendre les « Can't keep up » du serveur vide
+- [ ] Tests instables (liste dans `docs/reprise.md`) rendus stables ; aucune livraison sans passe entièrement verte
+- [ ] `docs/reprise.md` remis à jour (« Ce que le mod sait faire » dit encore « 3 métiers » et « plafond 5 »)
+

@@ -144,11 +144,18 @@ Quand écrire :
 5. **Décision qui revient à KOLRAX** : `demandes/<mot>` (pour `kolrax`, avec des `options` si possible), puis avance sur autre chose. Si c'est urgent, envoie aussi un message privé.
 6. **Demande à l'Admin** : `docs/demandes-admin.md`, et une copie dans `demandes/<mot>` (pour `admin`) pour que KOLRAX la voie. Recopie la réponse de l'Admin quand elle arrive.
 
+## Tests en jeu de KOLRAX (panneau, collection `essais`)
+KOLRAX fait la feuille de tests en jeu dans l'onglet « Tests » du panneau. Chaque document `essais/<id>` : `{num, ordre, groupe, titre, preparation, etapes, attendu, important, statut: a_faire|ok|ko|bloque|corrige, remarque, note, maj}`.
+- **Au début de chaque session**, après les consignes : lis les essais en `ko` ou `bloque`. Ils **passent avant le plan**, les `important` d'abord. Sa `remarque` décrit ce qu'il a vu : reproduis-le par un test (en jeu de test si possible), corrige, livre.
+- Une fois livré : `statut` → `corrige`, et `note` = ce qui a changé, en une phrase simple pour lui. Ne mets jamais `ok` toi-même : c'est KOLRAX qui revérifie.
+- Un `bloque` qui vient d'un manque (pas d'un bug) : fais-le, ou explique dans `note` pourquoi c'est impossible et ce qu'il peut faire.
+- Le chantier n'est fini que si le plan est à 0 case **et** qu'aucun essai n'est en `ko` ou `bloque`.
+
 ## Rythme : travail en continu (décidé le 13/10 au soir)
 KOLRAX veut que le chantier avance **le plus possible**, quitte à épuiser le quota de la semaine avant vendredi. La routine se lance **toutes les heures** ; le verrou empêche deux sessions en même temps. Quand le quota est épuisé, les sessions échouent jusqu'à la remise à zéro (vendredi 16/10, 16 h UTC), puis reprennent seules.
 
 **Fin du chantier : la routine s'arrête seule** (décidé le 17/10)
-- `python3 tools/suivi.py reste` compte les cases non cochées de `docs/plan.md`. À **0**, le mod est terminé.
+- `python3 tools/suivi.py reste` compte les cases non cochées de `docs/plan.md`. À **0**, et si aucun essai du panneau n'est en `ko` ou `bloque`, le mod est terminé.
 - C'est la **première commande** de chaque session (après `git pull`). À 0 : désactiver la routine (ToolSearch `select:RemoteTrigger`, puis `update` de `trig_0183uwCLQp7tTc8cxSxdvTx2` avec `{"enabled": false}`), puis s'arrêter sans rien lire ni lancer d'autre.
 - Si la désactivation échoue et que `docs/TERMINE` n'existe pas : créer `docs/TERMINE` (date UTC), commit, push, et un seul message privé à KOLRAX pour qu'il désactive la routine lui-même. Si `docs/TERMINE` existe déjà : s'arrêter tout de suite, sans message.
 - La session qui coche la dernière case fait la même chose après sa fin de session.
