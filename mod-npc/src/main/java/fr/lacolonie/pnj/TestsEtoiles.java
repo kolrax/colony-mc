@@ -138,14 +138,14 @@ public class TestsEtoiles {
         Cerveau.decider(t, Metier.de(t.metier)); // il étudie
         String r = t.appliquer(Ordres.lire("Suis-moi !", t.metier), chef);
         h.assertTrue(t.memoire.getLong("formation_fin") == 0 && t.mode == Travailleur.Mode.SUIVRE, "« suis-moi » : il suit (" + t.mode + ") : " + r);
-        h.assertTrue(chef.getInventory().countItem(Items.COPPER_INGOT) == 20, "le prix rendu : " + chef.getInventory().countItem(Items.COPPER_INGOT) + " ; " + r);
+        h.assertTrue(Reglages.valeur(chef.getInventory()) == 20, "le prix rendu (2 pièces d'or) : " + Reglages.valeur(chef.getInventory()) + " ; " + r);
         h.assertTrue(r.contains("apprentissage") && t.niveau == 1, "il le dit, sans étoile : " + r);
         Cerveau.decider(t, Metier.de(t.metier));
         h.assertTrue(t.action != null && t.action.nom.equals("suivre"), "il suit : " + (t.action == null ? "-" : t.action.nom));
         t.mode = Travailleur.Mode.TRAVAIL;
         Consignes.ordonner(t, former, chef, "va te former", 0, 1);
         r = t.appliquer(Ordres.lire("Arrête de te former", t.metier), chef);
-        h.assertTrue(t.memoire.getLong("formation_fin") == 0 && chef.getInventory().countItem(Items.COPPER_INGOT) == 20, "« arrête de te former » : " + r);
+        h.assertTrue(t.memoire.getLong("formation_fin") == 0 && Reglages.valeur(chef.getInventory()) == 20, "« arrête de te former » : " + r);
         t.discard();
         h.succeed();
     }
