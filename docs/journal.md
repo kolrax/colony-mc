@@ -487,3 +487,8 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Graphify : a répondu (index frais au début, 0cb28b5), mais ne résout pas les symboles des branches en cours ; les relecteurs ont vérifié les appelants avec Grep.
 - Point du jour : pas encore l'heure pour le 17/10.
 - Prochaine étape exacte : finir `autres-joueurs` (voir `docs/reprise.md`), livrer 0.9.41, puis la dernière case : **rumeurs**.
+
+## 2026-10-17 05 h 24 UTC : livraison 0.9.41 (autres joueurs)
+- **0.9.41 installée** (`main` `0594602`) : personne connecté (0/10) ; `colonie_pnj-0.9.41.jar` (1 970 325 octets, sha1 `0549dad27227…`) via `/mods-off`, 0.9.40 rangé, un seul jar ; « Done » à 05 h 23 min 53 s, « colonie_pnj (version 0.9.40 -> 0.9.41) », aucune erreur ni avertissement du mod (panneau des PNJ ouvert, Simple Voice Chat prêt ; les 282 erreurs de tables de butin du journal ne viennent pas du mod). Pas de modpack (canal inchangé, 0.5.1 reste valable). Avant le redémarrage, le serveur était encore très en retard sans joueur (« Can't keep up », environ 7 min) et SDLink se reconnectait.
+- **Autres joueurs** (lot 14) : un autre joueur autorisé par le chef peut donner des ordres à ses ouvriers ; un autre joueur peut débaucher un ouvrier contre une meilleure paie, ou payer un ordre ; les enfants et les apprentis ne sont jamais débauchés ni loués pour un ordre payé ; tout le monde voit « Prénom (Métier) · Chef » au-dessus de la tête.
+- Mesures : **353/353 JUnit, 396/396 en jeu**. Nouveau test `mineurNiDebaucheNiPaye` vu rouge sur l'ancien code. Rien essayé avec un vrai client (nom au-dessus de la tête non vu à l'écran).

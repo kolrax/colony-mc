@@ -160,3 +160,4 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Le rendu du petit (attribut `SCALE` du jeu, synchronisé sans changement client) n'a pas été vu à l'écran : vérifier au banc photo (`runPhotos`) la taille, le nom au-dessus de la tête et le skin.
 - La mort de vieillesse n'est pas mise en scène (pas de lit, pas d'adieux des proches) ; l'enfant n'a pas de lit à lui réservé (il prend un lit libre, sinon dort près du poste).
 - Rien au panneau web : `familles` et `ages` se règlent dans `reglages.json` seulement.
+- Lot 14 (autres joueurs) : « apprends le métier de X » n'est pas réservé au chef (`Commandement.reserver`) : un joueur autorisé peut changer le métier qu'apprend un enfant ou un apprenti.

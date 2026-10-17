@@ -65,6 +65,8 @@ final class Etranger {
         String paie = "";
         if (!c.commande(t.chef, nom)) {
             if (paye == null) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
+            // Un enfant ou un apprenti ne se loue pas à un autre : rien n'est pris (lot 13).
+            if (Famille.mineur(t)) return texte(t, "etranger_mineur", nom, 0, "Garde tes pièces : je suis trop jeune. C'est " + t.chefNom + " qui décide de moi.");
             // Ce qu'il ne fera pas de toute façon (réservé au chef, grève, ordre mortel, hors métier, moral trop bas) : rien n'est pris.
             if (reserve || l.vide() || !accepterait(t, l)) return texte(t, "etranger_refus", nom, 0, "Je n'obéis qu'à " + t.chefNom + ".");
             if (!Debauche.assez(paye.pieces(), t.salaireVerse()))
@@ -118,6 +120,9 @@ final class Etranger {
         CompoundTag refus = t.memoire.getCompound("debauche_refus");
         String cle = p.getUUID().toString();
         boolean rancune = refus.contains(cle) && maintenant - refus.getLong(cle) < RANCUNE && maintenant >= refus.getLong(cle);
+        // Un enfant ou un apprenti ne quitte pas les siens : ni lettre ni rancune (lot 13).
+        if (Famille.mineur(t))
+            return texte(t, "debauche_mineur", nom, 0, "Je suis trop jeune pour partir. Vois ça avec " + t.chefNom + ".");
         // Pendant sa formation payée par son chef, il ne part pas (lot 13).
         if (t.memoire.getLong("formation_fin") > 0)
             return texte(t, "debauche_formation", nom, 0, "Je suis en apprentissage, payé par " + t.chefNom + ". Pas maintenant.");
