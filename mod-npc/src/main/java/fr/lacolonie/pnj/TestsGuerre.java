@@ -67,20 +67,41 @@ public class TestsGuerre {
         h.assertTrue(r.ok(), "la mission « " + id + " » est acceptée : " + r.texte());
     }
 
-    /** L'autre joueur, étranger, a un poste loin d'ici (on peut lui déclarer la guerre) ; il se tient près de notre garde. */
-    static BlockPos etranger(GameTestHelper h, TestsChef.Scene s, int coin, double x, double z) {
+    /** Un joueur étranger, en survie, et son poste. */
+    record Etranger(net.minecraft.server.level.ServerPlayer j, BlockPos poste) {}
+
+    /**
+     * Un joueur étranger en survie (le faux joueur des tests est en créatif, et un garde ne frappe jamais un joueur en
+     * créatif), avec un poste loin d'ici (on peut lui déclarer la guerre) ; il se tient près de notre garde.
+     */
+    static Etranger etranger(GameTestHelper h, TestsChef.Scene s, int coin, double x, double z) {
+        ServerLevel l = h.getLevel();
+        var cookie = net.minecraft.server.network.CommonListenerCookie.createInitial(new com.mojang.authlib.GameProfile(UUID.randomUUID(), "Etranger" + coin), false);
+        net.minecraft.server.level.ServerPlayer j = new net.minecraft.server.level.ServerPlayer(l.getServer(), l, cookie.gameProfile(), cookie.clientInformation()) {
+            @Override
+            public boolean isSpectator() { return false; }
+
+            @Override
+            public boolean isCreative() { return false; }
+        };
+        net.minecraft.network.Connection co = new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
+        new io.netty.channel.embedded.EmbeddedChannel(co);
+        l.getServer().getPlayerList().placeNewPlayer(co, j, cookie);
+        j.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        net.neoforged.fml.util.ObfuscationReflectionHelper.setPrivateValue(net.minecraft.server.level.ServerPlayer.class, j, 0, "spawnInvulnerableTime");
         BlockPos poste = loin(h, coin);
-        Courrier.de(h.getLevel().getServer()).definirPoste(s.autre().getUUID(), h.getLevel(), poste);
-        s.autre().teleportTo(h.getLevel(), s.b().getX() + x, s.b().getY(), s.b().getZ() + z, 0, 0);
-        return poste;
+        Courrier.de(l.getServer()).definirPoste(j.getUUID(), l, poste);
+        j.teleportTo(l, s.b().getX() + x, s.b().getY(), s.b().getZ() + z, 0, 0);
+        return new Etranger(j, poste);
     }
 
-    static void finEtranger(GameTestHelper h, TestsChef.Scene s, BlockPos poste) {
+    static void finEtranger(GameTestHelper h, TestsChef.Scene s, Etranger e) {
         Courrier c = Courrier.de(h.getLevel().getServer());
-        c.paix(s.chef().getUUID(), s.autre().getUUID());
-        c.oublierPoste(s.autre().getUUID(), h.getLevel(), poste);
-        c.boites.remove(s.autre().getUUID());
+        c.paix(s.chef().getUUID(), e.j().getUUID());
+        c.oublierPoste(e.j().getUUID(), h.getLevel(), e.poste());
+        c.boites.remove(e.j().getUUID());
         c.boites.remove(s.chef().getUUID());
+        e.j().discard();
         TestsGuerrier.fin(s.g());
         s.partir();
     }
@@ -95,13 +116,13 @@ public class TestsGuerre {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void defendreSansGuerre(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 320);
-        BlockPos poste = etranger(h, s, 320, 3.5, 4.5);
+        Etranger e = etranger(h, s, 320, 3.5, 4.5);
         mission(h, s, s.g(), Guerre.DEFENDRE);
-        boolean[] vu = surveiller(h, s.g(), s.autre());
+        boolean[] vu = surveiller(h, s.g(), e.j());
         h.runAtTickTime(h.getTick() + 160, () -> {
             h.assertFalse(vu[0], "il ne l'attaque pas (" + s.g().paroles + ")");
-            h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'étranger ne prend aucun coup");
-            finEtranger(h, s, poste);
+            h.assertTrue(e.j().getHealth() == e.j().getMaxHealth(), "l'étranger ne prend aucun coup");
+            finEtranger(h, s, e);
             h.succeed();
         });
     }
@@ -110,17 +131,17 @@ public class TestsGuerre {
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void defendreEnGuerre(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 321);
-        BlockPos poste = etranger(h, s, 321, 3.5, 4.5);
+        Etranger e = etranger(h, s, 321, 3.5, 4.5);
         mission(h, s, s.g(), Guerre.DEFENDRE);
-        String dit = Armee.declarer(s.chef(), s.autre().getUUID().toString());
+        String dit = Armee.declarer(s.chef(), e.j().getUUID().toString());
         Courrier c = Courrier.de(h.getLevel().getServer());
         h.assertTrue(dit.contains("déclare la guerre"), "le chef lit la déclaration : " + dit);
-        h.assertTrue(c.enGuerre(s.chef().getUUID(), s.autre().getUUID()) && c.enGuerre(s.autre().getUUID(), s.chef().getUUID()), "la guerre, des deux côtés");
-        h.assertTrue(!c.boites.getOrDefault(s.autre().getUUID(), List.of()).isEmpty(), "l'autre l'apprend aussi à son poste");
-        h.assertTrue(Armee.declarer(s.chef(), s.autre().getUUID().toString()).startsWith("Tu es déjà en guerre"), "pas deux fois");
+        h.assertTrue(c.enGuerre(s.chef().getUUID(), e.j().getUUID()) && c.enGuerre(e.j().getUUID(), s.chef().getUUID()), "la guerre, des deux côtés");
+        h.assertTrue(!c.boites.getOrDefault(e.j().getUUID(), List.of()).isEmpty(), "l'autre l'apprend aussi à son poste");
+        h.assertTrue(Armee.declarer(s.chef(), e.j().getUUID().toString()).startsWith("Tu es déjà en guerre"), "pas deux fois");
         h.succeedWhen(() -> {
-            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'ennemi (" + s.g().paroles + ")");
-            finEtranger(h, s, poste);
+            h.assertTrue(e.j().getHealth() < e.j().getMaxHealth(), "il frappe l'ennemi (" + s.g().paroles + ")");
+            finEtranger(h, s, e);
         });
     }
 
@@ -186,23 +207,23 @@ public class TestsGuerre {
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void repliSous30(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 324);
-        BlockPos poste = etranger(h, s, 324, 16.5, 4.5);
+        Etranger e = etranger(h, s, 324, 16.5, 4.5);
         s.g().teleportTo(s.b().getX() + 14.5, s.b().getY(), s.b().getZ() + 4.5);
         mission(h, s, s.g(), Guerre.DEFENDRE);
-        Armee.declarer(s.chef(), s.autre().getUUID().toString());
+        Armee.declarer(s.chef(), e.j().getUUID().toString());
         long[] blesse = {-1};
         h.onEachTick(() -> {
-            if (blesse[0] < 0 && s.g().action instanceof Actions.Attaquer a && a.cible == s.autre()) {
+            if (blesse[0] < 0 && s.g().action instanceof Actions.Attaquer a && a.cible == e.j()) {
                 blesse[0] = h.getTick();
                 s.g().setHealth(s.g().getMaxHealth() * 0.25f);
             }
-            if (blesse[0] >= 0) s.autre().setHealth(s.autre().getMaxHealth()); // l'étranger tient bon : seul le repli compte
+            if (blesse[0] >= 0) e.j().setHealth(e.j().getMaxHealth()); // l'étranger tient bon : seul le repli compte
         });
         h.succeedWhen(() -> {
             h.assertTrue(blesse[0] >= 0, "il charge d'abord l'ennemi");
             h.assertTrue(s.g().distanceToSqr(Vec3.atBottomCenterOf(s.b())) < 4 * 4, "il recule jusqu'au poste (" + s.g().paroles + ", " + (s.g().action == null ? "-" : s.g().action.nom) + ")");
-            h.assertFalse(s.g().action instanceof Actions.Attaquer a && a.cible == s.autre(), "il ne se bat plus");
-            finEtranger(h, s, poste);
+            h.assertFalse(s.g().action instanceof Actions.Attaquer a && a.cible == e.j(), "il ne se bat plus");
+            finEtranger(h, s, e);
         });
     }
 
