@@ -3,6 +3,20 @@
 Mise à jour : 11/10/2026, mod 0.8.0. 42 classes, environ 15 000 lignes.
 But : ouvrir seulement les fichiers utiles. Chaque ligne donne le rôle, la taille (en lignes), les classes liées et les pièges.
 
+
+## Refonte 1.0.0 (17/10) : à lire d'abord
+Les classes retirées (IA, ReponsesIA, ReglagesIA, DepensesIA, Voix, VoixSvc, Audio, Incompris, Adressage, Conversations, Causeries, Souvenirs, Relations, Liens, Famille, Ages, Rumeurs, Espions, Debauche, Achats, Humeur, Moral, Deuil, Remarques, Bravoure, Corbeau) n'existent plus : ignore leurs lignes plus bas (historique : étiquette git `v1-finale`).
+Nouvelles classes :
+- `Missions` : `donner(p, t, id, repetition, nombre, horaires, lieu)` et `action(p, t, action, données)` (boutons de la fiche), droits (`autorise`), réponses courtes. Même entrée pour l'écran et le joueur fantôme.
+- `Statut` (pur) : le texte unique au-dessus de la tête (en cours, ⚠ bloqué avec solution, en attente, hors horaires) ; constantes de blocage par métier en fin de fichier. `Travailleur.STATUT`, `majStatut` (5 s), `bloquer`/`debloquer`, `lieuTravail`, `lieuImpose`/`travailleIci`.
+- `Lieux` (jeu) et `LieuxRegles` (pur) : colonie, tampon, blocs naturels/construits, `peutCasser`, puits du mineur, arbres permis, structures.
+- `BarreCommandes` : touche B (client), `Recherche` (pure), `executer(p, t, idAction)` (serveur), paquet `Reseau.Barre`.
+- `Livret` : `livret.txt` → livre écrit, donné une fois avec le premier poste.
+- `Fantome` : commande `/fantome` (dev ou `reglages.json` `fantome: true`), rapport JSON ; `tools/fantome.py`, scénarios dans `mod-npc/fantome/`.
+- `Paroles` (bulles, heure) et `Essais` (outils de GameTests repris de l'ancien TestsIA).
+- Tests : `TestsMission`, `TestsPoste`, `TestsLieux`, `TestsMetiersMission`, `TestsBarre`, `TestsGuerre` (refait) ; JUnit `StatutTest`, `StatutMetiersTest`, `LieuxTest`, `BarreCommandesTest`, `LivretTest`, `FantomeTest`, `BoiteTest` (journal).
+- Changés de rôle : `Courrier.ecrire` écrit une ligne au journal du poste ; `Boite` = règles du journal ; `Client.EcranPoste` = 5 onglets ; `Client.EcranOuvrier` = fiche ; `Guerre`/`Armee` = guerre simple (declarer, paix, Rang, Repli) ; `Obeissance` = jauge de satisfaction unique.
+
 ## Où sont les choses
 - Code : `mod-npc/src/main/java/fr/lacolonie/pnj/` (36 classes, tests en jeu compris). Tests JUnit : `mod-npc/src/test/java/fr/lacolonie/pnj/` (6 classes).
 - Ressources : `mod-npc/src/main/resources/`

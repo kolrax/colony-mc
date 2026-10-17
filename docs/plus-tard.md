@@ -162,3 +162,11 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Rien au panneau web : `familles` et `ages` se règlent dans `reglages.json` seulement.
 - Lot 14 (autres joueurs) : « apprends le métier de X » n'est pas réservé au chef (`Commandement.reserver`) : un joueur autorisé peut changer le métier qu'apprend un enfant ou un apprenti.
 - Lot 14 (rumeurs) : un étranger qui demande des nouvelles peut entendre « chef » dans la réponse (répliques écrites pour le chef, {chef} = le chef de l'ouvrier) ; des répliques propres à l'étranger seraient plus justes. Pas de test en jeu pour l'échange entre deux colonies en paix, ni pour les faits de mort, naissance et débauche ; un seul fait GUERRE par colonie (la dernière guerre vue).
+
+## Restes de la refonte 1.0.0 (17/10)
+- Ouvriers peu productifs au fantôme (mineur, fermier, bûcheron qui ne dépose pas) : branche `v2-inactifs`, prioritaire (voir `docs/reprise.md`).
+- Guerre : la troupe avance lentement en bataille (11 à 15 blocs en 25 s) ; seuil du banc abaissé à 4 gardes touchés ; ancien chemin « attaquez la colonie de X » encore là ; `Armee.enfoncer` ne passe pas par `Lieux.peutCasser` (ne casse que les portes d'un poste ennemi).
+- Chasseur : chasse encore autour du poste (refonte : hors colonie). Mineur : pas de carrière à ciel ouvert hors colonie. Guérisseur : pas de statut bloqué. `Abri` casse de la terre naturelle avec sa propre vérification.
+- Restes sans effet à nettoyer : `Travailleur.lettresADeposer/lettresALire`, `Courrier.Lettre/vols/envoyerCorbeau`, intentions `LIENS/ENTERRER/DIAMANT` d'`Ordres`, réglages `moral_*`/`caractere_monstres`, textes familles/relations de `Messages`, `Nuit`, `Vie`, champ `fatigue`, message 0.8.0 à la connexion.
+- Une mission refusée juste après l'embauche (« n'a pas de poste ») tant que l'ouvrier n'a pas fait son premier tour (chunks frais).
+- Écrans (fiche, mission, confirmation, poste, barre) jamais vus avec un vrai client.

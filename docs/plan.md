@@ -101,7 +101,7 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 
 ## 16. Refonte « ouvriers robots » 1.0.0 (décidée le 17/10, à livrer le 17/10 avant 22 h UTC, voir `docs/refonte.md`)
 - [x] Étiquette git `v1-finale` ; retraits de la partie 3 de `docs/refonte.md` (IA, lettres et corbeau, moral détaillé, révolte, deuil, conversations, familles, rumeurs, économie entre ouvriers…) avec leurs tests ; build vert
-- [ ] Joueur fantôme : commande `/fantome` (dev ou réglage), rapport JSON, `tools/fantome.py` et scénario « 3 ouvriers, 2 jours, aucun bloc construit cassé » sur un monde généré
+- [x] Joueur fantôme : commande `/fantome` (dev ou réglage), rapport JSON, `tools/fantome.py` et scénario « 3 ouvriers, 2 jours, aucun bloc construit cassé » sur un monde généré
 - [x] La mission : quoi, où, jusqu'à quand, horaires, qui ; file par ouvrier ; statut unique au-dessus de la tête et au poste ; blocages avec raison et solution ; tout survit au redémarrage
 - [x] Lieux de travail intelligents sans bâton (partie 2) : colonie et tampon, jamais casser une construction (déblocage compris), arbres naturels seulement, mineur sous terre ou carrière hors colonie ; bouton « Travaille ici »
 - [x] Fiche de l'ouvrier au clic droit, avec le menu des missions de son métier et la confirmation « Compris : … ✔/✖ »
@@ -109,7 +109,8 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [x] Les 12 métiers branchés sur les missions, savoir-faire actuels gardés, plusieurs ouvriers sur une même mission
 - [x] Barre de commandes guidées (touche dédiée, autocomplétion sur le répertoire d'actions, jamais de phrase libre)
 - [x] Horaires à la place du sommeil ; satisfaction simple (paie et nourriture) qui règle la vitesse ; grève si impayé
-- [ ] Guerre simple et grands combats : déclarer et faire la paix au poste ; défendre, escorter, attaquer ; formation, charge, repli ; 30 contre 30 sans lag
+- [x] Guerre simple et grands combats : déclarer et faire la paix au poste ; défendre, escorter, attaquer ; formation, charge, repli ; 30 contre 30 sans lag
 - [x] Équilibre dans un seul fichier de réglages (coûts, salaires, production, étoiles, formation, plafond 30)
 - [ ] Feuille de tests v2 dans le panneau (essais `V01`…) ; tests instables rendus stables ; charge mesurée à 50 ouvriers
-- [ ] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce ; `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste
+- [x] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce (livrée le 17/10 à 20 h 28 UTC)
+- [x] Après la livraison 1.0.0 : `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste (à vérifier)
