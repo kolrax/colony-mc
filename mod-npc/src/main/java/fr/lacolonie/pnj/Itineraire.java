@@ -574,7 +574,7 @@ final class Itineraire {
             // Du gravier ou du sable sur un bloc de sa propre colonne lui tomberait dessus ; dans la marche, il attend qu'il
             // soit tombé (il le recassera de côté) avant d'y monter.
             boolean surLui = blocs.stream().anyMatch(b -> b.getX() == p.getX() && b.getZ() == p.getZ() && !Monde.traversable(l, b) && Monde.tombe(l, b.above()));
-            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b)) && (aCreuserIci || Monde.debout(l, marche))) {
+            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b))) && (aCreuserIci || Monde.debout(l, marche))) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();

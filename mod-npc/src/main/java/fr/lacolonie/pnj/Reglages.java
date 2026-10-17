@@ -84,6 +84,8 @@ public class Reglages {
     public int secondes_entre_remarques = 600;
     /** Les outils et armes des PNJ s'usent N fois moins vite que ceux d'un joueur (cahier 3.13 ; 1 = comme un joueur). */
     public int usure_outils = 3;
+    /** La colonie : le rayon (en blocs) autour du poste où l'on ne creuse pas de carrière ni ne coupe d'arbre sans « Travaille ici » (refonte, partie 2). */
+    public int rayon_colonie = 48;
     /** L'éleveur garde au plus N bêtes de chaque espèce par enclos : il n'en fait plus naître et abat l'excédent (2 au moins). */
     public int betes_par_enclos = 12;
     /**
@@ -191,6 +193,7 @@ public class Reglages {
         secondes_entre_conversations = Math.max(0, secondes_entre_conversations);
         secondes_entre_remarques = Math.max(0, secondes_entre_remarques);
         usure_outils = Math.max(1, usure_outils);
+        rayon_colonie = Math.max(0, Math.min(512, rayon_colonie));
         moral_minutes_bilan = Math.clamp(moral_minutes_bilan, 1, 20);
         nuit_debut = Math.floorMod(nuit_debut, 24);
         nuit_fin = Math.floorMod(nuit_fin, 24);

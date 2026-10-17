@@ -324,6 +324,15 @@ public class Travailleur extends PathfinderMob {
 
     /** Profondeur imposée (tests) ; Integer.MIN_VALUE = celle du catalogue. */
     public int profondeurForcee = Integer.MIN_VALUE;
+    /** « Travaille ici » : le lieu de travail que son chef lui a désigné (null : il choisit seul, {@link Lieux}). Sauvegardé. */
+    public BlockPos lieuImpose;
+
+    /** « Travaille ici » (bouton de la fiche) : il travaillera autour de p, dans le respect des constructions ; null : il choisit seul. */
+    public void travailleIci(BlockPos p) {
+        lieuImpose = p == null ? null : p.immutable();
+        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu
+        memoire.remove("lieu");
+    }
     public int fatigue;
     int fatigueCompteur;
     /** Ticks de travail depuis sa dernière pause ou son dernier repos (lot 5, loisirs ; non sauvegardé). */
@@ -2392,6 +2401,7 @@ public class Travailleur extends PathfinderMob {
         t.putString("ChefNom", chefNom);
         t.putString("Mode", mode.name());
         if (bureau != null) t.put("Bureau", NbtUtils.writeBlockPos(bureau));
+        if (lieuImpose != null) t.put("LieuImpose", NbtUtils.writeBlockPos(lieuImpose));
         if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
         t.putInt("JoursExpedition", joursExpedition);
         t.putLong("SortieDepuis", sortieDepuis);
@@ -2460,6 +2470,7 @@ public class Travailleur extends PathfinderMob {
         chefNom = t.getString("ChefNom");
         try { mode = Mode.valueOf(t.getString("Mode")); } catch (IllegalArgumentException e) { mode = Mode.CHOMEUR; }
         bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
+        lieuImpose = NbtUtils.readBlockPos(t, "LieuImpose").orElse(null);
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
         joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;

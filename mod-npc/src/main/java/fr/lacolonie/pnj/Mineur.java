@@ -152,8 +152,8 @@ final class Mineur extends Metier {
         for (int h = 0; h < haut; h++) {
             BlockPos q = p.above(h);
             if (!Monde.libre(l, q)) {
-                // Le tunnel d'un joueur (briques, planches…) : il ne casse que le naturel.
-                if (echecSur(t, q) || Monde.construit(l, q)) return Case.BLOQUE;
+                // Le tunnel d'un joueur (briques, planches…), le tampon d'une construction, sous une fondation : il n'y touche pas (Lieux).
+                if (echecSur(t, q) || !Lieux.peutCasser(t, q)) return Case.BLOQUE;
                 casser(t, q);
                 return Case.ACTION;
             }
@@ -207,9 +207,24 @@ final class Mineur extends Metier {
         CompoundTag m = t.memoire;
         // Le plus près possible du bureau : il aura moins de marche pour rapporter le minerai.
         // Jamais sur une structure ni près de la base d'un autre joueur.
-        java.util.function.Predicate<BlockPos> refus = q -> interdit(t, q, false);
-        BlockPos s = Monde.solNaturel(t, t.bureau, 64, refus);
-        if (s == null && !t.chezLui(t.blockPosition())) s = Monde.solNaturel(t, t.blockPosition(), 24, refus);
+        // Loin des constructions, jamais dans une structure ni près d'un autre poste ({@link Lieux#puitsPermis}). Dans la
+        // colonie, un seul puits : il reprend toujours la même entrée, son escalier part dans une autre direction.
+        java.util.function.Predicate<BlockPos> refus = q -> !Lieux.puitsPermis(t, q);
+        BlockPos s = null;
+        int sens = 0;
+        if (t.lieuImpose != null) s = Monde.solNaturel(t, t.lieuImpose, Lieux.RAYON_ICI, refus);
+        else if (m.contains("puits_colonie") && Lieux.dansColonie(t, BlockPos.of(m.getLong("puits_colonie")))) {
+            s = BlockPos.of(m.getLong("puits_colonie"));
+            sens = (m.getInt("sens_colonie") + 1) % 4;
+        }
+        if (s == null && t.lieuImpose == null) s = Monde.solNaturel(t, t.bureau, 64, refus);
+        if (s == null && t.lieuImpose == null && !t.chezLui(t.blockPosition())) s = Monde.solNaturel(t, t.blockPosition(), 24, refus);
+        if (s != null && t.lieuImpose == null && Lieux.dansColonie(t, s)) { m.putLong("puits_colonie", s.asLong()); m.putInt("sens_colonie", sens); }
+        if (s == null && t.lieuImpose != null) {
+            Cerveau.dire(t, "pas_de_lieu", 600, "Aucun lieu sûr pour miner là où tu m'as dit : il y a des constructions trop près.");
+            Cerveau.attendre(t, 30);
+            return;
+        }
         if (s == null) {
             // Tout est construit autour du bureau : il explore plus loin pour trouver un sol naturel.
             BlockPos e = Cerveau.pointAExplorer(t, "puits", t.bureau, t.porteeMax());
@@ -223,8 +238,10 @@ final class Mineur extends Metier {
             return;
         }
         m.putLong("puits", s.asLong());
+        m.putInt("entree", s.getY());
+        Lieux.choisi(t, s);
         m.putInt("marche", 0);
-        m.putInt("sens", 0);
+        m.putInt("sens", sens);
         m.putInt("tours", 0);
         m.remove("fond");
         m.putInt("cote", 1);
@@ -268,7 +285,7 @@ final class Mineur extends Metier {
         for (Object[] f : new Object[][]{{c.blocs, 3}, {Actions.Filtre.de("#c:ores"), 2}}) {
             BlockPos q = Monde.chercherBloc(t, (Actions.Filtre) f[0], (int) f[1], t.blockPosition(), true, true);
             if (q != null && !ignores.contains(cle(q))) {
-                if (echecSur(t, q) || interdit(t, q, true)) { ignores.putBoolean(cle(q), true); m.put("ignores", ignores); }
+                if (echecSur(t, q) || interdit(t, q, true) || !Lieux.peutCasser(t, q)) { ignores.putBoolean(cle(q), true); m.put("ignores", ignores); }
                 else { casser(t, q); return; }
             }
         }
@@ -276,7 +293,8 @@ final class Mineur extends Metier {
         // 2. Pas encore de puits : il en choisit l'entrée, sur un sol naturel.
         if (!m.contains("puits")) { nouveauPuits(t); return; }
         BlockPos puits = BlockPos.of(m.getLong("puits"));
-        int cible = Math.max(-59, profondeur);
+        // Sous terre : au moins 10 blocs sous l'entrée du puits (Lieux).
+        int cible = Math.max(-59, Lieux.regles(t.level()) ? Math.min(profondeur, (m.contains("entree") ? m.getInt("entree") : puits.getY()) - Lieux.SOUS_SURFACE) : profondeur);
 
         // 3. L'escalier, marche après marche, jusqu'à la profondeur du minerai.
         if (!m.contains("fond")) {

@@ -95,9 +95,15 @@ final class Bucheron extends Metier {
             }
         }
 
-        // 3. L'arbre du bon bois le plus proche de lui.
-        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t);
+        // 3. L'arbre naturel du bon bois le plus proche de lui : hors de la colonie, ou dans la zone « Travaille ici », jamais
+        //    près d'une construction (Lieux). Désigné « Travaille ici » mais loin de ce lieu : il y va d'abord.
+        if (t.lieuImpose != null && !Lieux.ici(t, t.blockPosition())) {
+            if (!aller(t, t.lieuImpose, c)) t.travailleIci(null);
+            return;
+        }
+        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q));
         if (arbre != null && t.peutAller(arbre)) {
+            Lieux.choisi(t, arbre);
             if (souches.size() < 16) {
                 BlockPos coin = carre(l, arbre);
                 souches.add(souche(coin != null ? coin : arbre, pousse(l.getBlockState(arbre)), coin != null));
@@ -106,6 +112,13 @@ final class Bucheron extends Metier {
             if (!t.chezLui(arbre)) m.putLong("coin_" + c.id, arbre.asLong()); // un bon coin loin de chez lui : il y reviendra
             m.putLong("ramassage", 0); // ce qui tombera des feuilles : ramassé juste après
             Cerveau.lancer(t, new Actions.Abattre(arbre));
+            return;
+        }
+
+        // Là où son chef l'a mis, plus d'arbre : il le dit et attend (il ne part pas ailleurs de lui-même).
+        if (t.lieuImpose != null) {
+            Cerveau.dire(t, "plus_d_arbre_ici", 600, "Plus d'arbre à couper là où tu m'as dit.");
+            Cerveau.attendre(t, 30);
             return;
         }
 
