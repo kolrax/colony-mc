@@ -138,3 +138,13 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Les ouvriers d'avant ce lot n'ont aucun talent ; ceux du banc et des tests (`Travailleur.auTravail`) non plus, pour rester comparables.
 - Rareté : `reglages.json` d'un serveur existant passe une seule fois à 0,35 toutes les 15 minutes (`chercheurs.plus_rares`) ; les chiffres choisis ensuite sont respectés.
 - Étoiles (lot 13) : une formation arrêtée quand le chef n'est pas en ligne (renvoi par lettre, ordre écrit chef parti) ne lui rend pas le prix ; pendant la formation, il reste au poste (pas de vraie absence) et sans geste d'étude ; l'avancement vers l'étoile suivante (`Etoiles.progres`) n'est montré nulle part ; une désobéissance (moral bas) laisse la formation continuer.
+
+## Autres joueurs (lot 14, première passe du 17/10)
+- Un autre joueur ne passe pas par l'IA : l'interpréteur seul lui répond (pas de dépense, mais des réponses moins riches). Ses mots ne vont pas non plus dans l'adressage : seule la fenêtre (ou le micro en regardant l'ouvrier) touche un ouvrier d'un autre chef, un seul à la fois.
+- Les réponses à un joueur autorisé gardent les répliques du chef (« Bien, chef. ») : à adapter (« Bien, Nielscutt. »).
+- « Suis-moi » d'un autorisé est refusé (le suivi va toujours au chef) ; « attends ici », « rentre », le travail, les gestes et les tâches passent.
+- La paie d'un ordre (« tiens, 10 pièces : coupe du bois ») : un seul ordre, la moitié de sa paie au moins ; l'ordre remplace les missions du chef comme s'il venait de lui. Pas de pièce tendue en main : la somme est dite dans la phrase et prise dans la bourse du joueur.
+- Débauche : la paie promise devient son salaire, payé comme les autres par la caisse du nouveau poste ; la somme versée d'avance va dans son sac (il la garde). Pas de vérification que le nouveau chef pourra payer ensuite.
+- Débauche : pas d'enfant ni d'apprenti protégé (la case « familles » n'existait pas encore) ; à ajouter quand elle sera là.
+- Débauche : un refus de « place » (pas de poste, plafond atteint) ou « sans somme » ne laisse pas de rancune ; un boutiquier qui tient boutique répond en marchand (la boutique passe avant).
+- Le chef apprend une tentative par lettre (`debauche_lettre_tentative`) : pas encore de souvenir dans `Souvenirs` (« qui a voulu te débaucher ? »).
