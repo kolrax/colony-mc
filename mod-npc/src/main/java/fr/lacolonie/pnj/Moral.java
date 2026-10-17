@@ -27,6 +27,7 @@ final class Moral {
         METEO("ce temps de chien", "meteo_mauvaise", "meteo_belle"),
         CHEF("la façon dont on me traite", "chef_crie", null),
         AMITIES("certains compagnons me sont insupportables", null, null),
+        NUIT("les nuits me tuent", "nuit_plainte", null),
         COLONIE("", null, "fier_colonie");
 
         final String dit, plainte, joie;
@@ -37,11 +38,18 @@ final class Moral {
     /** Ce que le bilan regarde (tout est lu côté jeu, sans recherche coûteuse). */
     record Etat(int impayes, boolean payeRecemment, List<String> repas, boolean lit, boolean toit, boolean blesse, boolean blesseVu,
                 int joursDeuil, boolean pluie, boolean orage, int bilansPluie, boolean beauTemps, boolean coupChef, int ouvriers, int depot,
-                int amities) {
+                int amities, int nuit) {
+        /** Sans les nuits ({@link Nuit#moral}). */
+        Etat(int impayes, boolean payeRecemment, List<String> repas, boolean lit, boolean toit, boolean blesse, boolean blesseVu,
+             int joursDeuil, boolean pluie, boolean orage, int bilansPluie, boolean beauTemps, boolean coupChef, int ouvriers, int depot,
+             int amities) {
+            this(impayes, payeRecemment, repas, lit, toit, blesse, blesseVu, joursDeuil, pluie, orage, bilansPluie, beauTemps, coupChef, ouvriers, depot, amities, 0);
+        }
+
         /** Sans amitiés ni inimitiés. */
         Etat(int impayes, boolean payeRecemment, List<String> repas, boolean lit, boolean toit, boolean blesse, boolean blesseVu,
              int joursDeuil, boolean pluie, boolean orage, int bilansPluie, boolean beauTemps, boolean coupChef, int ouvriers, int depot) {
-            this(impayes, payeRecemment, repas, lit, toit, blesse, blesseVu, joursDeuil, pluie, orage, bilansPluie, beauTemps, coupChef, ouvriers, depot, 0);
+            this(impayes, payeRecemment, repas, lit, toit, blesse, blesseVu, joursDeuil, pluie, orage, bilansPluie, beauTemps, coupChef, ouvriers, depot, 0, 0);
         }
     }
 
@@ -103,6 +111,7 @@ final class Moral {
         c.put(Cause.METEO, e.orage ? -2 : e.pluie && e.bilansPluie >= 2 ? -1 : e.beauTemps ? 1 : 0);
         if (e.coupChef) c.put(Cause.CHEF, -2);
         c.put(Cause.AMITIES, e.amities); // un ami, un couple, un ennemi (Liens.moral)
+        c.put(Cause.NUIT, Math.min(0, e.nuit)); // les nuits travaillées d'affilée (Nuit.moral)
         c.put(Cause.COLONIE, (e.ouvriers >= OUVRIERS ? 1 : 0) + (e.depot >= DEPOT ? 1 : 0));
         c.values().removeIf(v -> v == 0);
         int total = c.values().stream().mapToInt(Integer::intValue).sum();

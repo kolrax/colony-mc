@@ -80,7 +80,9 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot, (Relations.actifs() ? Relations.de(t).moral() : 0) + Famille.moral(t)); // la famille réunie (lot 13)
+                !pluie && l.isDay(), coup, ouvriers, depot, (Relations.actifs() ? Relations.de(t).moral() : 0) + Famille.moral(t), // la famille réunie (lot 13)
+                // Les nuits d'affilée (lot 13) : une prime promise ou une paie au-dessus de sa demande en reprennent un peu.
+                Nuit.moral(m.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus, t.prime > 0 || t.facteurPaie() > 1));
     }
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */

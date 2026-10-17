@@ -69,6 +69,8 @@ final class Chasseur extends Metier {
         }
         // La nuit, la chasse est au guerrier : lui rentre au poste.
         if (nuit || repos) {
+            // Mis de nuit (lot 13) : rien à chasser dans le noir ; il le dit une fois par nuit et attend au poste.
+            if (nuit && t.deNuit() && Cerveau.parfois(t, "nuit_sans_ouvrage", Cerveau.UN_JOUR)) Besoins.dire(t, "nuit_sans_ouvrage", null);
             if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 8 * 8) Cerveau.rentrer(t);
             else Cerveau.attendre(t, 5);
             return;

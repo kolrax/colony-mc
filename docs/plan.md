@@ -85,7 +85,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Recrutement : PNJ plus rares, avec des compétences propres ; arrivées depuis les villages, débauche d'un autre joueur, réputation, affiche ou crieur (0.9.37, 1re passe : rareté, talents, réputation, affiche, villages ; débauche au lot 14, crieur dans plus-tard)
 - [x] Étoiles qui montent avec l'expérience ou une formation payée (0.9.38, 1re passe)
 - [ ] Familles, enfants qui grandissent, vieillesse lente mais perceptible ; apprenti
-- [ ] Travailleurs de nuit (fatigue, santé, moral)
+- [x] Travailleurs de nuit (fatigue, santé, moral) (0.9.39, 1re passe)
 
 ## 14. Autres joueurs
 - [ ] Autoriser un joueur : il peut parler aux ouvriers et leur donner des ordres ; un autre joueur peut tenter de les convaincre ou de les corrompre (paie plus élevée)

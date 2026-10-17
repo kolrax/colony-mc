@@ -124,7 +124,7 @@ final class Obeissance {
     /** La phrase ne porte aucun ordre à elle (mission, action, déplacement, expédition, horaires, règle) : elle répond à l'ordre en suspens. */
     static boolean sansOrdre(Ordres.Lecture l) {
         // « Marché conclu », « tope là » : la poignée de main scelle le marché, ce n'est pas un nouvel ordre.
-        return l.missions.isEmpty() && l.faire.stream().allMatch(f -> f.id().equals("serrer_main")) && l.jours < 0 && l.debut < 0 && l.fin < 0 && l.regles.isEmpty() && !l.annulerRegles
+        return l.missions.isEmpty() && l.faire.stream().allMatch(f -> f.id().equals("serrer_main")) && l.jours < 0 && l.debut < 0 && l.fin < 0 && l.equipe < 0 && l.regles.isEmpty() && !l.annulerRegles
                 && l.intentions.stream().noneMatch(i -> java.util.EnumSet.of(Ordres.Intention.SUIVRE, Ordres.Intention.ARRETER_SUIVRE, Ordres.Intention.ATTENDRE,
                         Ordres.Intention.TRAVAIL, Ordres.Intention.RENTRER, Ordres.Intention.RENVOYER, Ordres.Intention.SAC, Ordres.Intention.ENTERRER).contains(i));
     }
