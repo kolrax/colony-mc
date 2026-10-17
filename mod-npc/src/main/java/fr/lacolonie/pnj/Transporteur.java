@@ -315,17 +315,21 @@ final class Transporteur extends Metier {
             Cerveau.lancer(t, new Actions.Deposer(garder));
             return;
         }
-        if ("depot_plein".equals(t.resultat)) Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+        if ("depot_plein".equals(t.resultat)) { Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein"); t.bloquer(Statut.SAC_PLEIN); }
         List<Trajet> l = lire(t);
         revoir(t, l, maintenant);
         int i = t.memoire.getLong("transport_repos") > maintenant ? -1 : Trajets.suivant(l, t.memoire.getInt("trajet_n"), maintenant);
         if (i < 0) {
-            if (l.isEmpty()) Cerveau.dire(t, "sans_trajet", 600, "Je n'ai rien à porter. Montre-moi un coffre, et dis-moi où en porter le contenu.");
+            if (l.isEmpty()) {
+                Cerveau.dire(t, "sans_trajet", 600, "Je n'ai rien à porter. Montre-moi un coffre, et dis-moi où en porter le contenu.");
+                t.bloquer(Statut.SANS_TRAJET);
+            }
             if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 6 * 6) Cerveau.rentrer(t);
             else Cerveau.attendre(t, 10);
             return;
         }
         t.memoire.putInt("trajet_n", i);
+        t.debloquer(Statut.SANS_TRAJET);
         // Au départ de chaque tour : ses deux bouts sont-ils toujours à nous ?
         if (!interdit(t, l.get(i))) Cerveau.lancer(t, new Tour(l.get(i)));
     }

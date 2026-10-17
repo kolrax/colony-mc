@@ -49,7 +49,7 @@ final class Cerveau {
         // Une longue marche vers plus loin dure des heures : la faim, l'épuisement, la nuit ou l'heure du retour l'arrêtent
         // (sans ça, Aliénor marchait affamée et épuisée vers le bout du monde).
         if (t.action instanceof Actions.Aller a && t.bureau != null && !t.chezLui(BlockPos.containing(a.cible)) && !t.memoire.getBoolean("fuite")
-                && (t.faim <= 8 || t.fatigue >= 100 || !t.enService() || t.doitRentrer())) t.finirAction("interrompu");
+                && (t.faim <= 8 || t.fatigue >= 100 || !enService(t) || t.doitRentrer())) t.finirAction("interrompu");
         // Sur le chemin du retour, la nuit le prend encore loin du poste (cahier 14.12) : il s'arrête et campe (plus bas).
         if (t.action instanceof Actions.Aller a && t.bureau != null && Abri.nuitDehors(t) && a.cible.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 25
                 && !t.isInWater() && !t.isPassenger() && !t.memoire.getBoolean("fuite") && !t.memoire.getBoolean("rappel")) t.finirAction("interrompu");
@@ -196,10 +196,10 @@ final class Cerveau {
             return;
         }
 
-        // Hors de ses heures, ou épuisé : il se repose.
+        // Hors de ses heures (ou des horaires de ses missions), ou épuisé : il se repose.
         if (t.fatigue >= 100) mem.putBoolean("epuise", true);
         else if (t.fatigue <= 40) mem.remove("epuise");
-        if (!t.enService() || mem.getBoolean("epuise")) {
+        if (!enService(t) || mem.getBoolean("epuise")) {
             if (mem.getBoolean("epuise")) ecrire(t, "epuise", 1800, "epuise");
             if (dehors) {
                 // En expédition, il campe sur place ; à moins d'une heure de marche, il rentre plutôt dormir chez lui.
@@ -213,6 +213,12 @@ final class Cerveau {
                 // La nuit, il se creuse un trou et s'y enferme jusqu'au matin (Abri) ; sinon il dort à la belle étoile.
                 if (Abri.abriter(t)) return;
                 lancer(t, new Actions.Reposer());
+                return;
+            }
+            // Hors des horaires de ses missions, le jour (statut « Hors horaires ») : il rentre au poste et y attend.
+            if (horsHoraires(t) && !mem.getBoolean("epuise") && !Abri.nuit(t.level())) {
+                if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) rentrer(t);
+                else attendre(t, 10);
                 return;
             }
             if (Monde.libres(t) < 24 && !mem.getBoolean("sacVide")) {
@@ -277,6 +283,30 @@ final class Cerveau {
         if (Blessures.auRepos(t, m)) return;
 
         m.travailler(t);
+    }
+
+    // --- Les horaires des missions (refonte 1.0.0 : ils remplacent le sommeil) -----------------------------
+
+    /** Il a des missions, et aucune n'est dans ses horaires à cette heure : il attend au poste (ou dort, la nuit). */
+    static boolean horsHoraires(Travailleur t) {
+        if (t.missions.isEmpty()) return false;
+        int h = t.heure();
+        for (Travailleur.Mission x : t.missions) if (x.enHoraires(h)) return false;
+        return true;
+    }
+
+    /**
+     * À l'ouvrage à cette heure : une mission dans ses horaires (« la nuit » : il travaille la nuit) ; une mission « toujours »,
+     * ou pas de mission, suit ses heures de service d'avant ({@code Travailleur.enService}).
+     */
+    static boolean enService(Travailleur t) {
+        boolean toujours = t.missions.isEmpty();
+        int h = t.heure();
+        for (Travailleur.Mission x : t.missions) {
+            if (x.horaires.equals("toujours")) toujours = true;
+            else if (x.enHoraires(h)) return true;
+        }
+        return toujours && t.enService();
     }
 
     // --- Outils pour les métiers --------------------------------------------------------------------

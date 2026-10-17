@@ -131,6 +131,7 @@ final class Fermier extends Metier {
             tour.recoltees = 0;
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -138,12 +139,31 @@ final class Fermier extends Metier {
             return;
         }
 
-        // Sans champ marqué, il ne touche à rien : il le dit à son chef.
+        // Sa mission a un lieu (ou « Travaille ici ») sans champ à lui autour : il y laboure et sème un champ de 9 sur 9
+        // (un essai toutes les 5 minutes au plus ; raté, faute de terre libre ou de graines, il le dit au-dessus de sa tête).
+        BlockPos lieu = t.lieuTravail();
+        if (lieu != null && parcelles(t).stream().noneMatch(p -> distance(p.centre, lieu) <= PRES_DU_LIEU * PRES_DU_LIEU)) {
+            if (t.memoire.getLong("champ_lieu") != lieu.asLong() || t.memoire.getLong("champ_lieu_t") <= Cerveau.temps(t)) {
+                t.memoire.putLong("champ_lieu", lieu.asLong());
+                t.memoire.putLong("champ_lieu_t", Cerveau.temps(t) + 300);
+                Cultures.Culture k = commandee(t);
+                Cerveau.lancer(t, new Champ(lieu, Cultures.mesures(""), k == null ? Cultures.TOUTES.get(0) : k, true));
+                return;
+            }
+            t.bloquer(Statut.RIEN_A_SEMER);
+            Cerveau.attendre(t, 20);
+            return;
+        }
+        t.debloquer(Statut.RIEN_A_SEMER);
+
+        // Sans champ marqué, il ne touche à rien : il le dit à son chef, et au-dessus de sa tête.
         if (champs.isEmpty()) {
+            t.bloquer(Statut.SANS_CHAMP);
             Cerveau.ecrire(t, "sans_champ", Cerveau.UN_JOUR, "sans_champ");
             Cerveau.attendre(t, 20);
             return;
         }
+        t.debloquer(Statut.SANS_CHAMP);
 
         // Une fois par tour, et au plus toutes les 5 minutes : un des champs marqués, ressemé s'il le faut.
         if (tour.zone == 0 && Cerveau.temps(t) >= tour.champsVus) {
@@ -154,6 +174,7 @@ final class Fermier extends Metier {
 
         // Le tour de ses champs : la prochaine zone qui en touche un ; ce qui est mûr, il le récolte.
         List<Parcelle> parcelles = parcelles(t);
+        if (lieu != null) parcelles.removeIf(p -> distance(p.centre, lieu) > PRES_DU_LIEU * PRES_DU_LIEU); // seulement le champ de ce lieu
         Cultures.Culture voulue = commandee(t);
         List<BlockPos> mures = new ArrayList<>();
         boolean[] vu = {false, false}; // {la zone touche un champ, un plant de la culture commandée}
@@ -171,8 +192,24 @@ final class Fermier extends Metier {
             tour.trouve = tour.vuCommande = false;
             if (vide) { Cerveau.attendre(t, 20 + t.getRandom().nextInt(11)); return; } // rien de mûr nulle part : une pause
         }
+        if (!mures.isEmpty()) mures.removeAll(autresMoissons(t)); // un autre fermier les récolte déjà : ils ne se gênent pas
         if (!mures.isEmpty()) { Cerveau.lancer(t, new Moisson(mures, tour, voulue)); return; }
         Cerveau.attendre(t, 1);
+    }
+
+    /** Un champ est « au lieu » de la mission si son centre en est à tant de blocs au plus. */
+    static final int PRES_DU_LIEU = 8;
+
+    /** Les plants que les autres fermiers alentour sont déjà en train de récolter. */
+    static java.util.Set<BlockPos> autresMoissons(Travailleur t) {
+        java.util.Set<BlockPos> r = new java.util.HashSet<>();
+        for (Travailleur o : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(Travailleur.ESPACE_DE_VIE, 16, Travailleur.ESPACE_DE_VIE),
+                o -> o != t && o.action instanceof Moisson)) {
+            Moisson m = (Moisson) o.action;
+            r.addAll(m.reste);
+            if (m.cible != null) r.add(m.cible);
+        }
+        return r;
     }
 
     // --- Les cultures mûres -------------------------------------------------------------------------------------
