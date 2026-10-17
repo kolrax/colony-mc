@@ -39,7 +39,7 @@ final class Famille {
         var taille = t.getAttribute(Attributes.SCALE);
         if (taille != null) {
             double e = actives() ? Ages.echelle(t.age < 0 ? Ages.ADULTE : t.age) : 1;
-            if (Math.abs(taille.getBaseValue() - e) > 0.005) taille.setBaseValue(e);
+            if (Math.abs(taille.getBaseValue() - e) > 0.005) { taille.setBaseValue(e); t.refreshDimensions(); }
         }
         double vie = 20 + 2 * (t.niveau - 1) + Talents.vie(t.talents) - (actives() ? Ages.vieEnMoins(t.age) : 0);
         var max = t.getAttribute(Attributes.MAX_HEALTH);

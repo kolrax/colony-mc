@@ -2219,7 +2219,7 @@ public class Travailleur extends PathfinderMob {
             signaler(p, "Ce métier n'est plus proposé sur le serveur.");
             return;
         }
-        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
+        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size(), payes = payes(p); // avant qu'il ne soit des leurs
         if (nb >= Reglages.actuel.pnj_max_par_joueur) {
             signaler(p, "Tu as déjà " + nb + " PNJ : c'est le maximum (" + Reglages.actuel.pnj_max_par_joueur + ").");
             return;
@@ -2243,7 +2243,7 @@ public class Travailleur extends PathfinderMob {
         this.prime = 0; // (« prime = 0 » remettait la prime d'embauche à zéro, et le message disait « pour rien »)
         salaire = -1; // un nouveau marché : ni le salaire fixé par l'ancien chef…
         int renom = Courrier.de(p.getServer()).reputation(p.getUUID());
-        surcout = surcout(payes(p), renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
+        surcout = surcout(payes, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
         memoire.remove("etoiles_gagnees"); // ses étoiles d'avant sont les siennes : il en demande le prix (Apprentissage)
         enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
