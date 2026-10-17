@@ -212,9 +212,9 @@ public class TestsEleveur {
             List<Cow> v = vaches(l, centre);
             long adultes = v.stream().filter(c -> !c.isBaby()).count();
             h.assertTrue(dedans(v, centre), "les vaches restent dans l'enclos " + suivi);
-            h.assertTrue(adultes <= 2, "l'excédent doit être abattu : " + adultes + " adultes (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(adultes <= 2, "l'excédent doit être abattu : " + adultes + " adultes (" + TestsJeu.etat(t, t.bureau) + ") " + suivi);
             h.assertTrue(adultes == 2 && marguerite.isAlive() && veau.isAlive() && veau.isBaby(), "le dernier couple, Marguerite et le veau restent");
-            h.assertTrue(TestsBucheron.compte(d, Items.BEEF) >= 2, "la viande au dépôt : " + TestsBucheron.compte(d, Items.BEEF));
+            h.assertTrue(TestsBucheron.compte(d, Items.BEEF) >= 2, "la viande au dépôt : " + TestsBucheron.compte(d, Items.BEEF) + ", sac " + t.compter(Actions.Filtre.de("minecraft:beef")) + " " + suivi);
             h.assertTrue(parTerre(l, centre) == 0, "rien par terre : " + parTerre(l, centre));
             h.assertTrue(ferme(l, porte) && dehors(t, porte), "il ressort et referme le portillon : " + l.getBlockState(porte) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             t.discard();

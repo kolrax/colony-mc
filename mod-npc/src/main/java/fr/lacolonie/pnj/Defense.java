@@ -88,7 +88,12 @@ final class Defense {
         }
         if (creeper != null) {
             // Il fuit seulement s'il a où aller (sinon il ne lâcherait son travail que pour rien) ; il appelle la garde de toute façon.
-            Vec3 loin = DefaultRandomPos.getPosAway(t, 16, 7, creeper.position());
+            // Loin de son souffle, avec de la marge : un seul tirage au hasard pouvait ne l'écarter que de deux pas.
+            // Sans refuge la dernière fois : il ne refait ses tirages que toutes les 3 s.
+            boolean rate = t.memoire.getBoolean("refuge_creeper_rate");
+            Vec3 loin = rate && !Cerveau.parfois(t, "refuge_creeper", 3) ? null : refuge(t, creeper, VUE + 4, 6);
+            if (!rate || loin != null) t.memoire.putBoolean("refuge_creeper_rate", loin == null);
+            if (loin == null && !rate) Cerveau.parfois(t, "refuge_creeper", 3); // le délai part de cet échec
             if (fuir(t, creeper, loin)) return true;
         }
         if (t.action instanceof Actions.Attaquer) return false; // il se bat déjà
@@ -204,10 +209,12 @@ final class Defense {
      * Où fuir ce monstre : de préférence hors de sa vue (il ne le refuira pas sans qu'il s'approche : {@link #dejaFui}), en trois
      * tirages au plus ; sinon le plus loin trouvé ; null s'il n'a nulle part où aller.
      */
-    static Vec3 refuge(Travailleur t, LivingEntity m) {
+    static Vec3 refuge(Travailleur t, LivingEntity m) { return refuge(t, m, VUE + 1, 3); }
+
+    /** Pareil, à {@code vue} blocs du monstre au moins si possible, en {@code tirages} tirages au plus. */
+    static Vec3 refuge(Travailleur t, LivingEntity m, double vue, int tirages) {
         Vec3 mieux = null;
-        double vue = VUE + 1;
-        for (int k = 0; k < 3; k++) {
+        for (int k = 0; k < tirages; k++) {
             Vec3 p = DefaultRandomPos.getPosAway(t, 16, 7, m.position());
             if (p == null) continue;
             if (p.distanceToSqr(m.position()) > vue * vue) return p;

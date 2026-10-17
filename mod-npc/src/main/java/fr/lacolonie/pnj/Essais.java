@@ -67,6 +67,50 @@ public class Essais {
     }
 
     /** Le mod trouve seul à qui on parle (prénom, « les gars », « sauf », le métier qui comprend la demande). */
+    /**
+     * Pour mesurer un test capricieux : {@code COLONIE_TESTS=enRang,sortDeLaLave COLONIE_FOIS=10 ./gradlew runGameTestServer}
+     * ne lance que ces tests (noms de méthode), chacun {@code COLONIE_FOIS} fois. Appelé au chargement du monde du serveur
+     * de test, avant qu'il ne forme ses lots. Sans la variable, rien ne change.
+     */
+    static boolean choisis;
+
+    static void choisir(net.minecraft.world.level.LevelAccessor l) {
+        String noms = System.getenv("COLONIE_TESTS");
+        if (noms == null || noms.isBlank() || choisis || !(l.getServer() instanceof net.minecraft.gametest.framework.GameTestServer s)) return;
+        choisis = true; // un seul tri : chaque dimension chargée repasse ici
+        java.util.Set<String> voulus = new java.util.HashSet<>(java.util.Arrays.asList(noms.toLowerCase().split(",")));
+        int fois;
+        try { fois = Math.max(1, Integer.parseInt(System.getenv().getOrDefault("COLONIE_FOIS", "1").trim())); }
+        catch (NumberFormatException ex) { fois = 1; }
+        try {
+            var f = net.minecraft.gametest.framework.GameTestServer.class.getDeclaredField("testFunctions");
+            f.setAccessible(true);
+            @SuppressWarnings("unchecked") var liste = (java.util.List<net.minecraft.gametest.framework.TestFunction>) f.get(s);
+            var gardes = liste.stream().filter(t -> voulus.contains(t.testName().substring(t.testName().lastIndexOf('.') + 1))).toList();
+            liste.clear();
+            liste.addAll(gardes);
+            // Chaque reprise dans son propre lot, joué après les autres : deux copies côte à côte se gêneraient (même coin).
+            var avant = champ("BEFORE_BATCH_FUNCTIONS");
+            var apres = champ("AFTER_BATCH_FUNCTIONS");
+            for (int i = 1; i < fois; i++)
+                for (var t : gardes) {
+                    String lot = t.batchName() + "_" + i;
+                    if (avant.containsKey(t.batchName())) avant.put(lot, avant.get(t.batchName()));
+                    if (apres.containsKey(t.batchName())) apres.put(lot, apres.get(t.batchName()));
+                    liste.add(new net.minecraft.gametest.framework.TestFunction(lot, t.testName(), t.structureName(), t.rotation(), t.maxTicks(),
+                            t.setupTicks(), t.required(), t.manualOnly(), t.maxAttempts(), t.requiredSuccesses(), t.skyAccess(), t.function()));
+                }
+            ColoniePnj.LOG.info("[tests] {} tests choisis, {} fois chacun", gardes.size(), fois);
+        } catch (ReflectiveOperationException ex) { throw new RuntimeException(ex); }
+    }
+
+    @SuppressWarnings("unchecked")
+    static java.util.Map<String, java.util.function.Consumer<net.minecraft.server.level.ServerLevel>> champ(String nom) throws ReflectiveOperationException {
+        var f = net.minecraft.gametest.framework.GameTestRegistry.class.getDeclaredField(nom);
+        f.setAccessible(true);
+        return (java.util.Map<String, java.util.function.Consumer<net.minecraft.server.level.ServerLevel>>) f.get(null);
+    }
+
     @GameTest(template = "vide", timeoutTicks = 100)
     public static void destinatairesSansIA(GameTestHelper h) {
         var chef = h.makeMockServerPlayerInLevel();

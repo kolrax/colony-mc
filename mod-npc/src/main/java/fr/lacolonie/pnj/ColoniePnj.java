@@ -140,6 +140,7 @@ public class ColoniePnj {
             mesure.clore();
             Itineraire.nouveauTick(); // le budget des recherches d'étapes repart pour le tick suivant
         });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.level.LevelEvent.Load e) -> Essais.choisir(e.getLevel()));
         NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
             // Les monstres s'en prennent aussi aux PNJ (sauf à ceux qui sont à terre).
             if (!e.getLevel().isClientSide && e.getEntity() instanceof Monster m && !(m instanceof NeutralMob))
