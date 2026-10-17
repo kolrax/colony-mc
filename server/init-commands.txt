@@ -1,5 +1,6 @@
 whitelist add KOLRAX_MC
 whitelist add Nielscutt
+whitelist add Mr_EcliipsE
 op KOLRAX_MC
 gamerule keepInventory false
 gamerule playersSleepingPercentage 50

@@ -71,7 +71,7 @@ cd mod-npc
 - Banc photo des gestes et skins : `./gradlew runPhotos` (client, il faut un écran). Captures dans `run-photos/screenshots`, à regarder une par une.
 
 ## Livrer
-**Sur le serveur** (monde de test `test-andesite`, encore jetable) :
+**Sur le serveur** (monde `colonie`, créé le 17/10 pour les essais de Nielscutt, qui y joue normalement : **ne pas le régénérer** sans l'accord de KOLRAX ; l'ancien monde `test-andesite` reste sur le disque) :
 1. Avant de redémarrer : `python tools/panel.py cmd "list"`, puis lire `python tools/panel.py cat /logs/latest.log 20`.
    - Si quelqu'un est connecté : 5 minutes de préavis en jeu (`tellraw`). Sinon, redémarrage libre, de préférence entre 3 h et 6 h.
 2. Envoi sûr, pour qu'une coupure (quota, réseau) ne laisse jamais le serveur cassé :
