@@ -86,6 +86,9 @@ public class TestsPoste {
         String cats = d.stream().map(x -> ((CompoundTag) x).getString("cat")).toList().toString();
         h.assertTrue(cats.equals("[outils, minerais, nourriture, bois]"), "les catégories : " + cats);
         h.assertTrue(((CompoundTag) d.get(1)).getLong("n") == 80, "le fer brut compté ensemble : " + d.get(1));
+        CompoundTag pioche = (CompoundTag) d.get(0);
+        h.assertTrue(pioche.getString("id").equals("minecraft:iron_pickaxe") && !pioche.getString("nom").isEmpty() && pioche.size() == 4,
+                "seulement l'objet de base, son nom, le nombre et la catégorie (pas de composants) : " + pioche);
         h.succeed();
     }
 
@@ -99,15 +102,21 @@ public class TestsPoste {
         t.missions.clear();
         for (String id : List.of("fer", "charbon", "cuivre")) t.missions.add(new Travailleur.Mission(id, "quantite", 64));
         h.runAtTickTime(h.getTick() + 2, () -> { // un PNJ tout juste apparu n'est pas encore dans le monde
+            Actions.Aller travail = new Actions.Aller(t.position().add(20, 0, 0), 1); // ce qu'il fait pour sa mission en cours
+            t.action = travail;
             e.action(chef, "mission_monter", mission(t, 2, 3));
             h.assertTrue(ids(t).equals(List.of("fer", "cuivre", "charbon")), "cuivre monte : " + ids(t));
+            h.assertTrue(t.action == travail, "la mission en cours n'a pas changé : il continue");
             e.action(chef, "mission_descendre", mission(t, 0, 3));
             h.assertTrue(ids(t).equals(List.of("cuivre", "fer", "charbon")), "fer descend : " + ids(t));
+            h.assertTrue(t.action == null, "fer n'est plus en tête : il lâche ce qu'il faisait pour elle");
             e.action(chef, "mission_annuler", mission(t, 0, 2)); // l'écran a vu 2 missions, il y en a 3 : rien
             e.action(intrus, "mission_annuler", mission(t, 0, 3)); // pas son ouvrier : rien
             h.assertTrue(ids(t).size() == 3, "ni l'écran périmé ni l'intrus ne touchent à la file : " + ids(t));
+            t.action = travail;
             e.action(chef, "mission_annuler", mission(t, 0, 3));
             h.assertTrue(ids(t).equals(List.of("fer", "charbon")), "la mission en cours annulée, il passe à la suivante : " + ids(t));
+            h.assertTrue(t.action == null, "la mission en cours annulée : il arrête son action");
             t.discard();
             h.succeed();
         });
@@ -122,6 +131,49 @@ public class TestsPoste {
     }
 
     static List<String> ids(Travailleur t) { return t.missions.stream().map(m -> m.id).toList(); }
+
+    /** Combien de livrets du chef dans son sac. */
+    static int livrets(ServerPlayer p) {
+        int n = 0;
+        for (ItemStack s : p.getInventory().items) {
+            var c = s.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            if (s.is(Items.WRITTEN_BOOK) && c != null && c.title().raw().equals(Bureau.livret().titre()) && !c.pages().isEmpty()) n += s.getCount();
+        }
+        return n;
+    }
+
+    /** « Faire de ce bureau mon poste » : le livret du chef, une seule fois par joueur, même s'il refait un poste. */
+    @GameTest(template = "vide", batch = "poste")
+    public static void livretDonneUneSeuleFois(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.oublierPoste(chef.getUUID(), h.getLevel(), e.getBlockPos()); // un bureau qui n'est pas encore son poste
+        h.assertTrue(livrets(chef) == 0, "pas de livret avant");
+        e.action(chef, "devenir_poste", new CompoundTag());
+        h.assertTrue(c.poste(chef.getUUID()) != null, "le bureau est son poste");
+        h.assertTrue(livrets(chef) == 1, "le livret du chef, avec ses pages : " + livrets(chef));
+        c.oublierPoste(chef.getUUID(), h.getLevel(), e.getBlockPos());
+        e.action(chef, "devenir_poste", new CompoundTag());
+        h.assertTrue(livrets(chef) == 1, "une seule fois par joueur : " + livrets(chef));
+        h.succeed();
+    }
+
+    /** L'onglet Caisse montre les guerres en cours (les pseudos, depuis Courrier.guerres). */
+    @GameTest(template = "vide", batch = "poste")
+    public static void guerresDansLaFiche(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite e = poste(h, chef);
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        h.assertTrue(e.fiche(chef).getList("guerres", Tag.TAG_STRING).isEmpty(), "en paix");
+        java.util.UUID ennemi = java.util.UUID.randomUUID();
+        c.declarer(chef.getUUID(), "Chef", ennemi, "Morvan");
+        try {
+            var g = e.fiche(chef).getList("guerres", Tag.TAG_STRING);
+            h.assertTrue(g.size() == 1 && g.getString(0).equals("Morvan"), "en guerre contre Morvan : " + g);
+        } finally { c.paix(chef.getUUID(), ennemi); }
+        h.succeed();
+    }
 
     /** Plus de corbeau : le type n'existe plus, et un ouvrier au loin qui a quelque chose à dire ne fait rien apparaître. */
     @GameTest(template = "vide", batch = "poste")

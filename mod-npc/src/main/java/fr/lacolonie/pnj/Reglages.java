@@ -52,6 +52,16 @@ public class Reglages {
             new Piece("numismatics:cog", "rouage en laiton", 64),
             new Piece("numismatics:crown", "rouage en or", 512),
             new Piece("numismatics:sun", "rouage en netherite", 4096)));
+    /*
+     * L'équilibre (refonte 1.0.0, partie 5), en pièces de bronze (1 = la plus petite pièce), pour un jour réel
+     * (minutes_entre_paies = 1440). On compte qu'un débutant gagne environ un rouage en laiton (64) par jour de jeu :
+     * - salaire par jour : ★ 2, ★★ 4, ★★★ 8 (≈ 10 % de ce gain), ★★★★ 16, ★★★★★ 32 ; prime d'embauche ×4 à ×3 ;
+     * - les 3 premiers ouvriers au prix de leur niveau, puis +15 % par ouvrier au-delà (fixé à l'embauche) :
+     *   3 ouvriers ★ = 6 par jour (un débutant), 30 ouvriers ★★★ ≈ 690 par jour (un très riche) ; plafond de 30 ;
+     * - vitesse : ★ 0,8, ★★ 1,0, ★★★ 1,2 (autant qu'un joueur), ★★★★ 1,4, ★★★★★ 1,6 (Travailleur.facteurTravail) ;
+     * - formation payée (Etoiles.Reglage.prix_formation) : 16, 32, 64, 128 pour passer à l'étoile suivante ;
+     * - la nourriture, prise au dépôt, s'ajoute à la paie.
+     */
     public int[] salaire_par_niveau = {2, 4, 8, 16, 32};
     public int[] prime_par_niveau = {8, 12, 24, 48, 96};
     public int minutes_entre_paies = 1440;
@@ -66,8 +76,9 @@ public class Reglages {
             "minecraft:cooked_cod", 2, "minecraft:cooked_salmon", 2));
     /** Un ouvrier qui a faim et rien au dépôt cherche à acheter à manger à un producteur à moins de N blocs (0 = jamais). */
     public int achat_distance = 32;
-    /** Au plus tant d'ouvriers par chef (cahier 9.2 : un très riche en a une trentaine). */
+    /** Au plus tant d'ouvriers par chef (cahier 9.2 et refonte partie 5 : un très riche en a une trentaine, jamais plus de {@link #PNJ_MAX}). */
     public int pnj_max_par_joueur = 30;
+    public static final int PNJ_MAX = 30;
     /** Le salaire croît avec la colonie (Cout) : les N premiers ouvriers d'un chef au prix de leur niveau, puis tant de plus par ouvrier au-delà (0,15 : +15 %). */
     public int ouvriers_sans_surcout = 3;
     public double surcout_par_ouvrier = 0.15;
@@ -183,7 +194,7 @@ public class Reglages {
         if (metiers_inactifs == null) metiers_inactifs = new ArrayList<>();
         minutes_entre_paies = Math.max(1, minutes_entre_paies);
         paies_impayees_avant_greve = Math.max(1, paies_impayees_avant_greve);
-        pnj_max_par_joueur = Math.max(0, pnj_max_par_joueur);
+        pnj_max_par_joueur = Math.clamp(pnj_max_par_joueur, 0, PNJ_MAX);
         ouvriers_sans_surcout = Math.clamp(ouvriers_sans_surcout, 0, 1000);
         surcout_par_ouvrier = Double.isNaN(surcout_par_ouvrier) ? 0.15 : Math.clamp(surcout_par_ouvrier, 0.0, 1.0);
         secondes_entre_conversations = Math.max(0, secondes_entre_conversations);

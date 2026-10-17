@@ -90,6 +90,7 @@ public final class Bureau {
                 if (ancien == null || !posteExiste(p.server, ancien)) {
                     c.definirPoste(p.getUUID(), level, pos);
                     rendreReserve(c, e);
+                    donnerLivret(p);
                     Travailleur.signaler(p, "Ton poste de travail est posé : tous tes ouvriers s'y rattachent. Clic droit dessus pour les gérer.");
                 }
             }
@@ -145,6 +146,43 @@ public final class Bureau {
         if (!reste.isEmpty()) c.reserves.put(e.proprietaire, reste);
         c.setDirty();
         e.setChanged();
+    }
+
+    /** Ce que le joueur garde (données du joueur, côté serveur) : il a déjà reçu le livret. */
+    static final String CLE_LIVRET = "colonie_pnj_livret";
+    /** Le livret, lu une fois dans les ressources du mod. */
+    private static Livret.Contenu livret;
+
+    static Livret.Contenu livret() {
+        if (livret == null) {
+            try (var in = Bureau.class.getResourceAsStream("/livret.txt")) {
+                livret = Livret.lire(in == null ? "" : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (java.io.IOException x) {
+                ColoniePnj.LOG.warn("Livret du chef illisible", x);
+                livret = Livret.lire("");
+            }
+        }
+        return livret;
+    }
+
+    /** Le livret du chef en livre écrit. */
+    static ItemStack livre() {
+        Livret.Contenu c = livret();
+        ItemStack s = new ItemStack(net.minecraft.world.item.Items.WRITTEN_BOOK);
+        s.set(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT, new net.minecraft.world.item.component.WrittenBookContent(
+                net.minecraft.server.network.Filterable.passThrough(c.titre()), c.auteur(), 0,
+                c.pages().stream().map(p -> net.minecraft.server.network.Filterable.<Component>passThrough(Component.literal(p))).toList(), true));
+        return s;
+    }
+
+    /** La première fois qu'un joueur a un poste, il reçoit le livret du chef ; une seule fois par joueur. */
+    static void donnerLivret(ServerPlayer p) {
+        var donnees = p.getPersistentData();
+        if (donnees.getBoolean(CLE_LIVRET) || livret().pages().isEmpty()) return;
+        donnees.putBoolean(CLE_LIVRET, true);
+        ItemStack s = livre();
+        if (!p.getInventory().add(s)) p.drop(s, false);
+        Travailleur.signaler(p, "Un livret t'est remis : « " + livret().titre() + " ». Il t'apprend à mener tes ouvriers.");
     }
 
     /** Le poste existe encore (son monde est là et le bloc aussi, s'il est chargé). */
@@ -481,6 +519,9 @@ public final class Bureau {
             f.put("journal", journal(c.boite(p.getUUID())));
             f.put("depot", depotTag(p.registryAccess()));
             f.put("caisse", caisseTag(p));
+            ListTag guerres = new ListTag(); // les pseudos de ceux avec qui il est en guerre
+            for (String nom : c.ennemis(p.getUUID()).values()) guerres.add(net.minecraft.nbt.StringTag.valueOf(nom));
+            f.put("guerres", guerres);
             return f;
         }
 
@@ -499,8 +540,12 @@ public final class Bureau {
             return t;
         }
 
-        /** Au-delà, l'onglet Dépôt ne montre pas les autres sortes (un paquet borné). */
-        static final int DEPOT_MAX = 400;
+        /**
+         * Au-delà, l'onglet Dépôt ne montre pas les autres sortes, et un nom est coupé : le paquet reste petit (environ
+         * 50 Ko au pire). Seuls l'objet de base, son nom affiché et le nombre partent, jamais les composants (le contenu
+         * d'une boîte de Shulker ou d'un livre ferait dépasser la taille d'un paquet).
+         */
+        static final int DEPOT_MAX = 400, NOM_MAX = 48;
         static final Actions.Filtre MINERAIS = Actions.Filtre.de(SORTES.get(0) + "|#c:ingots|#c:gems|#c:nuggets|#c:dusts");
         static final Actions.Filtre BOIS = Actions.Filtre.de("#minecraft:logs|#minecraft:planks|#minecraft:saplings|#minecraft:wooden_slabs"
                 + "|#minecraft:wooden_stairs|#minecraft:wooden_fences|minecraft:stick|#c:rods/wooden");
@@ -530,7 +575,10 @@ public final class Bureau {
             ListTag t = new ListTag();
             for (int i = 0; i < sortes.size(); i++) {
                 CompoundTag x = new CompoundTag();
-                x.put("objet", sortes.get(i).save(reg));
+                ItemStack s = sortes.get(i);
+                x.putString("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString());
+                String nom = s.getHoverName().getString();
+                x.putString("nom", nom.length() <= NOM_MAX ? nom : nom.substring(0, NOM_MAX));
                 x.putLong("n", nombres.get(i));
                 x.putString("cat", categorie(sortes.get(i)));
                 t.add(x);
@@ -589,6 +637,7 @@ public final class Bureau {
                     if (ancien != null && posteExiste(p.server, ancien) && !estLePoste()) return;
                     c.definirPoste(p.getUUID(), level, worldPosition);
                     Travailleur.signaler(p, "Ce bureau est ton poste de travail : tous tes ouvriers s'y rattachent.");
+                    donnerLivret(p);
                 }
                 case "enregistrer" -> {
                     Travailleur t = ouvrier(p, d.getString("uuid"));
@@ -612,14 +661,22 @@ public final class Bureau {
             if (p.connection != null && p.connection.hasChannel(Reseau.Poste.TYPE)) PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
         }
 
-        /** Change la file de missions de cet ouvrier ; vrai si elle a changé. Annuler la première : il passe à la suivante. */
+        /**
+         * Change la file de missions de cet ouvrier ; vrai si elle a changé. Si la mission en cours (la première) change,
+         * il lâche ce qu'il faisait pour elle, comme sur un ordre de la fiche (sauf s'il se bat ou fuit un danger).
+         */
         static boolean mission(Travailleur t, String action, int i, int vue) {
             if (t == null || vue != t.missions.size() || i < 0 || i >= t.missions.size()) return false;
-            return switch (action) {
+            Travailleur.Mission avant = t.missions.get(0);
+            boolean change = switch (action) {
                 case "mission_monter" -> Boite.deplacer(t.missions, i, -1);
                 case "mission_descendre" -> Boite.deplacer(t.missions, i, 1);
                 default -> { t.missions.remove(i); yield true; }
             };
+            if (change && (t.missions.isEmpty() || t.missions.get(0) != avant) && t.action != null
+                    && !(t.action instanceof Actions.Attaquer || t.action instanceof Actions.Fuir || t.action instanceof Actions.Echapper))
+                t.finirAction("ordre");
+            return change;
         }
 
         static Travailleur ouvrier(ServerPlayer p, String uuid) {
