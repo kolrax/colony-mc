@@ -128,6 +128,7 @@ public class ColoniePnj {
             Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
+        Fantome.enregistrer(); // le joueur fantôme des essais (/fantome, refonte partie 7)
         NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants
         NeoForge.EVENT_BUS.addListener(Defense::chefFrappe); // on frappe le chef : ses gens réagissent selon ses ordres (GardeChef)
         NeoForge.EVENT_BUS.addListener(Defense::viser); // le coup visé d'un joueur (pas le coup balayé)

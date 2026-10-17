@@ -130,6 +130,8 @@ public class Reglages {
     public boolean caractere_monstres = true;
     public int port_panneau = 25776;
     public String jeton_panneau = "";
+    /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
+    public boolean fantome = false;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
