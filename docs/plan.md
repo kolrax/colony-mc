@@ -112,4 +112,5 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [ ] Guerre simple et grands combats : déclarer et faire la paix au poste ; défendre, escorter, attaquer ; formation, charge, repli ; 30 contre 30 sans lag
 - [x] Équilibre dans un seul fichier de réglages (coûts, salaires, production, étoiles, formation, plafond 30)
 - [ ] Feuille de tests v2 dans le panneau (essais `V01`…) ; tests instables rendus stables ; charge mesurée à 50 ouvriers
-- [ ] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce ; `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste
+- [x] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce (livrée le 17/10 à 20 h 28 UTC)
+- [ ] Après la livraison 1.0.0 : `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste (à vérifier)
