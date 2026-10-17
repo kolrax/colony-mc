@@ -95,19 +95,21 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## Bonus (après tout le reste)
 Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, scribe, éclaireur (important), quêtes et histoires, marchands ambulants et bandits, panneau web (admin seulement).
 
-## 15. Manques relevés au contrôle du 17/10 (cases cochées mais faites en partie)
-- [ ] **Risque d'abord** : au déblocage, un ouvrier coincé peut casser des blocs construits par un joueur (rondins, pierre taillée, béton, pierres polies, terre cuite, carters de Create absents de `Monde.construit`) et ne vérifie pas la base voisine. Il ne doit jamais casser une construction pour sortir
-- [ ] Persistance : après un redémarrage, le relais en cours, la cérémonie de deuil et certaines règles d'ordres longs se perdent sans rien dire
-- [ ] Emploi du temps à deux métiers : « le matin tu mines, l'après-midi tu coupes » (exemple du cahier des charges) ne garde que le matin
-- [ ] Guerre complète : le chef PNJ propose de lever les fermiers en renfort ; « brûlez » met vraiment le feu ; la casse ne se limite pas aux portes près du bureau ennemi ; victoire et défaite branchées
-- [ ] Équipes : plusieurs ouvriers sur un même chantier (« va aider Raoul » fait vraiment travailler ensemble)
-- [ ] Besoins : loisirs (taverne, fête) et maladies, notés « Indispensable »
-- [ ] Blessures : types de blessure (brûlure, morsure, fracture…), en plus des gravités
-- [ ] Économie : les ouvriers achètent aussi de l'équipement ; écran de boutique pour le joueur
-- [ ] Recrutement : le crieur
-- [ ] Cadeau d'un diamant : selon son caractère, il peut le revendre ou s'en faire un outil
-- [ ] Éclaireur ou cartographe (noté « Important »)
-- [ ] Mesure de charge à jour : 50 PNJ avec tous les systèmes ajoutés depuis la 0.8.5 ; comprendre les « Can't keep up » du serveur vide
-- [ ] Tests instables (liste dans `docs/reprise.md`) rendus stables ; aucune livraison sans passe entièrement verte
-- [ ] `docs/reprise.md` remis à jour (« Ce que le mod sait faire » dit encore « 3 métiers » et « plafond 5 »)
+## 15. Manques relevés au contrôle du 17/10 (remplacé par la refonte du 17/10)
+- Casse au déblocage, persistance, emploi du temps à deux métiers, équipes, guerre, tests instables, charge et reprise : repris dans le lot 16
+- Retirés par la refonte : loisirs et maladies, types de blessure, crieur, diamant, éclaireur
 
+## 16. Refonte « ouvriers robots » 1.0.0 (décidée le 17/10, à livrer le 17/10 avant 22 h UTC, voir `docs/refonte.md`)
+- [ ] Étiquette git `v1-finale` ; retraits de la partie 3 de `docs/refonte.md` (IA, lettres et corbeau, moral détaillé, révolte, deuil, conversations, familles, rumeurs, économie entre ouvriers…) avec leurs tests ; build vert
+- [ ] Joueur fantôme : commande `/fantome` (dev ou réglage), rapport JSON, `tools/fantome.py` et scénario « 3 ouvriers, 2 jours, aucun bloc construit cassé » sur un monde généré
+- [ ] La mission : quoi, où, jusqu'à quand, horaires, qui ; file par ouvrier ; statut unique au-dessus de la tête et au poste ; blocages avec raison et solution ; tout survit au redémarrage
+- [ ] Lieux de travail intelligents sans bâton (partie 2) : colonie et tampon, jamais casser une construction (déblocage compris), arbres naturels seulement, mineur sous terre ou carrière hors colonie ; bouton « Travaille ici »
+- [ ] Fiche de l'ouvrier au clic droit, avec le menu des missions de son métier et la confirmation « Compris : … ✔/✖ »
+- [ ] Poste à 5 onglets (Ouvriers, Missions, Dépôt, Caisse, Journal) ; dépôt redessiné dans le même style ; le Journal remplace les lettres
+- [ ] Les 12 métiers branchés sur les missions, savoir-faire actuels gardés, plusieurs ouvriers sur une même mission
+- [ ] Barre de commandes guidées (touche dédiée, autocomplétion sur le répertoire d'actions, jamais de phrase libre)
+- [ ] Horaires à la place du sommeil ; satisfaction simple (paie et nourriture) qui règle la vitesse ; grève si impayé
+- [ ] Guerre simple et grands combats : déclarer et faire la paix au poste ; défendre, escorter, attaquer ; formation, charge, repli ; 30 contre 30 sans lag
+- [ ] Équilibre dans un seul fichier de réglages (coûts, salaires, production, étoiles, formation, plafond 30)
+- [ ] Feuille de tests v2 dans le panneau (essais `V01`…) ; tests instables rendus stables ; charge mesurée à 50 ouvriers
+- [ ] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce ; `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste

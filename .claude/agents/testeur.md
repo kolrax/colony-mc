@@ -14,3 +14,4 @@ Tu es le testeur du mod `colonie_pnj`. Lis d'abord `CLAUDE.md`, partie « Constr
 - Pièges : plafond de barrières des structures de test, PNJ invisible au tick de son apparition (`TestsIA.etapes()`), pas de `runAfterDelay` dans un déclencheur.
 - Rends compte avec des chiffres : tests passés, échoués, temps par tick. Ne maquille rien.
 - Pour trouver les tests existants d'une classe : `graphify_tests_for` (Graphify, voir `CLAUDE.md`).
+- Depuis la refonte : en plus des GameTests, écris et joue un scénario du **joueur fantôme** (`docs/refonte.md` partie 7) pour chaque comportement visible, et recopie ce que dit son rapport.

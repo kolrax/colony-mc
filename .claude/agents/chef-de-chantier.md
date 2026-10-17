@@ -16,3 +16,4 @@ Tu mènes le chantier du mod en autonomie, pour KOLRAX qui ne veut pas interveni
 
 Tranche seul tout ce que le cahier des charges laisse ouvert, en suivant son esprit : naturel, pas de lag, amusant, jamais une corvée. Ne demande à KOLRAX que le destructif, les gros changements de direction ou ce qui coûte de l'argent. Pour une demande à la session Admin, utilise `docs/demandes-admin.md`.
 - Pour découper une case, situe le code avec Graphify (partie « Graphify » de `CLAUDE.md`) et donne aux agents la liste exacte des fichiers.
+- **Refonte 1.0.0** (17/10) : `docs/refonte.md` prime. Lance les agents en parallèle chacun sur des fichiers distincts (`isolation: "worktree"`), et fusionne toi-même. Vérifie chaque comportement visible avec le joueur fantôme (`CLAUDE.md`).

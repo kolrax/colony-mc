@@ -1,9 +1,10 @@
 # La Colonie : manuel de travail de Claude
 
 Dépôt PUBLIC du serveur Minecraft « La Colonie » et de son mod de PNJ maison `colonie_pnj`.
-Tu développes ce mod en autonomie pour **KOLRAX_MC**, le chef de projet. Échéance : mod fini le **vendredi 16/10/2026** (ouverture du serveur vendredi soir ou samedi).
+Tu développes ce mod en autonomie pour **KOLRAX_MC**, le chef de projet. **Refonte « ouvriers robots » 1.0.0 décidée le 17/10** : à livrer le **samedi 17/10 avant 22 h UTC** (minuit à Paris), ouverture **lundi 19/10 sur un monde neuf**.
 
 À lire avant tout travail :
+0. **`docs/refonte.md`** : il prime sur le cahier des charges partout où ils se contredisent (IA, lettres, moral, familles… sont retirés).
 1. `docs/cahier-des-charges.md` : ses 127 réponses. Elles font foi. Ses « précisions » priment sur l'option cochée.
 2. `docs/plan.md` : les lots dans l'ordre, et ce qui est fait.
 3. `docs/reprise.md` (une page : où on en est exactement) et la fin de `docs/journal.md`.
@@ -71,7 +72,7 @@ cd mod-npc
 - Banc photo des gestes et skins : `./gradlew runPhotos` (client, il faut un écran). Captures dans `run-photos/screenshots`, à regarder une par une.
 
 ## Livrer
-**Sur le serveur** (monde `colonie`, créé le 17/10 pour les essais de Nielscutt, qui y joue normalement : **ne pas le régénérer** sans l'accord de KOLRAX ; l'ancien monde `test-andesite` reste sur le disque) :
+**Sur le serveur** (monde `colonie` en 0.9.43, où joue Nielscutt : **ne jamais le supprimer ni le régénérer**. La 1.0.0 part sur un nouveau monde `essai-v2` (procédure « Si tu régénères le monde de test »), le dossier `colonie` reste sur le disque ; l'ancien monde `test-andesite` aussi) :
 1. Avant de redémarrer : `python tools/panel.py cmd "list"`, puis lire `python tools/panel.py cat /logs/latest.log 20`.
    - Si quelqu'un est connecté : 5 minutes de préavis en jeu (`tellraw`). Sinon, redémarrage libre, de préférence entre 3 h et 6 h.
 2. Envoi sûr, pour qu'une coupure (quota, réseau) ne laisse jamais le serveur cassé :
@@ -150,9 +151,15 @@ KOLRAX fait la feuille de tests en jeu dans l'onglet « Tests » du panneau. Cha
 - Une fois livré : `statut` → `corrige`, et `note` = ce qui a changé, en une phrase simple pour lui. Ne mets jamais `ok` toi-même : c'est KOLRAX qui revérifie.
 - Un `bloque` qui vient d'un manque (pas d'un bug) : fais-le, ou explique dans `note` pourquoi c'est impossible et ce qu'il peut faire.
 - Le chantier n'est fini que si le plan est à 0 case **et** qu'aucun essai n'est en `ko` ou `bloque`.
+- **Depuis la refonte**, les essais `T00`… concernent la 0.9 : ignore-les. La feuille v2 (`V01`, `V02`…, groupe « Version 2 ») est écrite par le testeur, avec les mêmes champs, `statut: a_faire`.
+
+## Joueur fantôme (vérifier en vraie partie, `docs/refonte.md` partie 7)
+- Tout comportement visible (lieu de travail, statut, écran, casse) se vérifie **aussi** par un scénario du fantôme sur un monde généré (`python3 tools/fantome.py mod-npc/fantome/<scenario>.txt`), pas seulement en GameTest. Lis le rapport JSON : il dit ce qu'un joueur verrait.
+- Un seul serveur de développement à la fois (comme `runGameTestServer`).
 
 ## Rythme : travail en continu (décidé le 13/10 au soir)
-KOLRAX veut que le chantier avance **le plus possible**, quitte à épuiser le quota de la semaine avant vendredi. La routine se lance **toutes les heures** ; le verrou empêche deux sessions en même temps. Quand le quota est épuisé, les sessions échouent jusqu'à la remise à zéro (vendredi 16/10, 16 h UTC), puis reprennent seules.
+KOLRAX veut que le chantier avance **le plus possible**. La routine se lance **toutes les heures** ; le verrou (`docs/EN-COURS`, valable 5 h) empêche deux sessions en même temps. Quand le quota est épuisé, les sessions échouent jusqu'à la remise à zéro (vendredi 23/10, 16 h UTC), puis reprennent seules.
+**Soir du 17/10** : une seule longue session travaille jusqu'à **21 h 30 UTC**, avec le plus d'agents possible en parallèle (chacun sur ses fichiers, `isolation: worktree`), puis le livreur livre ce qui est vert avant 22 h UTC. Ensuite, sessions normales de 2 h 45 jusqu'à la fin du plan (ouverture lundi).
 
 **Fin du chantier : la routine s'arrête seule** (décidé le 17/10)
 - `python3 tools/suivi.py reste` compte les cases non cochées de `docs/plan.md`. À **0**, et si aucun essai du panneau n'est en `ko` ou `bloque`, le mod est terminé.
@@ -162,7 +169,7 @@ KOLRAX veut que le chantier avance **le plus possible**, quitte à épuiser le q
 - Pour relancer le chantier : ajouter des cases au plan, supprimer `docs/TERMINE`, réactiver la routine.
 
 **Travailler**
-- Une session travaille jusqu'à **2 h 45**, en enchaînant les cases : après chaque livraison, case suivante tout de suite. Elle s'arrête proprement vers 2 h 45 (fin de session, voir plus bas), pour que la suivante prenne le relais dans l'heure.
+- Hors soir du 17/10, une session travaille jusqu'à **2 h 45**, en enchaînant les cases : après chaque livraison, case suivante tout de suite. Elle s'arrête proprement vers 2 h 45 (fin de session, voir plus bas), pour que la suivante prenne le relais dans l'heure.
 - Une seule relecture par case (une deuxième seulement sur un bloquant). Première passe de chaque lot avant d'approfondir. Restes mineurs dans `docs/plus-tard.md`. Un test par comportement nouveau.
 - Pendant que le développeur code, l'`auteur` et l'`artiste` avancent les textes et les visuels des cases suivantes. Un seul `runGameTestServer` à la fois.
 

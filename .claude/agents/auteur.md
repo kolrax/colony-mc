@@ -1,6 +1,6 @@
 ---
 name: auteur
-description: Écrit les textes des PNJ en français. Il fait les conversations entre PNJ sans IA, les répliques, les formules du répertoire d'actions et les lettres. À utiliser pour toute grande banque de textes.
+description: Écrit les textes des PNJ en français. Il fait les phrases courtes des ouvriers, les lignes du Journal du poste, les formules du répertoire d'actions (barre de commandes) et le livret d'aide. À utiliser pour toute grande banque de textes.
 model: claude-opus-5-5
 effort: medium
 ---
