@@ -14,14 +14,14 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-import static fr.lacolonie.pnj.TestsIA.attendre;
-import static fr.lacolonie.pnj.TestsIA.equipe;
-import static fr.lacolonie.pnj.TestsIA.etapes;
-import static fr.lacolonie.pnj.TestsIA.regarder;
+import static fr.lacolonie.pnj.Essais.attendre;
+import static fr.lacolonie.pnj.Essais.equipe;
+import static fr.lacolonie.pnj.Essais.etapes;
+import static fr.lacolonie.pnj.Essais.regarder;
 
 /**
  * Les actions du répertoire, jouées pour de vrai (sans IA : l'interpréteur les reconnaît ; un test avec l'IA est dans
- * le lot « ia »). Chaque test a son coin de monde plat, loin des autres (TestsIA.equipe).
+ * le lot « ia »). Chaque test a son coin de monde plat, loin des autres (Essais.equipe).
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -212,9 +212,9 @@ public class TestsRepertoire {
         Travailleur odon = e[2];
         etapes(h, chef, e,
                 () -> { regarder(chef, odon); odon.parler(chef, "Quelle heure est-il ?"); },
-                () -> h.assertTrue(IA.echange(odon).contains("Il est"), "l'heure : " + IA.echange(odon)),
+                () -> h.assertTrue(Paroles.echange(odon).contains("Il est"), "l'heure : " + Paroles.echange(odon)),
                 () -> odon.parler(chef, "Où est le poste ?"),
-                () -> h.assertTrue(IA.echange(odon).contains("Le poste est"), "le poste : " + IA.echange(odon)),
+                () -> h.assertTrue(Paroles.echange(odon).contains("Le poste est"), "le poste : " + Paroles.echange(odon)),
                 () -> h.assertTrue(odon.geste().equals("pointer"), "il le montre du doigt : " + odon.geste()),
                 () -> fin(e));
     }
@@ -249,8 +249,8 @@ public class TestsRepertoire {
         Travailleur bertrand = e[0], odon = e[2];
         etapes(h, chef, e,
                 () -> { regarder(chef, bertrand); bertrand.parler(chef, "Dis à Odon que le repas est prêt"); },
-                () -> h.assertTrue(c(bertrand).equals("message") || IA.echange(odon).contains("repas"), "consigne : " + c(bertrand)),
-                () -> h.assertTrue(IA.echange(odon).contains("le repas est prêt"), "Odon l'a appris : " + IA.echange(odon)),
+                () -> h.assertTrue(c(bertrand).equals("message") || Paroles.echange(odon).contains("repas"), "consigne : " + c(bertrand)),
+                () -> h.assertTrue(Paroles.echange(odon).contains("le repas est prêt"), "Odon l'a appris : " + Paroles.echange(odon)),
                 () -> fin(e));
     }
 
@@ -269,7 +269,7 @@ public class TestsRepertoire {
         boolean[] auBout = {false, false}; // il est arrivé au bout ; il y était déjà arrivé quand il l'a appris
         h.onEachTick(() -> {
             if (odon.position().distanceTo(but) < 2) auBout[0] = true;
-            if (auMessage[0] < 0 && IA.echange(odon).contains("le repas est prêt")) { auMessage[0] = odon.position().distanceTo(but); auBout[1] = auBout[0]; }
+            if (auMessage[0] < 0 && Paroles.echange(odon).contains("le repas est prêt")) { auMessage[0] = odon.position().distanceTo(but); auBout[1] = auBout[0]; }
         });
         etapes(h, chef, e,
                 () -> Cerveau.lancer(odon, new Actions.Aller(but, 1)),
@@ -325,8 +325,8 @@ public class TestsRepertoire {
                     h.assertTrue(vu != null && h.getLevel().getFluidState(vu.above()).is(net.minecraft.tags.FluidTags.LAVA), "le chef doit regarder le fond du bain : " + vu);
                     raoul.parler(chef, "Raoul, va là-bas !");
                 },
-                () -> h.assertTrue(raoul.consigne == null, "il doit refuser d'y aller : " + c(raoul) + " / " + IA.echange(raoul)),
-                () -> h.assertTrue(IA.echange(raoul).contains("mort"), "il doit dire pourquoi : " + IA.echange(raoul)),
+                () -> h.assertTrue(raoul.consigne == null, "il doit refuser d'y aller : " + c(raoul) + " / " + Paroles.echange(raoul)),
+                () -> h.assertTrue(Paroles.echange(raoul).contains("mort"), "il doit dire pourquoi : " + Paroles.echange(raoul)),
                 () -> fin(e));
     }
 
@@ -397,29 +397,4 @@ public class TestsRepertoire {
                 () -> fin(e));
     }
 
-    /**
-     * Lot 3 : une phrase que personne ne comprend (sans IA) va au journal des phrases non comprises, motif « rien »,
-     * avec le métier visé ; une phrase comprise n'y va pas.
-     */
-    @GameTest(template = "vide", timeoutTicks = 400)
-    public static void phraseIncompriseNotee(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 40);
-        Travailleur raoul = e[1];
-        // « Fais tourner la lune à l'envers » est compris par le répertoire (action « lune ») : une autre phrase absurde.
-        String absurde = "Fais pousser des ailes au cochon !";
-        h.assertFalse(IA.conversationDisponible(), "ce test se joue sans IA");
-        h.assertTrue(Ordres.lire(absurde, "guerrier").vide(), "l'interpréteur ne doit rien y comprendre");
-        int[] avant = {TestsIA.fois(absurde, Incompris.RIEN), TestsIA.fois("Suis-moi", Incompris.RIEN)};
-        etapes(h, chef, e,
-                () -> { regarder(chef, raoul); raoul.parler(chef, absurde); raoul.parler(chef, "Suis-moi"); },
-                () -> {
-                    h.assertTrue(TestsIA.fois(absurde, Incompris.RIEN) == avant[0] + 1, "notée une fois de plus, motif rien : " + Incompris.JOURNAL.plusFrequentes(3));
-                    h.assertTrue(Incompris.JOURNAL.plusFrequentes(Incompris.MAX).stream().anyMatch(x -> "fais pousser des ailes au cochon".equals(x.get("phrase_normalisee"))
-                            && ((java.util.List<?>) x.get("metiers")).contains("guerrier")), "avec le métier de Raoul");
-                    h.assertTrue(TestsIA.fois("Suis-moi", Incompris.RIEN) == avant[1] && TestsIA.fois("Suis-moi", Incompris.IA_SEULE) == 0, "« suis-moi » est compris : pas noté");
-                    h.assertTrue(raoul.mode == Travailleur.Mode.SUIVRE, "et il suit toujours : " + raoul.mode);
-                },
-                () -> fin(e));
-    }
 }

@@ -168,7 +168,7 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 4000)
     public static void salleDeCinqSurCinq(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 60);
+        Travailleur[] e = Essais.equipe(h, chef, 60);
         Travailleur bertrand = e[0];
         bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
         ServerLevel l = h.getLevel();
@@ -176,7 +176,7 @@ public class TestsMineur {
         pierre(l, o.offset(-4, 0, 3), o.offset(4, 4, 11));
         BlockPos planche = o.offset(1, 1, 5);
         l.setBlockAndUpdate(planche, Blocks.OAK_PLANKS.defaultBlockState());
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 0.5, o.getY() + 0.5, o.getZ() + 3.02));
                     bertrand.parler(chef, "Creuse une salle de 5 sur 5");
@@ -200,14 +200,14 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 3000)
     public static void carriereEnCouches(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 62);
+        Travailleur[] e = Essais.equipe(h, chef, 62);
         Travailleur bertrand = e[0];
         bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
         pierre(l, o.offset(-3, -3, 2), o.offset(3, -1, 8));
         List<BlockPos> marches = List.of(o.offset(1, -2, 3), o.offset(1, -3, 3), o.offset(1, -3, 4));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 0.5, o.getY() - 0.02, o.getZ() + 3.5));
                     bertrand.parler(chef, "Fais une carrière de 4 sur 4 sur 3 couches");
@@ -231,7 +231,7 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 1200)
     public static void carriereAuDessusDUnVide(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 63);
+        Travailleur[] e = Essais.equipe(h, chef, 63);
         Travailleur bertrand = e[0];
         bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
         ServerLevel l = h.getLevel();
@@ -242,9 +242,9 @@ public class TestsMineur {
         for (int z = 3; z <= 5; z++) for (int y = 2; y <= 3; y++) l.setBlockAndUpdate(o.offset(0, -y, z), Blocks.AIR.defaultBlockState());
         int[] plusBas = {Integer.MAX_VALUE};
         h.onEachTick(() -> { if (bertrand.isAlive()) plusBas[0] = Math.min(plusBas[0], bertrand.getBlockY()); });
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> bertrand.moveTo(bloc.getX() + 0.5, bloc.getY() + 1, bloc.getZ() + 0.5),
-                TestsIA.attendre(h, 10), // déplacé, il n'est visible du chef qu'au tick suivant
+                Essais.attendre(h, 10), // déplacé, il n'est visible du chef qu'au tick suivant
                 () -> {
                     if (bertrand.position().distanceToSqr(Vec3.atBottomCenterOf(bloc.above())) > 0.05) {
                         bertrand.moveTo(bloc.getX() + 0.5, bloc.getY() + 1, bloc.getZ() + 0.5);
@@ -256,7 +256,7 @@ public class TestsMineur {
                     bertrand.parler(chef, "Fais une carrière de 3 sur 1, 1 de profondeur");
                 },
                 () -> h.assertTrue(l.getBlockState(bloc).isAir() && l.getBlockState(bloc.north()).isAir() && l.getBlockState(bloc.south()).isAir() && bertrand.consigne == null, "il doit creuser la bande (" + TestsRepertoire.c(bertrand) + ", " + TestsJeu.etat(bertrand, bertrand.bureau) + ")"),
-                TestsIA.attendre(h, 40),
+                Essais.attendre(h, 40),
                 () -> h.assertTrue(plusBas[0] >= o.getY(), "il ne doit pas tomber dans le vide (descendu à " + (plusBas[0] - o.getY()) + ")"),
                 () -> TestsRepertoire.fin(e));
     }
@@ -265,7 +265,7 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void sacPleinRienParTerre(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 64);
+        Travailleur[] e = Essais.equipe(h, chef, 64);
         Travailleur bertrand = e[0];
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
@@ -274,7 +274,7 @@ public class TestsMineur {
         for (int i = 0; i < bertrand.inventaire.getContainerSize(); i++) bertrand.inventaire.setItem(i, new ItemStack(Items.DIRT, 64));
         bertrand.bureau = o.offset(-40, 0, 0); // pas de poste chargé là : avant, il cassait quand même et jetait la pierre
         long[] debut = {-1};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
                     bertrand.parler(chef, "Creuse un tunnel");
@@ -292,7 +292,7 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void laisseLeDiamantSansBonnePioche(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 65);
+        Travailleur[] e = Essais.equipe(h, chef, 65);
         Travailleur bertrand = e[0];
         bertrand.inventaire.addItem(new ItemStack(Items.STONE_PICKAXE));
         ServerLevel l = h.getLevel();
@@ -300,7 +300,7 @@ public class TestsMineur {
         pierre(l, o.offset(3, 0, -2), o.offset(14, 3, 2));
         BlockPos diamant = o.offset(10, 0, 0); // au bout : laissé en place, il ne barre pas le passage
         l.setBlockAndUpdate(diamant, Blocks.DIAMOND_ORE.defaultBlockState());
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
                     bertrand.parler(chef, "Creuse un tunnel");
@@ -314,13 +314,13 @@ public class TestsMineur {
     @GameTest(template = "vide", timeoutTicks = 2400)
     public static void tunnelDeDouzeBlocs(GameTestHelper h) {
         net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 61);
+        Travailleur[] e = Essais.equipe(h, chef, 61);
         Travailleur bertrand = e[0];
         bertrand.inventaire.addItem(new ItemStack(Items.DIAMOND_PICKAXE));
         ServerLevel l = h.getLevel();
         BlockPos o = chef.blockPosition();
         pierre(l, o.offset(3, 0, -2), o.offset(20, 3, 2));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(o.getX() + 3.02, o.getY() + 0.5, o.getZ() + 0.5));
                     bertrand.parler(chef, "Creuse un tunnel de 12 blocs vers l'est");

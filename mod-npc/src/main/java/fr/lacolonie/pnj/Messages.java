@@ -613,10 +613,6 @@ final class Messages {
         b.append(t.faim <= 6 ? ", et j'ai très faim" : t.faim <= 12 ? ", j'ai un peu faim" : "");
         b.append(t.fatigue >= 80 ? ", et je suis épuisé." : t.fatigue >= 50 ? ", un peu fatigué." : ".");
         b.append(t.moral >= 75 ? " J'ai le cœur à l'ouvrage." : t.moral < 25 ? " Mais j'ai le moral au plus bas." : t.moral < 50 ? " Le moral n'y est pas trop." : "");
-        String cause = t.moral < 50 ? Humeur.cause(t) : ""; // ce qui lui pèse le plus, au dernier bilan (Moral)
-        if (!cause.isEmpty()) b.append(" Ce qui me pèse le plus : ").append(cause).append('.');
-        String aveu = Humeur.aveu(t); // un sabotage avoué, ou un butin qui se trahit
-        if (!aveu.isEmpty()) b.append(' ').append(aveu);
         return b.toString();
     }
 

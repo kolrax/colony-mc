@@ -104,11 +104,11 @@ public class TestsGuerisseur {
         Vec3 c = Vec3.atBottomCenterOf(g.bureau);
         chef.moveTo(c.x, c.y, c.z);
         Vec3[] place = {null};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> g.parler(chef, "Garde à vous"),
                 () -> h.assertTrue(g.consigne != null && g.consigne.id.equals("garde_a_vous"), "au garde-à-vous (" + TestsRepertoire.c(g) + ")"),
                 () -> { place[0] = g.position(); b.hurt(b.damageSources().generic(), 100); },
-                TestsIA.attendre(h, 300),
+                Essais.attendre(h, 300),
                 () -> {
                     h.assertTrue(b.aTerre && b.isAlive(), "Jean est toujours à terre");
                     h.assertTrue(g.consigne != null && g.consigne.id.equals("garde_a_vous"), "elle tient l'ordre (" + TestsRepertoire.c(g) + ")");
@@ -132,8 +132,8 @@ public class TestsGuerisseur {
         chef.moveTo(c.x, c.y, c.z);
         Blessures.noter(b, Gravite.LEGERE);
         b.setHealth(10);
-        TestsIA.etapes(h, chef, e,
-                TestsIA.attendre(h, 200),
+        Essais.etapes(h, chef, e,
+                Essais.attendre(h, 200),
                 () -> h.assertTrue(Blessures.gravite(b) == Gravite.LEGERE, "une blessure légère : elle ne la panse pas seule (" + Blessures.gravite(b) + ")"),
                 () -> g.parler(chef, "Soigne Jean"),
                 () -> h.assertTrue(Blessures.gravite(b) == Gravite.AUCUNE && b.getHealth() > 10, "pansé sur ordre (" + Blessures.gravite(b) + ", " + b.getHealth()

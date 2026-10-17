@@ -155,7 +155,7 @@ public class TestsPecheur {
         mare(l, base, 4, 12, 8, 16); // la lointaine, montrée par le chef
         BlockPos fond = base.offset(6, -2, 14);
         boolean[] m = mouille(h, g);
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(fond.getX() + 0.5, fond.getY() + 0.98, fond.getZ() + 0.5));
                     g.parler(chef, "Pêche ici");

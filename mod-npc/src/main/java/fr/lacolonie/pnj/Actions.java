@@ -205,7 +205,7 @@ public final class Actions {
         BlockState st = lvl.getBlockState(p);
         ItemStack outil = t.getMainHandItem();
         if (!st.requiresCorrectToolForDrops() || outil.isCorrectToolForDrops(st))
-            for (ItemStack d : Block.getDrops(st, lvl, p, lvl.getBlockEntity(p), t, outil)) { d = Humeur.trouve(t, d); if (!d.isEmpty()) t.ranger(d); } // un diamant gardé en cachette ?
+            for (ItemStack d : Block.getDrops(st, lvl, p, lvl.getBlockEntity(p), t, outil)) t.ranger(d);
         lvl.destroyBlock(p, false, t);
     }
 
@@ -910,7 +910,6 @@ public final class Actions {
         static void manque(Travailleur t, String type, Object... vals) {
             if (t.mode == Travailleur.Mode.GREVE || !t.paieDue()) return;
             t.impayes++;
-            t.changerMoral(Obeissance.RETARD);
             Courrier.reputer(t, Recrutement.IMPAYE);
             t.prochainePaie = System.currentTimeMillis() + Travailleur.periodePaie();
             if (t.impayes >= Reglages.actuel.paies_impayees_avant_greve) t.commencerGreve();
@@ -955,7 +954,6 @@ public final class Actions {
             t.swing(InteractionHand.MAIN_HAND);
             if (depose) Sons.depot(t, b.getBlockPos()); // le sac vidé ne sonne que s'il a vraiment laissé quelque chose
             t.nettoyerMissions();
-            if (diamants) Humeur.diamantsRendus(t); // celui qui ne triche pas s'en vante
             if (b.reserve.total() > reserve) Cerveau.ecrire(t, "reserve", Cerveau.UN_JOUR, "depot_reserve"); // une fois par jour au plus
             return plein ? echec("depot_plein") : Etat.OK;
         }

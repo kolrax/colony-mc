@@ -258,7 +258,7 @@ public class TestsEleveur {
         Cow veau = bete(l, EntityType.COW, centre.offset(2, 0, -2), true, null);
         for (int i = 0; i < 2; i++) bete(l, EntityType.COW, centre.offset(1, 0, i), false, null);
         List<String> suivi = suivi(h, g, centre);
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> g.parler(chef, "Abats deux vaches"),
                 () -> {
                     List<Cow> v = vaches(l, centre);
@@ -288,7 +288,7 @@ public class TestsEleveur {
         BlockPos centre = b[0].offset(12, 0, 0);
         enclos(l, centre);
         for (int i = 0; i < 4; i++) bete(l, EntityType.COW, centre.offset(1, 0, i - 2), false, null);
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> g.parler(chef, "Abats deux vaches"),
                 () -> h.assertTrue(g.consigne == null, "la consigne est finie (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
                 () -> h.assertTrue(vaches(l, centre).size() == 4, "les vaches du voisin sont toutes là : " + vaches(l, centre).size()),

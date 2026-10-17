@@ -182,7 +182,7 @@ public class TestsCuisinier {
         d.depot.setItem(0, new ItemStack(Items.BEEF, 10));
         d.depot.setItem(1, new ItemStack(Items.COD, 2));
         d.depot.setItem(2, new ItemStack(Items.COAL, 2));
-        TestsIA.etapes(h, chef, new Travailleur[]{t},
+        Essais.etapes(h, chef, new Travailleur[]{t},
                 () -> t.parler(chef, "Cuis le poisson"),
                 () -> h.assertTrue("minecraft:cod".equals(t.memoire.getCompound("fournee").getString("cru")),
                         "la morue au four : " + t.memoire.getCompound("fournee") + " (" + TestsRepertoire.c(t) + ", " + TestsJeu.etat(t, t.bureau) + ")"),

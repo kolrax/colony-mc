@@ -71,14 +71,13 @@ final class Ordres {
         Guerre.Lu guerre;
         /** La boutique ({@link Boutique}) : l'ouvrir, la fermer, des prix, ce qu'il ne vend pas ; null si rien n'est dit. */
         Boutique.Lu boutique;
-        /** « Espionne Raoul » ({@link Rumeurs#espionner}) : le chef à espionner, null sinon. */
-        String espion;
+
         /** Qui d'autre que le chef peut le commander ({@link Commandement}), et qui ne le peut plus. */
         final List<String> commandants = new ArrayList<>(), destitues = new ArrayList<>();
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && equipe < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
                 && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty()
-                && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null && boutique == null && commandants.isEmpty() && destitues.isEmpty() && espion == null; }
+                && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null && boutique == null && commandants.isEmpty() && destitues.isEmpty(); }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -278,9 +277,7 @@ final class Ordres {
         // La guerre d'abord (« attaquez la colonie de X et pillez leur dépôt » n'est ni la garde du chef, ni celle de notre dépôt).
         Guerre.Lu guerre = Guerre.lire(texte);
         if (!guerre.rien()) { l.guerre = guerre; texte = guerre.reste; }
-        // « Va espionner la colonie de Raoul » (Rumeurs, Espions) : le nom n'est pas une mission.
-        String espion = Rumeurs.espionner(texte);
-        if (espion != null) { l.espion = espion; texte = Rumeurs.sansEspionner(texte); }
+
         // La boutique (« tiens la boutique », « vends le pain à 2 pièces ») : ses nombres ne sont pas des missions.
         Boutique.Lu boutique = Boutique.lire(texte);
         if (!boutique.rien()) { l.boutique = boutique; texte = boutique.reste; }

@@ -499,17 +499,17 @@ final class Cuisinier extends Metier {
                 boolean pains = sous instanceof Fermier.Pain;
                 sous = null;
                 if (pains) return r; // le pain dit lui-même ce qu'il a fait
-                if (r == Actions.Etat.OK) { Voix.dire(t, fini, "calme"); return r; }
-                Voix.dire(t, raison.equals("sans_combustible") ? "Je n'ai rien pour chauffer le four, chef : ni charbon ni bois au dépôt."
+                if (r == Actions.Etat.OK) { Paroles.dire(t, fini, "calme"); return r; }
+                Paroles.dire(t, raison.equals("sans_combustible") ? "Je n'ai rien pour chauffer le four, chef : ni charbon ni bois au dépôt."
                         : raison.equals("four_occupe") ? "Le four est pris, chef : je n'y touche pas." : "Je n'arrive pas au four, chef.", "calme");
                 return echec(raison);
             }
             Bureau.Entite b = Bureau.entite(t);
-            if (b == null || !(t.level() instanceof ServerLevel l)) { Voix.dire(t, "Il me faut un poste de travail pour ça, chef.", "calme"); return echec("pas_de_bureau"); }
+            if (b == null || !(t.level() instanceof ServerLevel l)) { Paroles.dire(t, "Il me faut un poste de travail pour ça, chef.", "calme"); return echec("pas_de_bureau"); }
             CompoundTag f = t.memoire.getCompound("fournee");
             if (!f.isEmpty() && etat(l, f) >= 0) {
                 if (etat(l, f) > 0) { sous = new Defourner(); fini = "La fournée est sortie, chef."; return Actions.Etat.EN_COURS; }
-                Voix.dire(t, "J'ai déjà une fournée au four, chef. Patience, ça cuit.", "calme");
+                Paroles.dire(t, "J'ai déjà une fournée au four, chef. Patience, ça cuit.", "calme");
                 return Actions.Etat.OK;
             }
             Plan p = plan(t, b, l, pain, sorte);
@@ -521,9 +521,9 @@ final class Cuisinier extends Metier {
                     fini = "C'est au four, chef. Ça sentira bon d'ici peu.";
                     return Actions.Etat.EN_COURS;
                 }
-                case SANS_FOUR -> Voix.dire(t, "Je n'ai pas de four libre près du poste, chef : un fourneau ou un fumoir, et je m'y mets.", "calme");
-                case SANS_COMBUSTIBLE -> Voix.dire(t, "Je n'ai rien pour chauffer le four, chef : ni charbon ni bois au dépôt.", "calme");
-                default -> Voix.dire(t, !pain ? (sorte.equals("poisson") ? "Il n'y a pas de poisson cru au dépôt, chef."
+                case SANS_FOUR -> Paroles.dire(t, "Je n'ai pas de four libre près du poste, chef : un fourneau ou un fumoir, et je m'y mets.", "calme");
+                case SANS_COMBUSTIBLE -> Paroles.dire(t, "Je n'ai rien pour chauffer le four, chef : ni charbon ni bois au dépôt.", "calme");
+                default -> Paroles.dire(t, !pain ? (sorte.equals("poisson") ? "Il n'y a pas de poisson cru au dépôt, chef."
                         : sorte.equals("viande") ? "Il n'y a pas de viande crue au dépôt, chef." : sorte.equals("patate") ? "Il n'y a pas de pommes de terre à cuire au dépôt, chef."
                         : "Il n'y a rien de cru à cuire au dépôt, chef.")
                         : "sans_ble".equals(c.lettre()) ? "Plus de blé pour le pain, chef, et rien de cru à cuire au dépôt."

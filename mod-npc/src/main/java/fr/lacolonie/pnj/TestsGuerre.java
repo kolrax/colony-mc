@@ -95,7 +95,7 @@ public class TestsGuerre {
         h.assertTrue(!c.boites.getOrDefault(r.chef(), java.util.List.of()).isEmpty(), "une lettre au poste ennemi");
         h.succeedWhen(() -> {
             h.assertTrue(r.o().getHealth() < r.o().getMaxHealth(), "il frappe l'ouvrier ennemi (" + s.g().paroles + ")");
-            h.assertTrue(TestsCaractere.aDit(m, "guerre_ennemi_vu"), "le mineur le signale (" + m.paroles + ")");
+            h.assertTrue(Essais.aDit(m, "guerre_ennemi_vu"), "le mineur le signale (" + m.paroles + ")");
             r.finir(s, m);
         });
     }

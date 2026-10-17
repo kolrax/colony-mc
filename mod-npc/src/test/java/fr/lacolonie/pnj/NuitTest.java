@@ -152,22 +152,4 @@ class NuitTest {
         assertTrue(Nuit.soin(3, 3) > 200, "il guérit plus lentement");
     }
 
-    @Test
-    void lesNuitsPesentSurLeMoral() {
-        assertEquals(0, Nuit.moral(0, 3, false));
-        assertEquals(-1, Nuit.moral(1, 3, false));
-        assertEquals(-2, Nuit.moral(3, 3, false));
-        assertEquals(-3, Nuit.moral(6, 3, false));
-        assertEquals(-2, Nuit.moral(6, 3, true), "une prime compense en partie");
-        assertEquals(0, Nuit.moral(1, 3, true));
-        Moral.Etat e = MoralTest.bien();
-        Moral.Etat nuits = new Moral.Etat(e.impayes(), e.payeRecemment(), e.repas(), e.lit(), e.toit(), true, e.blesseVu(), e.joursDeuil(), e.pluie(),
-                e.orage(), e.bilansPluie(), e.beauTemps(), e.coupChef(), e.ouvriers(), e.depot(), 0, Nuit.moral(6, 3, false));
-        Moral.Bilan b = Moral.bilan(nuits);
-        assertEquals(-3, b.de(Moral.Cause.NUIT));
-        assertEquals(Moral.Cause.NUIT, b.pire(), "les nuits pèsent le plus (" + b + ")");
-        assertEquals("les nuits me tuent", Moral.Cause.NUIT.dit);
-        assertTrue(Vie.TOUTES.containsKey(Moral.Cause.NUIT.plainte), "sa plainte existe");
-        assertTrue(Vie.TOUTES.containsKey("nuit_sans_ouvrage"));
-    }
 }

@@ -51,11 +51,11 @@ public class TestsDefense {
         boolean[] loin = {false};
         h.succeedWhen(() -> {
             if (m.distanceTo(creeper) > 10) loin[0] = true;
-            h.assertTrue(TestsCaractere.aDit(m, "creeper_alerte"), "le mineur prévient le guerrier (" + m.paroles + ", " + TestsJeu.etat(m, b) + ")");
-            h.assertTrue(TestsCaractere.aDit(g, "guerrier_alerte_ok"), "le guerrier répond (" + g.paroles + ")");
+            h.assertTrue(Essais.aDit(m, "creeper_alerte"), "le mineur prévient le guerrier (" + m.paroles + ", " + TestsJeu.etat(m, b) + ")");
+            h.assertTrue(Essais.aDit(g, "guerrier_alerte_ok"), "le guerrier répond (" + g.paroles + ")");
             h.assertTrue(loin[0], "le mineur s'éloigne du creeper");
             h.assertFalse(creeper.isAlive(), "le creeper est tué (" + TestsJeu.etat(g, b) + ")");
-            h.assertTrue(TestsCaractere.aDit(g, "guerrier_monstre_tue"), "le guerrier le dit (" + g.paroles + ")");
+            h.assertTrue(Essais.aDit(g, "guerrier_monstre_tue"), "le guerrier le dit (" + g.paroles + ")");
             TestsGuerrier.fin(g, m);
         });
     }
@@ -79,7 +79,7 @@ public class TestsDefense {
         h.runAtTickTime(h.getTick() + 300, () -> {
             h.assertTrue(faute[0] == null, faute[0]);
             h.assertTrue(creeper.isAlive(), "le creeper n'est pas frappé");
-            h.assertTrue(TestsCaractere.aDit(m, "creeper_alerte"), "le mineur a bien appelé (" + m.paroles + ")");
+            h.assertTrue(Essais.aDit(m, "creeper_alerte"), "le mineur a bien appelé (" + m.paroles + ")");
             creeper.discard();
             TestsGuerrier.fin(g, m);
             h.succeed();
@@ -108,7 +108,7 @@ public class TestsDefense {
         m.forcerChunk();
         var husk = TestsGuerrier.fige(h, EntityType.HUSK, b.east(9));
         h.succeedWhen(() -> {
-            h.assertTrue(TestsCaractere.aDit(m, "monstre_vu"), "il signale le monstre (" + m.paroles + ", " + TestsJeu.etat(m, b) + ")");
+            h.assertTrue(Essais.aDit(m, "monstre_vu"), "il signale le monstre (" + m.paroles + ", " + TestsJeu.etat(m, b) + ")");
             h.assertTrue(m.memoire.getInt("alerte") == husk.getId(), "la garde l'apprendra");
             husk.discard();
             TestsGuerrier.fin(m);
@@ -151,7 +151,7 @@ public class TestsDefense {
         int[] loin = {0};
         h.succeedWhen(() -> {
             loin[0] = Math.max(loin[0], TestsJeu.distance(g, b));
-            h.assertTrue(TestsCaractere.aDit(g, "ronde_nuit"), "il annonce sa ronde (" + g.paroles + ")");
+            h.assertTrue(Essais.aDit(g, "ronde_nuit"), "il annonce sa ronde (" + g.paroles + ")");
             h.assertTrue(loin[0] >= 9, "il tourne autour du poste, plus loin que sa garde (" + loin[0] + " blocs au plus, " + TestsJeu.etat(g, b) + ")");
             TestsGuerrier.fin(g);
         });
@@ -223,7 +223,7 @@ public class TestsDefense {
                 BlockPos toit = Abri.place(e).below();
                 h.assertTrue(t.blockPosition().equals(toit.below(2)) && t.action instanceof Actions.Reposer, "il s'y repose (" + TestsJeu.etat(t, bureau) + ")");
                 h.assertTrue(Monde.solide(l, toit), "le trou est fermé au-dessus de sa tête");
-                h.assertTrue(TestsCaractere.aDit(t, "nuit_cache") && TestsCaractere.aDit(t, "nuit_camp"), "il le dit (" + t.paroles + ")");
+                h.assertTrue(Essais.aDit(t, "nuit_cache") && Essais.aDit(t, "nuit_camp"), "il le dit (" + t.paroles + ")");
                 h.assertTrue(Math.abs(t.getBlockY() - ici.getY()) == 3 && TestsJeu.distance(t, ici) <= 2, "à sa place, trois blocs sous terre");
                 cache[0] = true;
                 toits[0] = toit;
@@ -232,7 +232,7 @@ public class TestsDefense {
             h.assertFalse(t.memoire.contains("abri"), "au matin, il sort (" + TestsJeu.etat(t, bureau) + ")");
             h.assertTrue(t.getBlockY() == ici.getY(), "il est remonté au niveau du sol (" + TestsJeu.etat(t, bureau) + ")");
             for (int k = 0; k < 3; k++) h.assertTrue(Monde.solide(l, toits[0].below(k)), "le trou est rebouché (" + k + ")");
-            h.assertTrue(TestsCaractere.aDit(t, "matin_reprise"), "il le dit (" + t.paroles + ")");
+            h.assertTrue(Essais.aDit(t, "matin_reprise"), "il le dit (" + t.paroles + ")");
             t.discard();
         });
     }
