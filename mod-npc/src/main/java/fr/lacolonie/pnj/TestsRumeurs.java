@@ -107,6 +107,7 @@ public class TestsRumeurs {
     public static void etrangerRienSurSonChef(GameTestHelper h) {
         TestsAutresJoueurs.Scene s = TestsAutresJoueurs.scene(h, 432, 3);
         Travailleur t = s.t();
+        t.chefNom = "Kolrax"; // un vrai pseudo (celui des faux joueurs a des tirets)
         t.temperament = "calme";
         t.moral = 60;
         t.rumeurs.voir(t.chefNom, Rumeurs.Genre.MORT, "Aliénor", t.jour());
@@ -143,14 +144,21 @@ public class TestsRumeurs {
         Travailleur t = s.t();
         Rival r = rival(h, 434, TestsJeu.sol(h, 434 * 400 + 40, 60000), "guerrier");
         t.rumeurs.voir(r.nom(), Rumeurs.Genre.POSTE, "à l'est|40 pas", t.jour());
-        String dit = t.appliquer(Ordres.lire("Espionne " + r.nom() + ".", "mineur"), s.chef());
-        h.assertTrue(Vie.vient("espion_part", dit), "il part : " + dit);
-        h.assertTrue(t.memoire.contains("espion"), "la mission est notée");
+        // L'ouvrier rival tout juste apparu n'est pas encore dans la liste du monde : l'ordre vient un peu après.
+        boolean[] parti = {false};
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            String dit = t.appliquer(Ordres.lire("Espionne " + r.nom() + ".", "mineur"), s.chef());
+            h.assertTrue(Vie.vient("espion_part", dit), "il part : " + dit);
+            h.assertTrue(t.memoire.contains("espion"), "la mission est notée");
+            parti[0] = true;
+        });
         double[] loin = {0};
         h.onEachTick(() -> loin[0] = Math.max(loin[0], t.position().distanceTo(Vec3.atBottomCenterOf(s.base()))));
         h.succeedWhen(() -> {
-            h.assertTrue(loin[0] > 25, "il va jusque là-bas (" + TestsJeu.etat(t, t.bureau) + ")");
-            h.assertTrue(TestsCaractere.aDit(t, "espion_retour"), "revenu, il le dit au chef (" + t.paroles + ")");
+            h.assertTrue(parti[0] && loin[0] > 25,"il va jusque là-bas (" + TestsJeu.etat(t, t.bureau) + ")");
+            // « J'ai fait le tour de chez Rival434. Écoute bien : » suivi de ce qu'il a vu.
+            h.assertTrue(t.paroles.stream().anyMatch(p -> p.contains(" ouvrier") && Vie.TOUTES.get("espion_retour").stream()
+                    .anyMatch(x -> p.startsWith(x.texte().replace("{nom}", r.nom())))), "revenu, il le dit au chef (" + t.paroles + ")");
             h.assertFalse(t.memoire.contains("espion"), "la mission est finie");
             h.assertTrue(t.rumeurs.fait(r.nom(), Rumeurs.Genre.NOMBRE) != null, "il a compté leurs ouvriers");
             h.assertTrue(r.ouvriers().get(0).rumeurs.fait(t.chefNom, Rumeurs.Genre.ESPION) != null, "l'ouvrier de là-bas l'a vu");
