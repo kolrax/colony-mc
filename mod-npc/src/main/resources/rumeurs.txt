@@ -17,8 +17,10 @@
 # VARIABLES
 #   {chef}      nom du chef de l'ouvrier (partout)
 #   {nom}       le chef d'une autre colonie, celui dont on parle
-#   {nombre}    nombre d'ouvriers vus (écrit « {nombre} ouvriers » : « 1 ouvriers » est à corriger par le code)
+#   {nombre}    nombre d'ouvriers vus (écrit « {nombre} ouvriers » : « 1 ouvriers » est corrigé par le code).
+#               Peut valoir 1 : aucun accord autour (pas de « vus », « je les ai vus »).
 #   {metiers}   les métiers vus, déjà en texte : « deux mineurs et un bûcheron »
+#               Peut ne compter qu'un métier : même règle, aucun accord au pluriel autour.
 #   {jours}     quand, déjà en texte : « hier », « il y a 3 jours » (en tête de phrase : majuscule par le code)
 #   {direction} où, déjà en texte avec sa préposition : « au nord », « au sud-est »
 #   {distance}  à quelle distance, nombre et unité : « 300 pas »
@@ -44,31 +46,32 @@
 #   espion_inconnu          il ne sait pas où est la colonie de {nom}
 #   espion_retour           il revient de chez {nom} ; ce qu'il a vu suit
 #   espion_repere           un ouvrier de {nom} l'a repéré
+#   rumeur_espion           il a repéré un espion de chez {nom} près du poste, {jours}
 #   espion_refus_enfant     un enfant à qui l'on demande d'espionner
 #   rumeur_passe            bulle : il passe une nouvelle sur {nom} à un collègue
 
 [rumeur_vu_nombre]
-{jours}, j'ai vu {nombre} ouvriers chez {nom}.
+{jours}, j'ai compté {nombre} ouvriers chez {nom}.
 {jours}, en passant chez {nom}, j'ai compté {nombre} ouvriers, à peu près.
 Chez {nom}, j'ai compté {nombre} ouvriers. C'était {jours}.
-{nom} a {nombre} ouvriers. Je les ai vus de mes yeux, {jours}.
+{nom} a {nombre} ouvriers. Je l'ai vu de mes yeux, {jours}.
 {jours}, chez {nom}, j'ai vu {nombre} ouvriers à l'ouvrage.
-{nombre} ouvriers chez {nom}, chef. Vus {jours}.
+{nombre} ouvriers chez {nom}, chef. Je l'ai vu {jours}.
 calme: J'ai bien compté, chef : {nombre} ouvriers chez {nom}, {jours}.
 peureux: {jours}, chez {nom}… {nombre} ouvriers. Je n'ai pas traîné.
 fourbe: {jours}, j'ai jeté un œil chez {nom}. {nombre} ouvriers, pas un de plus.
-colerique: {nom} ? {nombre} ouvriers, vus {jours}. Rien de quoi trembler.
+colerique: {nom} ? {nombre} ouvriers, {jours}. Rien de quoi trembler.
 
 [rumeur_vu_metiers]
 {jours}, chez {nom}, j'ai vu {metiers}.
-Chez {nom}, il y a {metiers}. Je les ai vus {jours}.
+Chez {nom}, il y a {metiers}. Je l'ai vu {jours}.
 {nom} emploie {metiers}. C'était {jours}.
 {jours}, j'ai croisé les gens de {nom} : {metiers}.
-Les ouvriers de {nom} ? {metiers}, d'après ce que j'ai vu {jours}.
-{jours}, j'ai vu chez {nom} {metiers}, chacun à son ouvrage.
-calme: Chez {nom}, chef : {metiers}. Je les ai vus {jours}.
+Chez {nom} ? {metiers}, d'après ce que j'ai vu {jours}.
+{jours}, j'ai vu chez {nom} {metiers} au travail.
+calme: Chez {nom}, chef : {metiers}. J'ai bien regardé, {jours}.
 peureux: {jours}, de loin… chez {nom}, j'ai vu {metiers}.
-fourbe: Bon à savoir, chef : {nom} a {metiers}. Vu {jours}.
+fourbe: Bon à savoir, chef : {nom} a {metiers}. C'était {jours}.
 
 [rumeur_vu_poste]
 Le poste de {nom} est {direction}, à {distance} d'ici.
@@ -242,6 +245,18 @@ calme: On m'a vu chez {nom}. J'ai préféré rentrer.
 peureux: Ils m'ont vu ! Chez {nom}, ils m'ont vu ! J'ai couru, chef.
 fourbe: Un ouvrier de {nom} m'a vu. Je lui ai dit que je m'étais perdu.
 colerique: Un gars de {nom} m'a repéré. Il a de la chance que j'aie filé.
+
+[rumeur_espion]
+{jours}, un ouvrier de {nom} rôdait près de notre poste.
+{jours}, j'ai surpris quelqu'un de chez {nom} qui nous guettait.
+Un ouvrier de {nom} est venu fouiner par ici, {jours}.
+{jours}, un gars de {nom} traînait autour du poste. Il nous espionnait.
+On nous surveille : {jours}, un ouvrier de {nom} rôdait par ici.
+{nom} nous fait espionner. J'ai vu un de ses ouvriers, {jours}.
+calme: {jours}, un ouvrier de {nom} observait notre poste. Je l'ai bien vu.
+peureux: {jours}, quelqu'un de chez {nom} rôdait près d'ici… Il pourrait revenir.
+fourbe: {jours}, {nom} nous a envoyé un curieux. Il a cru que je ne l'avais pas vu.
+colerique: {jours}, un espion de {nom} rôdait chez nous. Qu'il revienne, pour voir !
 
 [espion_refus_enfant]
 Je suis trop jeune pour ça.
