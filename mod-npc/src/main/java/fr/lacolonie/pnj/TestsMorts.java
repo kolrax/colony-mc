@@ -45,6 +45,8 @@ public class TestsMorts {
         final Set<String> degats = new LinkedHashSet<>();
         String premier = "";
         final List<String> actions = new ArrayList<>();
+        /** Où il est, tous les 5 ticks (L : dans la lave), les 6 premières secondes. */
+        final List<String> trace = new ArrayList<>();
         Actions.Action derniere;
 
         Suivi(GameTestHelper h, Travailleur t) { this.h = h; this.t = t; vieMin = t.getHealth(); airMin = t.getAirSupply(); }
@@ -53,7 +55,7 @@ public class TestsMorts {
             return "vie min " + vieMin + "/" + t.getMaxHealth() + ", air min " + airMin + ", dégâts " + degats
                     + (premier.isEmpty() ? "" : " (premier : " + premier + ")") + (aTerre ? ", À TERRE" : "") + (mort ? ", MORT" : "")
                     + ", vie " + t.getHealth() + ", en " + rel(h, t.blockPosition()).toShortString() + ", action "
-                    + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat + ", " + t.diag + " ; actions " + actions;
+                    + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat + ", " + t.diag + " ; actions " + actions + " ; trace " + trace;
         }
 
         /** Vivant, jamais à terre, au moins {@code part} de sa vie (0 : pas de seuil), et aucun des dégâts {@code interdits}. */
@@ -79,6 +81,7 @@ public class TestsMorts {
                 s.premier = d.getMsgId() + " en " + rel(h, t.blockPosition()).toShortString() + " au tick " + h.getTick()
                         + ", action " + (t.action == null ? "-" : t.action.nom);
             if (t.aTerre) s.aTerre = true;
+            if (h.getTick() % 5 == 0 && s.trace.size() < 24) s.trace.add(String.format(java.util.Locale.ROOT, "%d:%.2f,%.2f,%.2f%s", h.getTick(), t.getX() - h.absolutePos(BlockPos.ZERO).getX(), t.getY() - h.absolutePos(BlockPos.ZERO).getY(), t.getZ() - h.absolutePos(BlockPos.ZERO).getZ(), t.isInLava() ? "L" : ""));
             if (!t.isAlive()) s.mort = true;
             if (t.action != s.derniere) {
                 if (s.derniere != null && s.actions.size() < 30)

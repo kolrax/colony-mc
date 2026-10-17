@@ -72,12 +72,14 @@ public class TestsRepertoire {
         Travailleur[] e = equipe(h, chef, 23);
         Travailleur bertrand = e[0];
         Vec3[] avant = new Vec3[1];
+        TestsMorts.Suivi s = TestsMorts.suivre(h, bertrand);
         etapes(h, chef, e,
                 () -> { regarder(chef, bertrand); bertrand.parler(chef, "Fige-toi !"); },
                 () -> h.assertTrue(c(bertrand).equals("arret") && bertrand.action instanceof Consignes.Faire, "figé : " + c(bertrand) + " " + bertrand.action),
                 () -> avant[0] = bertrand.position(),
                 attendre(h, 100),
-                () -> h.assertTrue(bertrand.position().distanceTo(avant[0]) < 0.3, "il ne bouge plus"),
+                () -> h.assertTrue(bertrand.position().distanceTo(avant[0]) < 0.3, "il ne bouge plus : de " + avant[0] + " à " + bertrand.position()
+                        + ", " + c(bertrand) + " " + bertrand.action + " ; " + s.texte()),
                 () -> bertrand.parler(chef, "Au travail !"),
                 () -> h.assertTrue(bertrand.consigne == null && bertrand.mode == Travailleur.Mode.TRAVAIL, "au travail : " + c(bertrand) + " " + bertrand.mode),
                 () -> fin(e));

@@ -49,13 +49,14 @@ public class TestsDefense {
         m.forcerChunk();
         var creeper = TestsGuerrier.fige(h, EntityType.CREEPER, b.east(27));
         boolean[] loin = {false};
+        TestsMorts.Suivi sg = TestsMorts.suivre(h, g), sm = TestsMorts.suivre(h, m);
         h.succeedWhen(() -> {
             if (m.distanceTo(creeper) > 10) loin[0] = true;
             h.assertTrue(Essais.aDit(m, "creeper_alerte"), "le mineur prévient le guerrier (" + m.paroles + ", " + TestsJeu.etat(m, b) + ")");
-            h.assertTrue(Essais.aDit(g, "guerrier_alerte_ok"), "le guerrier répond (" + g.paroles + ")");
-            h.assertTrue(loin[0], "le mineur s'éloigne du creeper");
+            h.assertTrue(Essais.aDit(g, "guerrier_alerte_ok"), "le guerrier répond (" + g.paroles + " ; " + sg.texte() + ")");
+            h.assertTrue(loin[0], "le mineur s'éloigne du creeper (à " + m.distanceTo(creeper) + " ; " + sm.texte() + ")");
             h.assertFalse(creeper.isAlive(), "le creeper est tué (" + TestsJeu.etat(g, b) + ")");
-            h.assertTrue(Essais.aDit(g, "guerrier_monstre_tue"), "le guerrier le dit (" + g.paroles + ")");
+            h.assertTrue(Essais.aDit(g, "guerrier_monstre_tue"), "le guerrier le dit (" + g.paroles + ", tué par " + creeper.getLastHurtByMob() + " ; " + sg.texte() + ")");
             TestsGuerrier.fin(g, m);
         });
     }
