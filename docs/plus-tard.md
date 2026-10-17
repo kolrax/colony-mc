@@ -138,3 +138,14 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Les ouvriers d'avant ce lot n'ont aucun talent ; ceux du banc et des tests (`Travailleur.auTravail`) non plus, pour rester comparables.
 - Rareté : `reglages.json` d'un serveur existant passe une seule fois à 0,35 toutes les 15 minutes (`chercheurs.plus_rares`) ; les chiffres choisis ensuite sont respectés.
 - Étoiles (lot 13) : une formation arrêtée quand le chef n'est pas en ligne (renvoi par lettre, ordre écrit chef parti) ne lui rend pas le prix ; pendant la formation, il reste au poste (pas de vraie absence) et sans geste d'étude ; l'avancement vers l'étoile suivante (`Etoiles.progres`) n'est montré nulle part ; une désobéissance (moral bas) laisse la formation continuer.
+
+## Familles (lot 13, première passe du 17/10)
+- **Renvoi** : renvoyer un parent n'emmène pas l'enfant ; renvoyer un enfant en fait un chercheur d'emploi (petit) qui finit par s'en aller comme les autres. Un enfant dont les deux parents sont partis reste chez le chef.
+- L'enfant n'obéit à aucun ordre, même « suis-moi » ou « rentre » (il joue près du poste ou de ses parents) ; seuls « apprends le métier de X » et les questions passent.
+- Les enfants peuvent être pris pour une causerie (`Causeries`) avec des répliques d'adultes ; pas de conversations propres aux enfants.
+- L'apprenti garde les étoiles gagnées en apprenant (★★ possible avant 16 ans, l'expérience va 1,5 fois plus vite) ; le cahier disait « ★ à 16 ans ».
+- Le nom de famille (`memoire.famille`, le prénom d'un parent) n'apparaît que sur la fiche et dans les réponses, pas au-dessus de la tête. Les couples de deux hommes n'ont pas d'enfant ; pas d'adoption.
+- L'IA ne connaît ni l'âge ni la famille (`IA.systeme`) ; les questions « quel âge as-tu ? », « qui sont tes parents ? », « as-tu des enfants ? » sont toujours répondues par le mod.
+- Le rendu du petit (attribut `SCALE` du jeu, synchronisé sans changement client) n'a pas été vu à l'écran : vérifier au banc photo (`runPhotos`) la taille, le nom au-dessus de la tête et le skin.
+- La mort de vieillesse n'est pas mise en scène (pas de lit, pas d'adieux des proches) ; l'enfant n'a pas de lit à lui réservé (il prend un lit libre, sinon dort près du poste).
+- Rien au panneau web : `familles` et `ages` se règlent dans `reglages.json` seulement.
