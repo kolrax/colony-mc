@@ -2309,7 +2309,8 @@ public class Travailleur extends PathfinderMob {
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
         Remarques.embauche(this); // ses nouveaux collègues en parleront
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
-        if (salaireFixe < 0) dire("Marché conclu, chef ! Je te suis." + (poste ? // une débauche : Etranger le dit à sa façon " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
+        // Une débauche (salaire promis) : Etranger le dit à sa façon.
+        if (salaireFixe < 0) dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
         if (Recrutement.exigence(renom) > 1) Besoins.dire(this, "embauche_reputation", null); // on dit qu'il paie mal : il prend ses sûretés
         else if (surcout > 1) Besoins.dire(this, "embauche_surcout", null); // « Une grande colonie, ça se paie, chef. »
         signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
