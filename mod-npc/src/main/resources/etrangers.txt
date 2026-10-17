@@ -1,0 +1,189 @@
+# Quand un autre que le chef parle à un ouvrier (lot 14, cahier 5.8, 6.1 et 6.2). Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+#
+# VARIABLES
+#   {chef}   nom du chef de l'ouvrier (partout ; dans debauche_accepte, c'est déjà le nouveau)
+#   {nom}    celui qui lui parle ; dans commande_permis et commande_retire : le ou les noms dits par le chef
+#   {prix}   la somme proposée, en pièces (écrire « {prix} pièces » : « 1 pièces » est corrigé tout seul)
+#
+# CLÉS
+#   commande_permis            réponse au chef : « {nom} peut te donner des ordres » (il le dira aux autres)
+#   commande_retire            réponse au chef : « n'obéis plus à {nom} »
+#   etranger_refus             un autre, sans la permission du chef, lui donne un ordre
+#   etranger_reserve           un autorisé lui demande ce que seul le chef décide (renvoi, paie, guerre…)
+#   etranger_trop_peu          on le paie pour un ordre, mais trop peu
+#   etranger_sans_pieces       on lui promet des pièces qu'on n'a pas sur soi
+#   etranger_paye              on le paie assez pour un ordre : il le fera
+#   etranger_ouvrage           un autre lui demande ce qu'il fait, comment il va
+#   etranger_merci             un autre le remercie
+#   etranger_salut             un autre le salue, ou lui parle de tout et de rien
+#   debauche_accepte           il accepte de passer au service de {nom} (dit à son nouveau chef)
+#   debauche_pieces            il accepterait, mais {nom} n'a pas la somme sur lui
+#   debauche_somme             on lui propose de partir sans dire de somme
+#   debauche_guerre            {nom} fait la guerre à son chef
+#   debauche_rancune           {nom} a déjà essayé il y a moins d'un jour
+#   debauche_place             {nom} n'a ni poste ni place pour un ouvrier de plus
+#   debauche_paie              la paie proposée n'est pas assez haute
+#   debauche_liens             les siens (sa moitié, ses amis) le retiennent
+#   debauche_reputation        on dit trop de mal de la colonie de {nom}, ou trop de bien de la sienne
+#   debauche_fidele            il est bien chez son chef
+#   debauche_lettre_depart     la lettre à l'ancien chef : il part chez {nom} pour {prix} pièces
+#   debauche_lettre_tentative  la lettre au chef : {nom} a voulu le débaucher, il a dit non
+
+[commande_permis]
+Entendu, {chef} : j'obéirai aussi à {nom}. Je le dirai aux autres.
+Bien, {chef}. Ce que {nom} demandera, nous le ferons.
+Compris : {nom} pourra nous commander. Les autres le sauront.
+C'est noté, {chef}. {nom} aura notre oreille, comme toi.
+fourbe: Va pour {nom}. Tant que la paie vient de toi, {chef}…
+colerique: Encore un maître ? Soit. J'obéirai à {nom}.
+
+[commande_retire]
+Entendu, {chef} : je n'obéirai plus à {nom}. Je préviendrai les autres.
+Bien. {nom} n'a plus d'ordre à nous donner.
+Compris : plus rien pour {nom}. Les autres le sauront.
+C'est noté, {chef}. {nom} peut toujours causer, je ne bougerai pas.
+colerique: Tant mieux. {nom} commençait à m'échauffer.
+
+[etranger_refus]
+Je n'obéis qu'à {chef}.
+Je sers {chef}, pas toi. Vois avec lui.
+Pardon, {nom}, mais mes ordres viennent de {chef}.
+Si {chef} me le dit, je le ferai. Pas avant.
+colerique: Tu n'es pas mon maître. Passe ton chemin.
+fourbe: Et qu'est-ce que j'y gagne, moi ? Rien. Alors non.
+peureux: Je… je ne peux pas. {chef} me gronderait.
+calme: Je n'ai qu'un maître, {nom} : c'est {chef}.
+
+[etranger_reserve]
+Ça, c'est à {chef} d'en décider.
+Pour ça, il faudra voir {chef}.
+Je ne peux pas, {nom} : c'est l'affaire de {chef}.
+Le reste, je le fais. Ça, non : c'est {chef} qui décide.
+colerique: Ça, ce n'est pas à toi de le dire.
+
+[etranger_trop_peu]
+C'est trop peu pour laisser l'ouvrage de {chef}.
+{prix} pièces ? Pour ce prix-là, je reste à mon ouvrage.
+Ce n'est pas assez, {nom}. {chef} me paie mieux que ça.
+Garde tes {prix} pièces. Il en faudrait davantage.
+fourbe: Mets-en un peu plus, et on verra.
+
+[etranger_sans_pieces]
+Montre-moi d'abord les pièces.
+Je ne vois pas tes pièces, {nom}.
+Promettre ne coûte rien. Les pièces d'abord.
+Ta bourse sonne creux, {nom}.
+fourbe: Sans pièces, pas d'affaire.
+
+[etranger_paye]
+Marché conclu.
+Pour {prix} pièces, soit.
+Entendu, {nom}. C'est payé, je m'y mets.
+Va pour {prix} pièces.
+fourbe: Voilà qui est parler. Je m'y mets.
+
+[etranger_ouvrage]
+Je suis au service de {chef}, et l'ouvrage ne manque pas.
+Ça va, merci. {chef} nous donne de quoi faire.
+Je travaille pour {chef}. On ne chôme pas, ici.
+Bien, {nom}. L'ouvrage avance.
+peureux: Ça va… tant que {chef} ne me voit pas bavarder.
+
+[etranger_merci]
+De rien.
+Avec plaisir, {nom}.
+Ce n'est rien.
+À ton service… enfin, à celui de {chef}.
+
+[etranger_salut]
+Le bonjour, {nom}.
+Salut à toi, {nom}.
+Bonjour. Je suis à l'ouvrage pour {chef}.
+Le bonjour. Que veux-tu ?
+colerique: Quoi encore ? J'ai à faire.
+peureux: Oh ! Bonjour… je ne t'avais pas vu.
+
+[debauche_accepte]
+Marché conclu. Je suis à toi, {nom}.
+Pour {prix} pièces, je suis ton homme.
+Va pour {prix} pièces. Je te suis, {nom}.
+Tope là. À ton service, désormais.
+fourbe: Une bonne paie vaut bien un nouveau maître. Allons-y.
+
+[debauche_pieces]
+Montre-moi d'abord les pièces, et on en reparlera.
+Les pièces d'avance, {nom}. Sinon, rien.
+Je ne pars pas sur une promesse. Les pièces d'abord.
+Tu n'as pas {prix} pièces sur toi. Reviens quand tu les auras.
+
+[debauche_somme]
+Et tu me paierais combien ?
+Partir ? Pour quelle paie ?
+Dis-moi d'abord combien de pièces.
+Des belles paroles… Combien, au juste ?
+fourbe: Tout dépend du prix, {nom}. Combien ?
+
+[debauche_guerre]
+Toi ? Tu fais la guerre à {chef}. Jamais.
+Je ne trahirai pas {chef} pour son ennemi.
+Passer chez l'ennemi ? Plutôt mourir.
+Garde tes pièces. On est en guerre, toi et nous.
+colerique: Tu oses ? Va-t'en avant que je m'échauffe !
+
+[debauche_rancune]
+Je t'ai déjà répondu.
+Encore toi ? C'est toujours non.
+Ma réponse n'a pas changé depuis tantôt.
+Laisse-moi en paix, {nom}. J'ai dit non.
+
+[debauche_place]
+Tu n'as ni poste ni place pour moi.
+Où travaillerais-je, chez toi ? Tu n'as pas de place.
+Sans poste ni place, ton offre ne vaut rien.
+Tu as déjà trop de monde, {nom}.
+
+[debauche_paie]
+C'est à peine plus que ce que j'ai. Non.
+{prix} pièces ? {chef} me paie presque autant.
+Pour si peu, je ne change pas de maître.
+Il faudrait bien plus pour que je parte.
+fourbe: Ajoute encore, et on verra.
+
+[debauche_liens]
+Les miens sont ici. Je reste.
+Ma moitié travaille ici. Je ne pars pas.
+J'ai mes amis chez {chef}. Garde tes pièces.
+On ne quitte pas les siens pour quelques pièces.
+peureux: Partir loin des miens ? Oh non.
+
+[debauche_reputation]
+On dit trop de mal de ta colonie.
+J'ai entendu parler de chez toi. Merci bien.
+{chef} paie à l'heure. Chez toi, on dit que non.
+Ta colonie n'a pas bonne réputation, {nom}.
+
+[debauche_fidele]
+Je suis bien chez {chef}.
+{chef} me traite bien. Je reste.
+Merci, {nom}, mais ma place est ici.
+Je ne quitte pas {chef}. Pas pour ça.
+calme: J'ai donné ma parole à {chef}. Elle vaut plus que tes pièces.
+colerique: Tu veux me voler à {chef} ? Va-t'en.
+
+[debauche_lettre_depart]
+{nom} m'offre {prix} pièces : je pars à son service. Sans rancune, {chef}.
+Je m'en vais chez {nom}, qui me paie {prix} pièces. Adieu, {chef}.
+Une meilleure paie m'attend chez {nom}. Je pars. Sans rancune.
+{nom} paie mieux : {prix} pièces. Je passe à son service.
+
+[debauche_lettre_tentative]
+{nom} a voulu me débaucher. Je lui ai dit non.
+Sache que {nom} est venu m'offrir des pièces pour te quitter. J'ai refusé.
+{nom} a tenté de m'attirer chez lui. Je reste avec toi, {chef}.
+On m'a fait une offre : {nom}, qui voulait que je le serve. C'est non.

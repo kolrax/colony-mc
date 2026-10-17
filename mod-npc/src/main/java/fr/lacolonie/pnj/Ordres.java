@@ -71,10 +71,12 @@ final class Ordres {
         Guerre.Lu guerre;
         /** La boutique ({@link Boutique}) : l'ouvrir, la fermer, des prix, ce qu'il ne vend pas ; null si rien n'est dit. */
         Boutique.Lu boutique;
+        /** Qui d'autre que le chef peut le commander ({@link Commandement}), et qui ne le peut plus. */
+        final List<String> commandants = new ArrayList<>(), destitues = new ArrayList<>();
 
         boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && equipe < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
                 && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty()
-                && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null && boutique == null; }
+                && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null && boutique == null && commandants.isEmpty() && destitues.isEmpty(); }
     }
 
     // --- Le vocabulaire -------------------------------------------------------------------------------
@@ -277,6 +279,9 @@ final class Ordres {
         // La boutique (« tiens la boutique », « vends le pain à 2 pièces ») : ses nombres ne sont pas des missions.
         Boutique.Lu boutique = Boutique.lire(texte);
         if (!boutique.rien()) { l.boutique = boutique; texte = boutique.reste; }
+        // Qui d'autre peut le commander (« Nielscutt peut te donner des ordres ») : avant le dépôt (« Nielscutt n'a plus le droit de te commander » n'en est pas).
+        Commandement.Lu commande = Commandement.lire(texte);
+        if (!commande.rien()) { l.commandants.addAll(commande.permis); l.destitues.addAll(commande.retires); texte = commande.reste; }
         // Ce qu'il fera si l'on frappe son chef (« attaque quiconque me frappe », « ne fais jamais rien à Nielscutt »).
         GardeChef.Lu garde = GardeChef.lire(texte);
         if (!garde.rien()) { l.posture = garde.posture; l.epargner.addAll(garde.epargner); texte = garde.reste; }

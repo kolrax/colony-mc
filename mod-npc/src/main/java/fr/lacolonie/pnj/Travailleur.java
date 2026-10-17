@@ -748,7 +748,7 @@ public class Travailleur extends PathfinderMob {
         String suffixe = switch (mode) {
             case CHOMEUR -> " · cherche du travail";
             case GREVE -> " · en grève";
-            default -> " (" + Metier.nom(metier) + ")";
+            default -> " (" + Metier.nom(metier) + ")" + (chefNom.isEmpty() ? "" : " · " + chefNom); // cahier 6.6 : tout le monde voit son chef
         };
         if (aTerre) suffixe = " · à terre";
         setCustomName(Component.literal(prenom + suffixe));
@@ -1820,6 +1820,8 @@ public class Travailleur extends PathfinderMob {
         if (avant != null && Obeissance.question(Ordres.lire(l.texte, metier))) enAttente = avant; // une simple question entre-temps : l'ordre reste en suspens
         if (mode == Mode.GREVE) return appliquerOrdre(l, enFace);
         Obeissance.Verdict v = Obeissance.decider(moral, temperament, ordre, false);
+        // Un marché (une prime à la paie) ne se conclut qu'avec le chef : à un autre, il refuse (Etranger).
+        if (v == Obeissance.Verdict.NEGOCIE && enFace != null && !enFace.getUUID().equals(chef)) v = Obeissance.Verdict.REFUSE;
         switch (v) {
             case RALE -> { Sons.grogne(this); return Messages.corps(this, "rale") + " " + appliquerOrdre(l, enFace); } // avec l'IA, elle râle à sa façon (elle voit son moral)
             case NEGOCIE, REFUSE -> {
@@ -2038,6 +2040,19 @@ public class Travailleur extends PathfinderMob {
             if (!l.retires.isEmpty()) {
                 String noms = String.join(" ni ", l.retires), dit = Besoins.texte(this, "depot_ordre_retire", noms, null);
                 r.add(dit != null ? dit : "Entendu, chef : plus de dépôt pour " + noms + ". Je préviendrai les autres.");
+            }
+        }
+        // Qui d'autre peut le commander (Commandement, cahier 6.2) : dit à un seul, toute la colonie le sait (dans le Courrier).
+        if (!parRegle && chef != null && (!l.commandants.isEmpty() || !l.destitues.isEmpty()) && level() instanceof ServerLevel sl) {
+            Courrier.de(sl.getServer()).autoriser(chef, l.commandants, l.destitues);
+            reponseImposee = true;
+            if (!l.commandants.isEmpty()) {
+                String noms = String.join(" et ", l.commandants), dit = Besoins.texte(this, "commande_permis", noms, null);
+                r.add(dit != null ? dit : "Entendu, chef : j'obéirai aussi à " + noms + ". Je le dirai aux autres.");
+            }
+            if (!l.destitues.isEmpty()) {
+                String noms = String.join(" ni à ", l.destitues), dit = Besoins.texte(this, "commande_retire", noms, null);
+                r.add(dit != null ? dit : "Entendu, chef : je n'obéirai plus à " + noms + ". Je préviendrai les autres.");
             }
         }
         // « Arrête ! » pendant qu'il frappe un homme sur son ordre : il baisse son arme.
@@ -2263,6 +2278,15 @@ public class Travailleur extends PathfinderMob {
             signaler(p, "Il te faut " + Reglages.texte(prime) + " dans ton inventaire pour la prime d'embauche.");
             return;
         }
+        entrerAuService(p, prime, -1);
+    }
+
+    /**
+     * Il entre au service de {@code p} (embauche, ou débauche par {@link Etranger}) : {@code prime} déjà versée ;
+     * {@code salaireFixe} : le salaire promis (-1 : celui qu'il demande).
+     */
+    void entrerAuService(ServerPlayer p, long prime, long salaireFixe) {
+        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
         // Rien de l'ancien chef ne le suit (un ouvrier renvoyé avant que le renvoi ne l'efface).
         Transporteur.oublier(this);
         Macon.oublier(this);
@@ -2275,7 +2299,7 @@ public class Travailleur extends PathfinderMob {
         coince.progres(getX(), getY(), getZ());
         impayes = 0;
         this.prime = 0; // (« prime = 0 » remettait la prime d'embauche à zéro, et le message disait « pour rien »)
-        salaire = -1; // un nouveau marché : ni le salaire fixé par l'ancien chef…
+        salaire = salaireFixe; // un nouveau marché : ni le salaire fixé par l'ancien chef…
         int renom = Courrier.de(p.getServer()).reputation(p.getUUID());
         surcout = surcout(nb, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
         memoire.remove("etoiles_gagnees"); // ses étoiles d'avant sont les siennes : il en demande le prix (Apprentissage)
@@ -2285,11 +2309,11 @@ public class Travailleur extends PathfinderMob {
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
         Remarques.embauche(this); // ses nouveaux collègues en parleront
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
-        dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
+        if (salaireFixe < 0) dire("Marché conclu, chef ! Je te suis." + (poste ? // une débauche : Etranger le dit à sa façon " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
         if (Recrutement.exigence(renom) > 1) Besoins.dire(this, "embauche_reputation", null); // on dit qu'il paie mal : il prend ses sûretés
         else if (surcout > 1) Besoins.dire(this, "embauche_surcout", null); // « Une grande colonie, ça se paie, chef. »
         signaler(p, "Tu as embauché " + prenom + " (" + Metier.nom(metier) + ", " + "★".repeat(niveau) + ") pour " + Reglages.texte(prime)
-                + ". Salaire : " + Reglages.texte(salaireDemande()) + ", dans la caisse de ton poste.");
+                + ". Salaire : " + Reglages.texte(salaireVerse()) + ", dans la caisse de ton poste.");
     }
 
     /** Le facteur de salaire qu'il demanderait à ce chef, selon les ouvriers que celui-ci a déjà (cahier 9.2). */

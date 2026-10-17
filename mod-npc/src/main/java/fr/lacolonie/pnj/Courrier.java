@@ -130,6 +130,8 @@ final class Courrier extends SavedData {
     long prochainId = 1;
     /** Ceux que chaque chef autorise à se servir au dépôt de son poste (« Nielscutt,Raoul ») : toute sa colonie le sait (GardeDepot). */
     final Map<UUID, String> permis = new HashMap<>();
+    /** Ceux à qui les ouvriers de chaque chef obéissent aussi (« Nielscutt,Raoul ») : toute sa colonie le sait (Commandement, lot 14). */
+    final Map<UUID, String> commandants = new HashMap<>();
     /** Les guerres (Armee) : pour chaque chef, ses ennemis et leur pseudo, du plus ancien au plus récent ; toujours des deux côtés. */
     final Map<UUID, LinkedHashMap<UUID, String>> guerres = new HashMap<>();
     /** La réputation de chaque chef ({@link Recrutement}, lot 13) : absente = 0. */
@@ -211,6 +213,14 @@ final class Courrier extends SavedData {
             pe.add(x);
         });
         t.put("Permis", pe);
+        ListTag co = new ListTag();
+        commandants.forEach((chef, noms) -> {
+            CompoundTag x = new CompoundTag();
+            x.putUUID("chef", chef);
+            x.putString("noms", noms);
+            co.add(x);
+        });
+        t.put("Commandants", co);
         ListTag gu = new ListTag();
         guerres.forEach((chef, m) -> m.forEach((ennemi, nom) -> {
             CompoundTag x = new CompoundTag();
@@ -278,6 +288,7 @@ final class Courrier extends SavedData {
             c.vols.add(vo);
         }
         for (Tag x : t.getList("Permis", Tag.TAG_COMPOUND)) c.permis.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
+        for (Tag x : t.getList("Commandants", Tag.TAG_COMPOUND)) c.commandants.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
         for (Tag x : t.getList("Guerres", Tag.TAG_COMPOUND)) {
             CompoundTag g = (CompoundTag) x;
             c.guerres.computeIfAbsent(g.getUUID("chef"), k -> new LinkedHashMap<>()).put(g.getUUID("ennemi"), g.getString("nom"));
@@ -295,6 +306,17 @@ final class Courrier extends SavedData {
         String l = GardeDepot.changer(permis.get(chef), oui, non);
         if (l.isEmpty()) permis.remove(chef);
         else permis.put(chef, l);
+        setDirty();
+    }
+
+    // --- Qui d'autre commande ses ouvriers (Commandement, cahier 6.2) ------------------------------------
+
+    boolean commande(UUID chef, String pseudo) { return chef != null && GardeChef.epargne(commandants.get(chef), pseudo); }
+
+    void autoriser(UUID chef, List<String> oui, List<String> non) {
+        String l = GardeDepot.changer(commandants.get(chef), oui, non);
+        if (l.isEmpty()) commandants.remove(chef);
+        else commandants.put(chef, l);
         setDirty();
     }
 

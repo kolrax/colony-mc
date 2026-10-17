@@ -95,7 +95,7 @@ final class GardeDepot {
     private static void effacer(StringBuilder sans, int a, int b) { for (int i = a; i < b; i++) sans.setCharAt(i, ' '); }
 
     /** Le pseudo dont le mot aplati commence en {@code a} (dans le texte), tel qu'écrit : ses bornes dans le texte. */
-    private static int[] pseudo(String texte, int s0, int a) {
+    static int[] pseudo(String texte, int s0, int a) {
         int b = a;
         // « Jean-Pierre », « test-mock-player » : le trait d'union coupe le mot dans le texte aplati, pas dans le pseudo.
         while (a - 2 >= s0 && texte.charAt(a - 1) == '-' && (Character.isLetterOrDigit(texte.charAt(a - 2)) || texte.charAt(a - 2) == '_')) {

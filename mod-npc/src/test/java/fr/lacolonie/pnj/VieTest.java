@@ -18,7 +18,7 @@ class VieTest {
                 + Vie.lire(Repertoire.lignes("/defense.txt")).size() + Vie.lire(Repertoire.lignes("/chef.txt")).size() + Vie.lire(Repertoire.lignes("/macon.txt")).size()
                 + Vie.lire(Repertoire.lignes("/depot.txt")).size() + Vie.lire(Repertoire.lignes("/economie.txt")).size() + Vie.lire(Repertoire.lignes("/guerre.txt")).size()
                 + Vie.lire(Repertoire.lignes("/recrutement.txt")).size()
-                + Vie.lire(Repertoire.lignes("/machines.txt")).size());
+                + Vie.lire(Repertoire.lignes("/machines.txt")).size() + Vie.lire(Repertoire.lignes("/etrangers.txt")).size());
         for (String cle : List.of("faim_legere", "faim_forte", "fatigue", "sans_lit", "lit_vole", "blessure_legere", "blessure_grave", "a_terre", "releve", "soigne", "blesse_vu",
                 "envie_pause", "plainte_douce", "plainte_forte", "content", "fier_colonie"))
             assertTrue(banque.containsKey(cle), cle);
@@ -59,6 +59,21 @@ class VieTest {
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
         // Sans le prénom du guerrier, l'alerte a toujours de quoi être dite.
         assertTrue(Vie.tirer("creeper_alerte", "calme", Map.of("chef", "Kolrax"), () -> 0.9) != null);
+    }
+
+    /** Lot 14 : un autre que le chef parle à l'ouvrier (Etranger), au moins quatre répliques communes par situation. */
+    @Test
+    void etrangersSeLit() {
+        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/etrangers.txt"));
+        assertEquals(22, banque.size());
+        for (var e : banque.entrySet()) {
+            assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
+            assertTrue(e.getValue().stream().filter(r -> r.temperament().isEmpty()).count() >= 4, e.getKey() + " : quatre répliques communes");
+            for (Vie.Replique r : e.getValue()) {
+                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
+                assertTrue(r.texte().length() <= 90, r.texte());
+            }
+        }
     }
 
     /** Lot 9 : quand on se sert au dépôt du poste (GardeDepot), au moins quatre répliques communes par situation. */

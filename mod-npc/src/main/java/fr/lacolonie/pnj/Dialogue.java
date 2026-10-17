@@ -77,7 +77,8 @@ final class Dialogue {
     static void parler(ServerPlayer p, String texte, Travailleur vise, boolean auMicro) {
         String dit = texte.strip();
         if (dit.isEmpty() || dit.length() > 256) return;
-        if (vise != null && (vise.aTerre || !p.getUUID().equals(vise.chef) || p.distanceToSqr(vise) > PORTEE * PORTEE)) return;
+        if (vise != null && !p.getUUID().equals(vise.chef)) { Etranger.parler(vise, p, dit); return; } // un autre que son chef (lot 14)
+        if (vise != null && (vise.aTerre || p.distanceToSqr(vise) > PORTEE * PORTEE)) return;
         List<Travailleur> autour = autour(p, vise);
         if (autour.isEmpty()) return;
 
@@ -207,6 +208,7 @@ final class Dialogue {
                 Relais.reprendre(lecture, seul); // pas son métier : il propose de prévenir (Relais)
                 GardeChef.reprendre(lecture, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
                 GardeDepot.reprendre(lecture, seul); // le dépôt du poste non plus
+                Commandement.reprendre(lecture, seul); // ni qui d'autre peut le commander
                 Guerre.reprendre(lecture, seul); // ni la guerre
                 if (seul.boutique != null) lecture.boutique = seul.boutique; // ni la boutique (Boutique)
                 if (seul.intentions.contains(Ordres.Intention.LIENS)) lecture.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
