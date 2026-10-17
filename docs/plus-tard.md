@@ -148,3 +148,4 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Débauche : pas d'enfant ni d'apprenti protégé (la case « familles » n'existait pas encore) ; à ajouter quand elle sera là.
 - Débauche : un refus de « place » (pas de poste, plafond atteint) ou « sans somme » ne laisse pas de rancune ; un boutiquier qui tient boutique répond en marchand (la boutique passe avant).
 - Le chef apprend une tentative par lettre (`debauche_lettre_tentative`) : pas encore de souvenir dans `Souvenirs` (« qui a voulu te débaucher ? »).
+- Relecture du 17/10 (reste) : une autorisation « X peut te donner des ordres » accepte n'importe quel nom (pas vérifié contre les profils connus du serveur : un prénom de PNJ peut y entrer, sans effet). Un ordre payé dont une partie est réservée au chef est refusé en entier.
