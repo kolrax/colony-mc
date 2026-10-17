@@ -61,6 +61,7 @@ public class TestsEtoiles {
         t.mode = Travailleur.Mode.TRAVAIL;
         t.bureau = poste.getBlockPos();
         t.debut = t.fin = 0; // en service toute la journée
+        t.prochainePaie = System.currentTimeMillis() + 3_600_000L; // pas de paie pendant le test : elle passerait avant « suis-moi »
         h.getLevel().addFreshEntity(t);
         return t;
     }
