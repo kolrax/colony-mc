@@ -54,6 +54,8 @@ public class TestsEtoiles {
         Vec3 p = h.absoluteVec(new Vec3(3.5, 2, 4.5));
         t.moveTo(p.x, p.y, p.z, 0, 0);
         t.tirerAuSort("mineur", 1);
+        t.talents = List.of(); // pas de talent au hasard (Talents) : la vie et la vitesse se comparent
+        t.appliquerNiveau();
         t.setNoAi(true);
         t.chef = chef.getUUID();
         t.mode = Travailleur.Mode.TRAVAIL;
