@@ -156,8 +156,18 @@ final class Fermier extends Metier {
         }
         t.debloquer(Statut.RIEN_A_SEMER);
 
-        // Sans champ marqué, il ne touche à rien : il le dit à son chef, et au-dessus de sa tête.
+        // Sans champ marqué : il en fait un de 9 sur 9 sur un terrain plat et libre, près de l'eau (refonte, partie 2), cherché
+        // toutes les 5 minutes au plus ; faute de terrain, il le dit à son chef, et au-dessus de sa tête.
         if (champs.isEmpty()) {
+            if (t.memoire.getLong("champ_auto_t") <= Cerveau.temps(t)) {
+                t.memoire.putLong("champ_auto_t", Cerveau.temps(t) + 300);
+                BlockPos ici = terrain(t);
+                if (ici != null) {
+                    Cultures.Culture k = commandee(t);
+                    Cerveau.lancer(t, new Champ(ici, Cultures.mesures(""), k == null ? Cultures.TOUTES.get(0) : k, true));
+                    return;
+                }
+            }
             t.bloquer(Statut.SANS_CHAMP);
             Cerveau.ecrire(t, "sans_champ", Cerveau.UN_JOUR, "sans_champ");
             Cerveau.attendre(t, 20);
@@ -195,6 +205,41 @@ final class Fermier extends Metier {
         if (!mures.isEmpty()) mures.removeAll(autresMoissons(t)); // un autre fermier les récolte déjà : ils ne se gênent pas
         if (!mures.isEmpty()) { Cerveau.lancer(t, new Moisson(mures, tour, voulue)); return; }
         Cerveau.attendre(t, 1);
+    }
+
+    /**
+     * Le centre d'un champ de 9 sur 9 à faire, à 32 blocs au plus du poste : sur trois cercles de huit points, celui où le plus
+     * de cases (une sur deux, 25 relevées) se sèment ({@link #sol} : libre, à ciel ouvert, ni bâti ni à un voisin), à 8 blocs
+     * au plus d'une eau à fleur de sol ; null s'il n'y en a pas (au moins 20 cases sur 25). Quelques milliers de blocs lus,
+     * au plus toutes les 5 minutes, et seulement par un fermier sans champ.
+     */
+    static BlockPos terrain(Travailleur t) {
+        if (t.bureau == null || !(t.level() instanceof ServerLevel l)) return null;
+        BlockPos mieux = null;
+        int note = 19;
+        for (int r = 10; r <= PORTEE - 6; r += 6)
+            for (int k = 0; k < 8; k++) {
+                double a = k * Math.PI / 4;
+                int x = t.bureau.getX() + (int) Math.round(Math.cos(a) * r), z = t.bureau.getZ() + (int) Math.round(Math.sin(a) * r);
+                if (!l.hasChunkAt(x, z)) continue;
+                int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                if (!eauPres(l, x, y, z)) continue;
+                int n = 0;
+                for (int i = -4; i <= 4; i += 2) for (int j = -4; j <= 4; j += 2) if (sol(t, l, new BlockPos(x + i, y, z + j), y) != null) n++;
+                if (n > note) { note = n; mieux = new BlockPos(x, y, z); }
+            }
+        return mieux;
+    }
+
+    /** De l'eau à fleur de sol (à 2 blocs près de la hauteur y) à 8 blocs au plus de (x, z), relevée une colonne sur deux. */
+    static boolean eauPres(ServerLevel l, int x, int y, int z) {
+        for (int i = -8; i <= 8; i += 2)
+            for (int j = -8; j <= 8; j += 2) {
+                if (!l.hasChunkAt(x + i, z + j)) continue;
+                int h = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x + i, z + j) - 1;
+                if (Math.abs(h - y) <= 2 && l.getFluidState(new BlockPos(x + i, h, z + j)).is(FluidTags.WATER)) return true;
+            }
+        return false;
     }
 
     /** Un champ est « au lieu » de la mission si son centre en est à tant de blocs au plus. */

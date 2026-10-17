@@ -158,8 +158,8 @@ public final class Statut {
 
     // --- Les blocages des métiers (lot 16 : les métiers branchés sur les missions) -------------------------
 
-    public static final String SANS_CHAMP = "Pas de champ : dis-lui « Travaille ici » sur de la terre libre",
-            RIEN_A_SEMER = "Rien à semer ici : de la terre libre et des graines au dépôt",
+    public static final String SANS_CHAMP = "Pas de terre plate près de l'eau : dis-lui « Travaille ici »",
+            RIEN_A_SEMER = "Rien à semer ici : il faut de la terre libre, des graines et une houe",
             SANS_EAU = "Pas d'eau près du poste : montre-lui un étang",
             SANS_EAU_ICI = "Pas d'eau à pêcher ici : choisis un autre lieu",
             SANS_ARME = "Pas d'arc ni de lame au dépôt",
