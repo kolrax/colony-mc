@@ -540,8 +540,12 @@ public final class Bureau {
             return t;
         }
 
-        /** Au-delà, l'onglet Dépôt ne montre pas les autres sortes (un paquet borné). */
-        static final int DEPOT_MAX = 400;
+        /**
+         * Au-delà, l'onglet Dépôt ne montre pas les autres sortes, et un nom est coupé : le paquet reste petit (environ
+         * 50 Ko au pire). Seuls l'objet de base, son nom affiché et le nombre partent, jamais les composants (le contenu
+         * d'une boîte de Shulker ou d'un livre ferait dépasser la taille d'un paquet).
+         */
+        static final int DEPOT_MAX = 400, NOM_MAX = 48;
         static final Actions.Filtre MINERAIS = Actions.Filtre.de(SORTES.get(0) + "|#c:ingots|#c:gems|#c:nuggets|#c:dusts");
         static final Actions.Filtre BOIS = Actions.Filtre.de("#minecraft:logs|#minecraft:planks|#minecraft:saplings|#minecraft:wooden_slabs"
                 + "|#minecraft:wooden_stairs|#minecraft:wooden_fences|minecraft:stick|#c:rods/wooden");
@@ -571,7 +575,10 @@ public final class Bureau {
             ListTag t = new ListTag();
             for (int i = 0; i < sortes.size(); i++) {
                 CompoundTag x = new CompoundTag();
-                x.put("objet", sortes.get(i).save(reg));
+                ItemStack s = sortes.get(i);
+                x.putString("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString());
+                String nom = s.getHoverName().getString();
+                x.putString("nom", nom.length() <= NOM_MAX ? nom : nom.substring(0, NOM_MAX));
                 x.putLong("n", nombres.get(i));
                 x.putString("cat", categorie(sortes.get(i)));
                 t.add(x);
@@ -654,14 +661,22 @@ public final class Bureau {
             if (p.connection != null && p.connection.hasChannel(Reseau.Poste.TYPE)) PacketDistributor.sendToPlayer(p, new Reseau.Poste(worldPosition, fiche(p)));
         }
 
-        /** Change la file de missions de cet ouvrier ; vrai si elle a changé. Annuler la première : il passe à la suivante. */
+        /**
+         * Change la file de missions de cet ouvrier ; vrai si elle a changé. Si la mission en cours (la première) change,
+         * il lâche ce qu'il faisait pour elle, comme sur un ordre de la fiche (sauf s'il se bat ou fuit un danger).
+         */
         static boolean mission(Travailleur t, String action, int i, int vue) {
             if (t == null || vue != t.missions.size() || i < 0 || i >= t.missions.size()) return false;
-            return switch (action) {
+            Travailleur.Mission avant = t.missions.get(0);
+            boolean change = switch (action) {
                 case "mission_monter" -> Boite.deplacer(t.missions, i, -1);
                 case "mission_descendre" -> Boite.deplacer(t.missions, i, 1);
                 default -> { t.missions.remove(i); yield true; }
             };
+            if (change && (t.missions.isEmpty() || t.missions.get(0) != avant) && t.action != null
+                    && !(t.action instanceof Actions.Attaquer || t.action instanceof Actions.Fuir || t.action instanceof Actions.Echapper))
+                t.finirAction("ordre");
+            return change;
         }
 
         static Travailleur ouvrier(ServerPlayer p, String uuid) {

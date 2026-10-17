@@ -691,7 +691,7 @@ public final class Client {
         /** Le dépôt : une pile d'un objet par sorte, son nombre et sa catégorie. */
         final List<ItemStack> objets = new ArrayList<>();
         final List<Long> nombres = new ArrayList<>();
-        final List<String> categories = new ArrayList<>();
+        final List<String> categories = new ArrayList<>(), noms = new ArrayList<>();
         CompoundTag choisi;
         // Réglages de l'ouvrier choisi
         int debut, fin, jours;
@@ -707,9 +707,11 @@ public final class Client {
             var niveau = Minecraft.getInstance().level;
             if (niveau != null) for (Tag x : infos.getList("depot", Tag.TAG_COMPOUND)) {
                 CompoundTag d = (CompoundTag) x;
-                ItemStack s = ItemStack.parseOptional(niveau.registryAccess(), d.getCompound("objet"));
+                ResourceLocation id = ResourceLocation.tryParse(d.getString("id"));
+                ItemStack s = id == null ? ItemStack.EMPTY : new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id));
                 if (s.isEmpty()) continue;
                 objets.add(s);
+                noms.add(d.getString("nom"));
                 nombres.add(d.getLong("n"));
                 categories.add(d.getString("cat"));
             }
@@ -749,7 +751,7 @@ public final class Client {
             String q = rechercheMemo.strip().toLowerCase(java.util.Locale.ROOT);
             for (int i = 0; i < objets.size(); i++)
                 if ((categorieMemo.isEmpty() || categorieMemo.equals(categories.get(i)))
-                        && (q.isEmpty() || objets.get(i).getHoverName().getString().toLowerCase(java.util.Locale.ROOT).contains(q))) l.add(i);
+                        && (q.isEmpty() || noms.get(i).toLowerCase(java.util.Locale.ROOT).contains(q))) l.add(i);
             return l;
         }
 
@@ -1041,7 +1043,7 @@ public final class Client {
                     g.fill(x, y, x + CASE - 1, y + CASE - 1, 0xFF2A2E2B);
                     g.renderOutline(x, y, CASE - 1, CASE - 1, 0xFF4A3E28);
                 }
-            ItemStack survol = null;
+            String survol = null;
             long nSurvol = 0;
             for (int k = 0; k < Math.min(RANGEES * COLONNES, v.size() - defilement * COLONNES); k++) {
                 int i = v.get(defilement * COLONNES + k);
@@ -1050,12 +1052,12 @@ public final class Client {
                 long n = nombres.get(i);
                 g.renderItem(s, x, y);
                 g.renderItemDecorations(font, s, x, y, n <= 1 ? null : n < 1000 ? String.valueOf(n) : n < 100_000 ? (n / 1000) + "k" : "∞");
-                if (mx >= x && mx < x + CASE - 1 && my >= y && my < y + CASE - 1) { survol = s; nSurvol = n; }
+                if (mx >= x && mx < x + CASE - 1 && my >= y && my < y + CASE - 1) { survol = noms.get(i); nSurvol = n; }
             }
             if (objets.isEmpty()) texte(g, "Le dépôt est vide.", gx + 2, gy + 4, GRIS);
             else if (v.isEmpty()) texte(g, "Rien ne correspond.", gx + 2, gy + 4, GRIS);
             if (survol != null) {
-                List<Component> l = new ArrayList<>(Screen.getTooltipFromItem(minecraft, survol));
+                List<Component> l = new ArrayList<>(List.of(Component.literal(survol)));
                 l.add(Component.literal("× " + nSurvol + " au dépôt").withStyle(s -> s.withColor(OR)));
                 g.renderComponentTooltip(font, l, mx, my);
             }
