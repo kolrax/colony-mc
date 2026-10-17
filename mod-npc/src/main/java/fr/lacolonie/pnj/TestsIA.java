@@ -374,13 +374,20 @@ public class TestsIA {
         Travailleur t = TestsJeu.ouvrier(h, "bucheron", 2, 2, 4, ItemStack.EMPTY);
         t.chef = chef.getUUID();
         var s = h.getLevel().getServer();
-        int avantDemandes = IA.TRANSCRIPTION.etat(9999).get("demandes") instanceof Integer i ? i : 0;
-        Voix.entendre(s, chef, t, son(48_000 / 10, 6000)); // 0,1 s : trop court
-        Voix.entendre(s, chef, t, son(48_000, 40)); // presque silencieux
-        h.assertTrue((int) IA.TRANSCRIPTION.etat(9999).get("demandes") == avantDemandes, "un bruit ne doit pas partir chez Whisper");
-        Voix.entendre(s, chef, t, son(48_000, 6000));
+        boolean[] parle = {false};
         h.succeedWhen(() -> {
-            h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, "il doit l'avoir entendu (" + t.mode + ")");
+            // Un PNJ tout juste apparu n'est pas toujours visible au même tick (Dialogue.autour) : on parle quand il l'est.
+            if (!parle[0]) {
+                if (Dialogue.autour(chef, null).isEmpty()) throw new net.minecraft.gametest.framework.GameTestAssertException("ouvrier pas encore visible");
+                int avantDemandes = IA.TRANSCRIPTION.etat(9999).get("demandes") instanceof Integer i ? i : 0;
+                Voix.entendre(s, chef, t, son(48_000 / 10, 6000)); // 0,1 s : trop court
+                Voix.entendre(s, chef, t, son(48_000, 40)); // presque silencieux
+                h.assertTrue((int) IA.TRANSCRIPTION.etat(9999).get("demandes") == avantDemandes, "un bruit ne doit pas partir chez Whisper");
+                parle[0] = true;
+                regarder(chef, t); // d'autres tests du lot ont leur chef à moins de 32 blocs : sans regard, l'adressage peut croire qu'il leur parle
+                Voix.entendre(s, chef, t, son(48_000, 6000));
+            }
+            h.assertTrue(t.mode == Travailleur.Mode.SUIVRE, "il doit l'avoir entendu (" + t.mode + ", " + Dialogue.journal().stream().filter(e -> String.valueOf(e.get("texte")).contains("Suis-moi, s")).findFirst().orElse(null) + ")");
             h.assertTrue(IA.echange(t).contains("Chef : Suis-moi, s'il te plaît.") && IA.echange(t).contains("J'arrive, chef"), "échange : " + IA.echange(t));
             t.discard();
         });
