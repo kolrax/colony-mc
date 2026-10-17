@@ -322,7 +322,7 @@ final class Macon extends Metier {
         if (objet != null) v.put("objet", objet);
         String x = Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
         if (x == null) x = secours;
-        if (voix) Voix.dire(t, x, "calme");
+        if (voix) Paroles.dire(t, x, "calme");
         else t.dire(x);
     }
 

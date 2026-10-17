@@ -221,17 +221,17 @@ public class TestsMacon {
         int[] arret = {-1};
         long[] quand = {0};
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(sol).add(0, 0.5, 0));
                     g.parler(chef, "Construis l'essai cube ici");
                 },
                 () -> h.assertTrue(Macon.chantier(g).getString("nom").equals("essai cube") && Macon.chantier(g).getInt("r") == 2,
-                        "le chantier est retenu, tourné vers le chef : " + Macon.chantier(g) + " / " + IA.echange(g)),
+                        "le chantier est retenu, tourné vers le chef : " + Macon.chantier(g) + " / " + Paroles.echange(g)),
                 () -> h.assertTrue(Macon.chantier(g).getInt("i") >= 6, "il avance : " + Macon.chantier(g) + " (" + TestsJeu.etat(g, base) + ")"),
                 () -> g.parler(chef, "Arrête le chantier"),
                 () -> {
-                    h.assertTrue(Macon.chantier(g).getBoolean("pause"), "en pause : " + IA.echange(g));
+                    h.assertTrue(Macon.chantier(g).getBoolean("pause"), "en pause : " + Paroles.echange(g));
                     arret[0] = Macon.chantier(g).getInt("i");
                     quand[0] = h.getTick();
                     Macon.MODELES.clear(); // comme après un redémarrage : le plan sera relu
@@ -320,12 +320,12 @@ public class TestsMacon {
         garnir(d, true);
         Macon.commencer(g, "config:" + CUBE, "essai cube", base.offset(0, 0, 8), 0, 0, null);
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> h.assertTrue(Macon.chantier(g).getInt("i") >= 3 && g.compter(Actions.Filtre.de("minecraft:oak_planks")) > 0,
                         "il porte des planches : " + Macon.chantier(g) + " (" + TestsJeu.etat(g, base) + ")"),
                 () -> g.parler(chef, "Abandonne le chantier"),
                 () -> {
-                    h.assertTrue(Macon.chantier(g).isEmpty(), "chantier oublié : " + IA.echange(g));
+                    h.assertTrue(Macon.chantier(g).isEmpty(), "chantier oublié : " + Paroles.echange(g));
                     h.assertTrue(g.compter(Actions.Filtre.de("minecraft:oak_planks")) == 0 && g.compter(Actions.Filtre.de("minecraft:cobblestone")) == 0,
                             "rien gardé sur lui : " + TestsJeu.etat(g, base));
                     h.assertTrue(TestsBucheron.compte(d, Items.OAK_PLANKS) > 0, "les planches sont au dépôt");

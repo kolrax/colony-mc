@@ -135,6 +135,9 @@ public abstract class Metier {
         boolean vu = !Guerrier.auDepot(b, depot(bon, enchante), seuil, false).isEmpty();
         if (manque) t.memoire.putLong("outil_vu", maintenant + (vu ? 30 : 10)); // trouvé : s'il n'arrive pas au poste, pas d'essai sans fin
         else t.memoire.putLong("revue_outil", maintenant + 60);
+        // Le statut (refonte 1.0.0) : « ⚠ Pas de pioche au dépôt » tant qu'il lui en manque une et que le dépôt n'en a pas.
+        if (manque && !vu) t.bloquer(Statut.outil(nom));
+        else if (Statut.outil(nom).equals(t.blocage)) t.debloquer();
         if (!vu) return false;
         Cerveau.lancer(t, new PrendreOutil(sorte, bon, seuil, nom, manque, enchante));
         return true;
@@ -189,6 +192,7 @@ public abstract class Metier {
             if (sorte.objet(vieux) && note(vieux) < note(neuf)) Guerrier.rendre(t, b, vieux);
             else if (!vieux.isEmpty()) Guerrier.garder(t, b, vieux);
             t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            if (Statut.outil(nom).equals(t.blocage)) t.debloquer();
             Cerveau.dire(t, "outil_depot", 60, manque ? "Je prends une " + nom + " au dépôt, et au travail."
                     : "Une meilleure " + nom + " au dépôt : je la prends, et je laisse la mienne.");
             return Actions.Etat.OK;

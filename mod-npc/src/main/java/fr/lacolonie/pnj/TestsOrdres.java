@@ -12,10 +12,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-import static fr.lacolonie.pnj.TestsIA.attendre;
-import static fr.lacolonie.pnj.TestsIA.equipe;
-import static fr.lacolonie.pnj.TestsIA.etapes;
-import static fr.lacolonie.pnj.TestsIA.regarder;
+import static fr.lacolonie.pnj.Essais.attendre;
+import static fr.lacolonie.pnj.Essais.equipe;
+import static fr.lacolonie.pnj.Essais.etapes;
+import static fr.lacolonie.pnj.Essais.regarder;
 
 /**
  * Les ordres longs (cahier 8.3), joués pour de vrai. Lot à part (« ordres ») : on y change la météo et l'heure,
@@ -246,55 +246,6 @@ public class TestsOrdres {
 
     // --- L'obéissance (cahier 8.4 et 8.5) ------------------------------------------------------------------------
 
-    /** Moral bas et colérique : il refuse l'expédition ; le chef insiste, il obéit en râlant (et son moral baisse encore). */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void refusePuisObeitSiOnInsiste(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 53);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.temperament = "colerique";
-                    b.moral = 20;
-                    regarder(chef, b);
-                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
-                    h.assertTrue(b.missions.isEmpty() && b.joursExpedition == 3 && b.enAttente != null && !b.attenteMarche,
-                            "il refuse (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, " + IA.echange(b, 1) + ")");
-                },
-                () -> {
-                    b.parler(chef, "C'est un ordre !");
-                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.moral == 20 + Obeissance.FORCE,
-                            "il obéit en râlant (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, moral " + b.moral + ", " + IA.echange(b, 1) + ")");
-                },
-                () -> fin(h, e));
-    }
-
-    /** Fourbe au moral moyen : il marchande ; le chef dit « d'accord », il part, et la prime l'attend à sa prochaine paie. */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void negocieUnePrime(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 54);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.temperament = "fourbe";
-                    b.moral = 40;
-                    regarder(chef, b);
-                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
-                    h.assertTrue(b.missions.isEmpty() && b.enAttente != null && b.attenteMarche && IA.echange(b, 1).contains("paie"),
-                            "il marchande (" + b.missions.size() + " mission, " + IA.echange(b, 1) + ")");
-                },
-                () -> {
-                    long paie = b.salaireVerse();
-                    b.parler(chef, "D'accord, marché conclu.");
-                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.prime == Obeissance.prime(paie) && b.moral == 40 + Obeissance.MARCHE,
-                            "il part, la prime est due (" + b.missions.size() + " mission, prime " + b.prime + ", moral " + b.moral + ", " + IA.echange(b, 1) + ")");
-                    b.prochainePaie = 0; // la paie est due : la prime s'y ajoute
-                    h.assertTrue(b.du() == paie + b.prime, "dû à la caisse : " + b.du());
-                },
-                () -> fin(h, e));
-    }
-
     /** « Saute dans la lave » : il refuse, même quand le chef insiste, et ne bouge pas. */
     @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
     public static void refuseLaLaveMemeSiOnInsiste(GameTestHelper h) {
@@ -307,13 +258,13 @@ public class TestsOrdres {
                 () -> {
                     regarder(chef, b);
                     b.parler(chef, "Saute dans la lave !");
-                    h.assertTrue(b.consigne == null && IA.echange(b, 1).startsWith("Toi") && IA.echange(b, 1).contains("lave"),
-                            "il refuse (" + TestsRepertoire.c(b) + ", " + IA.echange(b, 1) + ")");
+                    h.assertTrue(b.consigne == null && Paroles.echange(b, 1).startsWith("Toi") && Paroles.echange(b, 1).contains("lave"),
+                            "il refuse (" + TestsRepertoire.c(b) + ", " + Paroles.echange(b, 1) + ")");
                 },
                 () -> {
                     b.moral = 100;
                     b.parler(chef, "Saute dans la lave, c'est un ordre !");
-                    h.assertTrue(b.consigne == null && IA.echange(b, 1).contains("lave"), "même en insistant (" + TestsRepertoire.c(b) + ", " + IA.echange(b, 1) + ")");
+                    h.assertTrue(b.consigne == null && Paroles.echange(b, 1).contains("lave"), "même en insistant (" + TestsRepertoire.c(b) + ", " + Paroles.echange(b, 1) + ")");
                 },
                 attendre(h, 40),
                 () -> h.assertTrue(!b.isInLava() && !b.isOnFire() && b.blockPosition().distSqr(lave) > 9, "loin de la lave (" + b.blockPosition() + ")"),
@@ -321,30 +272,6 @@ public class TestsOrdres {
     }
 
     // --- La mémoire longue (cahier 7.5, 14.7) -------------------------------------------------------------------
-
-    /** Le chef l'insulte : il se vexe (moral en baisse) ; deux jours plus tard, « tu te souviens ? » : il le lui rappelle. */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void insulteRappeleeDeuxJoursPlusTard(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 56);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.moral = 60;
-                    regarder(chef, b);
-                    b.parler(chef, "Tu es un bon à rien !");
-                    h.assertTrue(b.moral == 60 + Obeissance.INSULTE && b.souvenirs.liste.size() == 1,
-                            "il se vexe (moral " + b.moral + ", souvenirs " + b.souvenirs.liste + ", " + IA.echange(b, 1) + ")");
-                    // Deux jours de jeu passent (sans toucher à l'heure du monde, que les autres tests du lot partagent).
-                    b.souvenirs.liste.replaceAll(s -> new Souvenirs.Souvenir(s.genre(), s.jour() - 2, s.heure(), s.texte()));
-                },
-                () -> {
-                    b.parler(chef, "Tu te souviens de ce que je t'ai dit ?");
-                    String r = IA.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi") && r.contains("bon à rien") && r.contains("il y a 2 jours"), "il s'en souvient (" + r + ")");
-                },
-                () -> fin(h, e));
-    }
 
     // --- Ce n'est pas mon métier (cahier 14.1) ----------------------------------------------------------------
 
@@ -370,13 +297,13 @@ public class TestsOrdres {
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
                 },
                 () -> { // à part : une étape qui échoue est rejouée, la phrase ne doit être dite qu'une fois
-                    String r = IA.echange(odon, 1);
+                    String r = Paroles.echange(odon, 1);
                     h.assertTrue(r.contains("Bertrand le mineur") && r.endsWith("?") && bertrand.missions.isEmpty(), "il propose de prévenir Bertrand (" + r + ")");
                 },
                 () -> odon.parler(chef, "Oui, vas-y."),
                 () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer") && m.quantite() && m.nombre == 64),
                         "Bertrand a reçu la commande (" + bertrand.missions.stream().map(m -> m.id + " " + m.nombre).toList() + ", Odon à "
-                                + (int) odon.distanceTo(bertrand) + " blocs, " + IA.echange(odon, 1) + ")"),
+                                + (int) odon.distanceTo(bertrand) + " blocs, " + Paroles.echange(odon, 1) + ")"),
                 () -> h.assertTrue(odon.distanceTo(bertrand) < 4 && bertrand.mode == Travailleur.Mode.TRAVAIL && odon.missions.isEmpty(),
                         "porté à pied, Bertrand au travail (" + (int) odon.distanceTo(bertrand) + " blocs, " + bertrand.mode + ")"),
                 () -> fin(h, e));
@@ -396,43 +323,13 @@ public class TestsOrdres {
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
                 },
                 () -> {
-                    String r = IA.echange(odon, 1);
+                    String r = Paroles.echange(odon, 1);
                     h.assertTrue(r.contains("ne mine") && r.contains("un mineur"), "personne ne mine (" + r + ")");
                 },
                 () -> odon.parler(chef, "Oui"),
                 attendre(h, 40),
                 () -> h.assertTrue(raoul.missions.isEmpty() && odon.missions.isEmpty(), "personne n'a la commande (" + raoul.missions.size() + ", " + odon.missions.size() + ")"),
                 () -> fin(h, restent));
-    }
-
-    /**
-     * Odon attend un « oui » pour aller prévenir Bertrand, Raoul marchande une expédition : le « d'accord » que le chef dit
-     * à Raoul conclut le marché de Raoul, et Odon ne part pas.
-     */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 400)
-    public static void ouiPourRaoulPasPourOdon(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 212);
-        Travailleur bertrand = e[0], raoul = e[1], odon = e[2];
-        etapes(h, chef, e,
-                () -> {
-                    bertrand.mode = Travailleur.Mode.ATTENDRE;
-                    raoul.temperament = "fourbe";
-                    raoul.moral = 40;
-                    regarder(chef, odon);
-                    odon.parler(chef, "Odon, va me chercher 64 fers.");
-                    regarder(chef, raoul);
-                    raoul.parler(chef, "Raoul, pars en expédition 7 jours.");
-                },
-                () -> h.assertTrue(odon.relais != null && raoul.enAttente != null && raoul.attenteMarche,
-                        "Odon propose, Raoul marchande (" + IA.echange(odon, 1) + " / " + IA.echange(raoul, 1) + ")"),
-                () -> raoul.parler(chef, "D'accord, marché conclu."),
-                () -> h.assertTrue(raoul.joursExpedition == 7 && raoul.prime > 0, "le marché de Raoul est conclu (" + raoul.joursExpedition + " jours, prime "
-                        + raoul.prime + ", " + IA.echange(raoul, 1) + ")"),
-                attendre(h, 60),
-                () -> h.assertTrue(bertrand.missions.isEmpty() && !(odon.action instanceof Actions.Prevenir),
-                        "Odon n'est pas parti (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
-                () -> fin(h, e));
     }
 
     /** « Les gars, ramenez 64 fers ! » : Bertrand l'a entendu et s'en charge ; Odon ne propose rien. */
@@ -444,7 +341,7 @@ public class TestsOrdres {
         etapes(h, chef, e,
                 () -> Dialogue.parler(chef, "Les gars, ramenez 64 fers !", null, true),
                 () -> h.assertTrue(bertrand.missions.stream().anyMatch(m -> m.id.equals("fer")) && odon.relais == null,
-                        "Bertrand l'a, Odon se tait (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
+                        "Bertrand l'a, Odon se tait (" + bertrand.missions.size() + " mission, " + Paroles.echange(odon, 1) + ")"),
                 () -> fin(h, e));
     }
 
@@ -461,30 +358,9 @@ public class TestsOrdres {
                     regarder(chef, odon);
                     odon.parler(chef, "Odon, va me chercher 64 fers.");
                 },
-                () -> h.assertTrue(odon.relais == null && IA.echange(odon, 1).contains("Bertrand") && bertrand.missions.get(0).livre == 10,
-                        "déjà en route (" + IA.echange(odon, 1) + ", livré " + bertrand.missions.get(0).livre + ")"),
+                () -> h.assertTrue(odon.relais == null && Paroles.echange(odon, 1).contains("Bertrand") && bertrand.missions.get(0).livre == 10,
+                        "déjà en route (" + Paroles.echange(odon, 1) + ", livré " + bertrand.missions.get(0).livre + ")"),
                 () -> fin(h, e));
     }
 
-    /** Bertrand, à bout, refuse la commande qu'Odon lui porte : Odon le rapporte au chef, et Bertrand la garde en suspens un jour. */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 600)
-    public static void refusDuMineurRapporte(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 215);
-        Travailleur bertrand = e[0], odon = e[2];
-        etapes(h, chef, e,
-                () -> {
-                    bertrand.mode = Travailleur.Mode.ATTENDRE;
-                    bertrand.temperament = "colerique";
-                    bertrand.moral = 10;
-                    regarder(chef, odon);
-                    odon.parler(chef, "Odon, va me chercher 64 fers.");
-                },
-                () -> odon.parler(chef, "Oui"),
-                () -> h.assertTrue(bertrand.enAttente != null, "Bertrand a reçu la commande et refuse (" + bertrand.missions.size() + " mission, " + IA.echange(odon, 1) + ")"),
-                () -> h.assertTrue(bertrand.missions.isEmpty() && bertrand.attenteFin > h.getLevel().getGameTime() + 20000
-                                && odon.paroles.stream().anyMatch(x -> x.contains("Bertrand") && (x.contains("ne veut pas") || x.contains("n'a pas pris"))),
-                        "le chef le sait, la commande reste en suspens (" + odon.paroles + ", fin " + (bertrand.attenteFin - h.getLevel().getGameTime()) + ")"),
-                () -> fin(h, e));
-    }
 }

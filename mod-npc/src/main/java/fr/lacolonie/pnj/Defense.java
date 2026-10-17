@@ -28,7 +28,7 @@ import java.util.Map;
  * depuis le cerveau, une seule petite recherche autour de lui (8 blocs) : un creeper en vue, il lâche son travail, s'en
  * éloigne et prévient le guerrier de son chef le plus proche ; à portée de voix (48 blocs), le guerrier répond et vient le
  * tuer ; plus loin (96 blocs au plus), l'ouvrier court vers lui, à l'opposé du creeper, et le guerrier l'apprend en le
- * voyant arriver ({@link Guerrier#veille}). Un autre monstre : son caractère décide ({@link Bravoure}) ; le colérique fonce le
+ * voyant arriver ({@link Guerrier#veille}). Un autre monstre : son caractère décide ; le colérique fonce le
  * frapper, le calme le signale près du poste (et se défend, lui ou un collègue frappé), le peureux fuit en criant, le fourbe
  * s'éclipse. Le travail reprend tout seul ensuite : la fuite et le combat sont des actions comme les autres.
  */
@@ -53,7 +53,7 @@ final class Defense {
 
     /**
      * Un ouvrier qui ne se bat pas voit un monstre : vrai s'il lâche ce qu'il fait (il fuit, ou il se bat). Un creeper, tous
-     * s'en éloignent ; un autre monstre, son caractère décide ({@link Bravoure}, réglage {@code caractere_monstres}) ; sans
+     * s'en éloignent ; un autre monstre, son caractère décide ; sans
      * ça, il le signale s'il est près du poste.
      */
     static boolean ouvrier(Travailleur t) {
@@ -66,7 +66,7 @@ final class Defense {
             return fuir(t, a.cible, DefaultRandomPos.getPosAway(t, 16, 7, a.cible.position()));
         // En guerre, un ennemi chez nous : il le signale à la garde et s'écarte (Armee).
         if (Armee.fuir(t)) return true;
-        double vue = caractere ? Bravoure.vue(t.temperament) : VUE;
+        double vue = VUE;
         // Une seule recherche : les monstres, et ses collègues tout proches (pour les secourir ou les envoyer à sa place).
         List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, t.getBoundingBox().inflate(vue, 3, vue),
                 e -> Monde.hostile(e) || caractere && e instanceof Travailleur w && w != t && t.chef != null && t.chef.equals(w.chef));
@@ -95,7 +95,7 @@ final class Defense {
         if (cible != null && caractere && reagir(t, cible, vus, collegues)) return true;
         LivingEntity vu = autre;
         // Le fourbe ne prévient personne, même quand il n'a pas où filer.
-        if (vu != null && !(caractere && t.temperament.equals("fourbe")) && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
+        if (vu != null && t.bureau != null && t.chezLui(t.blockPosition()) && Cerveau.parfois(t, "monstre_vu", 60)) {
             signaler(t, vu);
             Besoins.dire(t, "monstre_vu", null);
         }
@@ -103,7 +103,7 @@ final class Defense {
     }
 
     /** Moins de 40 % de sa vie, ou hors de combat : il ne se bat plus. */
-    static boolean faible(Travailleur t) { return t.getHealth() < t.getMaxHealth() * Bravoure.FAIBLE || Blessures.horsDeCombat(t); }
+    static boolean faible(Travailleur t) { return t.getHealth() < t.getMaxHealth() * 0.4 || Blessures.horsDeCombat(t); }
 
     /**
      * Son caractère devant le monstre {@code m}, le plus proche en vue (pas un creeper) ; {@code vus} : les monstres en vue,
@@ -120,29 +120,14 @@ final class Defense {
             LivingEntity a = w.getLastHurtByMob();
             if (contre == null && d2 <= 6 * 6 && a != null && vus.contains(a) && Monde.recent(w, w.getLastHurtByMobTimestamp())) contre = a;
         }
+        // Plus de caractère (refonte 1.0.0), une règle fixe : frappé, celui qui ne se bat pas (ou trop blessé) fuit s'il a où aller ;
+        // debout, un combattant riposte à qui frappe (lui ou un collègue tout près) ; sinon il signale.
         boolean faible = faible(t);
-        // Où s'éloigner : seulement pour ceux qui peuvent fuir (quelques essais de position, pas plus d'une fois par décision).
-        boolean fuyard = t.temperament.equals("peureux") || t.temperament.equals("fourbe") || t.temperament.equals("colerique") && faible;
-        // Il l'a déjà fui et le monstre ne s'est pas approché depuis : il ne tourne pas en rond (il refuit s'il est frappé).
-        if (fuyard && !frappe && dejaFui(t, m)) return false;
-        Vec3 loin = fuyard ? refuge(t, m) : null;
-        Bravoure.Reaction r = Bravoure.face(t.temperament, faible, frappe, contre != null && !frappe, proche != null, loin != null);
-        return switch (r) {
-            case CHARGER -> attaquer(t, frappe ? coup : m, "monstre_charge");
-            case RIPOSTER -> contre != null && attaquer(t, contre, "monstre_riposte");
-            case FUIR -> loin != null && fuir(t, m, loin) && noterFuite(t, m);
-            case ECLIPSER, POUSSER -> {
-                if (loin == null) yield false;
-                // Sans prévenir la garde : il file, ou il y envoie un collègue en paroles.
-                if (Cerveau.parfois(t, "monstre_eclipse", 30)) crier(t, r == Bravoure.Reaction.POUSSER ? "monstre_pousse" : "monstre_eclipse", proche == null ? null : proche.prenom);
-                Actions.Fuir f = new Actions.Fuir(m);
-                f.refuge = loin;
-                retenirPlace(t);
-                Cerveau.lancer(t, f);
-                yield noterFuite(t, m);
-            }
-            case SIGNALER -> false;
-        };
+        if (frappe && (faible || !Armee.arme(t))) {
+            Vec3 loin = refuge(t, m);
+            if (loin != null) return fuir(t, m, loin) && noterFuite(t, m);
+        }
+        return !faible && (frappe || Armee.arme(t)) && contre != null && attaquer(t, contre, "monstre_riposte");
     }
 
     /** Il frappe le monstre avec ce qu'il a en main, sans quitter son espace de vie ni le poursuivre loin ; pas un monstre qu'il n'a pas pu atteindre tout à l'heure. */
@@ -221,7 +206,7 @@ final class Defense {
      */
     static Vec3 refuge(Travailleur t, LivingEntity m) {
         Vec3 mieux = null;
-        double vue = Bravoure.vue(t.temperament) + 1;
+        double vue = VUE + 1;
         for (int k = 0; k < 3; k++) {
             Vec3 p = DefaultRandomPos.getPosAway(t, 16, 7, m.position());
             if (p == null) continue;
@@ -286,7 +271,7 @@ final class Defense {
     static Travailleur garde(Travailleur t, double r) {
         if (t.chef == null) return null;
         return t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(r, 24, r),
-                        g -> g != t && g.isAlive() && "guerrier".equals(g.metier) && t.chef.equals(g.chef) && !Famille.mineur(g))
+                        g -> g != t && g.isAlive() && "guerrier".equals(g.metier) && t.chef.equals(g.chef))
                 .stream().min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
     }
 
@@ -353,7 +338,7 @@ final class Defense {
         Metier m = Metier.de(t.metier);
         boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && (x.cible == a || Monde.hostile(x.cible))
                 || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
-        if (m == null || !m.combattant || Famille.mineur(t) || Blessures.horsDeCombat(t) || combat) {
+        if (m == null || !m.combattant || Blessures.horsDeCombat(t) || combat) {
             // Les autres ouvriers : un mot, indigné ou effrayé selon leur caractère ; pas plus.
             if (!combat && Cerveau.parfois(t, "chef_frappe_vu", 30) && !Besoins.dire(t, "chef_frappe_vu", null)) t.dire("Hé ! On ne frappe pas le chef !");
             return;
@@ -423,7 +408,7 @@ final class Defense {
             Metier m = Metier.de(t.metier);
             boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && x.cible != v && Monde.hostile(x.cible)
                     || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
-            if (m != null && m.combattant && !Famille.mineur(t) && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v, recidive); if (garde == null) garde = t; }
+            if (m != null && m.combattant && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v, recidive); if (garde == null) garde = t; }
             else if (temoin == null) temoin = t;
         }
         // Sans guerrier : un ouvrier le signale, d'un mot, pas plus.

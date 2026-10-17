@@ -89,7 +89,7 @@ final class Commandement {
     static boolean ordre(Ordres.Lecture l) {
         return !l.missions.isEmpty() || !l.faire.isEmpty() || l.debut >= 0 || l.fin >= 0 || l.equipe >= 0 || l.jours >= 0 || !l.horsMetier.isEmpty()
                 || !l.regles.isEmpty() || l.annulerRegles || l.posture != null || !l.epargner.isEmpty() || l.depot != null || !l.permis.isEmpty()
-                || !l.retires.isEmpty() || l.guerre != null || l.boutique != null || !l.commandants.isEmpty() || !l.destitues.isEmpty() || l.espion != null
+                || !l.retires.isEmpty() || l.guerre != null || l.boutique != null || !l.commandants.isEmpty() || !l.destitues.isEmpty()
                 || l.intentions.stream().anyMatch(i -> !PAROLES.contains(i));
     }
 
@@ -114,8 +114,7 @@ final class Commandement {
         boolean r = l.intentions.removeIf(AU_CHEF::contains);
         r |= l.debut >= 0 || l.fin >= 0 || l.equipe >= 0 || l.jours >= 0 || !l.regles.isEmpty() || l.annulerRegles || l.posture != null || !l.epargner.isEmpty()
                 || l.depot != null || !l.permis.isEmpty() || !l.retires.isEmpty() || l.guerre != null || l.boutique != null || !l.commandants.isEmpty() || !l.destitues.isEmpty()
-                || l.quotidien || l.espion != null;
-        l.espion = null;
+                || l.quotidien;
         l.debut = l.fin = l.equipe = l.jours = -1;
         l.regles.clear();
         l.annulerRegles = false;
