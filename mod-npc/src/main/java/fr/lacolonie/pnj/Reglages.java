@@ -83,6 +83,16 @@ public class Reglages {
     public int usure_outils = 3;
     /** L'éleveur garde au plus N bêtes de chaque espèce par enclos : il n'en fait plus naître et abat l'excédent (2 au moins). */
     public int betes_par_enclos = 12;
+    /**
+     * Travail de nuit (lot 13, cahier 5.10) : les heures de « travaille de nuit » ; la fatigue d'une heure de travail la nuit
+     * (×1,3) ; ce que rend une heure de sommeil le jour (les deux tiers) ; à tant de nuits d'affilée, −2 points de vie max
+     * (−4 au double), une guérison plus lente et un moral plus bas (0 = jamais) ; tant de jours sans nuit effacent le compte.
+     */
+    public int nuit_debut = 20, nuit_fin = 6;
+    public double nuit_fatigue = 1.3;
+    public double nuit_sommeil_jour = 0.67;
+    public int nuit_nuits_avant_malus = 3;
+    public int nuit_jours_de_repos = 2;
     /** Moral (lot 5, cahier 5.2) : un bilan de ses causes (paie, repas, lit, danger, deuil, météo…) toutes les N minutes. */
     public int moral_minutes_bilan = 5;
     /** Sous ce moral, il travaille plus lentement et écrit au chef ce qui ne va pas (une lettre par jour du jeu au plus). */
@@ -178,6 +188,13 @@ public class Reglages {
         secondes_entre_remarques = Math.max(0, secondes_entre_remarques);
         usure_outils = Math.max(1, usure_outils);
         moral_minutes_bilan = Math.clamp(moral_minutes_bilan, 1, 20);
+        nuit_debut = Math.floorMod(nuit_debut, 24);
+        nuit_fin = Math.floorMod(nuit_fin, 24);
+        if (nuit_debut == nuit_fin) { nuit_debut = 20; nuit_fin = 6; }
+        nuit_fatigue = Double.isNaN(nuit_fatigue) || nuit_fatigue <= 0 ? 1.3 : Math.clamp(nuit_fatigue, 1.0, 3.0);
+        nuit_sommeil_jour = Double.isNaN(nuit_sommeil_jour) || nuit_sommeil_jour <= 0 ? 0.67 : Math.clamp(nuit_sommeil_jour, 0.1, 1.0);
+        nuit_nuits_avant_malus = Math.clamp(nuit_nuits_avant_malus, 0, 30);
+        nuit_jours_de_repos = Math.clamp(nuit_jours_de_repos, 1, 30);
         moral_seuil_lettre = Math.clamp(moral_seuil_lettre, 0, 100);
         moral_seuil_demission = Math.clamp(moral_seuil_demission, 0, moral_seuil_lettre);
         moral_jours_avant_demission = Math.max(0, moral_jours_avant_demission);

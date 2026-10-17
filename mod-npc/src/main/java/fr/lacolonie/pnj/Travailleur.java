@@ -30,6 +30,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
@@ -523,9 +525,49 @@ public class Travailleur extends PathfinderMob {
 
     /** Vrai pendant ses heures de travail (heures du jeu). */
     public boolean enService() {
-        int h = (int) ((level().getDayTime() + 6000) % 24000 / 1000); // 0 tick = 6 h du matin
+        int h = heure();
         if (debut == fin) return true; // même heure de début et de fin : toute la journée
         return debut < fin ? h >= debut && h < fin : h >= debut || h < fin;
+    }
+
+    /** L'heure du jeu (0 à 23 ; le tick 0 du jour est 6 h du matin). */
+    int heure() { return (int) ((level().getDayTime() + 6000) % 24000 / 1000); }
+
+    /** Vrai s'il travaille de nuit (la plupart de ses heures de service la nuit : lot 13, {@link Nuit}). */
+    public boolean deNuit() { return Nuit.deNuit(debut, fin); }
+
+    /** Le modificateur de vie max des nuits d'affilée (lot 13). */
+    static final ResourceLocation NUITS = ResourceLocation.fromNamespaceAndPath(ColoniePnj.MODID, "nuits");
+
+    /**
+     * Chaque heure du jeu (depuis {@link #tickCorps}) : les heures travaillées la nuit ; chaque jour à midi, une nuit de plus
+     * ou un jour libre ({@link Nuit#compter}), puis la vie max d'après les nuits d'affilée.
+     */
+    void compterNuits(boolean heureDeNuitTravaillee) {
+        if (heureDeNuitTravaillee) memoire.putInt("nuit_heures", memoire.getInt("nuit_heures") + 1);
+        long jour = Math.floorDiv(level().getDayTime() + 6000 - 12000, 24000); // le jour change à midi, après la nuit
+        if (!memoire.contains("nuit_jour")) memoire.putLong("nuit_jour", jour);
+        else if (memoire.getLong("nuit_jour") != jour) {
+            memoire.putLong("nuit_jour", jour);
+            Nuit.Compte c = Nuit.compter(new Nuit.Compte(memoire.getInt("nuits"), memoire.getInt("nuits_libres")), memoire.getInt("nuit_heures"),
+                    Reglages.actuel.nuit_jours_de_repos);
+            memoire.putInt("nuits", c.nuits());
+            memoire.putInt("nuits_libres", c.libres());
+            memoire.remove("nuit_heures");
+        }
+        santeNuits();
+    }
+
+    /** La vie max réduite par les nuits d'affilée (−2, puis −4), rendue quand le compte retombe. */
+    void santeNuits() {
+        var a = getAttribute(Attributes.MAX_HEALTH);
+        if (a == null) return;
+        double voulu = -Nuit.vieEnMoins(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus);
+        AttributeModifier m = a.getModifier(NUITS);
+        if (m != null && m.amount() == voulu) return;
+        if (m != null) a.removeModifier(NUITS);
+        if (voulu != 0) a.addTransientModifier(new AttributeModifier(NUITS, voulu, AttributeModifier.Operation.ADD_VALUE));
+        if (getHealth() > getMaxHealth()) setHealth(getMaxHealth());
     }
 
     /** L'objet que produit sa mission en cours. */
@@ -597,13 +639,13 @@ public class Travailleur extends PathfinderMob {
             case SUIVRE -> "Te suit";
             case ATTENDRE -> "Attend";
             case TRAVAIL -> bureau == null ? "Sans poste" : expedition ? "En expédition"
-                    : action instanceof Actions.Reposer || !enService() ? "Se repose"
+                    : action instanceof Actions.Reposer || !enService() ? (deNuit() && !Nuit.heureDeNuit(heure()) ? "Dort le jour (travaille de nuit)" : "Se repose")
                     : action instanceof Besoins.Flaner ? "En pause"
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
                     : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") && !metier.equals("macon") ? "Sans mission"
-                    : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail";
+                    : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail"; // vert à l'écran : « de nuit » est dit dans son portrait (fiche)
         };
     }
 
@@ -1075,7 +1117,7 @@ public class Travailleur extends PathfinderMob {
             faim = Math.max(0, faim - 1);
             if (faim <= 6) changerMoral(Obeissance.FAIM); // la faim forte mine le moral, lentement
         }
-        if (++soinCompteur >= 200) {
+        if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus)) { // les nuits d'affilée ralentissent la guérison
             soinCompteur = 0;
             if (faim >= 15 && getHealth() < getMaxHealth()) heal(1);
             else if (faim == 0 && getHealth() > 1) hurt(damageSources().starve(), 1);
@@ -1089,10 +1131,15 @@ public class Travailleur extends PathfinderMob {
             fatigueCompteur = 0;
             // Une expédition fatigue : on y travaille plus dur, et on récupère mal en dormant dehors.
             boolean dehors = expedition && sortieDepuis >= 0;
-            if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE) fatigue -= isSleeping() ? 12 : dehors ? 5 : 8;
-            else if (mode == Mode.TRAVAIL && action != null) fatigue += Talents.fatigue(dehors ? 7 : 5, talents);
+            // De nuit (lot 13) : le travail de nuit fatigue plus, et le sommeil de jour d'un travailleur de nuit répare moins.
+            Reglages rg = Reglages.actuel;
+            boolean laNuit = Nuit.heureDeNuit(heure()), travaille = false;
+            if (action instanceof Actions.Reposer || mode == Mode.ATTENDRE || mode == Mode.GREVE)
+                fatigue -= Nuit.repos(isSleeping() ? 12 : dehors ? 5 : 8, !laNuit && deNuit(), rg.nuit_sommeil_jour);
+            else if (mode == Mode.TRAVAIL && action != null) { fatigue += Talents.fatigue(Nuit.fatigue(dehors ? 7 : 5, laNuit, rg.nuit_fatigue), talents); travaille = true; }
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);
+            compterNuits(travaille && laNuit);
             moral = Moral.repos(moral, memoire.getInt("bilan")); // avec le temps, le moral revient doucement vers 60 (pas après un mauvais bilan)
             if (action instanceof Actions.Reposer && moral < Obeissance.REPOS) changerMoral(1); // le repos le fait remonter
         }
@@ -1544,7 +1591,8 @@ public class Travailleur extends PathfinderMob {
         t.putString("periode", Reglages.actuel.minutes_entre_paies % 1440 == 0
                 ? (Reglages.actuel.minutes_entre_paies == 1440 ? "par jour" : "tous les " + Reglages.actuel.minutes_entre_paies / 1440 + " jours")
                 : "toutes les " + Reglages.actuel.minutes_entre_paies + " minutes");
-        t.putString("attitude", (attitude() + " " + Talents.portrait(talents)).trim());
+        t.putString("attitude", (attitude() + " " + Talents.portrait(talents) + (deNuit() ? " Il travaille de nuit." : "")
+                + (Nuit.vieEnMoins(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus) > 0 ? " Il a les traits tirés." : "")).trim());
         t.putString("mode", switch (mode) {
             case CHOMEUR -> "Cherche du travail";
             case SUIVRE -> "Te suit";
@@ -1995,10 +2043,18 @@ public class Travailleur extends PathfinderMob {
         }
 
         // Horaires et expéditions.
-        if (l.debut >= 0 || l.fin >= 0) {
+        if (l.debut >= 0 || l.fin >= 0 || l.equipe >= 0) {
             if (l.debut >= 0) debut = l.debut;
             if (l.fin >= 0) fin = l.fin;
-            r.add(debut == fin ? Messages.corps(this, "dit_toute_journee") : Messages.corps(this, "dit_horaires", debut, fin));
+            // « Travaille de nuit » sans heures dites : celles des réglages (lot 13) ; « travaille de jour » : 6 h - 18 h.
+            if (l.debut < 0 && l.fin < 0) {
+                debut = l.equipe == 1 ? Reglages.actuel.nuit_debut : 6;
+                fin = l.equipe == 1 ? Reglages.actuel.nuit_fin : 18;
+            }
+            r.add(debut == fin ? Messages.corps(this, "dit_toute_journee")
+                    : l.equipe == 1 ? Messages.corps(this, "dit_nuit", debut, fin)
+                    : l.equipe == 0 ? Messages.corps(this, "dit_jour", debut, fin)
+                    : Messages.corps(this, "dit_horaires", debut, fin));
         }
         if (l.jours > 0) {
             joursExpedition = Math.clamp(l.jours, 1, 30);
@@ -2111,7 +2167,8 @@ public class Travailleur extends PathfinderMob {
         if (!besoin.isEmpty()) return besoin;
         if (faim <= 8) return "J'ai trop faim pour travailler.";
         if (memoire.getBoolean("epuise")) return "Je suis épuisé : je me repose avant de reprendre.";
-        if (!enService()) return "Ma journée est finie : je travaille de " + debut + " h à " + fin + " h.";
+        if (!enService()) return deNuit() ? "Je travaille de nuit, de " + debut + " h à " + fin + " h : le jour, je dors."
+                : "Ma journée est finie : je travaille de " + debut + " h à " + fin + " h.";
         if (missions.isEmpty()) return metier.equals("bucheron") ? "Sans mission, je coupe n'importe quel bois." : Messages.corps(this, "sans_mission");
         Mission m = missionActive();
         if (m == null) {

@@ -434,6 +434,12 @@ final class Messages {
         m("dit_regle", null, "Entendu : {0}, {1}.", "Bien noté : {0}, {1}.", "C'est compris : {0}, {1}.");
         m("dit_oublie_regles", null, "Entendu, j'oublie tes consignes.", "Bien, je ne tiens plus compte de ce que tu m'avais demandé.");
         m("dit_horaires", null, "Entendu : je travaillerai de {0} h à {1} h.", "D'accord, de {0} h à {1} h.");
+        // Le travail de nuit (lot 13) : {0} début, {1} fin.
+        m("dit_nuit", null, "Entendu : je ferai les nuits, de {0} h à {1} h. Le jour, je dormirai.",
+                "Bien, chef : je travaillerai de nuit, de {0} h à {1} h.", "Les nuits, donc. De {0} h à {1} h, j'y serai.",
+                "D'accord : de {0} h à {1} h, de nuit. Il me faudra dormir le jour.");
+        m("dit_jour", null, "Entendu : je reprends le jour, de {0} h à {1} h.", "Enfin le jour ! De {0} h à {1} h, chef.",
+                "Bien : plus de nuits. Je travaillerai de {0} h à {1} h.", "Merci, chef. De {0} h à {1} h, au grand jour.");
         m("dit_toute_journee", null, "Entendu : je travaillerai toute la journée.", "D'accord, sans arrêt.");
         m("dit_jours", null, "Entendu : mes expéditions dureront {0} jours au plus.", "D'accord : {0} jours d'expédition au plus.");
         m("dit_aide", null, "Tu peux me dire : « suis-moi », « arrête de me suivre », « attends ici », « au travail », « rentre au poste », « montre ton sac », « ramène 10 fers et 1 diamant », « garde 32 charbons en stock », « travaille de 8 h à 20 h », « comment ça va ? », « où en es-tu ? », « pourquoi tu ne travailles pas ? ». Et des centaines d'autres choses : « garde à vous », « assieds-toi », « danse », « fais le cochon », « mets-toi derrière moi », « donne-moi ton pain », « raconte une blague », « où est le poste ? », « repos »… (la liste est dans l'onglet Actions du panneau).");

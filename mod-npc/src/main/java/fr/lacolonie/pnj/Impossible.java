@@ -63,7 +63,7 @@ final class Impossible {
             Ordres.Intention.SALUT, Ordres.Intention.MERCI);
 
     static boolean faisable(Ordres.Lecture l) {
-        if (l.intentions.stream().anyMatch(i -> !PAROLES.contains(i)) || !l.missions.isEmpty() || l.debut >= 0 || l.fin >= 0 || l.jours >= 0 || !l.horsMetier.isEmpty() || !l.regles.isEmpty() || l.annulerRegles) return true;
+        if (l.intentions.stream().anyMatch(i -> !PAROLES.contains(i)) || !l.missions.isEmpty() || l.debut >= 0 || l.fin >= 0 || l.equipe >= 0 || l.jours >= 0 || !l.horsMetier.isEmpty() || !l.regles.isEmpty() || l.annulerRegles) return true;
         for (Ordres.Faire f : l.faire) {
             Repertoire.Entree e = Repertoire.PAR_ID.get(f.id());
             if (e == null || !e.comportement().equals("info")) return true;

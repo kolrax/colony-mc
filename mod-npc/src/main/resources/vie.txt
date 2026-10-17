@@ -845,3 +845,28 @@ calme: Pas de coffre ici. J'attends qu'on m'en montre un autre.
 peureux: Le coffre a disparu… Quelqu'un l'a volé ? Avec tout ce qu'il y avait dedans ?
 fourbe: Un coffre qui disparaît… Je n'y suis pour rien, je le précise.
 colerique: Qui a pris le coffre ? Qu'il le remette, et vite !
+
+# Travail de nuit (lot 13, cahier 5.10). nuit_plainte : la cause NUIT de son moral (bilan, lettre « les nuits me tuent ») ;
+# nuit_sans_ouvrage : mis de nuit dans un métier de jour (le chasseur), il n'a rien à faire dans le noir et attend au poste.
+[nuit_plainte]
+Les nuits me tuent, {chef}. Je ne sais plus quand je dors.
+Toujours la nuit… Je ne vois plus le soleil qu'en me couchant.
+Je dors le jour, je veille la nuit. Mon corps n'y comprend plus rien.
+Encore une nuit à l'ouvrage. J'ai les yeux qui brûlent.
+Le sommeil du jour ne repose pas. On dort mal, avec ce soleil.
+Une nuit, ça passe. Mais toutes les nuits, c'est trop.
+calme: Les nuits pèsent. Je tiens, mais il faudra me rendre le jour.
+peureux: Seul dans le noir, nuit après nuit… Chaque bruit me glace.
+fourbe: Les nuits, personne ne voit ce qu'on fait. Mais personne ne voit ce qu'on endure non plus.
+colerique: Encore la nuit ! Qu'on me rende mes jours, bon sang !
+
+[nuit_sans_ouvrage]
+Dans ce noir, je ne vois rien à faire. J'attends au poste.
+De nuit, mon ouvrage ne se fait pas. Je reste au poste, {chef}.
+Le gibier dort, et je n'y vois goutte. Je patiente ici.
+Je ne peux rien faire de bon à cette heure. Je garde le poste.
+La nuit ne vaut rien pour mon métier. J'attends le jour ici.
+calme: Rien à faire de nuit. Je reste là, sans bouger.
+peureux: Partir dans le noir ? Non, je reste au poste.
+fourbe: Payé à attendre au poste toute la nuit… Je ne m'en plaindrai pas.
+colerique: Me mettre de nuit pour rester planté là ! À quoi bon ?

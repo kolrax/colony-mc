@@ -41,6 +41,8 @@ final class Ordres {
         boolean ajouter;
         /** Horaires demandés (-1 : rien dit). Même heure de début et de fin : toute la journée. */
         int debut = -1, fin = -1;
+        /** Travail de nuit ({@link Nuit}) : 1 « travaille de nuit », 0 « travaille de jour », -1 rien dit. Les heures sont alors celles des réglages. */
+        int equipe = -1;
         /** Durée maximale des expéditions demandée, en jours (-1 : rien dit). */
         int jours = -1;
         /** Ce qu'on lui demande et qui n'est pas de son métier (« du bois » à un mineur), par métier. */
@@ -70,7 +72,7 @@ final class Ordres {
         /** La boutique ({@link Boutique}) : l'ouvrir, la fermer, des prix, ce qu'il ne vend pas ; null si rien n'est dit. */
         Boutique.Lu boutique;
 
-        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
+        boolean vide() { return intentions.isEmpty() && missions.isEmpty() && debut < 0 && fin < 0 && equipe < 0 && jours < 0 && horsMetier.isEmpty() && faire.isEmpty()
                 && regles.isEmpty() && !annulerRegles && mortel == null && posture == null && epargner.isEmpty()
                 && depot == null && permis.isEmpty() && retires.isEmpty() && guerre == null && boutique == null; }
     }
@@ -204,6 +206,16 @@ final class Ordres {
         return false;
     }
 
+    /** Les mots du travail de nuit, et du retour au jour (lot 13, {@link Nuit}). */
+    static final String[] NUIT = {"travaille de nuit", "travailles de nuit", "travaillez de nuit", "travailles la nuit", "travailler de nuit", "travailleras de nuit", "travaillerez de nuit",
+            "bosse de nuit", "bossez de nuit", "feras les nuits", "ferez les nuits", "fais les nuits", "faites les nuits", "fera les nuits",
+            "equipe de nuit", "poste de nuit", "service de nuit", "ouvrier de nuit", "travailleur de nuit",
+            "travaille la nuit", "travaillez la nuit", "travailler la nuit", "travailleras la nuit"};
+    static final String[] JOUR = {"travaille de jour", "travaillez de jour", "travailler de jour", "travailleras de jour", "reprends le jour",
+            "reprenez le jour", "equipe de jour", "poste de jour", "service de jour", "plus de nuit", "plus de nuits", "fini les nuits",
+            "finies les nuits", "assez de nuits", "arrete les nuits", "arretez les nuits", "arrete de travailler de nuit", "arrete de travailler la nuit",
+            "ne travaille plus de nuit", "ne travaille plus la nuit", "ne travailles plus la nuit", "ne travaillez plus de nuit", "travaille le jour", "travaillez le jour"};
+
     static final Pattern HORAIRES = Pattern.compile(" (?:de |entre |des |a partir de )?(\\d{1,2}) ?h(?:eures?)?(?: ?\\d{1,2})? (?:a|jusqu a|et|au|-) (\\d{1,2}) ?h");
     static final Pattern COMMENCE = Pattern.compile(" (?:commence|commences|commencez|commencer|debute|debutes|debuter|embauche|leve toi|reveille toi) (?:a |vers |des )?(\\d{1,2}) ?h");
     static final Pattern FINIS = Pattern.compile(" (?:finis|finit|finissez|finir|termine|termines|terminer|arrete|arretes|arreter|debauche|stoppe|quitte) (?:le travail |de travailler |ta journee )?(?:a |vers )?(\\d{1,2}) ?h");
@@ -239,8 +251,14 @@ final class Ordres {
         GardeDepot.Lu depot = GardeDepot.lire(texte);
         if (!depot.rien()) { l.depot = depot.posture; l.permis.addAll(depot.permis); l.retires.addAll(depot.retires); texte = depot.reste; }
         // Les ordres longs d'abord : la conséquence d'une règle (« s'il pleut, rentre ») ne se fait pas tout de suite.
+        // Le travail de nuit (lot 13), lu avant : « reprends le jour » n'est pas la règle « le jour, reprends ». Jamais « bonne nuit »,
+        // « la nuit tombe » ni « la nuit, rentre » ; le jour d'abord (« arrête de travailler de nuit » contient « travailler de nuit ») ;
+        // « tu travailles de nuit ? » est une question. Des heures dites (« de 22 h à 4 h ») restent les siennes (plus bas).
+        String n0 = normaliser(texte);
+        if (!n0.contains("?")) l.equipe = dit(n0, JOUR) ? 0 : dit(n0, NUIT) ? 1 : -1;
         OrdresLongs.Lu lu = OrdresLongs.lire(texte);
         for (OrdresLongs.Regle r : lu.regles) {
+            if (l.equipe >= 0 && OrdresLongs.heure(r.quand)) continue; // « travaille la nuit » : ses heures, pas une règle
             if (r.voit() && r.previens()) { l.regles.add(r); continue; }
             Lecture x = lire(r.suite, metier);
             String verbe = OrdresLongs.metierDuVerbe(r.suite);
