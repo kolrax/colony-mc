@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Les règles de la boîte aux lettres du poste (lot 2 « messages »), sans le jeu. */
+/** Les règles du journal du poste (1.0.0, à la place des lettres), sans le jeu. */
 class BoiteTest {
     static final UUID ALIENOR = UUID.randomUUID(), BERTRAND = UUID.randomUUID();
     static long ids = 1;
@@ -28,40 +28,52 @@ class BoiteTest {
     @Test
     void laRoutineDuMemeOuvrierSeRegroupe() {
         List<Courrier.Lettre> b = new ArrayList<>();
-        assertTrue(Boite.ranger(b, l(ALIENOR, "faim", false), 200));
+        assertTrue(Boite.ranger(b, l(ALIENOR, "faim", false), 100));
         Courrier.Lettre derniere = null;
-        for (int i = 0; i < 4; i++) assertFalse(Boite.ranger(b, derniere = l(ALIENOR, "faim", false), 200), "fondue, pas nouvelle");
+        for (int i = 0; i < 4; i++) assertFalse(Boite.ranger(b, derniere = l(ALIENOR, "faim", false), 100), "fondue, pas nouvelle");
         String texteDerniere = derniere.texte;
-        assertTrue(Boite.ranger(b, l(BERTRAND, "faim", false), 200), "un autre ouvrier : une autre lettre");
-        assertTrue(Boite.ranger(b, l(ALIENOR, "torches", false), 200), "une autre situation : une autre lettre");
+        assertTrue(Boite.ranger(b, l(BERTRAND, "faim", false), 100), "un autre ouvrier : une autre ligne");
+        assertTrue(Boite.ranger(b, l(ALIENOR, "torches", false), 100), "une autre situation : une autre ligne");
         assertEquals(3, b.size());
         Courrier.Lettre faim = b.stream().filter(x -> x.deUuid == ALIENOR && x.type.equals("faim")).findFirst().orElseThrow();
         assertEquals(5, faim.nombre);
-        assertEquals("faim ×5", Boite.objet(faim));
-        assertEquals(texteDerniere, faim.texte, "le texte de la 5e lettre");
+        assertEquals("Aliénor : faim ×5", Boite.ligne(faim));
+        assertEquals(texteDerniere, faim.texte, "le texte de la 5e");
     }
 
     @Test
-    void laPurgeGardeLesImportantesNonLuesEnDernier() {
+    void uneVieilleLigneNeSeRegroupePlus() {
+        List<Courrier.Lettre> b = new ArrayList<>();
+        Boite.ranger(b, l(ALIENOR, "faim", false), 100);
+        for (int i = 0; i < Boite.RECENTES; i++) Boite.ranger(b, l(BERTRAND, "", false), 100);
+        assertTrue(Boite.ranger(b, l(ALIENOR, "faim", false), 100), "loin dans le journal : une nouvelle ligne, en tête");
+        assertEquals(ALIENOR, b.get(0).deUuid);
+    }
+
+    @Test
+    void centLignesAuPlusEtLesImportantesPartentEnDernier() {
         List<Courrier.Lettre> b = new ArrayList<>();
         Courrier.Lettre importante = l(ALIENOR, "", true);
-        Boite.ranger(b, importante, 200);
-        for (int i = 0; i < 205; i++) Boite.ranger(b, l(BERTRAND, "", false), 200);
-        assertEquals(200, b.size());
-        assertTrue(b.contains(importante), "la vieille importante non lue survit : la routine non lue part avant elle");
+        Boite.ranger(b, importante, 100);
+        for (int i = 0; i < 150; i++) Boite.ranger(b, l(BERTRAND, "", false), 100);
+        assertEquals(100, b.size());
+        assertTrue(b.contains(importante), "la vieille importante reste : la routine part avant elle");
+        for (int i = 0; i < 150; i++) Boite.ranger(b, l(BERTRAND, "", true), 100);
+        assertEquals(100, b.size());
+        assertFalse(b.contains(importante), "que des importantes : la plus vieille part");
     }
 
     @Test
-    void plusieursAuteursSansRepondreEtAuteurCourt() {
+    void plusieursAuteursEtAuteurCourt() {
         List<Courrier.Lettre> b = new ArrayList<>();
-        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
-        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
-        assertEquals(ALIENOR, b.get(0).deUuid, "un seul auteur : on peut lui répondre");
+        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 100);
+        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 100);
         assertEquals("Aliénor", b.get(0).de);
-        Boite.ranger(b, l(BERTRAND, "depot_plein", false), 200);
-        assertNull(b.get(0).deUuid, "deux auteurs : plus de « Répondre »");
+        Boite.ranger(b, l(BERTRAND, "depot_plein", false), 100);
+        assertNull(b.get(0).deUuid);
         assertEquals("Aliénor et Bertrand", b.get(0).de);
-        assertTrue(b.get(0).texte.startsWith("Ont écrit : Aliénor, Bertrand."), b.get(0).texte);
+        assertTrue(b.get(0).texte.startsWith("Ont dit : Aliénor, Bertrand."), b.get(0).texte);
+        assertEquals(1, b.size());
     }
 
     @Test
@@ -70,102 +82,37 @@ class BoiteTest {
         for (int i = 0; i < 60; i++) {
             Courrier.Lettre x = l(UUID.randomUUID(), "depot_plein", false);
             x.de = "Ouvrier" + i;
-            Boite.ranger(b, x, 200);
+            Boite.ranger(b, x, 100);
         }
         assertEquals(1, b.size());
         Courrier.Lettre x = b.get(0);
         assertEquals(60, x.nombre);
         assertTrue(x.auteurs.length() <= Boite.AUTEURS_MAX + 3 && x.auteurs.endsWith("…"), "bornée : " + x.auteurs.length());
         assertEquals("Ouvrier0 et bien d'autres", x.de);
-        assertEquals("Ouvrier0", Boite.court("Ouvrier0"));
         assertEquals("A et 9 autres", Boite.court("A, B, C, D, E, F, G, H, I, J"));
     }
 
     @Test
-    void toujoursEnGreveResteParOuvrier() {
+    void lImportantNeSeRegroupeJamaisEtLAvisDuPosteEstSansAuteur() {
         List<Courrier.Lettre> b = new ArrayList<>();
-        Boite.ranger(b, l(ALIENOR, "toujours_greve", false), 200);
-        Boite.ranger(b, l(BERTRAND, "toujours_greve", false), 200);
-        Boite.ranger(b, l(ALIENOR, "toujours_greve", false), 200);
-        assertEquals(2, b.size(), "chacun a sa somme due : une lettre par ouvrier");
+        assertTrue(Boite.ranger(b, l(ALIENOR, "a_terre", true), 100));
+        assertTrue(Boite.ranger(b, l(ALIENOR, "a_terre", true), 100));
+        assertEquals(2, b.size());
+        Courrier.Lettre avis = l(null, "deces", true);
+        avis.objet = "Avis de décès : Raoul";
+        assertEquals("Avis de décès : Raoul", Boite.ligne(avis));
     }
 
     @Test
-    void toutLuLaisseLesImportantes() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        Courrier.Lettre imp = l(ALIENOR, "", true), routine = l(BERTRAND, "", false);
-        Boite.ranger(b, imp, 200);
-        Boite.ranger(b, routine, 200);
-        assertTrue(Boite.toutLu(b));
-        assertTrue(routine.lue);
-        assertFalse(imp.lue, "une importante se lit en l'ouvrant");
-    }
-
-    @Test
-    void leDepotPleinSeRegroupeTousOuvriersConfondus() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        Boite.ranger(b, l(ALIENOR, "depot_plein", false), 200);
-        Boite.ranger(b, l(BERTRAND, "depot_plein", false), 200);
-        Boite.ranger(b, l(ALIENOR, "greve", true), 200);
-        Boite.ranger(b, l(BERTRAND, "greve", true), 200);
-        Boite.ranger(b, l(ALIENOR, "poste_detruit", true), 200);
-        Boite.ranger(b, l(BERTRAND, "poste_detruit", true), 200);
-        assertEquals(1, b.stream().filter(x -> x.type.equals("depot_plein")).count());
-        Courrier.Lettre depot = b.stream().filter(x -> x.type.equals("depot_plein")).findFirst().orElseThrow();
-        assertTrue(depot.nombre == 2 && depot.de.contains("Aliénor") && depot.de.contains("Bertrand"), "cite les deux : " + depot.de);
-        assertEquals(2, b.stream().filter(x -> x.type.equals("greve")).count(), "la grève reste par ouvrier");
-        List<Courrier.Lettre> poste = b.stream().filter(x -> x.type.equals("poste_detruit")).toList();
-        assertTrue(poste.size() == 1 && poste.get(0).importante && poste.get(0).nombre == 2, "poste détruit : une seule lettre, importante");
-    }
-
-    @Test
-    void lImportantEtLesReponsesNeSeRegroupentJamais() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        for (int i = 0; i < 3; i++) assertTrue(Boite.ranger(b, l(ALIENOR, "a_terre", true), 200));
-        for (int i = 0; i < 2; i++) assertTrue(Boite.ranger(b, l(ALIENOR, "", false), 200));
-        assertEquals(5, b.size());
-        assertTrue(b.stream().allMatch(x -> x.nombre == 1));
-    }
-
-    @Test
-    void lesAvisRegroupesGardentChaqueTexte() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        Courrier.Lettre a = l(null, "ramene", false), c = l(null, "ramene", false);
-        String attendu = c.texte + "\n\n" + a.texte;
-        Boite.ranger(b, a, 200);
-        Boite.ranger(b, c, 200);
-        assertEquals(1, b.size());
-        assertEquals(attendu, b.get(0).texte);
-        assertEquals(2, b.get(0).nombre);
-    }
-
-    @Test
-    void laPurgeEnleveDAbordLesVieillesLues() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        Courrier.Lettre nonLue = l(ALIENOR, "", false), archivee = l(ALIENOR, "", false);
-        Boite.ranger(b, nonLue, 3);
-        Boite.ranger(b, archivee, 3);
-        archivee.archivee = archivee.lue = true;
-        Courrier.Lettre lue = l(ALIENOR, "", false);
-        Boite.ranger(b, lue, 3);
-        lue.lue = true;
-        Boite.ranger(b, l(ALIENOR, "", false), 3);
-        assertEquals(3, b.size());
-        assertFalse(b.contains(lue), "la lue part d'abord");
-        Boite.ranger(b, l(ALIENOR, "", false), 3);
-        assertTrue(b.contains(nonLue) && !b.contains(archivee), "puis l'archivée, jamais la non lue tant qu'autre chose peut partir");
-    }
-
-    @Test
-    void ordreDeLEcran() {
-        List<Courrier.Lettre> b = new ArrayList<>();
-        Courrier.Lettre lue = l(ALIENOR, "", false), imp = l(ALIENOR, "", true), nonLue = l(BERTRAND, "", false), archivee = l(BERTRAND, "", false);
-        for (Courrier.Lettre x : List.of(lue, imp, nonLue, archivee)) Boite.ranger(b, x, 200);
-        lue.lue = true;
-        archivee.archivee = true;
-        assertEquals(List.of(imp, nonLue, lue), Boite.affichees(b, false));
-        assertEquals(List.of(archivee), Boite.affichees(b, true));
-        assertTrue(Boite.effacerLues(b));
-        assertEquals(List.of(archivee, nonLue, imp), b);
+    void deplacerUneMission() {
+        List<String> l = new ArrayList<>(List.of("fer", "charbon", "bois"));
+        assertTrue(Boite.deplacer(l, 1, -1));
+        assertEquals(List.of("charbon", "fer", "bois"), l);
+        assertTrue(Boite.deplacer(l, 1, 1));
+        assertEquals(List.of("charbon", "bois", "fer"), l);
+        assertFalse(Boite.deplacer(l, 0, -1), "déjà en tête");
+        assertFalse(Boite.deplacer(l, 2, 1), "déjà en bas");
+        assertFalse(Boite.deplacer(l, 5, -1), "n'existe pas");
+        assertEquals(List.of("charbon", "bois", "fer"), l);
     }
 }
