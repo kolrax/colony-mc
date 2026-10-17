@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -40,10 +41,10 @@ public class TestsPoste {
         return e;
     }
 
-    /** Un ouvrier de ce chef, rattaché à ce poste. */
+    /** Un ouvrier de ce chef, rattaché à ce poste, immobile (son cerveau ne touche pas à sa file pendant le test). */
     static Travailleur ouvrier(GameTestHelper h, ServerPlayer chef, String metier) {
-        Travailleur t = TestsJeu.ouvrier(h, metier, 2, 2, 2, ItemStack.EMPTY, BUREAU);
-        t.chef = chef.getUUID();
+        Travailleur t = Travailleur.auTravail(h.getLevel(), metier, h.absolutePos(BUREAU), h.absoluteVec(new Vec3(2.5, 2, 2.5)), chef.getUUID(), ItemStack.EMPTY);
+        t.setNoAi(true);
         return t;
     }
 
