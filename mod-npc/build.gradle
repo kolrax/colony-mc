@@ -78,6 +78,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Le joueur fantôme (tools/fantome.py) : un serveur sur un monde généré normal, dans son propre dossier.
+        fantome {
+            server()
+            gameDirectory = project.file('run-fantome')
+            programArgument '--nogui'
+        }
+
         // This run config launches GameTestServer and runs all registered gametests, then exits.
         // By default, the server will crash when no gametests are provided.
         // The gametest system is also enabled by default for other run configs under the /test command.

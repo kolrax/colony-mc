@@ -1,0 +1,31 @@
+# Variante pour le code d'avant les missions (0.9) : le bouton « mission » n'y existe pas encore, alors les ouvriers
+# sont mis au travail à la main (data merge), seulement pour vérifier le relevé des blocs cassés. À retirer une fois
+# les missions livrées.
+# Copie du scénario obligatoire (refonte, partie 7) : un poste au bord d'un village, trois ouvriers (mineur, bûcheron,
+# fermier) avec leurs missions, deux jours de jeu. Attendu : aucun bloc construit cassé, aucun arbre du village
+# coupé, une production non nulle, des statuts lisibles.
+# La monnaie du monde d'essai (écrite par tools/fantome.py) : cuivre 1, or 8, émeraude 64.
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche mineur 2
+fantome embauche bucheron 2
+fantome embauche fermier 2
+# Leurs outils, des graines et du pain au dépôt (par l'écran du dépôt), le reste de l'or à la caisse.
+fantome donne minecraft:iron_pickaxe 2
+fantome donne minecraft:iron_axe 2
+fantome donne minecraft:iron_hoe 1
+fantome donne minecraft:wheat_seeds 16
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+# Les missions, choisies comme à l'écran du poste.
+fantome mission mineur miner quantite 64
+fantome mission bucheron couper quantite 32
+fantome mission fermier cultiver toujours
+fantome clic mineur
+execute as @e[type=colonie_pnj:travailleur] run data merge entity @s {Mode:"TRAVAIL"}
+fantome rapport au-travail-debut
+attendre 5
+jours 2
