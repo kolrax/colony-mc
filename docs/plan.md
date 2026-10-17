@@ -114,3 +114,4 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [ ] Feuille de tests v2 dans le panneau (essais `V01`…) ; tests instables rendus stables ; charge mesurée à 50 ouvriers
 - [x] Livraison 1.0.0 : nouveau monde d'essai `essai-v2` (le monde `colonie` reste sur le disque), modpack obligatoire, annonce (livrée le 17/10 à 20 h 28 UTC)
 - [x] Après la livraison 1.0.0 : `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste (à vérifier)
+- [x] Livraison 1.0.1 (serveur seul) : mineur qui ne se bloque plus avec ses torches, « Travaille ici » qui le débloque, objets des joueurs respectés près de la mine, fermier « Plus de graines au dépôt » (livrée le 17/10 à 22 h 50 UTC)
