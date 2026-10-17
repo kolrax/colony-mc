@@ -254,6 +254,7 @@ public final class Bureau {
             for (Direction d : Direction.values()) {
                 BlockPos v = worldPosition.relative(d);
                 if (level.getBlockEntity(v) instanceof Entite) continue; // pas le dépôt d'un autre bureau
+                if (Machines.machine(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(v).getBlock()).toString())) continue; // une machine (four, trémie, Create) n'est jamais le dépôt
                 IItemHandler h = level.getCapability(Capabilities.ItemHandler.BLOCK, v, d.getOpposite());
                 if (h != null) l.add(h);
             }

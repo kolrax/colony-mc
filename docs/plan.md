@@ -79,7 +79,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Dépôt : les PNJ peuvent y ranger sans limite, mais pas le joueur
 
 ## 12. Create (indispensable)
-- [ ] Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ; ils sont la main-d'œuvre de l'industrie
+- [x] Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ; ils sont la main-d'œuvre de l'industrie (0.9.36, 1re passe : par le transporteur ; pas encore essayé avec le vrai Create)
 
 ## 13. Familles, recrutement, progression
 - [ ] Recrutement : PNJ plus rares, avec des compétences propres ; arrivées depuis les villages, débauche d'un autre joueur, réputation, affiche ou crieur

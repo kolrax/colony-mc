@@ -385,8 +385,10 @@ final class Repertoire {
      */
     static List<Trouve> lire(String texte, String metier) {
         List<Trouve> r = new ArrayList<>();
+        boolean porter = Machines.ordreDePorter(Ordres.normaliser(texte));
         for (Trouve t : chercher(texte)) {
             if (!t.sur() || !(metier.isEmpty() || t.e.pour(metier))) continue;
+            if (t.e.drapeau("discret") && !porter) continue; // « mets-toi dans la machine », « fais du pain dans le four »
             // Une seconde action seulement si elle est dite ailleurs dans la phrase (« salue et danse »), pas une variante de la première.
             if (!r.isEmpty() && (r.size() >= 2 || t.score < 100 || r.get(0).score < 100 || Math.abs(t.debut - r.get(0).debut) < 2)) continue;
             r.add(t);
@@ -403,7 +405,8 @@ final class Repertoire {
     /** Les métiers que concerne la phrase : une action du répertoire propre à certains métiers (« abats cet arbre » : le bûcheron). */
     static Set<String> metiersConcernes(String texte) {
         Set<String> r = new LinkedHashSet<>();
-        for (Trouve t : chercher(texte)) if (t.sur() && !t.fin && !t.e.metiers.isEmpty()) { r.addAll(t.e.metiers); break; }
+        // Une action « discret » (porter à une machine : « dans le four ») ne choisit pas à qui l'on parle : le cuisinier garde « mets la viande dans le four ».
+        for (Trouve t : chercher(texte)) if (t.sur() && !t.fin && !t.e.metiers.isEmpty() && !t.e.drapeau("discret")) { r.addAll(t.e.metiers); break; }
         return r;
     }
 

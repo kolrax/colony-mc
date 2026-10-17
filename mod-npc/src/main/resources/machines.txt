@@ -1,0 +1,137 @@
+# Machines de Create : l'ouvrier remplit ou vide une machine, et en parle. Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt et defense.txt (lu par Vie.lire, au chargement de Vie).
+# Les lignes vides et les lignes qui commencent par # sont ignorées.
+#
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+#
+# - « [cle] » ouvre une section. Clé en minuscules, sans accent ni espace (lettres, chiffres et « _ »),
+#   unique dans ce fichier ET différente des clés de vie.txt, remarques.txt, relations.txt et defense.txt.
+# - Une réplique par ligne, courte (bulle en jeu, 90 caractères au plus). Préfixe facultatif « temperament: »
+#   (calme:, peureux:, fourbe:, colerique: ; aucun autre). Chaque section a six répliques communes et une
+#   par tempérament.
+# - Tirage proposé (comme vie.txt) : une fois sur deux une réplique du tempérament du PNJ, sinon une commune.
+#
+# VARIABLES (seulement celles-ci)
+#   {chef}     nom du chef de la colonie (partout)
+#   {objet}    ce qu'on met dans la machine, dit comme on le dit (« du blé », « des pierres ») :
+#              machine_remplir_ok et machine_charge seulement
+#   {machine}  la machine, avec son article défini (« le moulin », « le broyeur », « le bassin »,
+#              « le tapis », « le présentoir ») : machine_remplir_ok, machine_vider_ok, machine_vide_rien,
+#              machine_pleine, machine_introuvable
+#              Jamais précédée de « à » ni de « de » (pas de contraction « au », « du ») ; jamais en début
+#              de phrase (la majuscule manquerait).
+# Les répliques avec {objet} ne sortent que si la valeur est connue ; chaque section garde au moins quatre
+# répliques sans {objet}.
+#
+# ACCORDS : comme vie.txt, aucun accord de genre sur celui qui parle ni sur le chef. Aucun accord sur la
+# machine non plus (pas de « il est plein » ni « elle est pleine ») : on répète {machine} ou on dit « ça ».
+#
+# CLÉS
+#   machine_remplir_ok           il accepte de remplir une machine avec {objet}
+#   machine_vider_ok             il accepte de ramener au dépôt ce qui sort de la machine
+#   machine_charge               il met la charge dans la machine (bulle courte)
+#   machine_vide_rien            la machine n'a rien produit
+#   machine_pleine               la machine est pleine, il attend
+#   machine_pas_capable          le bloc montré n'accepte rien : il demande le présentoir ou le tapis dessous
+#   machine_peur                 remarque spontanée devant une machine qui tourne
+#   machine_introuvable          la machine a disparu (bulle)
+# Les lettres au chef sur les machines (pleine, disparue…) sont dans Messages.java (machine_pleine, machine_introuvable…).
+
+[machine_remplir_ok]
+Entendu. Je mets {objet} dans {machine}.
+D'accord, je vais nourrir {machine} avec {objet}.
+Je m'en occupe. Ça ne se remplit pas tout seul, ces machines.
+Bien, chef. Je remplis {machine} et je surveille.
+Compris. Je prends {objet} et je charge {machine}.
+J'y vais. Je garde les doigts loin des roues.
+calme: Je remplis {machine}. Sans me presser, ça tourne de toute façon.
+peureux: D'accord… Mais je pose {objet} et je recule aussitôt.
+fourbe: Je remplis {machine}. Et je compte ce qui entre, on ne sait jamais.
+colerique: C'est bon, j'y vais ! Elle a toujours faim, cette ferraille.
+
+[machine_vider_ok]
+D'accord. Je vide {machine} et je ramène tout au dépôt.
+Compris. Ce qui sort, je le range au dépôt.
+Je m'en charge. Rien ne restera dans {machine}.
+Bien. Je fais l'aller-retour entre {machine} et le dépôt.
+Entendu. Je récupère ce que {machine} a fait.
+J'y vais. Voyons ce que ça a donné.
+calme: Je vide {machine}. Chaque chose à sa place, au dépôt.
+peureux: Je vais vider {machine}… Pourvu que ça ne reparte pas pendant ce temps.
+fourbe: Je ramène tout au dépôt. Tout. Promis.
+colerique: Encore à moi de vider ? Bon. Mais vite fait.
+
+[machine_charge]
+Et voilà {objet}.
+Je charge.
+Tiens, mange.
+Ça entre bien.
+Encore un peu…
+C'est chargé.
+calme: Doucement. Voilà.
+peureux: Vite, je pose et je recule.
+fourbe: Un pour toi, un pour… non, tout pour toi.
+colerique: Avale ça, et tourne !
+
+[machine_vide_rien]
+Rien. Pas une miette dans {machine}.
+J'ai regardé : {machine} est vide.
+Pas un grain. Ça a tourné pour rien.
+Rien à ramener pour l'instant.
+Il n'y a rien à prendre. Il faudra repasser.
+Ça tourne, ça tourne, mais {machine} ne donne rien.
+calme: Rien encore. Je repasserai plus tard.
+peureux: Rien du tout… C'est normal, ça ?
+fourbe: Rien. Quelqu'un est passé avant moi, peut-être.
+colerique: Tout ce chemin pour rien ! Cette ferraille se moque de moi.
+
+[machine_pleine]
+Ça déborde. J'attends que {machine} avale tout ça.
+Plus de place dans {machine}. Je patiente.
+Ça ne rentre plus. J'attends un peu.
+Je garde le reste sur moi, le temps que ça passe.
+Il y a trop à faire dans {machine}. Je reste là.
+Pas plus pour l'instant. Laissons-lui le temps.
+calme: Chacun son rythme, même pour une machine. J'attends.
+peureux: J'attends ici… Pas trop près.
+fourbe: Plus de place. Bien. Une pause qui ne me coûte rien.
+colerique: Ça déborde ! Et moi, je reste là à attendre !
+
+[machine_pas_capable]
+Ça, on ne peut rien mettre dedans. Montre-moi plutôt le présentoir ou le tapis dessous.
+Je ne sais pas où poser quoi là-dessus. Il y a un présentoir, ou un tapis, en dessous ?
+Cette pièce-là ne prend rien. C'est ce qui est dessous qu'il me faut montrer.
+Je ne peux rien charger là. Montre-moi l'endroit où l'on pose les choses.
+Ça tourne ou ça frappe, mais ça ne se remplit pas. Le présentoir, plutôt ?
+Pardon, {chef}, là je ne vois pas d'entrée. Montre-moi le tapis ou le présentoir.
+calme: Ce n'est pas là qu'on charge. Montre-moi ce qui est en dessous, s'il te plaît.
+peureux: Je ne mets pas les mains là-dedans ! Le présentoir dessous, peut-être ?
+fourbe: Je veux bien, mais ça n'a pas de bouche. Le tapis dessous, plutôt.
+colerique: On ne remplit pas ça ! Montre-moi le présentoir, qu'on avance.
+
+[machine_peur]
+Quel vacarme. On ne s'entend plus penser.
+Ces roues tournent toutes seules. Je n'arrive pas à m'y faire.
+Ça grince, ça cogne… et pourtant ça travaille mieux que nous.
+Mon grand-père appelait ça de la sorcellerie. Il n'avait pas tout à fait tort.
+Toute une journée de meule en un rien de temps. C'est beau, quand même.
+Je me demande où va toute cette force.
+calme: Il y a quelque chose d'apaisant dans ce tic-tac de roues.
+peureux: Je ne passe jamais trop près. Une manche prise, et adieu.
+fourbe: Si ça travaille à notre place, on pourra se reposer. En théorie.
+colerique: Elle grince encore ! Qui va la graisser, cette maudite roue ?
+
+[machine_introuvable]
+Je ne vois plus {machine}. C'était pourtant là.
+Je cherche {machine}. Quelqu'un a tout démonté ?
+J'arrive, et plus de machine. Ça commence bien.
+{chef}, je ne trouve plus {machine}.
+Une machine pareille ne s'envole pas. Pourtant, plus rien.
+J'attends qu'on me dise quoi faire.
+calme: Plus de machine ici. J'attends qu'on m'en montre une autre.
+peureux: {machine} a disparu… Pourvu que personne ne se soit blessé.
+fourbe: Je n'y ai pas touché, je le précise.
+colerique: Qui a démonté {machine} ? Qu'on remette tout ça, et vite !

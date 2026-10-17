@@ -262,7 +262,7 @@ final class Consignes {
                     // Le transporteur : le sens (« du dépôt à ce coffre »), et l'objet dit (« le fer »), sinon tout.
                     String objet = a.equals("oublier_trajets") ? null : filtre("", phrase, t);
                     if (objet == null || objet.equals("tout")) objet = "";
-                    Trajets.Sens sens = Trajets.sens(phrase);
+                    Trajets.Sens sens = Trajets.sens(phrase, lieu != null && Transporteur.machineVue(t, lieu)); // une machine se remplit, sauf « vide »
                     String r = a.equals("oublier_trajets") ? null : Transporteur.verifierOrdre(t, a, sens, objet, lieu);
                     if (r != null) return r;
                     texte = (a.equals("trajet") ? sens.name() : "") + "|" + (objet.isEmpty() ? "" : Transporteur.nomDit(phrase)) + "|" + objet;
@@ -616,6 +616,11 @@ final class Consignes {
         mot("#minecraft:saplings", "pousse", "pousses", "jeune arbre", "graine d arbre");
         mot("minecraft:wheat_seeds", "graine", "graines");
         mot("minecraft:wheat", "ble");
+        mot("#c:ores|#c:raw_materials", "minerai", "minerais"); // ce qu'on verse au broyeur (lot 12) ; le métal dit l'emporte (mot plus long)
+        mot("#c:ores/iron|minecraft:raw_iron", "minerai de fer", "minerais de fer");
+        mot("#c:ores/copper|minecraft:raw_copper", "minerai de cuivre", "minerais de cuivre");
+        mot("#c:ores/gold|minecraft:raw_gold", "minerai d or", "minerais d or");
+        mot("#c:ores/zinc|#c:raw_materials/zinc", "minerai de zinc", "minerais de zinc");
         mot("#minecraft:wool", "laine");
         mot("minecraft:leather", "cuir");
         mot("minecraft:bone", "os");

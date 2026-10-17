@@ -3,6 +3,7 @@ package fr.lacolonie.pnj;
 import fr.lacolonie.pnj.Trajets.Trajet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -86,6 +87,56 @@ final class Transporteur extends Metier {
         return (d < 2 ? "juste à côté du poste" : "à " + d + " pas " + Messages.direction(t.bureau, b) + " du poste") + xyz;
     }
 
+    /** Le bloc regardé est une machine (ou une pièce de machine qui mène à une), pas un coffre. */
+    static boolean machineVue(Travailleur t, BlockPos vu) {
+        long p = point(t, vu);
+        return p != Trajets.DEPOT && Machines.machine(id(t.level(), BlockPos.of(p)));
+    }
+
+    /** L'identifiant retenu d'un bout de trajet qui est une machine (« machines », sans lire le monde : elle a pu être cassée), ou "". */
+    static String machineDe(Travailleur t, long p) { return p == Trajets.DEPOT ? "" : t.memoire.getCompound("machines").getString(Long.toString(p)); }
+
+    /** Il retient que ce bout est une machine (pour la nommer dans ses lettres et ses répliques, même cassée). */
+    static void retenirMachine(Travailleur t, long p) {
+        if (p == Trajets.DEPOT || !t.level().isLoaded(BlockPos.of(p))) return;
+        String id = id(t.level(), BlockPos.of(p));
+        if (!Machines.machine(id)) return;
+        CompoundTag c = t.memoire.getCompound("machines");
+        c.putString(Long.toString(p), id);
+        t.memoire.put("machines", c);
+    }
+
+    /**
+     * Une lettre sur un bout de trajet : celle du coffre ({@code coffre_plein}, « le coffre {0} »), ou, pour une machine,
+     * {@code machine_pleine}… qui la nomme (« le moulin », {0}) et dit où ({1}).
+     */
+    static void lettre(Travailleur t, String cle, String type, long p) {
+        String id = machineDe(t, p);
+        if (id.isEmpty()) Cerveau.ecrire(t, cle, Cerveau.UN_JOUR, type, lieu(t, p));
+        else Cerveau.ecrire(t, cle, Cerveau.UN_JOUR, LETTRES_MACHINE.get(type), Machines.nom(id), lieu(t, p));
+    }
+
+    static final java.util.Map<String, String> LETTRES_MACHINE = java.util.Map.of("coffre_plein", "machine_pleine", "coffre_introuvable", "machine_introuvable",
+            "coffre_source_vide", "machine_source_vide", "coffre_inaccessible", "machine_inaccessible", "coffre_interdit", "machine_interdite");
+
+    /** Une réplique sur une machine ({@code {machine}} : « le moulin »), si elle est permise ; sinon la réplique du coffre ({@code coffre}, peut être null). */
+    static void parler(Travailleur t, long p, String cleMachine, String coffre) {
+        String id = machineDe(t, p);
+        if (id.isEmpty()) { if (coffre != null) Besoins.parler(t, coffre, null); return; }
+        if (t.muet() || !Besoins.permis(t, cleMachine)) return;
+        String s = replique(t, cleMachine, id, null);
+        if (s != null) t.dire(s);
+    }
+
+    /** La réplique {@code cle} sur la machine {@code id}, {@code objet} dit s'il est connu ; null si la section manque. */
+    static String replique(Travailleur t, String cle, String id, String objet) {
+        java.util.Map<String, String> v = new java.util.HashMap<>();
+        v.put("chef", t.chefNom.isEmpty() ? "chef" : t.chefNom);
+        v.put("machine", Machines.nom(id));
+        if (objet != null && !objet.isEmpty()) v.put("objet", objet);
+        return Vie.tirer(cle, t.temperament, v, t.getRandom()::nextDouble);
+    }
+
     /**
      * Les poignées d'un bout de trajet (le dépôt : le bureau et ses coffres collés) ; null si le coffre n'est plus là. Un coffre
      * se vide par le dessous et se remplit par le dessus ({@code prendre}) : un four ne rend que ce qu'il a cuit, et reçoit son
@@ -110,6 +161,34 @@ final class Transporteur extends Metier {
                 || l.getCapability(Capabilities.ItemHandler.BLOCK, p, Direction.UP) != null || l.getCapability(Capabilities.ItemHandler.BLOCK, p, Direction.DOWN) != null;
     }
 
+    /** L'identifiant du bloc (« create:millstone »). */
+    static String id(Level l, BlockPos p) { return BuiltInRegistries.BLOCK.getKey(l.getBlockState(p).getBlock()).toString(); }
+
+    /**
+     * Le bloc où poser ou prendre quand le chef montre {@code vu} (lot 12) : lui-même s'il a un inventaire ; pour une pièce de
+     * machine qui n'en a pas, son voisin : sous la presse ou le mélangeur, le présentoir, le bassin ou le tapis (1 ou 2 blocs
+     * plus bas) ; l'entonnoir, le bloc où il est accroché ; une roue de broyage, l'entrée entre les deux roues. Null : rien.
+     * Quelques blocs lus, une seule fois, à l'ordre : pas de recherche.
+     */
+    static BlockPos cible(Level l, BlockPos vu) {
+        if (coffre(l, vu)) return vu;
+        Machines.Machine m = Machines.de(id(l, vu));
+        if (m == null) return null;
+        List<BlockPos> essais = new ArrayList<>();
+        switch (m.relais()) {
+            case DESSOUS -> { essais.add(vu.below()); essais.add(vu.below(2)); }
+            case ACCROCHE -> {
+                BlockState s = l.getBlockState(vu);
+                for (var pr : s.getProperties())
+                    if (pr.getName().equals("facing") && s.getValue(pr) instanceof Direction d) essais.add(vu.relative(d.getOpposite()));
+            }
+            case CONTROLEUR -> { for (Direction d : Direction.Plane.HORIZONTAL) if (id(l, vu.relative(d)).equals(Machines.CONTROLEUR)) essais.add(vu.relative(d)); }
+            default -> {}
+        }
+        for (BlockPos q : essais) if (coffre(l, q)) return q;
+        return null;
+    }
+
     /** Les blocs d'un coffre : ses deux moitiés pour un double coffre, la moitié de référence d'abord (la plus petite position). */
     static List<BlockPos> moities(Level l, BlockPos p) {
         BlockState s = l.getBlockState(p);
@@ -123,6 +202,9 @@ final class Transporteur extends Metier {
     /** Le bloc regardé comme bout de trajet : le bureau de son poste, et les coffres collés à lui (une moitié suffit), sont le dépôt. */
     static long point(Travailleur t, BlockPos p) {
         if (p == null || t.level().getBlockEntity(p) instanceof Bureau.Entite) return Trajets.DEPOT;
+        BlockPos c = cible(t.level(), p);
+        if (c != null) p = c;
+        if (Machines.machine(id(t.level(), p))) return p.asLong(); // une machine collée au bureau reste une machine
         List<BlockPos> m = moities(t.level(), p);
         for (BlockPos q : m) if (t.bureau != null && q.distManhattan(t.bureau) <= 1) return Trajets.DEPOT;
         return m.get(0).asLong();
@@ -132,7 +214,11 @@ final class Transporteur extends Metier {
     static String refus(Travailleur t, String mode, BlockPos vu) {
         if (t.bureau == null) return "Il me faut un poste de travail pour ça, chef.";
         if (mode.equals("oublier_trajets") || vu == null) return null;
-        if (!coffre(t.level(), vu)) return "Ce n'est pas un coffre, ça, chef. Montre-moi un coffre, un tonneau, ou une caisse.";
+        if (cible(t.level(), vu) == null) {
+            if (!Machines.deCreate(id(t.level(), vu))) return "Ce n'est pas un coffre, ça, chef. Montre-moi un coffre, un tonneau, une caisse, ou une machine.";
+            String r = Besoins.texte(t, "machine_pas_capable", null, null);
+            return r != null ? r : "Ça, on ne peut rien mettre dedans, chef. Montre-moi plutôt le présentoir, le bassin ou le tapis dessous.";
+        }
         long p = point(t, vu);
         if (p == Trajets.DEPOT) return mode.equals("trajet") ? "C'est notre dépôt, ça, chef. Montre-moi l'autre coffre." : null;
         if (!aNous(t, p)) return Fermier.distance(t.bureau, vu) > (double) Trajets.ZONE * Trajets.ZONE || Math.abs(vu.getY() - t.bureau.getY()) > Trajets.ZONE
@@ -155,7 +241,12 @@ final class Transporteur extends Metier {
      */
     static String verifierOrdre(Travailleur t, String mode, Trajets.Sens sens, String objet, BlockPos vu) {
         long p = point(t, vu);
-        if (mode.equals("trajet") && sens == Trajets.Sens.DU_DEPOT && objet.isEmpty()) return "Avec quoi, chef ? Dis-moi ce que je dois porter du dépôt à ce coffre.";
+        String id = p == Trajets.DEPOT ? "" : id(t.level(), BlockPos.of(p));
+        Machines.Machine m = Machines.de(id);
+        if (m != null && m.entreeSeule() && (mode.equals("trajet_prendre") || mode.equals("trajet") && sens == Trajets.Sens.VERS_DEPOT))
+            return "On ne vide pas " + m.nom() + ", chef : ce qu'il fait sort tout seul. Montre-moi l'endroit où ça tombe.";
+        if (mode.equals("trajet") && sens == Trajets.Sens.DU_DEPOT && objet.isEmpty())
+            return "Avec quoi, chef ? Dis-moi ce que je dois mettre " + (m != null ? "dans " + m.nom() : "du dépôt dans ce coffre") + ".";
         if (!mode.equals("trajet_deposer")) return null;
         if (!t.memoire.contains("trajet_depart")) return "D'où dois-je le prendre, chef ? Montre-moi d'abord le coffre, et dis-moi « prends dans ce coffre ».";
         long depart = t.memoire.getLong("trajet_depart");
@@ -180,7 +271,7 @@ final class Transporteur extends Metier {
                 if (!s.isEmpty()) t.inventaire.setItem(i, b.rangerVisible(s)); // pas la réserve : elle n'est pas un stock sans limite pour le chef
             }
         purger(t);
-        for (String k : List.of("trajets", "trajet_depart", "trajet_depart_o", "trajet_depart_n", "en_charge", "transport_repos", "trajet_vides", "trajet_n", "trajets_revus"))
+        for (String k : List.of("trajets", "trajet_depart", "trajet_depart_o", "trajet_depart_n", "en_charge", "transport_repos", "trajet_vides", "trajet_n", "trajets_revus", "machines", "poses"))
             t.memoire.remove(k);
         if (!renvoi && charge) t.memoire.putBoolean("en_charge", true);
     }
@@ -245,7 +336,7 @@ final class Transporteur extends Metier {
         if (!source && aNous(t, x.dest())) return false;
         long p = source ? x.source() : x.dest();
         changer(t, x, x.suspendre(true));
-        Cerveau.ecrire(t, "interdit_" + p, Cerveau.UN_JOUR, "coffre_interdit", lieu(t, p));
+        lettre(t, "interdit_" + p, "coffre_interdit", p);
         return true;
     }
 
@@ -253,6 +344,16 @@ final class Transporteur extends Metier {
     static void revoir(Travailleur t, List<Trajet> l, long maintenant) {
         if (t.memoire.getLong("trajets_revus") > maintenant || l.isEmpty()) return;
         t.memoire.putLong("trajets_revus", maintenant + REVUE);
+        // Les bouts chargés : une machine posée depuis (ou un ancien trajet) est retenue ; un bloc qui n'en est plus une est oublié.
+        CompoundTag mach = t.memoire.getCompound("machines");
+        for (Trajet x : l)
+            for (long p : new long[]{x.source(), x.dest()}) {
+                if (p == Trajets.DEPOT || !t.level().isLoaded(BlockPos.of(p))) continue;
+                String id = id(t.level(), BlockPos.of(p));
+                if (Machines.machine(id)) mach.putString(Long.toString(p), id);
+                else if (coffre(t.level(), BlockPos.of(p))) mach.remove(Long.toString(p));
+            }
+        t.memoire.put("machines", mach);
         for (Trajet x : List.copyOf(l)) {
             if (!x.suspendu()) interdit(t, x);
             else if (present(t, x.source()) && present(t, x.dest()) && aNous(t, x.source()) && aNous(t, x.dest())) changer(t, x, x.suspendre(false));
@@ -301,7 +402,7 @@ final class Transporteur extends Metier {
             if (!arriver(t, p)) {
                 if (coince() || age > 20 * 60 * 3) {
                     // Il n'y arrive pas : il l'écrit (une fois par jour et par coffre), le trajet attend, et ce qu'il porte ira au dépôt.
-                    Cerveau.ecrire(t, "inaccessible_" + p, Cerveau.UN_JOUR, "coffre_inaccessible", lieu(t, p));
+                    lettre(t, "inaccessible_" + p, "coffre_inaccessible", p);
                     changer(t, trajet, trajet.attendre(Cerveau.temps(t) + PLEIN));
                     return echec("bloque");
                 }
@@ -311,17 +412,23 @@ final class Transporteur extends Metier {
             if (h == null) {
                 // Le coffre n'est plus là : le trajet est suspendu, il l'écrit ; ce qu'il porte retourne à la source, sinon au dépôt.
                 changer(t, trajet, trajet.suspendre(true));
-                Cerveau.ecrire(t, "introuvable_" + p, Cerveau.UN_JOUR, "coffre_introuvable", lieu(t, p));
-                Besoins.parler(t, "transport_coffre_introuvable", null);
-                if (etape == 1 && !charge.isEmpty()) { etape = 2; nouveauBut(); return Actions.Etat.EN_COURS; }
+                lettre(t, "introuvable_" + p, "coffre_introuvable", p);
+                parler(t, p, "machine_introuvable", "transport_coffre_introuvable");
+                if (etape == 1 && !charge.isEmpty()) return retour(t);
                 return echec("introuvable");
             }
             t.swing(InteractionHand.MAIN_HAND);
             Sons.coffre(t, BlockPos.of(p));
+            if (Machines.deCreate(machineDe(t, p)) && t.getRandom().nextInt(8) == 0) parler(t, p, "machine_peur", null); // devant une machine de Create, parfois, un mot sur elle
             switch (etape) {
                 case 0 -> {
-                    prendre(t, h);
-                    if (charge.isEmpty()) return vide(t);
+                    // Une machine : seulement ses cases de sortie (un bassin garde ses entrées) ; jamais une machine qui n'a que des entrées.
+                    Machines.Machine m = Machines.de(machineDe(t, p));
+                    if (m == null || !m.entreeSeule()) prendre(t, h, m == null ? 0 : m.sortie(), m != null && Trajets.alimente(lire(t), p), p);
+                    if (charge.isEmpty()) {
+                        parler(t, p, "machine_vide_rien", null);
+                        return vide(t);
+                    }
                     t.memoire.putInt("trajet_vides", 0);
                     t.memoire.putBoolean("en_charge", true);
                     Besoins.parler(t, "transport_charge", null);
@@ -331,14 +438,13 @@ final class Transporteur extends Metier {
                 case 1 -> {
                     if (!poser(t, p, h)) {
                         // Plus de place : une lettre par jour et par coffre ; le trajet attend ; le reste retourne à la source.
-                        Cerveau.ecrire(t, "coffre_plein_" + p, Cerveau.UN_JOUR, "coffre_plein", lieu(t, p));
-                        Besoins.parler(t, "transport_coffre_plein", null);
+                        lettre(t, "coffre_plein_" + p, "coffre_plein", p);
+                        parler(t, p, "machine_pleine", "transport_coffre_plein");
                         changer(t, trajet, trajet.attendre(Cerveau.temps(t) + PLEIN));
-                        etape = 2;
-                        nouveauBut();
-                        return Actions.Etat.EN_COURS;
+                        return retour(t);
                     }
                     t.memoire.remove("en_charge");
+                    parler(t, p, "machine_charge", null);
                     return Actions.Etat.OK;
                 }
                 default -> {
@@ -350,6 +456,17 @@ final class Transporteur extends Metier {
             return Actions.Etat.EN_COURS;
         }
 
+        /**
+         * Ce qu'il n'a pas pu poser retourne à la source ; jamais à une machine (ce serait dans ses entrées) : il le garde
+         * ({@code en_charge}) et le porte au dépôt.
+         */
+        Actions.Etat retour(Travailleur t) {
+            if (!machineDe(t, trajet.source()).isEmpty()) return echec("retour_depot");
+            etape = 2;
+            nouveauBut();
+            return Actions.Etat.EN_COURS;
+        }
+
         /** Rien à prendre : trajet suivant ; tous ses trajets vides plusieurs fois de suite, il l'écrit et souffle. */
         Actions.Etat vide(Travailleur t) {
             int n = t.memoire.getInt("trajet_vides") + 1;
@@ -358,18 +475,27 @@ final class Transporteur extends Metier {
             if (Trajets.tousVides(n, prets)) {
                 n = 0;
                 t.memoire.putLong("transport_repos", maintenant + PAUSE);
-                Cerveau.ecrire(t, "source_vide", Cerveau.UN_JOUR, "coffre_source_vide", lieu(t, trajet.source()));
+                lettre(t, "source_vide", "coffre_source_vide", trajet.source());
             }
             t.memoire.putInt("trajet_vides", n);
             return echec("source_vide");
         }
 
-        /** Il charge ce qui répond au filtre, jamais plus que la place dans son sac. */
-        void prendre(Travailleur t, List<IItemHandler> hs) {
+        /**
+         * Il charge ce qui répond au filtre, jamais plus que la place dans son sac, à partir de la case {@code debut} (la sortie
+         * d'une machine). Il ne prend que ce que le bloc laisse sortir (la capacité d'une machine de Create ne rend que ses produits).
+         */
+        void prendre(Travailleur t, List<IItemHandler> hs, int debut, boolean alimentee, long p) {
+            CompoundTag pose = t.memoire.getCompound("poses").getCompound(Long.toString(p));
+            java.util.Set<String> poses = new java.util.HashSet<>();
+            for (Tag x : pose.getList("o", Tag.TAG_STRING)) poses.add(x.getAsString());
+            long maintenant = Cerveau.temps(t);
             for (IItemHandler h : hs)
-                for (int i = 0; i < h.getSlots(); i++) {
+                for (int i = debut; i < h.getSlots(); i++) {
                     ItemStack vu = h.getStackInSlot(i);
-                    if (!filtre.objet(vu)) continue;
+                    if (!filtre.objet(vu) || vu.isEmpty()) continue;
+                    // Une presse, un tapis : ce qu'il y a posé lui-même (pas encore travaillé) n'est pas un produit.
+                    if (!Trajets.prenable(BuiltInRegistries.ITEM.getKey(vu.getItem()).toString(), alimentee, poses, pose.getLong("t"), maintenant)) continue;
                     int n = Trajets.prise(vu.getCount(), place(t, vu));
                     if (n <= 0) continue;
                     ItemStack pris = h.extractItem(i, n, false);
@@ -402,8 +528,14 @@ final class Transporteur extends Metier {
             for (ItemStack c : charge) {
                 ItemStack s = sortir(t, c);
                 if (s.isEmpty()) continue;
+                int avant = s.getCount();
+                String mid = machineDe(t, p);
                 if (b != null) s = b.rangerVisible(s); // pas la réserve (cahier 14.4 : « mais pas le joueur »)
+                else if (etape == 1 && Machines.four(mid) && s.getBurnTime(net.minecraft.world.item.crafting.RecipeType.SMELTING) > 0
+                        && t.level().getCapability(Capabilities.ItemHandler.BLOCK, BlockPos.of(p), Direction.NORTH) instanceof IItemHandler cote)
+                    s = ItemHandlerHelper.insertItemStacked(cote, s, false); // le combustible par le côté
                 else for (IItemHandler h : hs) if (!s.isEmpty()) s = ItemHandlerHelper.insertItemStacked(h, s, false);
+                if (etape == 1 && !mid.isEmpty() && s.getCount() < avant) posee(t, p, c);
                 if (!s.isEmpty()) {
                     restes.add(s.copy());
                     ItemStack x = t.inventaire.addItem(s);
@@ -413,6 +545,23 @@ final class Transporteur extends Metier {
             charge.clear();
             charge.addAll(restes);
             return restes.isEmpty();
+        }
+
+        /** Il note ce qu'il a posé dans la machine {@code p}, et quand (16 sortes au plus) : il ne le reprendra pas comme un produit. */
+        static void posee(Travailleur t, long p, ItemStack c) {
+            CompoundTag tout = t.memoire.getCompound("poses"), une = tout.getCompound(Long.toString(p));
+            ListTag o = une.getList("o", Tag.TAG_STRING);
+            String id = BuiltInRegistries.ITEM.getKey(c.getItem()).toString();
+            boolean deja = false;
+            for (Tag x : o) deja |= x.getAsString().equals(id);
+            if (!deja) {
+                if (o.size() >= 16) o.remove(0);
+                o.add(net.minecraft.nbt.StringTag.valueOf(id));
+            }
+            une.put("o", o);
+            une.putLong("t", Cerveau.temps(t));
+            tout.put(Long.toString(p), une);
+            t.memoire.put("poses", tout);
         }
 
         /** Sort de son sac jusqu'à {@code c.getCount()} objets pareils à {@code c}. */
@@ -459,7 +608,8 @@ final class Transporteur extends Metier {
                     t.memoire.putLong("trajet_depart", vu);
                     t.memoire.putString("trajet_depart_o", objet);
                     t.memoire.putString("trajet_depart_n", nom);
-                    Voix.dire(t, "Je prendrai " + (nom.isEmpty() ? "" : nom + " ") + (vu == Trajets.DEPOT ? "au dépôt" : "dans ce coffre")
+                    String ici = vu == Trajets.DEPOT ? "au dépôt" : "dans " + Machines.nom(id(t.level(), BlockPos.of(vu))).replaceFirst("^le ", "ce ").replaceFirst("^la ", "cette ").replaceFirst("^l'", "cet ");
+                    Voix.dire(t, "Je prendrai " + (nom.isEmpty() ? "" : nom + " ") + ici
                             + ". Montre-moi maintenant où le porter, et dis-moi « dépose dans celui-là ».", "calme");
                     return Actions.Etat.OK;
                 }
@@ -490,6 +640,15 @@ final class Transporteur extends Metier {
             ecrire(t, l);
             t.memoire.remove("transport_repos");
             t.memoire.putInt("trajet_vides", 0);
+            retenirMachine(t, tr.source());
+            retenirMachine(t, tr.dest());
+            // Une machine : il la nomme (« Je mets le blé dans le moulin »).
+            String md = machineDe(t, tr.dest()), ms = machineDe(t, tr.source());
+            String dit = !md.isEmpty() ? replique(t, "machine_remplir_ok", md, nom) : !ms.isEmpty() ? replique(t, "machine_vider_ok", ms, null) : null;
+            if (dit != null) {
+                Voix.dire(t, dit, "calme");
+                return Actions.Etat.OK;
+            }
             String sens = tr.source() == Trajets.DEPOT ? "du dépôt à ce coffre" : tr.dest() == Trajets.DEPOT ? "de ce coffre au dépôt" : "d'un coffre à l'autre";
             Voix.dire(t, "Je porterai " + (tr.objet().isEmpty() ? "tout" : nom.isEmpty() ? "ce que tu m'as dit" : nom) + " " + sens
                     + ", et je referai le chemin tant qu'il y aura à porter.", "calme");
