@@ -85,14 +85,14 @@ public class TestsRemarques {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void vaSurLaLune(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 222);
+        Travailleur[] e = Essais.equipe(h, chef, 222);
         Travailleur b = e[0];
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
-                    TestsIA.regarder(chef, b);
+                    Essais.regarder(chef, b);
                     b.parler(chef, "Va sur la lune, Bertrand !");
-                    String r = IA.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("impossible_lune", r.substring(6)), "il en rit (" + IA.echange(b, 2) + ")");
+                    String r = Paroles.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("impossible_lune", r.substring(6)), "il en rit (" + Paroles.echange(b, 2) + ")");
                     h.assertFalse(b.action instanceof Actions.Aller, "il ne part pas");
                 },
                 () -> TestsOrdres.fin(h, e));

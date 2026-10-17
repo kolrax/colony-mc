@@ -88,6 +88,6 @@ final class Remarques {
         boolean auTravail = t.mode == Travailleur.Mode.TRAVAIL && t.enService() && !(t.action instanceof Actions.Reposer);
         boolean ennui = t.mode == Travailleur.Mode.ATTENDRE || auTravail && t.missions.isEmpty() && t.action instanceof Actions.Attendre a && a.ticks >= 200;
         boolean paie = t.memoire.contains("paie_le") && t.memoire.getLong("paie_le") == t.jour();
-        return new Vie.Moment(IA.heure(t), pluie, sl.isThundering() && (pluie || neige), neige, auTravail, t.metier, fini, depot, ennui, nouveau, paie);
+        return new Vie.Moment(Paroles.heure(t), pluie, sl.isThundering() && (pluie || neige), neige, auTravail, t.metier, fini, depot, ennui, nouveau, paie);
     }
 }

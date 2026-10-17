@@ -136,14 +136,14 @@ public class TestsTransporteur {
         BlockPos a = base.offset(14, 0, 0);
         Container c = coffre(l, a, new ItemStack(Items.IRON_INGOT, 8));
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(a));
                     h.assertTrue(a.equals(Consignes.regardBloc(chef, 48)), "le chef regarde le coffre : " + Consignes.regardBloc(chef, 48));
                     g.parler(chef, "Porte le contenu de ce coffre au dépôt");
                 },
-                () -> h.assertTrue(IA.echange(g).contains("pas à nous"), "il refuse et dit pourquoi : " + IA.echange(g)),
-                TestsIA.attendre(h, 200),
+                () -> h.assertTrue(Paroles.echange(g).contains("pas à nous"), "il refuse et dit pourquoi : " + Paroles.echange(g)),
+                Essais.attendre(h, 200),
                 () -> {
                     h.assertTrue(Transporteur.lire(g).isEmpty(), "aucun trajet retenu : " + Transporteur.lire(g));
                     h.assertTrue(compte(c, Items.IRON_INGOT) == 8, "le coffre du voisin est intact : " + compte(c, Items.IRON_INGOT));
@@ -184,12 +184,12 @@ public class TestsTransporteur {
         Container c = coffre(l, a, new ItemStack(Items.IRON_INGOT, 12), new ItemStack(Items.COBBLESTONE, 5));
         Bureau.Entite d = TestsBucheron.depot(g);
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(a));
                     g.parler(chef, "Porte le fer de ce coffre au dépôt");
                 },
-                () -> h.assertTrue(Transporteur.lire(g).size() == 1, "le trajet est retenu : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                () -> h.assertTrue(Transporteur.lire(g).size() == 1, "le trajet est retenu : " + Transporteur.lire(g) + " / " + Paroles.echange(g)),
                 () -> {
                     h.assertTrue(TestsBucheron.compte(d, Items.IRON_INGOT) == 12, "le fer au dépôt : " + TestsBucheron.compte(d, Items.IRON_INGOT) + " (" + TestsJeu.etat(g, g.bureau) + ")");
                     h.assertTrue(compte(c, Items.COBBLESTONE) == 5, "la pierre reste au coffre");
@@ -213,17 +213,17 @@ public class TestsTransporteur {
         Container ca = coffre(l, a, new ItemStack(Items.IRON_INGOT, 8));
         Container cz = coffre(l, z);
         Travailleur[] e = {g};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(a));
                     g.parler(chef, "Prends dans ce coffre");
                 },
-                () -> h.assertTrue(g.memoire.contains("trajet_depart"), "le départ est retenu : " + IA.echange(g)),
+                () -> h.assertTrue(g.memoire.contains("trajet_depart"), "le départ est retenu : " + Paroles.echange(g)),
                 () -> {
                     TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(z));
                     g.parler(chef, "Dépose dans celui-là");
                 },
-                () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).dest() == z.asLong(), "le trajet est retenu : " + Transporteur.lire(g) + " / " + IA.echange(g)),
+                () -> h.assertTrue(Transporteur.lire(g).size() == 1 && Transporteur.lire(g).get(0).dest() == z.asLong(), "le trajet est retenu : " + Transporteur.lire(g) + " / " + Paroles.echange(g)),
                 () -> h.assertTrue(compte(cz, Items.IRON_INGOT) == 8 && compte(ca, Items.IRON_INGOT) == 0,
                         "le fer est passé d'un coffre à l'autre : " + compte(cz, Items.IRON_INGOT) + " (" + TestsJeu.etat(g, g.bureau) + ")"),
                 () -> TestsRepertoire.fin(e));

@@ -41,9 +41,9 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 2600, batch = "remarques")
     public static void compagnonsEnParlent(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 246);
+        Travailleur[] e = Essais.equipe(h, chef, 246);
         int[] moral = new int[3];
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     moral[1] = e[1].moral;
                     e[0].kill();
@@ -62,14 +62,14 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
     public static void enterrementApaise(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 247);
+        Travailleur[] e = Essais.equipe(h, chef, 247);
         Vec3[] tombe = {null};
         int[] apres = new int[3];
         boolean[] proches = new boolean[3];
         h.onEachTick(() -> {
             for (int i = 1; i < 3; i++) if (tombe[0] != null && e[i].position().distanceToSqr(tombe[0]) <= 3.5 * 3.5) proches[i] = true;
         });
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> e[0].moveTo(e[0].getX() + 12, e[0].getY(), e[0].getZ()),
                 () -> {
                     tombe[0] = e[0].position();
@@ -77,7 +77,7 @@ public class TestsDeuil {
                 },
                 () -> {
                     for (int i = 1; i < 3; i++) apres[i] = e[i].moral;
-                    TestsIA.regarder(chef, e[1]);
+                    Essais.regarder(chef, e[1]);
                     e[1].parler(chef, "Raoul, on va enterrer Bertrand.");
                     h.assertTrue(e[1].action instanceof Deuil.Enterrement && e[2].action instanceof Deuil.Enterrement,
                             "tous deux vont à la tombe (" + TestsRepertoire.c(e[1]) + " / " + TestsRepertoire.c(e[2]) + ")");
@@ -99,14 +99,14 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
     public static void aTerreNeVientPas(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 248);
+        Travailleur[] e = Essais.equipe(h, chef, 248);
         int[] avant = new int[3];
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> e[0].kill(),
                 () -> {
                     e[2].tomberATerre();
                     avant[2] = e[2].moral;
-                    TestsIA.regarder(chef, e[1]);
+                    Essais.regarder(chef, e[1]);
                     e[1].parler(chef, "Allez à la tombe de Bertrand.");
                     h.assertTrue(e[1].action instanceof Deuil.Enterrement, "Raoul y va (" + TestsRepertoire.c(e[1]) + ")");
                     h.assertFalse(e[2].action instanceof Deuil.Enterrement, "Odon, à terre, n'y va pas");
@@ -123,15 +123,15 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 600, batch = "deuil")
     public static void lettreAuChefAbsent(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 249);
+        Travailleur[] e = Essais.equipe(h, chef, 249);
         java.util.UUID absent = java.util.UUID.randomUUID();
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     for (Travailleur t : e) t.chef = absent;
                     e[0].kill();
                 },
                 () -> h.assertTrue(TestsMineur.lettre(e[1], "deuil") || TestsMineur.lettre(e[2], "deuil"), "une lettre au chef absent"),
-                TestsIA.attendre(h, 120),
+                Essais.attendre(h, 120),
                 () -> {
                     h.assertFalse(dit(e[1], "deuil_apprend") || dit(e[2], "deuil_apprend"), "personne à qui le dire (" + paroles(e) + ")");
                     e[1].chef = e[2].chef = chef.getUUID(); // le chef revient
@@ -144,11 +144,11 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
     public static void attendRetourneASaPlace(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 250);
+        Travailleur[] e = Essais.equipe(h, chef, 250);
         Vec3[] place = {null};
         boolean[] venu = {false};
         h.onEachTick(() -> { if (e[2].action instanceof Deuil.Enterrement d && d.arrive) venu[0] = true; });
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     e[2].mode = Travailleur.Mode.ATTENDRE;
                     place[0] = e[2].position();
@@ -156,7 +156,7 @@ public class TestsDeuil {
                 },
                 () -> e[0].kill(),
                 () -> {
-                    TestsIA.regarder(chef, e[1]);
+                    Essais.regarder(chef, e[1]);
                     e[1].parler(chef, "Raoul, on va enterrer Bertrand.");
                     h.assertTrue(e[2].action instanceof Deuil.Enterrement, "Odon vient aussi (" + TestsRepertoire.c(e[2]) + ")");
                 },
@@ -170,9 +170,9 @@ public class TestsDeuil {
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "deuil")
     public static void ouiALaProposition(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 251);
+        Travailleur[] e = Essais.equipe(h, chef, 251);
         Travailleur[] qui = {null};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> e[0].kill(),
                 () -> Courrier.de(h.getLevel().getServer()).effectifs.get(chef.getUUID()).get(e[0].getUUID()).mortLe -= Deuil.JOUR + 1, // un jour a passé
                 () -> {
@@ -181,7 +181,7 @@ public class TestsDeuil {
                     h.assertFalse(dit(e[1], "enterrement_propose") && dit(e[2], "enterrement_propose"), "un seul le propose");
                 },
                 () -> {
-                    TestsIA.regarder(chef, qui[0]);
+                    Essais.regarder(chef, qui[0]);
                     qui[0].parler(chef, "Oui.");
                     h.assertTrue(e[1].action instanceof Deuil.Enterrement && e[2].action instanceof Deuil.Enterrement, "ils y vont (" + paroles(e) + ")");
                     qui[0].parler(chef, "Non, arrêtez.");

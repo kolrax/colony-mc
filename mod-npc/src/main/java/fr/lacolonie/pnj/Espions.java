@@ -287,6 +287,6 @@ final class Espions {
         String r = dire(t, "espion_retour", Map.of("nom", nom)) + " " + t.rumeurs.raconter(new Rumeurs.Question(nom), t.jour(), textes(t), f -> true);
         if (repere) r += " " + dire(t, "espion_repere", Map.of("nom", nom));
         Courrier.ecrireTexte(t, "Des nouvelles de " + nom, r, false);
-        IA.noter(t, "Toi", r);
+        Paroles.noter(t, "Toi", r);
     }
 }

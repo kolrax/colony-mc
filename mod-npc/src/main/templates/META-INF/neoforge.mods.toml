@@ -92,10 +92,3 @@ PNJ travailleurs de La Colonie : on les trouve, on les embauche contre des piece
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"
 
-# Simple Voice Chat (facultatif) : les PNJ parlent à voix haute et on peut leur parler au micro.
-[[dependencies.${mod_id}]]
-    modId="voicechat"
-    type="optional"
-    versionRange="*" # ses versions s'écrivent « 1.21.1-2.6.22 » ; l'API 2.6 suffit
-    ordering="NONE"
-    side="BOTH"

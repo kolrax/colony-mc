@@ -103,13 +103,13 @@ public class TestsCaractere {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void excusesDuChef(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 232);
+        Travailleur[] e = Essais.equipe(h, chef, 232);
         Travailleur b = e[0];
         int[] avant = {0};
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     b.moral = 70;
-                    TestsIA.regarder(chef, b);
+                    Essais.regarder(chef, b);
                     b.parler(chef, "Tu es un bon à rien, Bertrand !");
                     b.hurt(h.getLevel().damageSources().playerAttack(chef), 1);
                     avant[0] = b.moral;
@@ -118,14 +118,14 @@ public class TestsCaractere {
                 // Les vérifications à part : une étape qui échoue est rejouée à chaque tick, sans refaire l'insulte ni le coup.
                 () -> {
                     h.assertTrue(avant[0] == 55, "insulte et coup : 15 de moins (" + avant[0] + ")");
-                    String r = IA.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("caractere_excuses", r.substring(6)), "il accepte (" + IA.echange(b, 2) + ")");
+                    String r = Paroles.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("caractere_excuses", r.substring(6)), "il accepte (" + Paroles.echange(b, 2) + ")");
                     h.assertTrue(b.moral == avant[0] + 8, "la moitié revient (" + avant[0] + " → " + b.moral + ")");
                 },
                 () -> b.parler(chef, "Pardon, Bertrand."),
                 () -> {
                     h.assertTrue(b.moral == avant[0] + 8, "une seule fois par offense (" + b.moral + ")");
-                    h.assertFalse(Vie.vient("caractere_excuses", IA.echange(b, 1).substring(6)), "rien de plus à pardonner (" + IA.echange(b, 1) + ")");
+                    h.assertFalse(Vie.vient("caractere_excuses", Paroles.echange(b, 1).substring(6)), "rien de plus à pardonner (" + Paroles.echange(b, 1) + ")");
                 },
                 () -> TestsOrdres.fin(h, e));
     }
@@ -134,19 +134,19 @@ public class TestsCaractere {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void avoueEtRendLeDiamant(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 233);
+        Travailleur[] e = Essais.equipe(h, chef, 233);
         Travailleur b = e[0];
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     b.temperament = "peureux";
                     Humeur.cacher(b, new ItemStack(Items.DIAMOND));
                     Humeur.cacher(b, new ItemStack(Items.BREAD, 2));
-                    TestsIA.regarder(chef, b);
+                    Essais.regarder(chef, b);
                     b.parler(chef, "Tu as gardé un diamant, Bertrand ?");
                 },
                 () -> {
-                    String r = IA.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_avoue", r.substring(6)), "il avoue (" + IA.echange(b, 2) + ")");
+                    String r = Paroles.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_avoue", r.substring(6)), "il avoue (" + Paroles.echange(b, 2) + ")");
                     h.assertTrue(diamantsCaches(b) == 0 && Humeur.butin(b) == 2, "le pain reste caché, plus de diamant (" + b.memoire.get("butin") + ")");
                     h.assertTrue(TestsBucheron.compte(TestsBucheron.depot(b), Items.DIAMOND) == 1, "le diamant est au dépôt");
                 },
@@ -156,19 +156,19 @@ public class TestsCaractere {
     @GameTest(template = "vide", timeoutTicks = 300)
     public static void nieJusquAuLendemain(GameTestHelper h) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = TestsIA.equipe(h, chef, 234);
+        Travailleur[] e = Essais.equipe(h, chef, 234);
         Travailleur b = e[0];
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     b.temperament = "peureux";
                     Humeur.cacher(b, new ItemStack(Items.DIAMOND));
                     b.memoire.putLong("diamant_nie", b.jour());
-                    TestsIA.regarder(chef, b);
+                    Essais.regarder(chef, b);
                     b.parler(chef, "Tu as gardé un diamant, Bertrand ?");
                 },
                 () -> {
-                    String r = IA.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_nie", r.substring(6)), "il nie encore (" + IA.echange(b, 2) + ")");
+                    String r = Paroles.echange(b, 1);
+                    h.assertTrue(r.startsWith("Toi : ") && Vie.vient("diamant_nie", r.substring(6)), "il nie encore (" + Paroles.echange(b, 2) + ")");
                     h.assertTrue(diamantsCaches(b) == 1, "le diamant reste caché (" + b.memoire.get("butin") + ")");
                 },
                 () -> TestsOrdres.fin(h, e));

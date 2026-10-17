@@ -205,7 +205,7 @@ final class Guerisseur extends Metier {
         Refus(String texte) { super("refus"); this.texte = texte; }
 
         Actions.Etat tick(Travailleur t) {
-            Voix.dire(t, texte, "calme");
+            Paroles.dire(t, texte, "calme");
             return echec("refus");
         }
     }
@@ -237,7 +237,7 @@ final class Guerisseur extends Metier {
             }
             Travailleur o = prochain(t, true, false, vus);
             if (o == null) {
-                Voix.dire(t, soignes == 0 ? "Je n'ai trouvé personne à soigner près du poste, chef." : "Tous nos blessés sont soignés, chef.", "calme");
+                Paroles.dire(t, soignes == 0 ? "Je n'ai trouvé personne à soigner près du poste, chef." : "Tous nos blessés sont soignés, chef.", "calme");
                 return Actions.Etat.OK;
             }
             sous = new Soin(o);

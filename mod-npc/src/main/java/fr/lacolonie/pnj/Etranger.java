@@ -43,9 +43,9 @@ final class Etranger {
         t.getLookControl().setLookAt(p);
         String nom = p.getName().getString();
         String r = repondre(t, p, nom, dit);
-        IA.noter(t, nom, dit);
+        Paroles.noter(t, nom, dit);
         if (r.isBlank()) return;
-        IA.noter(t, "Toi", r);
+        Paroles.noter(t, "Toi", r);
         t.dire(r);
     }
 

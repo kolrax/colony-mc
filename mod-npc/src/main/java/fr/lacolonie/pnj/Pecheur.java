@@ -395,7 +395,7 @@ final class Pecheur extends Metier {
             if (t.mode != Travailleur.Mode.GREVE) { t.mode = Travailleur.Mode.TRAVAIL; t.majNom(); }
             t.memoire.remove("rappel");
             t.memoire.remove("eau_revue"); // il regarde de nouveau autour du poste
-            Voix.dire(t, "J'y vais, chef : je prends ma canne et je file au bord de l'eau.", "calme");
+            Paroles.dire(t, "J'y vais, chef : je prends ma canne et je file au bord de l'eau.", "calme");
             return Actions.Etat.OK;
         }
     }
@@ -422,7 +422,7 @@ final class Pecheur extends Metier {
                 c = trouver(t, l, x, z, true);
             }
             if (c == null) {
-                Voix.dire(t, vue == null ? "Je ne vois pas d'eau par là, chef."
+                Paroles.dire(t, vue == null ? "Je ne vois pas d'eau par là, chef."
                         : !Fermier.aLui(t, vue) ? "Cette eau est plus près d'un autre poste que du nôtre, chef : elle n'est pas à nous, je n'y pêche pas."
                         : "Je ne peux pas pêcher là pour l'instant, chef : il me faut une eau d'au moins trois pas sur trois, avec un bord sec où je n'aie pas déjà échoué, ni pris par un autre. Redemande-moi plus tard, ou montre-moi un autre endroit.", "calme");
                 return echec("sans_eau");
@@ -430,7 +430,7 @@ final class Pecheur extends Metier {
             retenir(t, c);
             for (String k : List.of("eau_revue", "peche_pause", "ordre_echecs")) t.memoire.remove(k);
             if (t.mode != Travailleur.Mode.GREVE) { t.mode = Travailleur.Mode.TRAVAIL; t.majNom(); }
-            Voix.dire(t, "Bien, chef : c'est là que je pêcherai désormais.", "calme");
+            Paroles.dire(t, "Bien, chef : c'est là que je pêcherai désormais.", "calme");
             return Actions.Etat.OK;
         }
     }

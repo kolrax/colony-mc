@@ -734,7 +734,7 @@ final class Consignes {
         var l = t.level();
         BlockPos ici = t.blockPosition();
         return switch (sujet) {
-            case "heure" -> new Fait("Il est " + IA.heure(t) + " h.", null);
+            case "heure" -> new Fait("Il est " + Paroles.heure(t) + " h.", null);
             case "schemas" -> new Fait(Macon.schemasTexte(t), null);
             case "chantier" -> new Fait(Macon.etatTexte(t), null);
             case "meteo" -> new Fait(l.isThundering() ? "Il y a de l'orage : mieux vaut rester à l'abri." : l.isRaining()
@@ -829,7 +829,7 @@ final class Consignes {
                 long h = Math.max(0, (System.currentTimeMillis() - t.arrivee) / 3_600_000);
                 yield new Fait("Je travaille pour toi depuis " + (h < 1 ? "moins d'une heure" : h < 48 ? h + " heures" : h / 24 + " jours") + ", chef.", null);
             }
-            case "caractere" -> new Fait("On me dit " + IA.TEMPERAMENTS.getOrDefault(t.temperament, "ordinaire") + ".", null);
+            case "caractere" -> new Fait("Je fais ce qu'on me dit, chef, et je le fais bien.", null);
             case "niveau" -> new Fait("J'ai " + t.niveau + " étoile" + (t.niveau > 1 ? "s" : "") + " sur 5 comme " + Metier.nom(t.metier).toLowerCase() + ".", null);
             case "distance" -> new Fait(chef == null ? "Je ne te vois pas, chef." : "Je suis à " + (int) t.distanceTo(chef) + " blocs de toi.", chef == null ? null : chef.blockPosition());
             case "ouvriers" -> ouvriers(t);
@@ -881,7 +881,7 @@ final class Consignes {
     static String parole(Travailleur t, String genre, ServerPlayer chef) {
         String s = switch (genre) {
             case "presentation" -> "Je m'appelle " + t.prenom + ", " + Metier.nom(t.metier).toLowerCase() + " (" + t.niveau + " étoile" + (t.niveau > 1 ? "s" : "")
-                    + "), à ton service, chef. On me dit " + IA.TEMPERAMENTS.getOrDefault(t.temperament, "ordinaire").split(",")[0] + ".";
+                    + "), à ton service, chef.";
             case "rapport" -> t.rapport();
             case "compter" -> "Un, deux, trois, quatre, cinq, six, sept, huit, neuf… dix !";
             case "alphabet" -> "A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y… et Z !";
@@ -1171,7 +1171,7 @@ final class Consignes {
         Actions.Etat ok(Travailleur t) { fini(t, c); return Actions.Etat.OK; }
 
         Actions.Etat rate(Travailleur t, String dit) {
-            if (dit != null && !dit.isEmpty()) Voix.dire(t, dit, "inquiet");
+            if (dit != null && !dit.isEmpty()) Paroles.dire(t, dit, "inquiet");
             fini(t, c);
             return echec(raisonSous.isEmpty() ? "consigne" : raisonSous);
         }
@@ -1325,7 +1325,7 @@ final class Consignes {
                     Repertoire.Entree p = Repertoire.PAR_ID.get(puis);
                     if (p != null && t.consigne == c) {
                         long fin = p.tenue() ? -1 : p.duree() > 0 ? t.level().getGameTime() + p.duree() * 20L : 0;
-                        if (p.comportement().equals("parler")) { String s = parole(t, p.arg(), t.chefJoueur()); Voix.dire(t, s, "joyeux"); fin = t.level().getGameTime() + 100; }
+                        if (p.comportement().equals("parler")) { String s = parole(t, p.arg(), t.chefJoueur()); Paroles.dire(t, s, "joyeux"); fin = t.level().getGameTime() + 100; }
                         t.consigne = new Consigne(p.id(), c.cible, c.texte, nombre(p), c.rang, c.total, fin, c.lieu, vise != null ? vise.getUUID() : c.entite);
                         return Actions.Etat.OK;
                     }
@@ -1464,14 +1464,14 @@ final class Consignes {
                     if (!(vise instanceof LivingEntity m) || !m.isAlive()) return ok(t);
                     Actions.Etat r = deleguer(t, sous instanceof Actions.Attaquer ? sous : new Actions.Attaquer(m));
                     if (r == null) return Actions.Etat.EN_COURS;
-                    if (!m.isAlive()) Voix.dire(t, "Il ne bougera plus, chef !", "fier");
+                    if (!m.isAlive()) Paroles.dire(t, "Il ne bougera plus, chef !", "fier");
                     return r == Actions.Etat.OK ? ok(t) : rate(t, "Je n'arrive pas à l'atteindre, chef.");
                 }
                 case "nettoyer" -> {
                     if (sous == null) {
                         List<LivingEntity> l = Monde.cibles(t, Math.max(8, c.nombre));
                         if (l.isEmpty()) {
-                            if (++vides > 60) { Voix.dire(t, "La zone est sûre, chef.", "fier"); return ok(t); }
+                            if (++vides > 60) { Paroles.dire(t, "La zone est sûre, chef.", "fier"); return ok(t); }
                             if (age % 40 == 0) regarder(t, "autour");
                             return Actions.Etat.EN_COURS;
                         }
@@ -1585,7 +1585,7 @@ final class Consignes {
                 case "abattre_autour" -> {
                     if (etape >= Math.max(1, c.nombre)) return ok(t);
                     BlockPos a = Actions.chercherArbre((ServerLevel) l, t.blockPosition(), 20, null, t);
-                    if (a == null) { Voix.dire(t, etape == 0 ? "Je ne vois pas d'arbre par ici, chef." : "Plus d'arbre par ici, chef.", "calme"); return ok(t); }
+                    if (a == null) { Paroles.dire(t, etape == 0 ? "Je ne vois pas d'arbre par ici, chef." : "Plus d'arbre par ici, chef.", "calme"); return ok(t); }
                     etape++;
                     sous = new Actions.Abattre(a);
                     return Actions.Etat.EN_COURS;
@@ -1659,11 +1659,11 @@ final class Consignes {
                     }
                     if (atelier instanceof Actions.Planches p) {
                         if (p.faites == 0) return rate(t, "Je n'ai plus de bûches, chef, ni sur moi ni au dépôt.");
-                        Voix.dire(t, p.faites + " planches au dépôt, chef." + ("depot_plein".equals(raisonSous) ? " Le dépôt est plein : j'ai gardé le reste sur moi." : ""), "calme");
+                        Paroles.dire(t, p.faites + " planches au dépôt, chef." + ("depot_plein".equals(raisonSous) ? " Le dépôt est plein : j'ai gardé le reste sur moi." : ""), "calme");
                         return ok(t);
                     }
                     if (atelier instanceof Actions.Charbon ch && ch.recu > 0) {
-                        Voix.dire(t, ch.recu + " charbon" + (ch.recu > 1 ? "s" : "") + " de bois au dépôt, chef.", "calme");
+                        Paroles.dire(t, ch.recu + " charbon" + (ch.recu > 1 ? "s" : "") + " de bois au dépôt, chef.", "calme");
                         return ok(t);
                     }
                     return rate(t, switch (raisonSous) {
@@ -1680,7 +1680,7 @@ final class Consignes {
                         return chantier.size() < Math.max(1, c.nombre) ? rate(t, "Je n'ai plus de torches, chef.") : ok(t);
                     }
                     etape = Math.max(etape, 1);
-                    if (chantier.isEmpty()) { chantier.addAll(sombres(t, Math.max(1, c.nombre))); if (chantier.isEmpty()) { Voix.dire(t, "C'est déjà bien éclairé ici, chef.", "calme"); return ok(t); } etape = 2; }
+                    if (chantier.isEmpty()) { chantier.addAll(sombres(t, Math.max(1, c.nombre))); if (chantier.isEmpty()) { Paroles.dire(t, "C'est déjà bien éclairé ici, chef.", "calme"); return ok(t); } etape = 2; }
                     break;
                 }
                 default -> {}
@@ -1690,7 +1690,7 @@ final class Consignes {
                 BlockPos p = chantier.remove(0);
                 if (FOUILLES.contains(m)) {
                     String arret = fouiller(t, p);
-                    if (arret != null) { Voix.dire(t, arret, "inquiet"); return ok(t); }
+                    if (arret != null) { Paroles.dire(t, arret, "inquiet"); return ok(t); }
                     if (sous != null) return Actions.Etat.EN_COURS;
                     continue;
                 }
@@ -1698,7 +1698,7 @@ final class Consignes {
                     case "miner_la", "tunnel", "trou", "defricher" -> {
                         if (l.getBlockState(p).isAir()) continue;
                         if (m.equals("defricher") ? !l.getBlockState(p).canBeReplaced() : !cassable(l, p)) continue;
-                        if (lave(l, p)) { Voix.dire(t, "De la lave, chef ! Je m'arrête là.", "inquiet"); return ok(t); }
+                        if (lave(l, p)) { Paroles.dire(t, "De la lave, chef ! Je m'arrête là.", "inquiet"); return ok(t); }
                         sous = new Actions.Casser(p);
                     }
                     case "abattre_la" -> sous = new Actions.Abattre(p);
@@ -1720,8 +1720,8 @@ final class Consignes {
                         // sans poste, ou le dépôt plein, il s'arrête et le dit (rien ne tombe par terre).
                         int place = bois != null ? (bois.size() + 63) / 64 + 2 : 1;
                         if (Monde.libres(t) < place) {
-                            if (t.bureau == null) { Voix.dire(t, "Mon sac est plein, chef : je m'arrête là.", "inquiet"); return ok(t); }
-                            if (vide) { Voix.dire(t, "Mon sac est plein, et le dépôt aussi, chef : je m'arrête là.", "inquiet"); return ok(t); }
+                            if (t.bureau == null) { Paroles.dire(t, "Mon sac est plein, chef : je m'arrête là.", "inquiet"); return ok(t); }
+                            if (vide) { Paroles.dire(t, "Mon sac est plein, et le dépôt aussi, chef : je m'arrête là.", "inquiet"); return ok(t); }
                             vide = true;
                             chantier.add(0, p);
                             Metier mt = Metier.de(t.metier);
@@ -1737,11 +1737,11 @@ final class Consignes {
             }
             if (m.equals("torches") && etape < 2) return Actions.Etat.EN_COURS;
             if (m.equals("defricher_zone") && etape == 0) { etape = 1; sous = new Actions.Ramasser(Fouille.TERRAIN_MAX, Actions.Filtre.de("tout"), zone); return Actions.Etat.EN_COURS; }
-            if (m.equals("defricher_zone")) Voix.dire(t, "Le terrain est dégagé, chef : on peut y bâtir.", "calme");
-            if (m.equals("foret")) Voix.dire(t, "La forêt est plantée, chef." + (plantees < voulu ? " Il me manquait des pousses : j'en ai mis " + plantees + " sur " + voulu + "." : ""), "calme");
+            if (m.equals("defricher_zone")) Paroles.dire(t, "Le terrain est dégagé, chef : on peut y bâtir.", "calme");
+            if (m.equals("foret")) Paroles.dire(t, "La forêt est plantée, chef." + (plantees < voulu ? " Il me manquait des pousses : j'en ai mis " + plantees + " sur " + voulu + "." : ""), "calme");
             // Fini : une deuxième passe pour ce qui est tombé (gravier) ou n'a pas pu être pris du premier coup.
             if (FOUILLES.contains(m) && !repasse) { repasse = true; laisses = 0; chantier.addAll(chantier(t)); return Actions.Etat.EN_COURS; }
-            if (FOUILLES.contains(m)) Voix.dire(t, (m.equals("tunnel") ? "Le tunnel est percé, chef." : m.equals("salle") ? "C'est creusé, chef." : "La carrière est vidée, chef.")
+            if (FOUILLES.contains(m)) Paroles.dire(t, (m.equals("tunnel") ? "Le tunnel est percé, chef." : m.equals("salle") ? "C'est creusé, chef." : "La carrière est vidée, chef.")
                     + (laisses > 0 ? " J'ai laissé quelques blocs : pas à nous, ou trop risqués." : ""), "calme");
             return ok(t);
         }
@@ -1783,7 +1783,7 @@ final class Consignes {
                 if (!t.getMainHandItem().isCorrectToolForDrops(st)) {
                     if (t.compter(Actions.Filtre.de(Mineur.PIOCHE)) == 0 && !t.getMainHandItem().is(net.minecraft.tags.ItemTags.PICKAXES))
                         return "Il me faut une pioche pour creuser ça, chef.";
-                    if (!minerai) { minerai = true; Voix.dire(t, "Ce minerai demande une meilleure pioche, chef : je le laisse en place.", "calme"); }
+                    if (!minerai) { minerai = true; Paroles.dire(t, "Ce minerai demande une meilleure pioche, chef : je le laisse en place.", "calme"); }
                     laisses++;
                     return null;
                 }
@@ -1991,9 +1991,9 @@ final class Consignes {
             t.getLookControl().setLookAt(vise);
             if (etape++ == 0) {
                 String nom = vise instanceof Travailleur w ? w.prenom : vise.getName().getString();
-                Voix.dire(t, nom + ", le chef te fait dire : " + c.texte, "calme");
+                Paroles.dire(t, nom + ", le chef te fait dire : " + c.texte, "calme");
                 if (vise instanceof Travailleur w) {
-                    IA.noter(w, t.prenom + " (de la part du chef)", c.texte);
+                    Paroles.noter(w, t.prenom + " (de la part du chef)", c.texte);
                     w.getLookControl().setLookAt(t);
                 }
                 t.setGeste("parler");

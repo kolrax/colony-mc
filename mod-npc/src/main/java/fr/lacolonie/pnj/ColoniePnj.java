@@ -109,15 +109,11 @@ public class ColoniePnj {
 
         NeoForge.EVENT_BUS.addListener((ServerStartingEvent e) -> {
             Reglages.charger();
-            ReglagesIA.charger();
             Macon.preparerDossier();
-            IA.DEPENSES = DepensesIA.charger(Reglages.dossier().resolve("depenses-ia.json"));
-            chargerIncompris();
             PanneauWeb.demarrer(e.getServer());
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
             PanneauWeb.arreter();
-            Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
             laisserFinirLaGeneration(e.getServer());
         });
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
@@ -125,7 +121,6 @@ public class ColoniePnj {
             PanneauWeb.arreter();
             Remarques.oublier(); // elles tiennent les mondes du serveur arrêté
             Deuil.oublier(); // les enterrements en cours aussi
-            Incompris.JOURNAL.sauver(fichierIncompris(), true, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants
@@ -149,10 +144,6 @@ public class ColoniePnj {
                 Courrier.tick(e.getServer());
                 h = mesure.mesurer(Charge.Partie.COURRIER, h);
             }
-            if (e.getServer().getTickCount() % 600 == 0) // les phrases non comprises, si elles ont changé (écrites en arrière-plan)
-                Incompris.JOURNAL.sauver(fichierIncompris(), false, x -> LOG.warn("Phrases non comprises : écriture impossible", x));
-            Voix.tick(e.getServer()); // qui parle à quel ouvrier au micro, et les phrases finies
-            mesure.mesurer(Charge.Partie.VOIX, h);
             mesure.clore();
             Itineraire.nouveauTick(); // le budget des recherches d'étapes repart pour le tick suivant
         });
@@ -178,17 +169,7 @@ public class ColoniePnj {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
             long n = Courrier.de(p.server).nonLues(p.getUUID());
             if (n > 0) Travailleur.signaler(p, "✉ " + n + (n > 1 ? " lettres t'attendent" : " lettre t'attend") + " à ton poste de travail.");
-            // Une fois par joueur : on peut parler à ses ouvriers au micro, et ce que ça implique (sa voix part vers un service en ligne).
             var donnees = p.getPersistentData();
-            if (Voix.pret && ReglagesIA.actuel.ecoutePossible() && !donnees.getBoolean("colonie_pnj_micro2")) {
-                donnees.putBoolean("colonie_pnj_micro2", true);
-                p.sendSystemMessage(Component.literal("🎙 Tu peux parler à tes ouvriers au micro (Simple Voice Chat) : regarde celui à qui tu parles, "
-                        + "ou appelle-le par son prénom ; « les gars » s'adresse à tous ceux qui t'entendent. Ils répondent à voix haute. "
-                        + "Quand un autre joueur est près de toi, il faut regarder un de tes ouvriers pour qu'ils t'écoutent. "
-                        + "Seul ce que tu dis ou écris à tes propres ouvriers part vers un service en ligne (Groq), pour qu'ils te comprennent ; "
-                        + "leurs réponses sont mises en voix par Google. Rien d'autre n'est envoyé.")
-                        .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
-            }
             // Une fois par joueur : la nouveauté de la 0.8.0.
             if (!donnees.getBoolean("colonie_pnj_repertoire")) {
                 donnees.putBoolean("colonie_pnj_repertoire", true);
@@ -359,22 +340,7 @@ public class ColoniePnj {
                     for (Travailleur t : l) for (String ligne : Itineraire.diagnostic(t)) c.getSource().sendSuccess(() -> Component.literal(ligne), false);
                     return 1;
                 })))
-                .then(Commands.literal("ia")
-                        .executes(c -> { for (String l : etatIA()) c.getSource().sendSuccess(() -> Component.literal(l), false); return 1; })
-                        .then(Commands.literal("recharger").executes(c -> {
-                            ReglagesIA.charger();
-                            c.getSource().sendSuccess(() -> Component.literal("Réglages de l'IA rechargés (config/colonie_pnj/ia.json)."), true);
-                            return 1;
-                        }))
-                        .then(Commands.literal("test").executes(c -> {
-                            var source = c.getSource();
-                            source.sendSuccess(() -> Component.literal("Essai des clés en cours…"), false);
-                            IA.tester().whenComplete((l, err) -> source.getServer().execute(() -> {
-                                if (l != null) for (String x : l) source.sendSuccess(() -> Component.literal(x), false);
-                                else source.sendFailure(Component.literal("Essai impossible : " + err));
-                            }));
-                            return 1;
-                        })))
+
                 .then(Commands.literal("banc")
                         .then(Commands.literal("fin").executes(c -> {
                             int n = finBanc(c.getSource().getServer());
@@ -389,13 +355,7 @@ public class ColoniePnj {
                                         .then(Commands.argument("pos", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos())
                                                 .executes(c -> banc(c, StringArgumentType.getString(c, "metier"),
                                                         net.minecraft.commands.arguments.coordinates.BlockPosArgument.getBlockPos(c, "pos")))))))
-                .then(Commands.literal("incompris")
-                        .executes(c -> { for (String l : incompris()) c.getSource().sendSuccess(() -> Component.literal(l), false); return 1; })
-                        .then(Commands.literal("vider").executes(c -> {
-                            Incompris.JOURNAL.vider();
-                            c.getSource().sendSuccess(() -> Component.literal("Journal des phrases non comprises remis à zéro."), true);
-                            return 1;
-                        })))
+
                 .then(Commands.literal("charge").executes(c -> {
                     for (String l : charge(c.getSource().getServer())) c.getSource().sendSuccess(() -> Component.literal(l), false);
                     return 1;
@@ -407,29 +367,6 @@ public class ColoniePnj {
                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copier le mot de passe")))), false);
                     return 1;
                 })));
-    }
-
-    // --- Phrases non comprises : /pnj incompris ------------------------------------------------------------
-
-    static java.nio.file.Path fichierIncompris() { return Reglages.dossier().resolve("incompris.json"); }
-
-    static void chargerIncompris() {
-        try { Incompris.JOURNAL.charger(fichierIncompris()); }
-        catch (Exception e) { LOG.error("Phrases non comprises illisibles (incompris.json), journal repris à zéro", e); }
-    }
-
-    static final Map<String, String> MOTIFS = Map.of(Incompris.RIEN, "personne", Incompris.IA_SEULE, "l'IA seule (action)", Incompris.IA_PAROLE, "l'IA seule (paroles)");
-
-    /** Les 10 phrases non comprises les plus fréquentes, pour /pnj incompris. */
-    static List<String> incompris() {
-        List<String> l = new ArrayList<>();
-        var top = Incompris.JOURNAL.plusFrequentes(10);
-        l.add(Incompris.JOURNAL.taille() + " phrases non comprises" + (top.isEmpty() ? "." : ". Les plus fréquentes (compris par) :"));
-        for (var e : top)
-            l.add(" - " + e.get("nombre") + "× « " + e.get("phrase") + " » (" + MOTIFS.getOrDefault((String) e.get("motif"), (String) e.get("motif"))
-                    + (((List<?>) e.get("metiers")).isEmpty() ? "" : " ; " + String.join(", ", ((List<?>) e.get("metiers")).stream().map(String::valueOf).toList()))
-                    + " ; dernière fois " + String.valueOf(e.get("derniere")).substring(0, 16).replace('T', ' ') + " UTC)");
-        return l;
     }
 
     // --- Banc de charge : /pnj banc, /pnj charge ----------------------------------------------------------
@@ -560,23 +497,6 @@ public class ColoniePnj {
         long pire = 0;
         for (long t : s.getTickTimesNanos()) pire = Math.max(pire, t);
         return Charge.ICI.lignes(s.getAverageTickTimeNanos() / 1e6, pire / 1e6);
-    }
-
-    /** /pnj ia : ce qui marche, ce qui manque, et la consommation du jour (jamais les clés). */
-    static List<String> etatIA() {
-        ReglagesIA r = ReglagesIA.actuel;
-        List<String> l = new ArrayList<>();
-        l.add("IA " + (r.active ? "active" : "désactivée") + " · clé Groq " + (r.groq_cle.isEmpty() ? "absente" : "présente") + " · clé Gemini "
-                + (r.gemini_cle.isEmpty() ? "absente" : "présente") + " · Simple Voice Chat " + (Voix.pret ? "prêt" : "absent"));
-        for (var s : List.of(IA.CONVERSATION, IA.ECOUTE, IA.TRANSCRIPTION, IA.VOIX, IA.OPENROUTER)) {
-            int max = s == IA.CONVERSATION ? r.max_conversations_jour : s == IA.ECOUTE ? r.max_ecoutes_jour : s == IA.TRANSCRIPTION ? r.max_transcriptions_jour
-                    : s == IA.OPENROUTER ? r.max_openrouter_jour : r.max_voix_jour;
-            var e = s.etat(max);
-            l.add(" - " + s.nom + " : " + e.get("demandes") + "/" + max + " aujourd'hui" + ((long) e.get("pause") > 0 ? ", en pause " + e.get("pause") + " s" : "")
-                    + (((String) e.get("erreur")).isEmpty() ? "" : " · dernière erreur : " + e.get("erreur")));
-        }
-        l.add(" - " + IA.openrouter());
-        return l;
     }
 
     static int chercheur(CommandContext<CommandSourceStack> c, int niveau, String skin) throws com.mojang.brigadier.exceptions.CommandSyntaxException {

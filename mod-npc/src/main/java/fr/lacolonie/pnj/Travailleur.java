@@ -1008,31 +1008,6 @@ public class Travailleur extends PathfinderMob {
      * c'est elle qui comprend et qui écrit la réponse ; sans elle (ou si elle ne répond pas), l'interpréteur.
      */
     void lireLettre(Courrier.Lettre l) {
-        // Des ordres longs (« s'il pleut, rentre ») : l'interpréteur seul les comprend, sans dépenser l'IA.
-        Ordres.Lecture seul = Ordres.lire(l.texte, metier);
-        if (!seul.regles.isEmpty() || seul.annulerRegles) { lireLettreSansIA(l); return; }
-        if (IA.conversationDisponible() && level().getServer() != null) {
-            var serveur = level().getServer();
-            IA.converser(this, l.texte, false).whenComplete((d, err) -> serveur.execute(() -> {
-                if (!isAlive()) return;
-                if (d == null || d.reponse().isEmpty()) { lireLettreSansIA(l); return; }
-                Ordres.Lecture li = d.lecture();
-                li.quotidien |= seul.quotidien;
-                Relais.reprendre(li, seul); // pas son métier : il fait passer la demande (Relais)
-                GardeChef.reprendre(li, seul); // ceux qui frappent le chef : l'IA ne connaît pas ces ordres
-                GardeDepot.reprendre(li, seul); // le dépôt du poste non plus
-                Guerre.reprendre(li, seul); // ni la guerre
-                if (seul.boutique != null) li.boutique = seul.boutique; // ni la boutique
-                if (seul.intentions.contains(Ordres.Intention.LIENS)) li.intentions.add(Ordres.Intention.LIENS); // ses amis : c'est le mod qui répond
-                if (li.texte.isBlank()) li.texte = l.texte;
-                String dit = appliquer(li, null);
-                String reponse = reponseImposee ? dit : d.reponse(); // un refus ou un marché : c'est lui qui répond, pas l'IA
-                IA.noter(this, "Lettre du chef", l.texte);
-                IA.noter(this, "Ta réponse", reponse);
-                Courrier.ecrireTexte(this, "Réponse à ta lettre", reponse, false);
-            }));
-            return;
-        }
         lireLettreSansIA(l);
     }
 
@@ -1336,7 +1311,7 @@ public class Travailleur extends PathfinderMob {
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
             Humeur.offense(this, Obeissance.COUP_CHEF); // des excuses pourront en effacer la moitié
             memoire.putLong("coup_chef", level().getGameTime());
-            souvenirs.noter(Souvenirs.Genre.COUP, jour(), IA.heure(this), "un coup");
+            souvenirs.noter(Souvenirs.Genre.COUP, jour(), Paroles.heure(this), "un coup");
             if (!aTerre && !muet() && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
         }
         return touche;
@@ -1588,7 +1563,7 @@ public class Travailleur extends PathfinderMob {
             if (pris == 0) { dire("Mon sac est plein, chef."); return InteractionResult.CONSUME; } // rien de pris : il le garde en main
             int piece = Reglages.piece(enMain);
             String objet = piece >= 0 ? Reglages.texte((long) pris * Reglages.actuel.monnaie.get(piece).valeur) : Souvenirs.nombre(pris, Consignes.nom(enMain));
-            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), IA.heure(this), objet);
+            if (!utile) souvenirs.noter(Souvenirs.Genre.CADEAU, jour(), Paroles.heure(this), objet);
             enMain.setCount(reste.getCount());
             // Un présent : il remercie selon son caractère ({objet} seulement s'il y en a plusieurs : « 3 diamants », sans article à deviner).
             dire(utile ? Messages.corps(this, "dit_merci_objet") : selon("cadeau", piece >= 0 || pris > 1 ? objet : null, "souv_cadeau"));
@@ -1709,7 +1684,7 @@ public class Travailleur extends PathfinderMob {
     private String seSouvenir(Ordres.Lecture l) {
         if (chef == null || mode == Mode.CHOMEUR || l.texte.isBlank() && l.regles.isEmpty()) return "";
         long j = jour();
-        int h = IA.heure(this);
+        int h = Paroles.heure(this);
         reactionSuffit = false;
         if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
         // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : il ne dit que ce qu'il a vu ou entendu (Rumeurs) ; ni ragot inventé, ni l'IA à sa place.
@@ -1836,7 +1811,7 @@ public class Travailleur extends PathfinderMob {
                 reponseImposee = true;
                 changerMoral(Obeissance.MARCHE);
                 prime += Obeissance.prime(salaireVerse());
-                souvenirs.noter(Souvenirs.Genre.MARCHE, jour(), IA.heure(this), Reglages.texte(Obeissance.prime(salaireVerse())) + " de plus pour « " + avant.texte + " »");
+                souvenirs.noter(Souvenirs.Genre.MARCHE, jour(), Paroles.heure(this), Reglages.texte(Obeissance.prime(salaireVerse())) + " de plus pour « " + avant.texte + " »");
                 return Messages.corps(this, "marche") + " " + appliquerOrdre(avant, enFace);
             }
             if (seule && Obeissance.abandonne(l.texte)) { reponseImposee = true; return Messages.corps(this, "abandon"); }

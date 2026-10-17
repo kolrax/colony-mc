@@ -77,14 +77,14 @@ public class TestsNuit {
         Travailleur t = s.t();
         String[] reponse = {null};
         long[] endormi = {-1};
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{t},
+        Essais.etapes(h, s.chef(), new Travailleur[]{t},
                 () -> {
                     reponse[0] = t.appliquer(Ordres.lire("Travaille de nuit", "bucheron"), s.chef());
                     h.assertTrue(t.debut == 20 && t.fin == 6, "heures de nuit (" + t.debut + "-" + t.fin + ", réponse " + reponse[0] + ")");
                     h.assertTrue(reponse[0] != null && reponse[0].contains("nuit"), "il répond qu'il fera les nuits : " + reponse[0]);
                     h.assertTrue(t.enService(), "à minuit, il est en service");
                 },
-                TestsIA.attendre(h, 100),
+                Essais.attendre(h, 100),
                 () -> {
                     h.assertFalse(t.action instanceof Actions.Reposer || t.isSleeping(), "la nuit, il ne dort pas (" + TestsJeu.etat(t, s.base()) + ")");
                     h.assertFalse(t.memoire.contains("abri"), "pas d'abri : il travaille");
@@ -95,7 +95,7 @@ public class TestsNuit {
                     h.assertTrue(t.isSleeping(), "à midi, il dort dans son lit (" + TestsJeu.etat(t, s.base()) + ")");
                     if (endormi[0] < 0) endormi[0] = h.getTick();
                 },
-                TestsIA.attendre(h, 800),
+                Essais.attendre(h, 800),
                 () -> {
                     h.assertTrue(t.isSleeping() && t.action instanceof Actions.Reposer, "toujours endormi 40 s plus tard (" + TestsJeu.etat(t, s.base()) + ")");
                     h.assertTrue(t.statut().startsWith("Dort le jour"), "statut : " + t.statut());

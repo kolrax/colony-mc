@@ -91,7 +91,7 @@ public class TestsBoutique {
         Scene s = scene(h, 380);
         s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 5));
         s.client().getInventory().add(new ItemStack(Items.COPPER_INGOT, 5));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Tiens la boutique"),
                 () -> h.assertTrue(Boutiquier.ouverte(s.t()), "la boutique doit être ouverte : " + vu(s)),
                 () -> s.t().parler(s.client(), "Je t'achète 3 pains"),
@@ -112,7 +112,7 @@ public class TestsBoutique {
         Scene s = scene(h, 381);
         s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 5));
         s.client().getInventory().add(new ItemStack(Items.COPPER_INGOT, 1));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Ouvre une boutique."),
                 () -> h.assertTrue(Boutiquier.ouverte(s.t()), "la boutique doit être ouverte : " + vu(s)),
                 () -> s.t().parler(s.client(), "Je t'achète 3 pains"),
@@ -132,7 +132,7 @@ public class TestsBoutique {
         s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 5));
         s.poste().caisse.setItem(0, new ItemStack(Items.COPPER_INGOT, 4));
         s.client().getInventory().add(new ItemStack(Items.GOLD_INGOT, 1));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Tiens la boutique, et vends le pain à 2 pièces."),
                 () -> h.assertTrue(Boutiquier.ouverte(s.t()) && dit(s.t(), "boutique_ordre_prix"), "ouverte, et le prix compris : " + vu(s)),
                 () -> s.t().parler(s.client(), "Je veux deux pains"),
@@ -153,7 +153,7 @@ public class TestsBoutique {
         s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 5));
         s.poste().depot.setItem(1, new ItemStack(Items.COOKED_BEEF, 2));
         s.client().getInventory().add(new ItemStack(Items.COPPER_INGOT, 10));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Tiens la boutique. Ne vends pas le pain."),
                 () -> h.assertTrue(Boutiquier.ouverte(s.t()) && dit(s.t(), "boutique_ordre_exclu"), "ouverte, et l'exclusion comprise : " + vu(s)),
                 () -> s.t().parler(s.client(), "Je veux du pain"),
@@ -162,7 +162,7 @@ public class TestsBoutique {
                     h.assertTrue(compte(s.client().getInventory(), Items.COPPER_INGOT) == 10, "pas une pièce prise");
                     h.assertTrue(dit(s.t(), "vente_absent"), "il dit qu'il n'en vend pas : " + vu(s));
                 },
-                TestsIA.attendre(h, 25), // une demande par seconde au plus
+                Essais.attendre(h, 25), // une demande par seconde au plus
                 () -> s.t().parler(s.client(), "Je t'achète un steak"),
                 () -> h.assertTrue(compte(s.client().getInventory(), Items.COOKED_BEEF) == 1 && compte(s.client().getInventory(), Items.COPPER_INGOT) == 7
                         && compte(s.poste().caisse, Items.COPPER_INGOT) == 3, "le steak vendu 3 pièces : " + vu(s)),
@@ -183,7 +183,7 @@ public class TestsBoutique {
         a.prenom = "Gauthier";
         a.inventaire.addItem(new ItemStack(Items.GOLD_INGOT, 1));
         a.forcerChunk();
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> { s.t().parler(s.chef(), "Tiens la boutique, et vends le pain à 2 pièces."); a.faim = 6; }, // affamé après l'ouverture : sa recherche de vendeur n'a lieu qu'une fois toutes les 3 minutes
                 () -> {
                     h.assertTrue(!a.chef.equals(s.t().chef), "deux chefs");
@@ -216,7 +216,7 @@ public class TestsBoutique {
         s.client().setGameMode(GameType.CREATIVE);
         s.client().getInventory().setItem(0, new ItemStack(Items.GOLD_INGOT, 1));
         for (int i = 1; i < 36; i++) s.client().getInventory().setItem(i, new ItemStack(Items.DIRT, 64));
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Tiens la boutique"),
                 () -> h.assertTrue(Boutiquier.ouverte(s.t()), "la boutique doit être ouverte : " + vu(s)),
                 () -> s.t().parler(s.client(), "Je t'achète 2 pains"),
@@ -236,9 +236,9 @@ public class TestsBoutique {
     public static void enGreveIlRefuse(GameTestHelper h) {
         Scene s = scene(h, 387);
         s.t().mode = Travailleur.Mode.GREVE;
-        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
                 () -> s.t().parler(s.chef(), "Tiens la boutique"),
-                TestsIA.attendre(h, 10),
+                Essais.attendre(h, 10),
                 () -> h.assertTrue(!Boutiquier.tient(s.t()) && !Boutiquier.ouverte(s.t()), "pas de boutique en grève : " + vu(s)),
                 () -> fin(s.t()));
     }
