@@ -1,9 +1,10 @@
 # Reprise : où on en est
 
-Mise à jour : 16/10/2026, 22 h 20 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 0.9.35** (22 h 16 UTC le 16/10), un seul jar dans `/mods`. `reglages.json` du serveur : `pnj_max_par_joueur` = 30.
+- **Serveur : 0.9.37** (00 h 38 UTC le 17/10), un seul jar dans `/mods`. `reglages.json` du serveur : `pnj_max_par_joueur` = 30, chercheurs 0,35 / 15 min (`plus_rares`).
+- 0.9.37 = **recrutement** (`Talents`, `Recrutement`, réputation dans `Courrier`, affiche, cloche de village ; `TestsRecrutement`, `RecrutementTest`). 0.9.36 = **machines de Create** par le transporteur (`Machines`, `TestsMachines` coins 390-398, `machines.txt`) ; jamais essayé avec le vrai Create (il plante le serveur de test : paquets aux faux joueurs).
 - 0.9.35 = **boutiques** (`Boutique` pur, `Boutiquier`, `TestsBoutique` coins 380-387, lots `boutique` et `boutique_nuit`). 0.9.34 = **coût des ouvriers** (`Cout`, `TestsCout` lot `cout`). 0.9.33 = **économie entre PNJ** (`Economie`, `Achats`, `TestsEconomie` coins 370-374).
 - 0.9.32 = **guerre entre colonies** 1re passe (`Guerre` pur, `Armee`, `Courrier.guerres`, `TestsGuerre` coins 320-323, `guerre.txt`), relue, 3 bloquants et 5 importants corrigés ; mineurs dans plus-tard.
 - 0.9.31 = **réserve sans limite du dépôt** (`Reserve`, `Bureau.Entite`, `Courrier.reserves`, `TestsReserve` coins 340-346).
@@ -13,7 +14,8 @@ Mise à jour : 16/10/2026, 22 h 20 UTC. Une page à lire en début de session, a
 - **Décision de KOLRAX (16/10, 17 h 12 UTC)** : le serveur n'ouvre que quand le mod est fini ; le chantier continue ; monde de test encore jetable (régénération permise).
 
 ## Branches à reprendre
-- Aucune : `economie`, `cout`, `boutiques` sont fusionnées. `en-cours` = `main`.
+- `origin/etoiles` : étoiles qui montent (lot 13), verte sur 0.9.37 (325/325 JUnit, 375/375 en jeu), relecture lancée en fin de session (voir le journal pour ses résultats). À faire : corriger la relecture, fusionner `main`, passe complète, livrer en 0.9.38.
+- `en-cours` = `main` (sa suppression est refusée depuis le cloud).
 
 ## Ce que le mod sait faire aujourd'hui
 - **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
@@ -32,11 +34,12 @@ Mise à jour : 16/10/2026, 22 h 20 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » et « Graphify » dans CLAUDE.md.**
-1. Lot 12 (Create) : « Les PNJ remplissent et vident les machines (dépôts, entonnoirs, tapis) ». Puis lot 13 (recrutement, étoiles, familles, nuit), lot 14.
-2. Avant l'ouverture : banc de charge avec 30 ouvriers par joueur (plafond passé de 5 à 30 en 0.9.34, jamais mesuré).
-3. Restes : achat d'équipement (économie), guerre (renfort des civils, feu, paix des deux côtés…), boutiques (chat public, lots, marchandage) : voir `docs/plus-tard.md`.
-4. Instables vus le 16/10 (passés à la relance) : `bucheronPresDeLaLave`, `compagnonsEnParlent`, `chasseSurOrdreLEspeceDite`, `coupsDArme`, `peureuxFuitDeLoin`, `fourbeSEclipse`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `tondUnMouton`, `calmeFrappeSeDefend`, `figeToiPuisAuTravail`, `iavoix`, `sortDeLaLave`. Environ une passe complète sur deux a 1 ou 2 échecs, aussi sur `main` seul. Les rendre fiables vaut une case (piste : beaucoup tombent dans le lot par défaut de 50 tests, avec des husks qui poursuivent).
-5. Méthode qui a marché : un worktree par case, 2 développeurs en parallèle, tests en jeu par `flock /tmp/gametest.lock`, relecteur dès qu'une case est verte ; avant de livrer une branche, fusionner `main` dedans et refaire build + passe complète.
+1. Finir `etoiles` (voir Branches) et livrer 0.9.38 ; cocher « Étoiles » au plan.
+2. Lot 13 : familles, enfants, vieillesse, apprenti ; travailleurs de nuit. Puis lot 14 (autoriser un joueur, débauche/corruption ; nom, métier, chef visibles ; rumeurs).
+3. Avant l'ouverture : banc de charge avec 30 ouvriers par joueur ; essai réel des machines de Create sur le serveur (moulin, presse, bassin, tapis) ; rendre fiables les tests instables.
+4. Restes : `docs/plus-tard.md` (crieur, débauche, achat d'équipement, guerre, boutiques, machines…).
+5. Instables connus (passent à la relance) : `bucheronPresDeLaLave`, `compagnonsEnParlent`, `chasseSurOrdreLEspeceDite`, `coupsDArme`, `peureuxFuitDeLoin`, `fourbeSEclipse`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `tondUnMouton`, `calmeFrappeSeDefend`, `figeToiPuisAuTravail`, `iavoix`, `sortDeLaLave`, `chasseDeNuit` (vu le 17/10).
+6. Méthode qui a marché : un worktree par case (outil Agent, isolation worktree), 2 développeurs en parallèle, `flock /tmp/gametest.lock`, relecteur dès qu'une case est verte ; avant de livrer, fusionner `main` dans la branche et refaire build + passe complète.
 
 ## Envoi du jar depuis le cloud
 `panel.py upload` échoue (connexion coupée). Ce qui marche : `panel.py write /mods-off/essai-colonie_pnj-X.jar <jar>`, vérifier la taille avec `panel.py ls /mods-off`, puis `panel.py mv` vers /mods. Banc : `execute positioned 484 64 272 positioned over motion_blocking_no_leaves run pnj banc 50 tous ~ ~ ~` (personne connecté), puis `pnj charge`, `spark tps`, `pnj banc fin`.
