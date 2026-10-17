@@ -118,6 +118,12 @@ final class Fermier extends Metier {
         return c == null ? null : Cultures.parId(c.id);
     }
 
+    /** Il ne manque plus de graines (semis réussi, rien à semer, ou des graines au dépôt) : « Plus de graines au dépôt » s'efface. */
+    static void plusSansGraines(Travailleur t) {
+        t.memoire.remove("sans_graines");
+        t.debloquer(Statut.SANS_GRAINES);
+    }
+
     @Override
     void travailler(Travailleur t) {
         Tour tour = TOURS.computeIfAbsent(t, k -> new Tour());
@@ -126,8 +132,15 @@ final class Fermier extends Metier {
         // Sa houe, prise au dépôt, s'il a des champs à labourer (pour récolter, les mains suffisent).
         if (!champs.isEmpty() && outilAuDepot(t, HOUES, HOUES, "houe")) return;
         // Plus de graines pour semer (vu au dernier semis) : il le dit au-dessus de sa tête jusqu'au prochain semis réussi,
-        // au lieu de « Cultive » quand son champ reste vide (fantôme : 0 blé en 2 jours).
-        if (t.memoire.getBoolean("sans_graines")) t.bloquer(Statut.SANS_GRAINES);
+        // au lieu de « Cultive » quand son champ reste vide (fantôme : 0 blé en 2 jours). Dès qu'il y a de ces graines au
+        // dépôt (ou sur lui), il ne le dit plus : il les prendra au prochain semis.
+        String sans = t.memoire.getString("sans_graines");
+        if (!sans.isEmpty()) {
+            Actions.Filtre g = Actions.Filtre.de(sans);
+            Bureau.Entite b = Bureau.entite(t);
+            if (t.compter(g) > 0 || b != null && b.compter(g) > 0) plusSansGraines(t);
+            else t.bloquer(Statut.SANS_GRAINES);
+        }
 
         // La récolte au dépôt : à la fin de chaque tour des champs, ou le sac presque plein (rien ne tombe par terre).
         if (Monde.libres(t) < 3 || tour.recoltees > 0 && tour.zone == 0) {
@@ -487,6 +500,7 @@ final class Fermier extends Metier {
                     etape = 1;
                     relever(t, l);
                     if (cases.isEmpty()) {
+                        plusSansGraines(t); // plus rien à semer : il ne manque plus de graines
                         dire(t, "Il n'y a rien à labourer là, chef : la terre est déjà semée, bâtie, ou trop loin du poste.");
                         return ordre ? echec("rien_a_semer") : Actions.Etat.OK;
                     }
@@ -518,14 +532,13 @@ final class Fermier extends Metier {
                     voulues = cases.size();
                     int graines = t.compter(graine);
                     if (graines == 0) {
-                        t.memoire.putBoolean("sans_graines", true);
+                        t.memoire.putString("sans_graines", graine.texte);
                         t.bloquer(Statut.SANS_GRAINES);
                         if (ordre) dire(t, "Je n'ai pas de " + nomGraines() + ", chef, ni sur moi ni au dépôt.");
                         else Cerveau.ecrire(t, "graines", Cerveau.UN_JOUR, "graines", nomGraines());
                         return echec("pas_de_graines");
                     }
-                    t.memoire.remove("sans_graines");
-                    t.debloquer(Statut.SANS_GRAINES);
+                    plusSansGraines(t);
                     if (aLabourer(l) && !equiperMeilleur(t, HOUES::objet)) {
                         if (ordre) dire(t, "Il me faut une houe pour labourer, chef, et il n'y en a pas au dépôt.");
                         else Cerveau.ecrire(t, "houe", 1800, "houe");

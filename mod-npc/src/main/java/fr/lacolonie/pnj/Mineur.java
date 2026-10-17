@@ -26,6 +26,8 @@ final class Mineur extends Metier {
     static final String FER_OU_MIEUX = "minecraft:iron_pickaxe|minecraft:diamond_pickaxe|minecraft:netherite_pickaxe";
     static final int PALIER = 6, GALERIE = 24, GALERIES = 8, TORCHES = 8;
     static final int[][] DIRS = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    /** La terre de son escalier : ce qu'il pose d'abord pour boucher un trou. */
+    static final Actions.Filtre TERRE = Actions.Filtre.de("minecraft:dirt|minecraft:coarse_dirt");
 
     /** Une commande de minerai : les blocs à miner, la hauteur (Y) des galeries et la pioche nécessaire. */
     static final class Minerai extends Commande {
@@ -146,6 +148,7 @@ final class Mineur extends Metier {
                 }
                 t.memoire.putInt("bouchons", t.memoire.getInt("bouchons") + 1);
                 t.memoire.putString("cible", cle(q));
+                Lieux.pose(t, q);
                 Cerveau.lancer(t, new Actions.Boucher(q));
                 return Case.ACTION;
             }
@@ -161,12 +164,14 @@ final class Mineur extends Metier {
         BlockPos sous = p.below();
         if (Monde.libre(l, sous)) {
             if (echecSur(t, sous)) return Case.BLOQUE;
-            // Du pavé, sinon tout bloc banal de son sac (la terre de l'escalier) ; sans rien, il en demande au chef.
+            // La terre de l'escalier d'abord (elle ne compte pas comme une construction), sinon un bloc banal de son sac qui
+            // n'est pas ce que sa mission demande de livrer (Itineraire.caseDeChantier) ; sans rien, il en demande au chef.
             int i = Itineraire.caseDeChantier(t, true);
             if (i >= 0) {
                 t.memoire.putString("cible", cle(sous));
                 String bloc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(t.inventaire.getItem(i).getItem()).toString();
-                Cerveau.lancer(t, new Actions.Poser(sous, Actions.Filtre.de(t.compter(Actions.Filtre.de("#c:cobblestones")) > 0 ? "#c:cobblestones" : bloc)));
+                Lieux.pose(t, sous);
+                Cerveau.lancer(t, new Actions.Poser(sous, Actions.Filtre.de(t.compter(TERRE) > 0 ? TERRE.texte : bloc)));
             } else Cerveau.lancer(t, new Actions.Demander("pierre_trou", Actions.Filtre.de("#c:cobblestones"), 8));
             return Case.ACTION;
         }
@@ -188,7 +193,7 @@ final class Mineur extends Metier {
         if (compteur % TORCHES == 0 && t.level().getMaxLocalRawBrightness(p.above()) < 8) {
             if (t.compter(Actions.Filtre.de("minecraft:torch")) > 0) {
                 m.putInt("torche", m.getInt("torche") + 1);
-                if (m.getInt("torche") % 2 == 1) { Cerveau.lancer(t, new Actions.Poser(p.above(), Actions.Filtre.de("minecraft:torch"))); return; }
+                if (m.getInt("torche") % 2 == 1) { Lieux.pose(t, p.above()); Cerveau.lancer(t, new Actions.Poser(p.above(), Actions.Filtre.de("minecraft:torch"))); return; }
             } else Cerveau.ecrire(t, "torches", 1800, "torches");
         }
         m.putInt("torche", 0);
@@ -222,6 +227,17 @@ final class Mineur extends Metier {
             t.bloquer(Statut.LIEU_MINE);
             m.putLong("rates_t", Cerveau.temps(t) + 300);
         }
+    }
+
+    /**
+     * Nouveau lieu (« Travaille ici ») ou nouveau chantier : il oublie ses puits ratés et sa mine, et n'est plus bloqué
+     * « Aucun lieu sûr pour miner » ; il cherche aussitôt une entrée.
+     */
+    static void oublierMine(Travailleur t) {
+        t.memoire.remove("rates");
+        t.memoire.remove("rates_t");
+        t.memoire.remove("mine");
+        t.debloquer(Statut.LIEU_MINE);
     }
 
     void nouveauPuits(Travailleur t) {
@@ -301,6 +317,7 @@ final class Mineur extends Metier {
             m.remove("puits");
             m.remove("ignores");
             m.remove("cible");
+            oublierMine(t);
         }
         CompoundTag ignores = m.getCompound("ignores");
 
