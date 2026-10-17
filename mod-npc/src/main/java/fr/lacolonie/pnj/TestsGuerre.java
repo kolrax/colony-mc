@@ -13,19 +13,22 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Lot 9, cahier 6.5 : la guerre entre colonies. Sans guerre, le guerrier ne touche pas l'ouvrier d'un autre chef (et refuse
- * l'assaut) ; la guerre déclarée, il le frappe près du poste, et un ouvrier le signale ; levée, l'armée marche au poste
- * ennemi, pille son dépôt et casse sa porte ; la paix faite, il baisse son arme. Voir {@link Guerre} et {@link Armee}.
- * Le chef ennemi n'est pas un joueur ici (les faux joueurs portent tous le même nom) : ses ouvriers portent son nom.
- * Coins 320 à 323.
+ * La guerre (refonte 1.0.0, partie 6) : elle se déclare et se fait la paix au poste ({@link Armee#declarer}, {@link Armee#paix}) ;
+ * les gardes ont trois missions (défendre, escorter, attaquer). Sans guerre, un garde qui défend la colonie ne touche pas un
+ * joueur étranger ; la guerre déclarée, il le frappe ; sous 30 % de sa vie, il rompt et se replie vers le poste ; la troupe qui
+ * attaque marche en rangs jusqu'au poste ennemi et en enfonce la porte (pas le bureau) ; la paix faite, il baisse son arme.
+ * Le banc « 30 contre 30 » mesure la part du mod pendant une grande bataille. Voir {@link Guerre} et {@link Armee}.
+ * Coins 320 à 326.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
 public class TestsGuerre {
-    /** Le chef ennemi (pas un joueur), son poste, et un de ses ouvriers (null si {@code ici} est null). */
+    /** Le chef ennemi (pas un joueur), son poste, et un de ses ouvriers (null si {@code x} est null). */
     record Rival(UUID chef, String nom, BlockPos poste, Travailleur o) {
         void finir(TestsChef.Scene s, Travailleur... autres) {
             Courrier c = Courrier.de(s.chef().getServer());
@@ -58,83 +61,103 @@ public class TestsGuerre {
     /** Loin de la scène : l'ouvrier ennemi n'est pas chez lui près de notre poste. */
     static BlockPos loin(GameTestHelper h, int coin) { return TestsJeu.sol(h, coin * 400 + 200, 60000); }
 
-    static boolean[] surveiller(GameTestHelper h, TestsChef.Scene s, Rival r) {
+    /** Le chef lui donne une mission de garde par sa fiche (comme le joueur) : elle doit être acceptée. */
+    static void mission(GameTestHelper h, TestsChef.Scene s, Travailleur g, String id) {
+        Missions.Reponse r = Missions.donner(s.chef(), g, id, "fois", 1, "toujours", null);
+        h.assertTrue(r.ok(), "la mission « " + id + " » est acceptée : " + r.texte());
+    }
+
+    /** L'autre joueur, étranger, a un poste loin d'ici (on peut lui déclarer la guerre) ; il se tient près de notre garde. */
+    static BlockPos etranger(GameTestHelper h, TestsChef.Scene s, int coin, double x, double z) {
+        BlockPos poste = loin(h, coin);
+        Courrier.de(h.getLevel().getServer()).definirPoste(s.autre().getUUID(), h.getLevel(), poste);
+        s.autre().teleportTo(h.getLevel(), s.b().getX() + x, s.b().getY(), s.b().getZ() + z, 0, 0);
+        return poste;
+    }
+
+    static void finEtranger(GameTestHelper h, TestsChef.Scene s, BlockPos poste) {
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.paix(s.chef().getUUID(), s.autre().getUUID());
+        c.oublierPoste(s.autre().getUUID(), h.getLevel(), poste);
+        c.boites.remove(s.autre().getUUID());
+        c.boites.remove(s.chef().getUUID());
+        TestsGuerrier.fin(s.g());
+        s.partir();
+    }
+
+    static boolean[] surveiller(GameTestHelper h, Travailleur g, net.minecraft.world.entity.Entity cible) {
         boolean[] vu = {false};
-        h.onEachTick(() -> { if (s.g().action instanceof Actions.Attaquer a && a.cible == r.o()) vu[0] = true; });
+        h.onEachTick(() -> { if (g.action instanceof Actions.Attaquer a && a.cible == cible) vu[0] = true; });
         return vu;
     }
 
-    /** Sans guerre : il laisse l'ouvrier de l'autre chef, tout près du poste ; « attaquez la colonie de X » : il refuse. */
+    /** Sans guerre déclarée : le garde qui défend la colonie laisse le joueur étranger, tout près de lui. */
     @GameTest(template = "vide", timeoutTicks = 300)
-    public static void sansGuerreRien(GameTestHelper h) {
+    public static void defendreSansGuerre(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 320);
-        Rival r = rival(h, s, 320, loin(h, 320), 4.5, 7.5);
-        boolean[] vu = surveiller(h, s, r);
-        String dit = s.g().appliquer(Ordres.lire("Attaquez la colonie de " + r.nom() + " !", "guerrier"), s.chef());
-        h.assertTrue(Vie.vient("guerre_refus_hors_guerre", dit), "il refuse : " + dit);
-        h.assertFalse(s.g().memoire.contains("guerre_assaut"), "pas d'assaut");
-        h.runAtTickTime(h.getTick() + 120, () -> {
-            h.assertFalse(vu[0], "il ne l'attaque pas");
-            h.assertTrue(r.o().getHealth() == r.o().getMaxHealth(), "l'autre ouvrier ne prend aucun coup");
-            r.finir(s);
+        BlockPos poste = etranger(h, s, 320, 3.5, 4.5);
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        boolean[] vu = surveiller(h, s.g(), s.autre());
+        h.runAtTickTime(h.getTick() + 160, () -> {
+            h.assertFalse(vu[0], "il ne l'attaque pas (" + s.g().paroles + ")");
+            h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'étranger ne prend aucun coup");
+            finEtranger(h, s, poste);
             h.succeed();
         });
     }
 
-    /** La guerre déclarée : la lettre part au poste ennemi ; le guerrier frappe l'ouvrier ennemi près du poste, un mineur le signale. */
+    /** La guerre déclarée au poste : les deux le lisent ; le garde qui défend la colonie frappe l'ennemi qui y est. */
     @GameTest(template = "vide", timeoutTicks = 400)
-    public static void guerreDeclareeDefense(GameTestHelper h) {
+    public static void defendreEnGuerre(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 321);
-        Rival r = rival(h, s, 321, loin(h, 321), 4.5, 7.5);
-        Travailleur m = s.ouvrier("mineur", 1.5, 8.5, new ItemStack(Items.IRON_PICKAXE));
-        m.mode = Travailleur.Mode.ATTENDRE;
-        String dit = s.g().appliquer(Ordres.lire("On déclare la guerre à " + r.nom() + ".", "guerrier"), s.chef());
+        BlockPos poste = etranger(h, s, 321, 3.5, 4.5);
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        String dit = Armee.declarer(s.chef(), s.autre().getUUID().toString());
         Courrier c = Courrier.de(h.getLevel().getServer());
-        h.assertTrue(Vie.vient("guerre_declaree", dit), "il le redit : " + dit);
-        h.assertTrue(c.enGuerre(s.chef().getUUID(), r.chef()) && c.enGuerre(r.chef(), s.chef().getUUID()), "la guerre, des deux côtés");
-        h.assertTrue(!c.boites.getOrDefault(r.chef(), java.util.List.of()).isEmpty(), "une lettre au poste ennemi");
+        h.assertTrue(dit.contains("déclare la guerre"), "le chef lit la déclaration : " + dit);
+        h.assertTrue(c.enGuerre(s.chef().getUUID(), s.autre().getUUID()) && c.enGuerre(s.autre().getUUID(), s.chef().getUUID()), "la guerre, des deux côtés");
+        h.assertTrue(!c.boites.getOrDefault(s.autre().getUUID(), List.of()).isEmpty(), "l'autre l'apprend aussi à son poste");
+        h.assertTrue(Armee.declarer(s.chef(), s.autre().getUUID().toString()).startsWith("Tu es déjà en guerre"), "pas deux fois");
         h.succeedWhen(() -> {
-            h.assertTrue(r.o().getHealth() < r.o().getMaxHealth(), "il frappe l'ouvrier ennemi (" + s.g().paroles + ")");
-            h.assertTrue(TestsCaractere.aDit(m, "guerre_ennemi_vu"), "le mineur le signale (" + m.paroles + ")");
-            r.finir(s, m);
+            h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il frappe l'ennemi (" + s.g().paroles + ")");
+            finEtranger(h, s, poste);
         });
     }
 
-    /** Levée : le guerrier marche au poste ennemi, à pied, prend au dépôt (pas les pièces) et casse la porte, pas le bureau. */
+    /** La troupe qui attaque marche jusqu'au poste ennemi, en enfonce la porte, pas le bureau. */
     @GameTest(template = "vide", timeoutTicks = 1200)
-    public static void leveePilleEtCasse(GameTestHelper h) {
+    public static void attaquePosteEnnemi(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 322);
         ServerLevel l = h.getLevel();
         BlockPos poste = TestsJeu.sol(h, 322 * 400 + 24, 60000 + 4);
         l.setBlockAndUpdate(poste, ColoniePnj.BUREAU.get().defaultBlockState());
-        Bureau.Entite b = (Bureau.Entite) l.getBlockEntity(poste);
-        b.depot.setItem(0, new ItemStack(Items.IRON_INGOT, 5));
         BlockPos porte = poste.offset(0, 0, 3);
         l.setBlockAndUpdate(porte, Blocks.OAK_DOOR.defaultBlockState());
         l.setBlockAndUpdate(porte.above(), Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
         Rival r = rival(h, s, 322, poste, null, 0);
-        s.g().debut = s.g().fin = 0; // en service jour et nuit
-        // Le rival n'a pas d'ouvrier ici (on ne trouve pas son nom) : la guerre est posée directement dans le Courrier.
+        Travailleur g2 = s.ouvrier("guerrier", 1.5, 2.5, new ItemStack(Items.IRON_SWORD)), g3 = s.ouvrier("guerrier", 1.5, 6.5, new ItemStack(Items.IRON_SWORD));
+        // Sans guerre (ni lieu) : la mission « attaquer » est acceptée mais attend, bloquée avec sa raison.
+        for (Travailleur g : List.of(s.g(), g2, g3)) mission(h, s, g, Guerre.ATTAQUER);
+        h.assertTrue(Armee.but(s.g(), s.g().missionActive()) == null, "pas de but sans guerre");
         Courrier.de(l.getServer()).declarer(s.chef().getUUID(), "chef", r.chef(), r.nom());
-        String dit = s.g().appliquer(Ordres.lire("Attaquez la colonie de " + r.nom() + ", pillez leur dépôt et cassez leurs portes.", "guerrier"), s.chef());
-        h.assertTrue(Vie.vient("guerre_levee", dit), "il rejoint les rangs : " + dit);
-        h.assertTrue(s.g().memoire.contains("guerre_assaut"), "l'assaut est lancé");
+        h.assertTrue(poste.equals(Armee.but(s.g(), s.g().missionActive())), "le but : le poste ennemi");
         h.succeedWhen(() -> {
-            h.assertTrue(b.depot.getItem(0).isEmpty(), "il pille le dépôt (" + s.g().paroles + ")");
-            h.assertFalse(l.getBlockState(porte).getBlock() instanceof DoorBlock, "il casse la porte (" + s.g().paroles + ")");
+            h.assertFalse(l.getBlockState(porte).getBlock() instanceof DoorBlock, "la troupe enfonce la porte (" + s.g().paroles + ")");
             h.assertTrue(l.getBlockState(poste).is(ColoniePnj.BUREAU.get()), "le bureau reste");
-            h.assertTrue(s.g().compter(Actions.Filtre.de("minecraft:iron_ingot")) == 5 && s.g().memoire.getBoolean("guerre_butin"), "il emporte le butin");
+            for (Travailleur g : List.of(s.g(), g2, g3))
+                h.assertTrue(g.distanceToSqr(Vec3.atBottomCenterOf(poste)) < 12 * 12, g.prenom + " est arrivé avec la troupe");
             l.removeBlock(poste, false);
-            r.finir(s);
+            r.finir(s, g2, g3);
         });
     }
 
-    /** La paix faite pendant qu'il frappe l'ouvrier ennemi : il baisse son arme et ne le touche plus. */
+    /** La paix faite au poste pendant qu'il frappe l'ouvrier ennemi : il baisse son arme et ne le touche plus. */
     @GameTest(template = "vide", timeoutTicks = 500)
     public static void paixPlusDAttaque(GameTestHelper h) {
         TestsChef.Scene s = TestsChef.scene(h, 323);
         Rival r = rival(h, s, 323, loin(h, 323), 4.5, 7.5);
-        s.g().appliquer(Ordres.lire("On déclare la guerre à " + r.nom() + ".", "guerrier"), s.chef());
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        h.assertTrue(Armee.declarer(s.chef(), r.chef().toString()).contains(r.nom()), "la guerre contre le rival, nommé par ses ouvriers");
         long[] paix = {-1};
         boolean[] apres = {false};
         String[] dit = {""};
@@ -142,7 +165,7 @@ public class TestsGuerre {
             boolean attaque = s.g().action instanceof Actions.Attaquer a && a.cible == r.o();
             if (attaque && paix[0] < 0) {
                 paix[0] = h.getTick();
-                dit[0] = s.g().appliquer(Ordres.lire("On fait la paix avec " + r.nom() + ".", "guerrier"), s.chef());
+                dit[0] = Armee.paix(s.chef(), "");
             }
             if (paix[0] >= 0 && h.getTick() == paix[0] + 20) r.o().setHealth(r.o().getMaxHealth());
             if (paix[0] >= 0 && h.getTick() > paix[0] + 20 && attaque) apres[0] = true;
@@ -150,10 +173,81 @@ public class TestsGuerre {
         h.succeedWhen(() -> {
             h.assertTrue(paix[0] >= 0, "la guerre : il attaque d'abord");
             h.assertTrue(h.getTick() > paix[0] + 140, "on attend");
-            h.assertTrue(Vie.vient("guerre_paix", dit[0]), "il le redit : " + dit[0]);
+            h.assertTrue(dit[0].contains("fait la paix"), "le chef lit la paix : " + dit[0]);
+            h.assertFalse(Courrier.de(h.getLevel().getServer()).enGuerre(s.chef().getUUID(), r.chef()), "plus de guerre");
             h.assertFalse(apres[0], "après la paix, plus d'attaque");
             h.assertTrue(r.o().getHealth() == r.o().getMaxHealth(), "plus un coup");
             r.finir(s);
+        });
+    }
+
+    /** En plein combat, sous 30 % de sa vie : il rompt et recule jusqu'au poste. */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void repliSous30(GameTestHelper h) {
+        TestsChef.Scene s = TestsChef.scene(h, 324);
+        BlockPos poste = etranger(h, s, 324, 16.5, 4.5);
+        s.g().teleportTo(s.b().getX() + 14.5, s.b().getY(), s.b().getZ() + 4.5);
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        Armee.declarer(s.chef(), s.autre().getUUID().toString());
+        long[] blesse = {-1};
+        h.onEachTick(() -> {
+            if (blesse[0] < 0 && s.g().action instanceof Actions.Attaquer a && a.cible == s.autre()) {
+                blesse[0] = h.getTick();
+                s.g().setHealth(s.g().getMaxHealth() * 0.25f);
+            }
+            if (blesse[0] >= 0) s.autre().setHealth(s.autre().getMaxHealth()); // l'étranger tient bon : seul le repli compte
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(blesse[0] >= 0, "il charge d'abord l'ennemi");
+            h.assertTrue(s.g().distanceToSqr(Vec3.atBottomCenterOf(s.b())) < 4 * 4, "il recule jusqu'au poste (" + s.g().paroles + ", " + (s.g().action == null ? "-" : s.g().action.nom) + ")");
+            h.assertFalse(s.g().action instanceof Actions.Attaquer a && a.cible == s.autre(), "il ne se bat plus");
+            finEtranger(h, s, poste);
+        });
+    }
+
+    /**
+     * Le banc de la grande bataille : 30 gardes « rouges » attaquent le poste des 30 « bleus », qui le défendent. On vérifie
+     * qu'ils se battent, et on écrit au journal la part du mod par tick (Charge) pour la comparer au budget d'un tick (50 ms).
+     */
+    @GameTest(template = "vide", timeoutTicks = 700, skyAccess = true, batch = "bataille")
+    public static void bataille30contre30(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        Courrier c = Courrier.de(l.getServer());
+        UUID rouge = UUID.randomUUID(), bleu = UUID.randomUUID();
+        BlockPos pr = TestsJeu.sol(h, 325 * 400, 60000), pb = TestsJeu.sol(h, 325 * 400 + 40, 60000);
+        c.definirPoste(rouge, l, pr);
+        c.definirPoste(bleu, l, pb);
+        c.declarer(rouge, "Rouge", bleu, "Bleu");
+        List<Travailleur> rouges = new ArrayList<>(), bleus = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            for (boolean r : new boolean[]{true, false}) {
+                BlockPos p = r ? pr : pb;
+                Travailleur g = Travailleur.auTravail(l, "guerrier", p, new Vec3(p.getX() + 2.5 + i % 6 * 1.5 * (r ? -1 : 1), p.getY(), p.getZ() - 6.5 + i / 6 * 2.5), r ? rouge : bleu, new ItemStack(Items.IRON_SWORD));
+                g.chefNom = r ? "Rouge" : "Bleu";
+                Guerrier.armer(g);
+                g.missions.add(new Travailleur.Mission(r ? Guerre.ATTAQUER : Guerre.DEFENDRE, "quantite", 1));
+                if (i == 0) g.forcerChunk();
+                (r ? rouges : bleus).add(g);
+            }
+        }
+        h.runAtTickTime(h.getTick() + 500, () -> {
+            Charge ch = Charge.ICI;
+            long touches = bleus.stream().filter(g -> g.getHealth() < g.getMaxHealth() || g.aTerre || !g.isAlive()).count()
+                    + rouges.stream().filter(g -> g.getHealth() < g.getMaxHealth() || g.aTerre || !g.isAlive()).count();
+            double pres = rouges.stream().mapToDouble(g -> Math.sqrt(g.distanceToSqr(Vec3.atBottomCenterOf(pb)))).average().orElse(-1);
+            ColoniePnj.LOG.info("[bataille 30 contre 30] part du mod : {} ms par tick en moyenne, {} ms au pire ; cerveau {} ms, actions {} ms, chemins {} ms ; {} gardes touchés, rouges à {} blocs du poste bleu en moyenne",
+                    String.format(java.util.Locale.ROOT, "%.3f", ch.moyenneMs(Charge.Partie.TOTAL)), String.format(java.util.Locale.ROOT, "%.3f", ch.pireMs(Charge.Partie.TOTAL)),
+                    String.format(java.util.Locale.ROOT, "%.3f", ch.moyenneMs(Charge.Partie.CERVEAU)), String.format(java.util.Locale.ROOT, "%.3f", ch.moyenneMs(Charge.Partie.ACTION)),
+                    String.format(java.util.Locale.ROOT, "%.3f", ch.moyenneMs(Charge.Partie.CHEMINS)), touches, String.format(java.util.Locale.ROOT, "%.1f", pres));
+            c.paix(rouge, bleu);
+            c.oublierPoste(rouge, l, pr);
+            c.oublierPoste(bleu, l, pb);
+            c.boites.remove(rouge);
+            c.boites.remove(bleu);
+            rouges.forEach(Travailleur::discard);
+            bleus.forEach(Travailleur::discard);
+            h.assertTrue(touches >= 10, "ils se battent : " + touches + " gardes touchés");
+            h.succeed();
         });
     }
 }
