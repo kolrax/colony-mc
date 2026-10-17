@@ -28,7 +28,7 @@ import java.util.Map;
  * depuis le cerveau, une seule petite recherche autour de lui (8 blocs) : un creeper en vue, il lâche son travail, s'en
  * éloigne et prévient le guerrier de son chef le plus proche ; à portée de voix (48 blocs), le guerrier répond et vient le
  * tuer ; plus loin (96 blocs au plus), l'ouvrier court vers lui, à l'opposé du creeper, et le guerrier l'apprend en le
- * voyant arriver ({@link Guerrier#veille}). Un autre monstre : son caractère décide ({@link Bravoure}) ; le colérique fonce le
+ * voyant arriver ({@link Guerrier#veille}). Un autre monstre : son caractère décide ; le colérique fonce le
  * frapper, le calme le signale près du poste (et se défend, lui ou un collègue frappé), le peureux fuit en criant, le fourbe
  * s'éclipse. Le travail reprend tout seul ensuite : la fuite et le combat sont des actions comme les autres.
  */
@@ -53,7 +53,7 @@ final class Defense {
 
     /**
      * Un ouvrier qui ne se bat pas voit un monstre : vrai s'il lâche ce qu'il fait (il fuit, ou il se bat). Un creeper, tous
-     * s'en éloignent ; un autre monstre, son caractère décide ({@link Bravoure}, réglage {@code caractere_monstres}) ; sans
+     * s'en éloignent ; un autre monstre, son caractère décide ; sans
      * ça, il le signale s'il est près du poste.
      */
     static boolean ouvrier(Travailleur t) {

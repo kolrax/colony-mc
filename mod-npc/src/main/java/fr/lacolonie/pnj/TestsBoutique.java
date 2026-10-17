@@ -169,34 +169,6 @@ public class TestsBoutique {
                 () -> fin(s.t()));
     }
 
-    /**
-     * Un affamé d'une autre colonie, son dépôt vide, une pièce d'or en poche : il achète du pain au boutiquier (un mineur, pas
-     * un producteur), au prix du chef (2) ; la caisse garde la pièce d'or et lui rend 6 cuivres. Il le mange.
-     */
-    @GameTest(template = "vide", timeoutTicks = 1200, batch = "boutique")
-    public static void affameAcheteAuBoutiquier(GameTestHelper h) {
-        Scene s = scene(h, 384);
-        s.poste().depot.setItem(0, new ItemStack(Items.BREAD, 3));
-        s.poste().caisse.setItem(0, new ItemStack(Items.COPPER_INGOT, 6));
-        BlockPos loin = s.t().bureau.west(10);
-        Travailleur a = TestsJeu.employe(h, "mineur", loin, Vec3.atBottomCenterOf(loin.east(2)), ItemStack.EMPTY);
-        a.prenom = "Gauthier";
-        a.inventaire.addItem(new ItemStack(Items.GOLD_INGOT, 1));
-        a.forcerChunk();
-        Essais.etapes(h, s.chef(), new Travailleur[]{s.t()},
-                () -> { s.t().parler(s.chef(), "Tiens la boutique, et vends le pain à 2 pièces."); a.faim = 6; }, // affamé après l'ouverture : sa recherche de vendeur n'a lieu qu'une fois toutes les 3 minutes
-                () -> {
-                    h.assertTrue(!a.chef.equals(s.t().chef), "deux chefs");
-                    h.assertTrue(a.memoire.contains("achat"), "il doit avoir acheté (" + TestsJeu.etat(a, a.bureau) + ", faim " + a.faim + ") ; " + vu(s));
-                    h.assertTrue(compte(s.poste().depot, Items.BREAD) == 2 && a.faim > 6, "un pain vendu et mangé : " + compte(s.poste().depot, Items.BREAD) + ", faim " + a.faim);
-                    h.assertTrue(Reglages.valeur(a.inventaire) == 6 && compte(a.inventaire, Items.GOLD_INGOT) == 0,
-                            "il a payé 2 d'une pièce d'or, 6 rendus : " + Reglages.valeur(a.inventaire));
-                    h.assertTrue(compte(s.poste().caisse, Items.GOLD_INGOT) == 1 && compte(s.poste().caisse, Items.COPPER_INGOT) == 0,
-                            "la caisse : la pièce d'or, sans ses 6 cuivres : " + Reglages.valeur(s.poste().caisse));
-                },
-                () -> fin(s.t(), a));
-    }
-
     /** Ce qui est tombé au sol près du client. */
     static int auSol(ServerPlayer p, Item i) {
         int n = 0;

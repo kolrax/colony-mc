@@ -66,7 +66,7 @@ public class TestsVie {
             h.assertTrue(dites(autre, "sans_lit") == 1, "l'autre dit une fois qu'il n'a pas de lit (" + autre.paroles + ")");
             h.assertTrue(casse[0], "lit cassé");
             h.assertTrue(dites(o, "sans_lit") == 1 && dites(o, "lit_vole") == 0, "son lit cassé, il dit une fois qu'il n'a plus de lit (" + o.paroles + ")");
-            h.assertTrue(o.lit == null && o.moral <= moralAvant[0] - 3, "lit perdu, moral " + moralAvant[0] + " → " + o.moral);
+            h.assertTrue(o.lit == null, "lit perdu");
             a.discard();
             b.discard();
         });

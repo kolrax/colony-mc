@@ -81,6 +81,10 @@ final class Dialogue {
             autour.stream().filter(t -> t.metier.equals(m) && !r.contains(t)).findFirst().ifPresent(r::add);
         if (!r.isEmpty() || a.explicite()) return r;
         // Personne de nommé : le premier dont le métier comprend la demande (la fenêtre d'abord) ; sinon celui de la fenêtre.
+        for (Travailleur t : autour) {
+            Ordres.Lecture l = Ordres.lire(dit, t.metier);
+            if (!l.vide() && l.horsMetier.isEmpty() && l.pourAutres.isEmpty()) { r.add(t); return r; } // c'est son métier
+        }
         for (Travailleur t : autour) if (!Ordres.lire(dit, t.metier).vide()) { r.add(t); return r; }
         if (vise != null) r.add(vise);
         return r;
