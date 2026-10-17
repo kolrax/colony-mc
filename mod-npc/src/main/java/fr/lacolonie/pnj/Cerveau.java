@@ -53,8 +53,6 @@ final class Cerveau {
         // Sur le chemin du retour, la nuit le prend encore loin du poste (cahier 14.12) : il s'arrête et campe (plus bas).
         if (t.action instanceof Actions.Aller a && t.bureau != null && Abri.nuitDehors(t) && a.cible.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 25
                 && !t.isInWater() && !t.isPassenger() && !t.memoire.getBoolean("fuite") && !t.memoire.getBoolean("rappel")) t.finirAction("interrompu");
-        // En révolte, même en plein combat : payé, apaisé, ou le chef parti loin, il pose les armes aussitôt (Humeur).
-        if (t.memoire.getBoolean("revolte")) Humeur.calmer(t);
         // Ce que le chef lui a demandé (une posture, un geste, une tâche) : une attaque ou une grosse faim passent avant.
         if (t.action instanceof Consignes.Faire f && Consignes.interrompre(t, f)) t.finirAction("interrompu");
         // Frappé en pleine action (il attend, il marche, il travaille) : il la lâche tout de suite, pour fuir ou riposter
@@ -73,7 +71,7 @@ final class Cerveau {
         // le calme frappé se défend ici, avant la fuite plus bas (Defense).
         if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
-        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque
+        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Besoins.satisfaction(t); } // de loin en loin : ce qu'il dit, et sa satisfaction
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         // Très grave en plein combat (sans consigne du chef) : il rompt et recule ; sinon, il ne cherche pas de nouveau combat.
         if (t.action != null) {
@@ -117,10 +115,6 @@ final class Cerveau {
             return;
         }
 
-        // À bout depuis des jours, après deux lettres au chef : il rend ce qu'il a pris au dépôt et s'en va (Humeur).
-        if (Humeur.demissionner(t)) return;
-        // Au plus bas : la révolte contre le chef (après ses avertissements), un vol ou un sabotage décidé au bilan (Humeur).
-        if (Humeur.mefaire(t)) return;
 
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
@@ -265,8 +259,6 @@ final class Cerveau {
         }
         mem.remove("livre");
 
-        // Longtemps au travail, le moral moyen ou bas : une courte pause au poste, puis il reprend (loisirs, lot 5).
-        if (Besoins.pause(t)) return;
 
         // Blessé très gravement : ni mine ni combat, il se repose au poste (Blessures).
         if (Blessures.auRepos(t, m)) return;

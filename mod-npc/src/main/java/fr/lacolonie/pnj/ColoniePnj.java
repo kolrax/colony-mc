@@ -119,8 +119,6 @@ public class ColoniePnj {
         // Après un plantage, seul « Stopped » est envoyé : on ferme aussi le panneau là.
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
             PanneauWeb.arreter();
-            Remarques.oublier(); // elles tiennent les mondes du serveur arrêté
-            Deuil.oublier(); // les enterrements en cours aussi
         });
         NeoForge.EVENT_BUS.addListener(ColoniePnj::commandes);
         NeoForge.EVENT_BUS.addListener(Guerrier::impact); // les flèches des guerriers ne blessent pas les passants

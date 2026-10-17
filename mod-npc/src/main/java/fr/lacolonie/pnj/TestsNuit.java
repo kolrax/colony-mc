@@ -168,7 +168,6 @@ public class TestsNuit {
             if (etape[0] == 1) {
                 h.assertTrue(t.memoire.getInt("nuits") == 3, "trois nuits d'affilée (" + t.memoire + ")");
                 h.assertTrue(t.getMaxHealth() == vie - 2, "−2 points de vie max (" + t.getMaxHealth() + " au lieu de " + vie + ")");
-                h.assertTrue(Moral.bilan(Humeur.etat(t)).de(Moral.Cause.NUIT) == -2, "les nuits pèsent sur son moral");
                 t.memoire.putInt("nuits", 6);
                 t.fatigueCompteur = 999;
                 etape[0] = 2;
@@ -186,7 +185,6 @@ public class TestsNuit {
             }
             h.assertTrue(t.memoire.getInt("nuits") == 0, "deux jours de repos : plus de nuits comptées (" + t.memoire + ")");
             h.assertTrue(t.getMaxHealth() == vie, "sa vie max revient (" + t.getMaxHealth() + ")");
-            h.assertTrue(Moral.bilan(Humeur.etat(t)).de(Moral.Cause.NUIT) == 0, "les nuits ne pèsent plus");
             fin(t);
         });
     }

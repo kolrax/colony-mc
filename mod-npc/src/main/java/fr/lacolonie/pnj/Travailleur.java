@@ -487,7 +487,7 @@ public class Travailleur extends PathfinderMob {
     public void tirerAuSort(String metierChoisi, int niveauChoisi) {
         var r = getRandom();
         prenom = PRENOMS[r.nextInt(PRENOMS.length)];
-        temperament = TEMPERAMENTS[r.nextInt(TEMPERAMENTS.length)];
+        temperament = "calme"; // caractères retirés (refonte 1.0.0) : le champ reste, sans effet
         metier = metierChoisi;
         if (niveauChoisi > 0) niveau = Math.clamp(niveauChoisi, 1, 5);
         else {
@@ -516,9 +516,9 @@ public class Travailleur extends PathfinderMob {
         }
     }
 
-    /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue ou une paie trop basse. */
+    /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue, une paie trop basse ou une satisfaction sous 50 (Besoins.satisfaction). */
     public double facteurTravail() {
-        return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1);
+        return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1) * (moral < 50 ? 0.75 : 1);
     }
 
     /** Ce qu'il demande pour son niveau, et selon la taille de la colonie à son embauche. */
@@ -648,7 +648,7 @@ public class Travailleur extends PathfinderMob {
     /** Ce qu'on voit au bureau : à terre, en grève, en expédition, se repose, au travail… */
     public String statut() {
         if (aTerre) return "À terre";
-        if (action instanceof Deuil.Enterrement) return "À un enterrement";
+
         return switch (mode) {
             case CHOMEUR -> "Cherche du travail";
             case GREVE -> "En grève";
@@ -656,7 +656,6 @@ public class Travailleur extends PathfinderMob {
             case ATTENDRE -> "Attend";
             case TRAVAIL -> bureau == null ? "Sans poste" : expedition ? "En expédition"
                     : action instanceof Actions.Reposer || !enService() ? (deNuit() && !Nuit.heureDeNuit(heure()) ? "Dort le jour (travaille de nuit)" : "Se repose")
-                    : action instanceof Besoins.Flaner ? "En pause"
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
@@ -1107,7 +1106,7 @@ public class Travailleur extends PathfinderMob {
         if (faimCompteur >= Talents.seuilFaim(6 * 60 * 20 * 2, talents)) {
             faimCompteur = 0;
             faim = Math.max(0, faim - 1);
-            if (faim <= 6) changerMoral(Obeissance.FAIM); // la faim forte mine le moral, lentement
+
         }
         if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus)) { // les nuits d'affilée ralentissent la guérison
             soinCompteur = 0;
@@ -1116,7 +1115,7 @@ public class Travailleur extends PathfinderMob {
         }
         // Le temps de travail depuis sa dernière pause (Besoins.pause) ; le repos le remet à zéro.
         if (action instanceof Actions.Reposer || isSleeping()) travailSansPause = 0;
-        else if (mode == Mode.TRAVAIL && action != null && !(action instanceof Actions.Attendre) && !(action instanceof Besoins.Flaner)
+        else if (mode == Mode.TRAVAIL && action != null && !(action instanceof Actions.Attendre)
                 && !(action instanceof Actions.LireLettres) && !(action instanceof Actions.ToucherPaie)
                 && !(action instanceof Actions.Fuir)) travailSansPause++;
         if (++fatigueCompteur >= 1000) { // une heure du jeu
@@ -1130,7 +1129,7 @@ public class Travailleur extends PathfinderMob {
                 fatigue -= Nuit.repos(isSleeping() ? 12 : dehors ? 5 : 8, !laNuit && deNuit(), rg.nuit_sommeil_jour);
             else if (mode == Mode.TRAVAIL && action != null) {
                 // Seul un vrai travail compte pour la nuit : pas l'attente au poste, une pause, ni le retour au poste (le chasseur de nuit).
-                travaille = !(action instanceof Actions.Attendre) && !(action instanceof Besoins.Flaner)
+                travaille = !(action instanceof Actions.Attendre)
                         && !(action instanceof Actions.LireLettres) && !(action instanceof Actions.ToucherPaie)
                         && !(action instanceof Actions.Aller a && bureau != null && a.cible.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 25);
                 fatigue += Talents.fatigue(Nuit.fatigue(dehors ? 7 : 5, laNuit && travaille, rg.nuit_fatigue), talents);
@@ -1138,11 +1137,10 @@ public class Travailleur extends PathfinderMob {
             else fatigue -= 2;
             fatigue = Math.clamp(fatigue, 0, 100);
             compterNuits(travaille && laNuit);
-            moral = Moral.repos(moral, memoire.getInt("bilan")); // avec le temps, le moral revient doucement vers 60 (pas après un mauvais bilan)
-            if (action instanceof Actions.Reposer && moral < Obeissance.REPOS) changerMoral(1); // le repos le fait remonter
+
         }
         if (tickCount % 10 == 0) ramasserAutour();
-        if (tickCount % 20 == 0) { Consignes.verifierVitesse(this); Blessures.lenteur(this); Humeur.lenteur(this); }
+        if (tickCount % 20 == 0) { Consignes.verifierVitesse(this); Blessures.lenteur(this); }
         // Il nage comme un joueur : allongé, quand il court dans l'eau profonde.
         boolean nage = isInWater() && isSprinting() && !isPassenger() && !isSleeping() && level().getFluidState(blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER);
         if (nage && getPose() == Pose.STANDING) setPose(Pose.SWIMMING);
@@ -1170,7 +1168,6 @@ public class Travailleur extends PathfinderMob {
         // Parti loin, il n'a pas pu passer à la caisse : il touchera sa paie à son retour.
         if (mode != Mode.CHOMEUR && mode != Mode.GREVE && chef != null && sortieDepuis < 0 && paieEnRetard()) {
             impayes++;
-            changerMoral(Obeissance.RETARD);
             Courrier.reputer(this, Recrutement.IMPAYE);
             prochainePaie = System.currentTimeMillis() + periodePaie();
             if (impayes >= Reglages.actuel.paies_impayees_avant_greve) commencerGreve();
@@ -1205,8 +1202,7 @@ public class Travailleur extends PathfinderMob {
     /** Appelé quand il a touché tout ce qu'on lui devait. */
     public void paye(long montant, boolean paieDuJour) {
         impayes = 0;
-        memoire.putLong("paie_le", jour()); // « paie_recue » des conversations
-        changerMoral(Obeissance.PAIE);
+        memoire.putLong("paie_le", jour());
         Sons.paie(this);
         if (paieDuJour) { prochainePaie = System.currentTimeMillis() + periodePaie(); prime = 0; if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).reputerPaie(chef, jour()); }
         if (mode == Mode.GREVE) {
@@ -1309,7 +1305,7 @@ public class Travailleur extends PathfinderMob {
         vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
         if (touche && !level().isClientSide && src.getEntity() instanceof Player p && p.getUUID().equals(chef)) {
-            Humeur.offense(this, Obeissance.COUP_CHEF); // des excuses pourront en effacer la moitié
+
             memoire.putLong("coup_chef", level().getGameTime());
 
             if (!aTerre && !muet() && Cerveau.parfois(this, "coup_dit", 10)) Besoins.dire(this, "coup", null); // selon son caractère
@@ -1328,8 +1324,7 @@ public class Travailleur extends PathfinderMob {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
             // Lot 13 : une mort bête ou au travail se sait et coûte au chef ; pas celle d'un ouvrier tué par un autre joueur ou ses hommes (guerre).
             if (!memoire.getBoolean("tombe_autrui") && !dAutrui(src.getEntity(), chef)) Courrier.reputer(this, Recrutement.MORT);
-            Humeur.deuil(this); // ses compagnons du même chef en deuil
-            Deuil.mort(this, tombe != null ? tombe : blockPosition()); // sa tombe, et la lettre au chef absent
+            noterTombe(sl, tombe != null ? tombe : blockPosition()); // sa tombe, à l'effectif du chef
             Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
                     + ") est mort en " + blockPosition().toShortString() + ", "
                     + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
@@ -1342,7 +1337,19 @@ public class Travailleur extends PathfinderMob {
         return e instanceof Travailleur t && t.chef != null && !t.chef.equals(chef);
     }
 
-    /** Le coffre de ses affaires, posé à sa mort : sa tombe ({@link Deuil}). */
+    /** Sa tombe notée à l'effectif de son chef (le poste la montre). */
+    void noterTombe(ServerLevel sl, BlockPos ou) {
+        Courrier c = Courrier.de(sl.getServer());
+        var eff = c.effectifs.get(chef);
+        Courrier.Membre m = eff == null ? null : eff.get(getUUID());
+        if (m == null) return;
+        m.tombe = ou.immutable();
+        m.tombeMonde = sl.dimension().location().toString();
+        m.mortLe = sl.getGameTime();
+        c.setDirty();
+    }
+
+    /** Le coffre de ses affaires, posé à sa mort : sa tombe. */
     BlockPos tombe;
 
     /** Mort définitive : ses affaires vont dans un coffre à son nom. */
@@ -1355,7 +1362,7 @@ public class Travailleur extends PathfinderMob {
             if (!st.isEmpty()) { tout.add(st); setItemSlot(s, ItemStack.EMPTY); }
         }
         tout.removeIf(st -> st.is(Items.PAPER) && st.getCount() == 1); // la lettre qu'il tenait
-        tout.addAll(Humeur.sortirButin(this)); // ce qu'il avait volé et caché
+
         if (tout.isEmpty()) { lieuAffaires = "Il n'avait rien sur lui."; return; }
         BlockPos pos = blockPosition();
         for (int i = 0; i < 3 && !level.getBlockState(pos).canBeReplaced(); i++) pos = pos.above();
@@ -1475,8 +1482,7 @@ public class Travailleur extends PathfinderMob {
     public boolean manger() {
         int meilleur = -1, ecart = Integer.MAX_VALUE, nourrit = 0;
         boolean change = false; // un aliment qu'il n'a pas mangé à ses 3 derniers repas passe avant (Moral : varier les repas)
-        List<String> derniers = Moral.lire(memoire.getString("repas"));
-        derniers = derniers.subList(Math.max(0, derniers.size() - 3), derniers.size());
+        List<String> derniers = List.of();
         for (int i = 0; i < inventaire.getContainerSize(); i++) {
             ItemStack s = inventaire.getItem(i);
             FoodProperties fp = s.getFoodProperties(this);
@@ -1489,8 +1495,7 @@ public class Travailleur extends PathfinderMob {
         if (meilleur < 0) return false;
         ItemStack s = inventaire.getItem(meilleur);
         FoodProperties fp = s.getFoodProperties(this);
-        if (faim <= 8) changerMoral(Obeissance.MANGER); // manger enfin, ça remonte le moral
-        Humeur.repas(this, s); // ses derniers repas : toujours le même, ça lasse (Moral)
+
         faim = Math.min(20, faim + fp.nutrition());
         eat(level(), s, fp);
         Sons.rot(this);
@@ -1679,10 +1684,8 @@ public class Travailleur extends PathfinderMob {
     }
 
     /**
-     * Le seul point où passent les ordres du chef (de vive voix, par l'IA ou par lettre) : obéit-il ? (cahier 8.4 et 8.5,
-     * {@link Obeissance}). Un ordre qui le tuerait, il le refuse toujours. Selon son moral et son caractère, il obéit,
-     * râle, marchande (le chef accepte : prime à la prochaine paie) ou refuse (le chef insiste : il obéit en râlant, sauf
-     * au plus bas). Les règles qui se déclenchent ont déjà été acceptées ; un gréviste garde sa grève.
+     * Le seul point où passent les ordres du chef (de vive voix ou par lettre). Il obéit toujours (refonte 1.0.0) : un ordre
+     * qui le tuerait ou une demande impossible sont refusés, avec leur raison. Un gréviste garde sa grève.
      */
     private String obeir(Ordres.Lecture l, ServerPlayer enFace) {
         long maintenant = level().getGameTime();
@@ -1696,17 +1699,7 @@ public class Travailleur extends PathfinderMob {
         }
         if (parRegle) return appliquerOrdre(l, enFace);
 
-        // « On va enterrer Bertrand » : ses compagnons proches vont à sa tombe ; nul ne refuse un dernier adieu (Deuil).
-        if (l.intentions.contains(Ordres.Intention.ENTERRER)) {
-            reponseImposee = true;
-            return Deuil.ordonner(this, l.texte);
-        }
-        // « Oui » à sa proposition d'enterrement, ou « non, arrête » en pleine cérémonie (Deuil).
-        String deuil = Deuil.repondre(this, l);
-        if (deuil != null) {
-            reponseImposee = true;
-            return deuil;
-        }
+
         // L'impossible (voler, aller sur la lune, casser la roche du fond du monde…) : il en rit, sans rien faire (cahier 14.9).
         String impossible = Impossible.demande(l.texte, Ordres.lire(l.texte, metier)); // seulement si rien n'y est faisable
         String blague = impossible == null ? null : Besoins.texte(this, "impossible_" + impossible, null, null);
@@ -1726,58 +1719,9 @@ public class Travailleur extends PathfinderMob {
             if (Obeissance.question(seul)) { enAttente = avant; relais = rel; }
             avant = null;
         }
-        if (avant != null) {
-            // Une phrase qui porte son propre ordre (« oui, mais d'abord rentre au poste », « fais le guet ») est un nouvel ordre.
-            // Sur les mots du chef : avec l'IA, l est sa lecture, qui reprend souvent l'ordre en suspens.
-            boolean seule = Obeissance.sansOrdre(Ordres.lire(l.texte, metier));
-            boolean accepte = attenteMarche && seule && Obeissance.accepte(l.texte);
-            boolean insiste = !accepte && (seule && Obeissance.insiste(l.texte) || Ordres.normaliser(l.texte).equals(Ordres.normaliser(avant.texte)));
-            if (accepte) {
-                reponseImposee = true;
-                changerMoral(Obeissance.MARCHE);
-                prime += Obeissance.prime(salaireVerse());
-
-                return Messages.corps(this, "marche") + " " + appliquerOrdre(avant, enFace);
-            }
-            if (seule && Obeissance.abandonne(l.texte)) { reponseImposee = true; return Messages.corps(this, "abandon"); }
-            if (attenteMarche && seule && !insiste && l.intentions.contains(Ordres.Intention.NON)) {
-                reponseImposee = true;
-                if (temperament.equals("colerique") || temperament.equals("fourbe")) { Sons.grogne(this); return Messages.corps(this, "pas_de_marche"); }
-                changerMoral(Obeissance.FORCE);
-                return Messages.corps(this, "sans_marche") + " " + appliquerOrdre(avant, enFace);
-            }
-            if (insiste && mode != Mode.GREVE) {
-                Obeissance.Ordre o = Obeissance.peine(avant, metier, !enService());
-                Obeissance.Verdict premier = Obeissance.premier(moral, temperament, o);
-                if (premier == Obeissance.Verdict.OBEIT) return appliquerOrdre(avant, enFace); // son moral est remonté entre-temps
-                if (premier == Obeissance.Verdict.RALE) { Sons.grogne(this); return Messages.corps(this, "rale") + " " + appliquerOrdre(avant, enFace); }
-                reponseImposee = true;
-                Sons.grogne(this); // il refuse encore, ou obéit de force
-                if (Obeissance.decider(moral, temperament, o, true) == Obeissance.Verdict.REFUSE)
-                    return Messages.corps(this, "refus_ferme", Messages.remede(raisonDuRefus(maintenant)));
-                changerMoral(Obeissance.FORCE);
-                return Messages.corps(this, "force") + " " + appliquerOrdre(avant, enFace);
-            }
-        }
-        Obeissance.Ordre ordre = Obeissance.peine(l, metier, !enService());
-        if (avant != null && Obeissance.question(Ordres.lire(l.texte, metier))) enAttente = avant; // une simple question entre-temps : l'ordre reste en suspens
-        if (mode == Mode.GREVE) return appliquerOrdre(l, enFace);
-        Obeissance.Verdict v = Obeissance.decider(moral, temperament, ordre, false);
-        // Un marché (une prime à la paie) ne se conclut qu'avec le chef : à un autre, il refuse (Etranger).
-        if (v == Obeissance.Verdict.NEGOCIE && enFace != null && !enFace.getUUID().equals(chef)) v = Obeissance.Verdict.REFUSE;
-        switch (v) {
-            case RALE -> { Sons.grogne(this); return Messages.corps(this, "rale") + " " + appliquerOrdre(l, enFace); } // avec l'IA, elle râle à sa façon (elle voit son moral)
-            case NEGOCIE, REFUSE -> {
-                Sons.grogne(this);
-                reponseImposee = true;
-                enAttente = enFace == null || enFace.getUUID().equals(chef) ? l : null; // l'ordre refusé d'un autre ne reste pas en suspens
-                attenteFin = maintenant + 1200;
-                attenteMarche = v == Obeissance.Verdict.NEGOCIE;
-                return attenteMarche ? Messages.corps(this, "negocie", Reglages.texte(Obeissance.prime(salaireVerse())))
-                        : Messages.corps(this, "refus_" + raisonDuRefus(maintenant));
-            }
-            default -> { return appliquerOrdre(l, enFace); }
-        }
+        if (avant != null && Obeissance.question(Ordres.lire(l.texte, metier))) enAttente = avant; // une simple question entre-temps : la proposition reste en suspens
+        // Il obéit toujours (refonte 1.0.0) : seuls l'ordre mortel et l'impossible sont refusés, avec leur raison (plus haut).
+        return appliquerOrdre(l, enFace);
     }
 
     /**
@@ -1855,11 +1799,6 @@ public class Travailleur extends PathfinderMob {
         if (o.enAttente == x) o.attenteFin = Math.max(o.attenteFin, level().getGameTime() + 24000);
         String rapport = Messages.corps(this, "relais_refuse", o.prenom, quoi, r);
         Courrier.ecrireTexte(chef != null && chef.equals(c.chef()) ? this : o, "Ta commande : " + quoi, rapport, false);
-    }
-
-    /** Pourquoi il refuse : sa paie en retard, sa faim, sa fatigue, les coups de son chef (ce jour-ci), ou le cœur n'y est plus. */
-    String raisonDuRefus(long maintenant) {
-        return Obeissance.raison(impayes, faim, fatigue, memoire.contains("coup_chef") && maintenant - memoire.getLong("coup_chef") < 24000);
     }
 
     private String appliquerOrdre(Ordres.Lecture l, ServerPlayer enFace) {
@@ -2169,7 +2108,7 @@ public class Travailleur extends PathfinderMob {
         lettresALire.clear();
         lettresAuCalme.clear();
         Pecheur.oublier(this); // son coin de pêche était près du poste de ce chef-là
-        Humeur.oublier(this); // son moral auprès de ce chef-là (lettres, démission, rancune) ; il repart à 70
+        moral = Obeissance.DEPART; // sa satisfaction repart de zéro auprès du nouveau chef
         memoire.remove("champs"); // les champs du fermier aussi
         memoire.remove("plants_laisses");
         Fermier.TOURS.remove(this);
@@ -2252,7 +2191,7 @@ public class Travailleur extends PathfinderMob {
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
-        Remarques.embauche(this); // ses nouveaux collègues en parleront
+
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
         // Une débauche (salaire promis) : Etranger le dit à sa façon.
         if (salaireFixe < 0) dire("Marché conclu, chef ! Je te suis." + (poste ? " Dis-moi « au travail » et je rejoins ton poste." : " Pose ton poste de travail (un bureau) pour me donner du travail."));
@@ -2340,7 +2279,7 @@ public class Travailleur extends PathfinderMob {
         super.readAdditionalSaveData(t);
         prenom = t.getString("Prenom");
         metier = t.getString("Metier");
-        temperament = t.getString("Temperament");
+        temperament = "calme"; // caractères retirés (refonte 1.0.0)
         niveau = Math.clamp(t.getInt("Niveau"), 1, 5);
         setSkin(t.getString("Skin"));
         chef = t.hasUUID("Chef") ? t.getUUID("Chef") : null;

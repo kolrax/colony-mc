@@ -164,8 +164,6 @@ class BoutiqueTest {
     /** Relecture : tenir la boutique est un ordre de travail (son obéissance en décide), et la monnaie a une borne. */
     @Test
     void ouvrirEstUnTravailEtLaMonnaieABorne() {
-        assertEquals(Obeissance.Peine.NORMAL, Obeissance.peine(Ordres.lire("Tiens la boutique", "mineur"), "mineur", false).peine());
-        assertEquals(Obeissance.Peine.PENIBLE, Obeissance.peine(Ordres.lire("Tiens la boutique", "mineur"), "mineur", true).peine());
         assertNull(Boutique.regler(VALEURS, new int[]{0, 0, 0, 10_000}, new int[]{0, 0, 0, 0}, 100_000));
     }
 
