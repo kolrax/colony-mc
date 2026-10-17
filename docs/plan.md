@@ -88,8 +88,8 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 - [x] Travailleurs de nuit (fatigue, santé, moral) (0.9.39, 1re passe)
 
 ## 14. Autres joueurs
-- [ ] Autoriser un joueur : il peut parler aux ouvriers et leur donner des ordres ; un autre joueur peut tenter de les convaincre ou de les corrompre (paie plus élevée)
-- [ ] Tout le monde voit le nom, le métier et le chef d'un ouvrier
+- [x] Autoriser un joueur : il peut parler aux ouvriers et leur donner des ordres ; un autre joueur peut tenter de les convaincre ou de les corrompre (paie plus élevée)
+- [x] Tout le monde voit le nom, le métier et le chef d'un ouvrier
 - [ ] Rumeurs : un PNJ peut révéler ce qu'il a appris par espionnage ou bouche à oreille
 
 ## Bonus (après tout le reste)
