@@ -108,14 +108,14 @@ Si tu régénères le monde de test :
 3. mettre à jour `MONDE_NOTE` dans `tools/etat.py`.
 
 ## Rendre compte
-- **Le panneau « Chantier des PNJ »** (ci-dessous) est la vitrine de KOLRAX : tiens-le à jour en direct. C'est là qu'il regarde, sur PC comme sur téléphone.
+- **Le panneau « Refonte des ouvriers »** (ci-dessous) est la vitrine de KOLRAX : tiens-le à jour en direct. C'est là qu'il regarde, sur PC comme sur téléphone.
 - **À chaque lot fini** : une entrée dans `docs/journal.md` (date, ce qui est fait, mesures, ce qui reste), mise à jour de `docs/plan.md`, commit.
 - **Chaque jour, après 18 h** : le point du jour, en message privé à KOLRAX (`python3 tools/discord.py dm fichier.md`, moins de 2000 caractères par bloc) et dans le panneau (journal, type `rapport`).
 - **Urgent seulement** (serveur en panne, décision bloquante) : message privé tout de suite.
 - Les mesures restent honnêtes : un jeu d'essai qui a servi aux corrections n'est plus un jeu à l'aveugle. Dis-le.
 
-## Panneau de suivi « Chantier des PNJ »
-Artefact https://claude.ai/artifact/2bjpVSsFMeSp1aXqD2wsQw, écrit avec l'outil **ArtifactData** (charge-le avec ToolSearch `select:ArtifactData`).
+## Panneau de suivi « Refonte des ouvriers » (depuis le 17/10)
+Artefact **https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ** (source : `docs/panneau-refonte.html`). L'ancien panneau « Chantier des PNJ » (`2bjpVSsFMeSp1aXqD2wsQw`) ne sert plus qu'à l'historique de la 0.9 : n'y écris plus. Le panneau est écrit avec l'outil **ArtifactData** (charge-le avec ToolSearch `select:ArtifactData`).
 - Une écriture sur un document existant exige `if_version` : fais un `get` juste avant.
 - Textes en français simple, compréhensibles par KOLRAX. Le champ `texte` accepte des lignes « - » et du **gras**.
 - Le lien de ta session est celui de tes commits (« Claude-Session: … »).
@@ -123,6 +123,7 @@ Artefact https://claude.ai/artifact/2bjpVSsFMeSp1aXqD2wsQw, écrit avec l'outil 
 Documents :
 - `etat/courant` : `{maj, session:{statut: en_cours|terminee|coupee, debut, fin, lot, objectif, resume, prochaine_etape, lien}, agents:[{nom, tache, statut: en_cours|fini|echec, debut, fin}], versions:{mod, modpack, modpack_obligatoire}, tests:{junit:"52/52", jeu:"65/65", date}}`. `nom` = le nom de fichier de l'agent (`developpeur`, `testeur`…). `tache` = une phrase claire pour KOLRAX.
 - `plan/lots` : `python3 tools/suivi.py plan /tmp/plan.json`, puis `set` avec `file_path`.
+- `plan/etapes` : `{maj, etapes: {"1": {statut: a_faire|en_cours|assemble|valide, note}, …}}`, une entrée par case du lot 16 (numérotées dans l'ordre). Mets-la à jour **à chaque morceau fini ou commencé**, sans attendre `main` : KOLRAX y voit l'avancement réel. `assemble` = codé et fusionné, pas encore vérifié ensemble ; `valide` = case cochée sur `main`. Une phrase simple dans `note`.
 - `journal/<AAAAMMJJ-HHMM-mot>` : `{date, type: session|livraison|incident|decision|rapport|info, titre, texte, lien}`.
 - `sessions/<AAAAMMJJ-HHMM>` : `{debut, fin, statut: en_cours|terminee|coupee|sautee|echec, lot, resume, lien}`.
 - `demandes/<mot>` : `{date, titre, texte, pour: kolrax|admin, importance: haute|normale, options:[…], statut: ouverte|repondue|traitee, reponse, note}`.
