@@ -341,19 +341,29 @@ public final class Fantome {
                 .executes(c -> bouton(c, StringArgumentType.getString(c, "action"), new CompoundTag()))
                 .then(Commands.argument("donnees", CompoundTagArgument.compoundTag())
                         .executes(c -> bouton(c, StringArgumentType.getString(c, "action"), CompoundTagArgument.getCompoundTag(c, "donnees"))))));
-        // Choisir une mission à l'écran : le bouton « mission » du poste, avec l'ouvrier, l'action du métier et sa fin.
+        // Une mission confirmée à l'écran : Missions.donner, la fonction serveur de l'écran de confirmation.
+        // id : une ligne du catalogue du métier (Metier.commandes) ; répétition : fois, jour ou stock ; horaires : jour, nuit, toujours, 8-12.
         f.then(Commands.literal("mission").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("id", StringArgumentType.word())
-                .executes(c -> mission(c, "une_fois", 0))
-                .then(Commands.argument("fin", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("quantite", "stock", "une_fois", "toujours"), b))
-                        .executes(c -> mission(c, StringArgumentType.getString(c, "fin"), 0))
-                        .then(Commands.argument("n", IntegerArgumentType.integer(0)).executes(c -> mission(c, StringArgumentType.getString(c, "fin"), IntegerArgumentType.getInteger(c, "n"))))))));
-        // La barre de commandes / l'entretien : exactement comme le paquet Commande (Reseau).
+                .executes(c -> mission(c, "fois", 1, "toujours"))
+                .then(Commands.argument("repetition", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("fois", "jour", "stock"), b))
+                        .executes(c -> mission(c, StringArgumentType.getString(c, "repetition"), 1, "toujours"))
+                        .then(Commands.argument("n", IntegerArgumentType.integer(0))
+                                .executes(c -> mission(c, StringArgumentType.getString(c, "repetition"), IntegerArgumentType.getInteger(c, "n"), "toujours"))
+                                .then(Commands.argument("horaires", StringArgumentType.word())
+                                        .executes(c -> mission(c, StringArgumentType.getString(c, "repetition"), IntegerArgumentType.getInteger(c, "n"),
+                                                StringArgumentType.getString(c, "horaires")))))))));
+        // Les boutons de la fiche de l'ouvrier (ici, suivre, attendre, rentrer, annuler, licencier) : Missions.action.
+        f.then(Commands.literal("bouton_ouvrier").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("action", StringArgumentType.word())
+                .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("ici", "suivre", "attendre", "rentrer", "annuler", "licencier"), b))
+                .executes(c -> boutonOuvrier(c, new CompoundTag()))
+                .then(Commands.argument("donnees", CompoundTagArgument.compoundTag()).executes(c -> boutonOuvrier(c, CompoundTagArgument.getCompoundTag(c, "donnees")))))));
+        // La barre de commandes : BarreCommandes.executer, comme le paquet de la barre.
         f.then(Commands.literal("commande").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("ordre", StringArgumentType.word()).executes(c -> {
             Joueur j = moi(c);
             Travailleur t = ouvrier(c, j);
             approcher(j, t.position());
-            t.commande(j, StringArgumentType.getString(c, "ordre"));
-            return ok(c, "Commande « " + StringArgumentType.getString(c, "ordre") + " » à " + t.prenom + ".");
+            String r = BarreCommandes.executer(j, t, StringArgumentType.getString(c, "ordre"));
+            return ok(c, "Commande « " + StringArgumentType.getString(c, "ordre") + " » à " + t.prenom + " : « " + r + " ».");
         }))));
         f.then(Commands.literal("paie").executes(c -> ranger(c, true, null)));
         f.then(Commands.literal("depose").executes(c -> ranger(c, false, null))
@@ -499,21 +509,23 @@ public final class Fantome {
         return ok(c, "Bouton « " + action + " » du poste " + d + ".");
     }
 
-    /**
-     * Une mission choisie à l'écran : le bouton « mission » du poste (même fonction serveur que l'écran), avec {@code uuid}
-     * (l'ouvrier), {@code mission} (l'action du métier), {@code fin} (quantite, stock, une_fois, toujours) et {@code n}.
-     */
-    static int mission(CommandContext<CommandSourceStack> c, String fin, int n) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    /** Une mission confirmée à l'écran : {@link Missions#donner}, sans lieu imposé (il choisit son lieu). */
+    static int mission(CommandContext<CommandSourceStack> c, String repetition, int n, String horaires) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         Joueur j = moi(c);
         Travailleur t = ouvrier(c, j);
-        CompoundTag d = new CompoundTag();
-        d.putString("uuid", t.getUUID().toString());
-        d.putString("mission", StringArgumentType.getString(c, "id"));
-        d.putString("fin", fin);
-        d.putInt("n", n);
-        Bureau.Entite b = bureauOuErreur(j);
-        b.action(j, "mission", d);
-        return ok(c, "Mission « " + d.getString("mission") + " » (" + fin + (n > 0 ? " " + n : "") + ") demandée à " + t.prenom + ".");
+        approcher(j, t.position());
+        var r = Missions.donner(j, t, StringArgumentType.getString(c, "id"), repetition, n, horaires, null);
+        return ok(c, (r.ok() ? "Mission acceptée par " : "Mission refusée par ") + t.prenom + " : " + r.texte());
+    }
+
+    /** Un bouton de la fiche de l'ouvrier ({@link Missions#action}) ; « ici » : là où se tient le fantôme. */
+    static int boutonOuvrier(CommandContext<CommandSourceStack> c, CompoundTag d) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Travailleur t = ouvrier(c, j);
+        String action = StringArgumentType.getString(c, "action");
+        if (!action.equals("ici")) approcher(j, t.position());
+        Missions.action(j, t, action, d);
+        return ok(c, "Bouton « " + action + " » de la fiche de " + t.prenom + ".");
     }
 
     /** La caisse (pièces) ou le dépôt : comme le clic maj d'un joueur sur ses cases, dans l'écran du dépôt. */
@@ -606,6 +618,7 @@ public final class Fantome {
             o.addProperty("au_dessus", t.getDisplayName().getString());
             o.addProperty("role", t.getEntityData().get(Travailleur.ROLE));
             o.addProperty("etat", t.getEntityData().get(Travailleur.ETAT));
+            o.addProperty("statut", t.getEntityData().get(Travailleur.STATUT)); // le statut unique (au-dessus de la tête et au poste)
             o.addProperty("pos", t.blockPosition().toShortString());
             o.addProperty("mode", String.valueOf(t.mode));
             o.addProperty("action", t.action == null ? "" : t.action.nom);

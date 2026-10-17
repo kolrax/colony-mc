@@ -17,10 +17,11 @@ fantome donne minecraft:wheat_seeds 16
 fantome donne minecraft:bread 32
 fantome depose
 fantome paie
-# Les missions, choisies comme à l'écran du poste.
-fantome mission mineur miner quantite 64
-fantome mission bucheron couper quantite 32
-fantome mission fermier cultiver toujours
+# Les missions, confirmées comme à l'écran (Missions.donner) : id du catalogue du métier, répétition (fois, jour,
+# stock), nombre, horaires. Chacun choisit seul son lieu de travail.
+fantome mission mineur charbon fois 64
+fantome mission bucheron tout fois 32
+fantome mission fermier ble stock 32
 fantome clic mineur
 fantome rapport trois-ouvriers-debut
 attendre 5
