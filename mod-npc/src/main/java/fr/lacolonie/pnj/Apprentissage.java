@@ -54,7 +54,7 @@ final class Apprentissage {
         long m = Etoiles.minute(t.level().getGameTime()) + 1; // + 1 : 0 veut dire « jamais »
         if (t.memoire.getLong("xp_minute") == m) return;
         t.memoire.putLong("xp_minute", m);
-        int xp = t.memoire.getInt("experience") + 1;
+        int xp = t.memoire.getInt("experience") + (Famille.apprenti(t) ? Ages.experience(t.age, m) : 1); // l'apprenti apprend plus vite (lot 13)
         t.memoire.putInt("experience", xp);
         if (Etoiles.monte(t.niveau, xp, reglage().minutes_de_travail)) monter(t, false);
     }
@@ -90,6 +90,7 @@ final class Apprentissage {
     /** « Va te former » : le chef paie de sa bourse, il part étudier. Renvoie sa réponse. */
     static String commencer(Travailleur t, ServerPlayer chef) {
         if (t.chef == null || !t.chef.equals(chef.getUUID())) return "Embauche-moi d'abord, et l'on parlera d'apprentissage.";
+        if (Famille.enfant(t)) return "Je suis trop jeune pour un maître, chef : attends que j'aie douze ans."; // avant tout paiement (lot 13)
         if (t.niveau >= Etoiles.MAX) return "Je suis maître en mon métier, chef : nul ne peut plus rien m'apprendre.";
         if (t.memoire.getLong("formation_fin") > 0) return "Je suis déjà en apprentissage, chef.";
         long prix = Etoiles.prix(t.niveau, reglage().prix_formation);

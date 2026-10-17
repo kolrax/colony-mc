@@ -102,7 +102,7 @@ final class Relations {
         l = de(t);
         if (Reglages.actuel.liens_couples && l.conjoint() == null)
             for (Travailleur o : pres)
-                if (Liens.couplePossible(l, o.getStringUUID(), de(o), t.getStringUUID(), t.jour())) { unir(t, o); return List.of(); }
+                if (!Famille.pasDeCouple(t, o) && Liens.couplePossible(l, o.getStringUUID(), de(o), t.getStringUUID(), t.jour())) { unir(t, o); return List.of(); } // ni mineur ni proche (lot 13)
         return pres;
     }
 

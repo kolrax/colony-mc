@@ -146,7 +146,8 @@ final class Armee {
             if (g.paix != null || g.paixToutes) r.add(texte(t, "guerre_paix", g.paix, null, "La paix. Enfin."));
             if (g.retraite) r.add(texte(t, "guerre_retraite", null, null, "Retraite ! On rentre !"));
             Metier mt = Metier.de(t.metier);
-            if (g.lever && mt != null && mt.combattant && t.memoire.contains("guerre_assaut")) r.add(texte(t, "guerre_levee", null, null, "Présent ! Je rejoins les rangs."));
+            if (g.lever && mt != null && mt.combattant && Famille.mineur(t)) r.add(texte(t, "guerre_trop_jeune", null, null, "Je suis trop jeune pour la guerre, chef."));
+            else if (g.lever && mt != null && mt.combattant && t.memoire.contains("guerre_assaut")) r.add(texte(t, "guerre_levee", null, null, "Présent ! Je rejoins les rangs."));
             return;
         }
         MinecraftServer s = sl.getServer();
@@ -190,7 +191,7 @@ final class Armee {
             if (u == null) { r.add(texte(t, "guerre_refus_hors_guerre", null, null, "Nous ne sommes pas en guerre, chef. Je ne frapperai personne.")); return; }
             String ennemi = c.ennemis(t.chef).get(u);
             List<Travailleur> armee = armee(s, t.chef);
-            if ("guerrier".equals(t.metier) && !armee.contains(t)) armee.add(t); // tout juste arrivé, il n'est pas encore dans la liste du monde
+            if ("guerrier".equals(t.metier) && !armee.contains(t) && !Famille.mineur(t)) armee.add(t); // tout juste arrivé, il n'est pas encore dans la liste du monde
             for (Travailleur w : armee) {
                 w.memoire.putString("guerre_assaut", u.toString());
                 w.memoire.putString("guerre_nom", ennemi);
@@ -203,6 +204,7 @@ final class Armee {
             Metier m = Metier.de(t.metier);
             String collegue = armee.stream().filter(w -> w != t).map(w -> w.prenom).findFirst().orElse(null);
             if (armee.isEmpty()) r.add("Nous n'avons pas un seul guerrier, chef. Qui irait se battre ?");
+            else if (m != null && m.combattant && Famille.mineur(t)) r.add(texte(t, "guerre_trop_jeune", ennemi, null, "Je suis trop jeune pour la guerre, chef.")); // lot 13
             else if (m != null && m.combattant) r.add(texte(t, "guerre_levee", ennemi, collegue, "Présent ! Je rejoins les rangs."));
             // Première passe : les autres ne partent pas en renfort, ils gardent la colonie.
             else r.add(texte(t, "guerre_renfort_refuse", ennemi, null, "Je préviens les gardes, chef. Moi, je garde la colonie."));
@@ -212,7 +214,7 @@ final class Armee {
     /** Les guerriers de ce chef (dans les mondes chargés). */
     static List<Travailleur> armee(MinecraftServer s, UUID chef) {
         List<Travailleur> l = new ArrayList<>();
-        for (Travailleur w : ColoniePnj.tous(s)) if (chef.equals(w.chef) && "guerrier".equals(w.metier) && w.mode != Travailleur.Mode.CHOMEUR) l.add(w);
+        for (Travailleur w : ColoniePnj.tous(s)) if (chef.equals(w.chef) && "guerrier".equals(w.metier) && w.mode != Travailleur.Mode.CHOMEUR && !Famille.mineur(w)) l.add(w); // jamais un enfant ni un apprenti (lot 13)
         return l;
     }
 

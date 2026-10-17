@@ -56,6 +56,7 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/machines.txt"), e -> System.err.println("[colonie_pnj] Section de machines.txt ignorée : " + e.getMessage())));
         // Un autre que le chef parle à l'ouvrier, lui donne des ordres ou veut le débaucher (lot 14, Etranger) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/etrangers.txt"), e -> System.err.println("[colonie_pnj] Section de etrangers.txt ignorée : " + e.getMessage())));
+        TOUTES.putAll(lire(Repertoire.lignes("/famille.txt"), e -> System.err.println("[colonie_pnj] Section de famille.txt ignorée : " + e.getMessage()))); // lot 13
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */

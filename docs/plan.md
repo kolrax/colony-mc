@@ -84,7 +84,7 @@ On coche `[x]` quand c'est livré. Si un lot prend trop de temps, découpe-le : 
 ## 13. Familles, recrutement, progression
 - [x] Recrutement : PNJ plus rares, avec des compétences propres ; arrivées depuis les villages, débauche d'un autre joueur, réputation, affiche ou crieur (0.9.37, 1re passe : rareté, talents, réputation, affiche, villages ; débauche au lot 14, crieur dans plus-tard)
 - [x] Étoiles qui montent avec l'expérience ou une formation payée (0.9.38, 1re passe)
-- [ ] Familles, enfants qui grandissent, vieillesse lente mais perceptible ; apprenti
+- [x] Familles, enfants qui grandissent, vieillesse lente mais perceptible ; apprenti (0.9.40, 1re passe)
 - [x] Travailleurs de nuit (fatigue, santé, moral) (0.9.39, 1re passe)
 
 ## 14. Autres joueurs

@@ -80,7 +80,7 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot, Relations.actifs() ? Relations.de(t).moral() : 0,
+                !pluie && l.isDay(), coup, ouvriers, depot, (Relations.actifs() ? Relations.de(t).moral() : 0) + Famille.moral(t), // la famille réunie (lot 13)
                 // Les nuits d'affilée (lot 13) : une prime promise ou une paie au-dessus de sa demande en reprennent un peu.
                 Nuit.moral(m.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus, t.prime > 0 || t.facteurPaie() > 1));
     }
@@ -231,7 +231,7 @@ final class Humeur {
             // double, l'être aimé triple : Relations), quel que soit l'ordre des morts.
             boolean memeJour = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour();
             int deja = memeJour ? t.memoire.getInt("deuil_coup") : 0, brut = memeJour ? t.memoire.getInt("deuil_brut") : 0;
-            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Relations.deuil(t, mort);
+            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Math.max(Relations.deuil(t, mort), Famille.poidsDeuil(t, mort)); // un parent, un enfant : comme l'être aimé (lot 13)
             if (memeJour && !t.memoire.contains("deuil_brut")) brut = deja; // mémoire d'avant les liens
             brut += Moral.DEUIL_COUP * poids;
             poidsMax = Math.max(poidsMax, poids);
@@ -265,13 +265,14 @@ final class Humeur {
         ServerPlayer chef = t.chefJoueur();
         boolean present = chef != null && chef.level() == t.level() && !chef.isSpectator() && chef.distanceTo(t) < PRESENT;
         int compagnons = 0;
-        if (r.moral_revolte && m.getInt("avertis") >= 2)
+        boolean revolte = r.moral_revolte && !Famille.mineur(t); // un mineur ne prend pas les armes (lot 13) : il vole, sabote ou s'en va
+        if (revolte && m.getInt("avertis") >= 2)
             for (Travailleur x : ColoniePnj.pnjDe(t.level().getServer(), t.chef))
                 if (x != t && x.mode != Travailleur.Mode.CHOMEUR && x.moral < r.moral_seuil_demission) compagnons++;
         int vols = m.getLong("vols_jour") == t.jour() ? m.getInt("vols") : 0;
         if (m.getList("butin", Tag.TAG_COMPOUND).size() >= Moral.BUTIN_MAX) vols = Integer.MAX_VALUE; // sa cachette est pleine
         Moral.Rancoeur rancoeur = new Moral.Rancoeur(t.moral, r.moral_seuil_demission, m.getInt("avertis"), m.getInt("bilans_bas"), bilansParJour(),
-                t.temperament, compagnons, m.getInt("menaces"), m.getInt("menace_depuis"), chef != null, present, r.moral_revolte, vols,
+                t.temperament, compagnons, m.getInt("menaces"), m.getInt("menace_depuis"), chef != null, present, revolte, vols,
                 r.moral_vol_max, r.moral_mefaits);
         switch (Moral.mefait(rancoeur, t.getRandom().nextDouble(), t.getRandom().nextDouble())) {
             case MENACE -> menacer(t, pire);
@@ -636,6 +637,7 @@ final class Humeur {
      * portée (lui seul, jamais un autre), ou l'attend, les bras croisés.
      */
     static boolean revolter(Travailleur t) {
+        if (Famille.mineur(t)) { t.memoire.remove("revolte"); t.memoire.remove("revolte_impayes"); return false; } // jamais les armes (lot 13)
         if (calmer(t)) return false;
         if (paieEnCaisse(t)) { Cerveau.lancer(t, new Actions.ToucherPaie()); return true; }
         if (t.faim <= 8 || t.faim <= 14 && t.compter(Actions.Filtre.de("nourriture")) > 0) return false;

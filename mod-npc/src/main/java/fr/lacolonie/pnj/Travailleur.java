@@ -126,6 +126,12 @@ public class Travailleur extends PathfinderMob {
     /** Ses compétences propres (lot 13, {@link Talents}) : un ou deux talents tirés à son arrivée ; aucun pour les ouvriers d'avant. */
     public List<String> talents = List.of();
     /**
+     * Son âge en années (lot 13, {@link Famille}) ; -1 : pas encore tiré. {@code ageFin} : l'âge où il s'éteindra ;
+     * {@code ageLe} : le temps du jeu de son dernier anniversaire compté (0 : pas encore). Sauvegardés « Age », « AgeFin », « AgeLe ».
+     */
+    public double age = -1, ageFin;
+    long ageLe;
+    /**
      * Ses missions, dans l'ordre : il remplit la première qui ne l'est pas. Une quantité livrée est retirée ; un stock
      * reste (il reprend quand il baisse).
      */
@@ -495,22 +501,30 @@ public class Travailleur extends PathfinderMob {
             niveau = x < 40 ? 1 : x < 70 ? 2 : x < 88 ? 3 : x < 97 ? 4 : 5;
         }
         talents = Talents.tirer(r::nextDouble);
+        Famille.naitreAdulte(this, 18, 50);
         arrivee = System.currentTimeMillis();
         appliquerNiveau();
         majNom();
     }
 
     void appliquerNiveau() {
-        getAttribute(Attributes.MAX_HEALTH).setBaseValue(20 + 2 * (niveau - 1) + Talents.vie(talents));
+        Famille.appliquer(this); // la vie selon le niveau, les talents et l'âge ; la taille selon l'âge
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(1 + 0.5 * (niveau - 1));
         setHealth(getMaxHealth());
     }
 
     /** Vitesse de travail : 0,8 à ★, 1,6 à ★★★★★, réduite par la fatigue ou une paie trop basse. */
-    public double facteurTravail() { return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1); }
+    public double facteurTravail() {
+        return (0.6 + 0.2 * niveau) * Talents.vitesse(talents) * facteurPaie() * (fatigue >= 90 ? 0.5 : fatigue >= 70 ? 0.75 : 1)
+                * (Famille.actives() ? Ages.vitesse(age) : 1); // apprenti à demi, vieux un peu moins (lot 13)
+    }
 
     /** Ce qu'il demande pour son niveau, et selon la taille de la colonie à son embauche. */
-    public long salaireDemande() { return Cout.salaire(Apprentissage.salaireDeBase(this), surcout); }
+    public long salaireDemande() {
+        long base = Apprentissage.salaireDeBase(this);
+        if (Famille.actives()) base = Math.round(base * Ages.paie(age)); // l'apprenti, la moitié ; l'enfant, rien (lot 13)
+        return Cout.salaire(base, surcout);
+    }
 
     /** Ce qu'on lui verse vraiment (fixé dans le bureau). */
     public long salaireVerse() { return salaire < 0 ? salaireDemande() : salaire; }
@@ -735,7 +749,7 @@ public class Travailleur extends PathfinderMob {
      * changement de nom ; le jeu n'envoie aux joueurs que ce qui a changé.
      */
     void majTete() {
-        entityData.set(ROLE, Insignes.role(Metier.nom(metier), chefNom, mode != Mode.CHOMEUR));
+        entityData.set(ROLE, Insignes.role(Famille.nomMetier(this), chefNom, mode != Mode.CHOMEUR));
         boolean peur = action instanceof Actions.Fuir || action instanceof Actions.Echapper; // en péril, survivre() lance Echapper
         boolean repos = isSleeping() || memoire.getBoolean("epuise") || fatigue >= 90;
         entityData.set(ETAT, Insignes.etat(new Insignes.Corps(aTerre, getHealth(), peur, mode == Mode.GREVE, faim,
@@ -748,7 +762,7 @@ public class Travailleur extends PathfinderMob {
         String suffixe = switch (mode) {
             case CHOMEUR -> " · cherche du travail";
             case GREVE -> " · en grève";
-            default -> " (" + Metier.nom(metier) + ")" + (chefNom.isEmpty() ? "" : " · " + chefNom); // cahier 6.6 : tout le monde voit son chef
+            default -> " (" + Famille.nomMetier(this) + ")" + (chefNom.isEmpty() ? "" : " · " + chefNom); // cahier 6.6 : tout le monde voit son chef
         };
         if (aTerre) suffixe = " · à terre";
         setCustomName(Component.literal(prenom + suffixe));
@@ -844,6 +858,7 @@ public class Travailleur extends PathfinderMob {
             if (ecouteTicks == 0) ecoutePar = null;
             return;
         }
+        if ((tickCount + getId()) % 1200 == 600 && chef != null) { Famille.veiller(this); if (isDeadOrDying() || isRemoved()) return; } // l'âge, une fois par minute (lot 13)
         if (mode == Mode.CHOMEUR) {
             long duree = Reglages.actuel.chercheurs.duree_minutes * 60_000L;
             if (System.currentTimeMillis() > arrivee + duree && level().getNearestPlayer(this, 16) == null) discard();
@@ -1192,7 +1207,7 @@ public class Travailleur extends PathfinderMob {
     static long periodePaie() { return Reglages.actuel.minutes_entre_paies * 60_000L; }
 
     /** Vrai quand la paie est due (le PNJ va alors la chercher au bureau). */
-    public boolean paieDue() { return chef != null && mode != Mode.CHOMEUR && System.currentTimeMillis() >= prochainePaie; }
+    public boolean paieDue() { return chef != null && mode != Mode.CHOMEUR && System.currentTimeMillis() >= prochainePaie && !Famille.enfant(this); }
 
     /** Une journée entière est passée sans qu'il ait pu toucher sa paie. */
     boolean paieEnRetard() { return Monnaie.paieEnRetard(System.currentTimeMillis(), prochainePaie, periodePaie()) && action == null; }
@@ -1335,11 +1350,14 @@ public class Travailleur extends PathfinderMob {
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
             // Lot 13 : une mort bête ou au travail se sait et coûte au chef ; pas celle d'un ouvrier tué par un autre joueur ou ses hommes (guerre).
-            if (!memoire.getBoolean("tombe_autrui") && !dAutrui(src.getEntity(), chef)) Courrier.reputer(this, Recrutement.MORT);
+            // Mort de vieillesse (lot 13) : ce n'est la faute de personne.
+            boolean vieux = memoire.getBoolean("vieillesse");
+            if (!vieux && !memoire.getBoolean("tombe_autrui") && !dAutrui(src.getEntity(), chef)) Courrier.reputer(this, Recrutement.MORT);
             Humeur.deuil(this); // ses compagnons du même chef en deuil
             Deuil.mort(this, tombe != null ? tombe : blockPosition()); // sa tombe, et la lettre au chef absent
             Courrier.avis(sl.getServer(), chef, "deces", true, "Avis de décès : " + prenom, prenom + " (" + Metier.nom(metier).toLowerCase() + ", " + "★".repeat(niveau)
-                    + ") est mort en " + blockPosition().toShortString() + ", " + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
+                    + ") est mort" + (vieux ? " de vieillesse, à " + Ages.ansTexte(age) + "," : "") + " en " + blockPosition().toShortString() + ", "
+                    + Messages.date(level()).toLowerCase() + ".\n\n" + lieuAffaires);
         }
     }
 
@@ -1599,7 +1617,7 @@ public class Travailleur extends PathfinderMob {
         t.putString("periode", Reglages.actuel.minutes_entre_paies % 1440 == 0
                 ? (Reglages.actuel.minutes_entre_paies == 1440 ? "par jour" : "tous les " + Reglages.actuel.minutes_entre_paies / 1440 + " jours")
                 : "toutes les " + Reglages.actuel.minutes_entre_paies + " minutes");
-        t.putString("attitude", (attitude() + " " + Talents.portrait(talents) + (deNuit() ? " Il travaille de nuit." : "")
+        t.putString("attitude", (Famille.portrait(this) + " " + attitude() + " " + Talents.portrait(talents) + (deNuit() ? " Il travaille de nuit." : "")
                 + (Nuit.vieEnMoins(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus) > 0 ? " Il a les traits tirés." : "")).trim());
         t.putString("mode", switch (mode) {
             case CHOMEUR -> "Cherche du travail";
@@ -1691,6 +1709,8 @@ public class Travailleur extends PathfinderMob {
         int h = IA.heure(this);
         reactionSuffit = false;
         if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
+        String famille = Famille.question(this, l.texte); // son âge, ses parents, ses enfants (lot 13)
+        if (famille != null) { reactionSuffit = reponseImposee = true; return famille; }
         // Les ordres longs : leur phrase est retirée de l.texte (« s'il pleut, rentre au poste » ne laisse rien) ; chacun est noté.
         for (OrdresLongs.Regle x : l.regles) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, Souvenirs.CONSIGNE + OrdresLongs.quand(x) + ", " + quoi(x));
         if (!l.texte.isBlank() && (!l.missions.isEmpty() || l.jours > 0 || l.quotidien)) souvenirs.noter(Souvenirs.Genre.ORDRE, j, h, l.texte);
@@ -1755,6 +1775,12 @@ public class Travailleur extends PathfinderMob {
             return Messages.corps(this, "mortel_" + danger);
         }
         if (parRegle) return appliquerOrdre(l, enFace);
+        // Un enfant ne travaille pas ; « apprends le métier de bûcheron » à un enfant ou un apprenti (Famille, lot 13).
+        String petit = Famille.ordre(this, l);
+        if (petit != null) {
+            reponseImposee = true;
+            return petit;
+        }
         // « On va enterrer Bertrand » : ses compagnons proches vont à sa tombe ; nul ne refuse un dernier adieu (Deuil).
         if (l.intentions.contains(Ordres.Intention.ENTERRER)) {
             reponseImposee = true;
@@ -1850,7 +1876,7 @@ public class Travailleur extends PathfinderMob {
     private String proposerRelais(Ordres.Lecture l, String met, Ordres.Mission m, ServerPlayer enFace) {
         List<String> f = Relais.fournisseurs(met, m.id(), metier);
         List<Travailleur> autres = level().getServer() == null ? List.of() : ColoniePnj.tous(level().getServer()).stream()
-                .filter(o -> o != this && chef.equals(o.chef) && o.mode != Mode.CHOMEUR && f.contains(o.metier) && Metier.catalogue(o.metier, m.id()) != null).toList();
+                .filter(o -> o != this && chef.equals(o.chef) && o.mode != Mode.CHOMEUR && !Famille.enfant(o) && f.contains(o.metier) && Metier.catalogue(o.metier, m.id()) != null).toList();
         if (autres.stream().anyMatch(o -> l.avec.contains(o.getUUID()))) return "";
         for (Travailleur o : autres)
             if (o.missions.stream().anyMatch(x -> x.id.equals(m.id()) && !Metier.remplie(o, x))) return Messages.corps(this, "relais_deja", Relais.qui(o.prenom, Metier.nom(o.metier)));
@@ -1936,6 +1962,10 @@ public class Travailleur extends PathfinderMob {
             return adieu;
         }
         if (duChef && confirmation && l.intentions.contains(Ordres.Intention.NON)) { memoire.remove("renvoi"); return Messages.corps(this, "dit_garde"); }
+        if (l.intentions.contains(Ordres.Intention.RENVOYER) && Famille.enfant(this)) { // on ne renvoie pas un enfant (lot 13)
+            String s = Besoins.texte(this, "enfant_renvoi", null, null);
+            return s != null ? s : "Me renvoyer ? Mais je suis un enfant, chef ! Ma famille est ici.";
+        }
         if (l.intentions.contains(Ordres.Intention.RENVOYER)) {
             if (enFace == null) return "Si tu veux te passer de moi, dis-le-moi en face, chef.";
             memoire.putLong("renvoi", maintenant + 600);
@@ -2003,8 +2033,7 @@ public class Travailleur extends PathfinderMob {
         // Il redit clairement ce qu'il a compris : c'est le mod qui répond, pas l'IA. Un homme qui ne porte pas les armes ne promet pas de frapper.
         if (!parRegle && l.posture != null) {
             memoire.putString("garde_chef", l.posture.name());
-            Metier mt = Metier.de(metier);
-            boolean arme = mt != null && mt.combattant;
+            boolean arme = Famille.arme(this); // un combattant, pas un mineur (lot 13)
             String cle = l.posture != GardeChef.Posture.ATTAQUE ? "chef_ordre_tranquille" : arme ? "chef_ordre_attaque" : "chef_ordre_attaque_civil";
             String dit = Besoins.texte(this, cle, null, null);
             r.add(dit != null ? dit : l.posture != GardeChef.Posture.ATTAQUE ? "Compris : si on te frappe, je m'interposerai, sans frapper."
@@ -2024,8 +2053,7 @@ public class Travailleur extends PathfinderMob {
             memoire.putString("garde_depot", GardeDepot.garde(GardeChef.posture(memoire.getString("garde_depot")), l).name());
         if (!parRegle && l.depot != null) {
             memoire.putString("garde_depot", l.depot.name());
-            Metier mt = Metier.de(metier);
-            boolean arme = mt != null && mt.combattant;
+            boolean arme = Famille.arme(this); // un combattant, pas un mineur (lot 13)
             String cle = l.depot != GardeChef.Posture.ATTAQUE ? "depot_ordre_tranquille" : arme ? "depot_ordre_attaque" : "depot_ordre_attaque_civil";
             String dit = Besoins.texte(this, cle, null, null);
             r.add(dit != null ? dit : l.depot != GardeChef.Posture.ATTAQUE ? "Compris : qui se sert au dépôt me trouvera devant lui, sans coup donné."
@@ -2267,11 +2295,12 @@ public class Travailleur extends PathfinderMob {
 
     void embaucher(ServerPlayer p) {
         if (mode != Mode.CHOMEUR) return;
+        if (Famille.enfant(this)) { signaler(p, "Un enfant ne s'embauche pas."); return; } // lot 13
         if (Reglages.actuel.metiers_inactifs.contains(metier) || !Metier.existe(metier)) {
             signaler(p, "Ce métier n'est plus proposé sur le serveur.");
             return;
         }
-        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size();
+        int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size(), payes = payes(p); // avant qu'il ne soit des leurs
         if (nb >= Reglages.actuel.pnj_max_par_joueur) {
             signaler(p, "Tu as déjà " + nb + " PNJ : c'est le maximum (" + Reglages.actuel.pnj_max_par_joueur + ").");
             return;
@@ -2304,7 +2333,7 @@ public class Travailleur extends PathfinderMob {
         this.prime = 0; // (« prime = 0 » remettait la prime d'embauche à zéro, et le message disait « pour rien »)
         salaire = salaireFixe; // un nouveau marché : ni le salaire fixé par l'ancien chef…
         int renom = Courrier.de(p.getServer()).reputation(p.getUUID());
-        surcout = surcout(nb, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
+        surcout = surcout(payes, renom); // …ni son ancien rang (cahier 9.2), et selon ce qu'on dit du chef (lot 13)
         memoire.remove("etoiles_gagnees"); // ses étoiles d'avant sont les siennes : il en demande le prix (Apprentissage)
         enAttente = null;
         prochainePaie = System.currentTimeMillis() + periodePaie();
@@ -2322,8 +2351,11 @@ public class Travailleur extends PathfinderMob {
 
     /** Le facteur de salaire qu'il demanderait à ce chef, selon les ouvriers que celui-ci a déjà (cahier 9.2). */
     static double surcoutPour(ServerPlayer p) {
-        return surcout(ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size(), Courrier.de(p.getServer()).reputation(p.getUUID()));
+        return surcout(payes(p), Courrier.de(p.getServer()).reputation(p.getUUID()));
     }
+
+    /** Ses ouvriers payés : les enfants ne comptent pas dans le surcoût (lot 13), mais bien dans le plafond. */
+    static int payes(ServerPlayer p) { return (int) ColoniePnj.pnjDe(p.getServer(), p.getUUID()).stream().filter(x -> !Famille.enfant(x)).count(); }
 
     /** Le facteur de salaire chez un chef qui a déjà {@code nb} ouvriers et telle réputation ({@link Cout}, {@link Recrutement#exigence}). */
     static double surcout(int nb, int reputation) { return Math.min(Cout.FACTEUR_MAX, Reglages.surcout(nb + 1) * Recrutement.exigence(reputation)); }
@@ -2352,6 +2384,9 @@ public class Travailleur extends PathfinderMob {
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
         t.putString("Talents", Talents.texte(talents));
+        t.putDouble("Age", age);
+        t.putDouble("AgeFin", ageFin);
+        t.putLong("AgeLe", ageLe);
         ListTag ms = new ListTag();
         for (Mission m : missions) ms.add(m.sauver());
         t.put("Missions", ms);
@@ -2456,6 +2491,9 @@ public class Travailleur extends PathfinderMob {
         lettresAuCalme.clear(); // elles sont dans « LettresALire »
         for (Tag x : t.getList("LettresADeposer", Tag.TAG_COMPOUND)) lettresADeposer.add(Courrier.Lettre.lire((CompoundTag) x));
         for (Tag x : t.getList("LettresALire", Tag.TAG_COMPOUND)) lettresALire.add(Courrier.Lettre.lire((CompoundTag) x));
+        if (t.contains("Age") && t.getDouble("Age") >= 0) { age = t.getDouble("Age"); ageFin = t.getDouble("AgeFin"); ageLe = t.getLong("AgeLe"); }
+        else Famille.naitreAdulte(this, 20, 45); // avant le lot 13 : un âge d'homme fait
+        Famille.appliquer(this);
         majNom();
     }
 

@@ -149,3 +149,14 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Débauche : un refus de « place » (pas de poste, plafond atteint) ou « sans somme » ne laisse pas de rancune ; un boutiquier qui tient boutique répond en marchand (la boutique passe avant).
 - Le chef apprend une tentative par lettre (`debauche_lettre_tentative`) : pas encore de souvenir dans `Souvenirs` (« qui a voulu te débaucher ? »).
 - Relecture du 17/10 (reste) : une autorisation « X peut te donner des ordres » accepte n'importe quel nom (pas vérifié contre les profils connus du serveur : un prénom de PNJ peut y entrer, sans effet). Un ordre payé dont une partie est réservée au chef est refusé en entier.
+## Familles (lot 13, première passe du 17/10)
+- **À dire à KOLRAX : les enfants comptent dans le plafond de PNJ par joueur** (`pnj_max_par_joueur`, 30 sur le serveur). Une famille nombreuse prend des places d'ouvriers ; quand la colonie est au plafond, plus aucune naissance. Ils ne comptent pas dans le surcoût des salaires. À lui de dire s'il préfère un plafond à part pour les enfants.
+- **Renvoi** : renvoyer un parent n'emmène pas l'enfant. Un enfant (moins de 12 ans) ne peut être ni renvoyé (il le dit) ni embauché par un autre ; un apprenti, si. Un enfant dont les deux parents sont partis reste chez le chef.
+- L'enfant n'obéit à aucun ordre, même « suis-moi » ou « rentre » (il joue près du poste ou de ses parents) ; seuls « apprends le métier de X » et les questions passent. Un mineur (moins de 16 ans) refuse tout ordre de se battre, n'entre pas dans l'armée, ne garde ni le chef ni le dépôt et ne se révolte pas les armes à la main ; un apprenti guerrier se défend quand même contre un monstre.
+- Les enfants peuvent être pris pour une causerie (`Causeries`) avec des répliques d'adultes ; pas de conversations propres aux enfants.
+- L'apprenti garde les étoiles gagnées en apprenant (★★ possible avant 16 ans, l'expérience va 1,5 fois plus vite) ; le cahier disait « ★ à 16 ans ».
+- Le nom de famille (`memoire.famille`, le prénom d'un parent) n'apparaît que sur la fiche et dans les réponses, pas au-dessus de la tête. Les couples de deux hommes n'ont pas d'enfant ; pas d'adoption.
+- L'IA ne connaît ni l'âge ni la famille (`IA.systeme`) ; les questions « quel âge as-tu ? », « qui sont tes parents ? », « as-tu des enfants ? » sont toujours répondues par le mod.
+- Le rendu du petit (attribut `SCALE` du jeu, synchronisé sans changement client) n'a pas été vu à l'écran : vérifier au banc photo (`runPhotos`) la taille, le nom au-dessus de la tête et le skin.
+- La mort de vieillesse n'est pas mise en scène (pas de lit, pas d'adieux des proches) ; l'enfant n'a pas de lit à lui réservé (il prend un lit libre, sinon dort près du poste).
+- Rien au panneau web : `familles` et `ages` se règlent dans `reglages.json` seulement.

@@ -1,0 +1,188 @@
+# Les familles (lot 13, cahier 5.6, 5.7 et 4.2) : enfants, apprentis, vieillesse, naissances. Fichier UTF-8.
+#
+# FORMAT : exactement celui de vie.txt (même lecteur : Vie.lire).
+#   [cle]
+#   réplique pour tous
+#   colerique: réplique réservée aux colériques
+# Préfixes possibles : calme:, peureux:, fourbe:, colerique:. Une réplique par ligne, 90 caractères au plus.
+# Aucun accord de genre sur celui qui parle ni sur {nom} : tournures neutres seulement.
+#
+# VARIABLES
+#   {objet}  un métier (« bûcheron ») pour apprenti_debut, adulte, enfant_metier, apprenti_metier ;
+#            un âge (« 34 ans ») pour age, age_enfant, age_vieux
+#   {nom}    un ou des prénoms : l'enfant né (naissance), les parents (parents), les enfants (enfants)
+#   {chef}   le nom du chef
+#
+# CLÉS
+#   naissance          le parent qui annonce la naissance de {nom}
+#   apprenti_debut     12 ans : il commence à apprendre le métier de {objet}
+#   adulte             16 ans : le voilà ouvrier ({objet})
+#   vieux              60 ans : il sent le poids des ans
+#   tres_vieux         70 ans : plus encore
+#   adieu              ses derniers mots, quand il s'éteint de vieillesse
+#   age, age_enfant, age_vieux   « quel âge as-tu ? » ({objet} = son âge)
+#   parents, parents_aucun       « qui sont tes parents ? »
+#   enfants, enfants_aucun       « as-tu des enfants ? »
+#   enfant_ordre       un ordre de travail à un enfant : il ne peut pas
+#   enfant_metier      « apprends le métier de {objet} » dit à un enfant
+#   apprenti_metier    pareil à un apprenti
+#   enfant_peur        l'enfant voit un monstre ou on le frappe : il se sauve
+#   enfant_jeu         l'enfant qui joue près du poste
+#   mineur_combat      un ordre de se battre (ou de frapper qui touche au chef, au dépôt) à un enfant ou un apprenti
+#   enfant_renvoi      on veut renvoyer un enfant
+#   guerre_trop_jeune  un apprenti guerrier à qui l'on lève l'armée
+
+[naissance]
+Un enfant ! {nom} est là, si menu dans mes bras.
+Regardez, voici {nom}, notre enfant. Doucement, ça dort.
+{nom} a vu le jour. Je n'ai jamais rien vu de plus beau.
+Une bouche de plus au poste : bienvenue à toi, {nom}.
+peureux: {nom}... si petit. J'ai peur de mal faire.
+colerique: Voici {nom} ! Le premier qui réveille l'enfant aura affaire à moi.
+fourbe: {nom} : un futur ouvrier pour {chef}, et un de plus pour nous.
+
+[apprenti_debut]
+J'ai douze ans : j'apprends le métier de {objet} !
+Me voici en apprentissage, chef. Le métier de {objet} m'attend.
+Plus question de jouer : on m'enseigne le métier de {objet}.
+Douze ans ! On va m'apprendre le métier de {objet}.
+peureux: J'apprends le métier de {objet}... pourvu que je ne casse rien.
+colerique: Le métier de {objet} ? Je l'apprendrai plus vite que tous !
+
+[adulte]
+Seize ans ! Le métier de {objet} est le mien pour de bon.
+Fini l'apprentissage : je connais le métier de {objet}.
+Me voilà ouvrier comme les autres, au métier de {objet}.
+Seize ans aujourd'hui, et le métier de {objet} dans les mains.
+colerique: Seize ans ! Qu'on ne me traite plus en enfant.
+fourbe: Seize ans : désormais, ma paie entière, chef.
+
+[vieux]
+Les ans me pèsent : je n'ai plus la vigueur d'antan.
+Mon dos me tire, le matin. Le temps passe, chef.
+Soixante hivers... j'avance moins vite qu'avant.
+Je fais encore ma part, mais à mon pas, désormais.
+colerique: Je n'ai plus vingt ans, mais je vaux encore mon pain !
+peureux: Je crains de devenir un fardeau, avec l'âge.
+
+[tres_vieux]
+Soixante-dix ans... chaque matin est un cadeau.
+Mes mains tremblent un peu, mais l'ouvrage se fait.
+J'ai vu passer bien des saisons, chef.
+Le grand âge est là. Je travaille comme je peux.
+fourbe: À mon âge, on a droit à quelques égards, non ?
+
+[adieu]
+Je suis bien las... Je vais me reposer, pour de bon.
+Ma route s'arrête ici. Prenez soin du poste.
+J'ai fait mon temps. Adieu, compagnons.
+Une longue vie, et une belle... Adieu, {chef}.
+peureux: Je n'ai plus peur, à présent. Adieu.
+colerique: J'ai assez trimé... Laissez-moi dormir, enfin.
+
+[age]
+J'ai {objet}, chef.
+{objet}, à peu de chose près.
+J'ai {objet}, et bon pied, bon œil.
+On me donne {objet}, et c'est le compte.
+fourbe: {objet}... mais j'en parais moins, non ?
+colerique: {objet}, et alors ?
+
+[age_enfant]
+J'ai {objet} !
+{objet}, chef ! Bientôt l'âge de l'ouvrage.
+J'ai {objet}, et je sais déjà compter jusqu'à cent.
+{objet}... c'est beaucoup, non ?
+peureux: J'ai... {objet}.
+
+[age_vieux]
+J'ai {objet}, chef. Le bel âge, comme on dit.
+{objet}. J'ai vu passer bien des hivers.
+J'ai {objet}, et les genoux le savent.
+{objet}, et toujours à l'ouvrage.
+colerique: {objet}, et je tiens encore une pioche !
+
+[parents]
+Mes parents ? {nom}.
+Je suis l'enfant de {nom}.
+{nom} : ce sont mes parents.
+J'ai grandi ici, auprès de {nom}.
+fourbe: {nom}. Tu les connais, je crois.
+
+[parents_aucun]
+Mes parents sont loin d'ici, ou en terre depuis longtemps.
+Je n'ai plus de famille, chef. Le poste en tient lieu.
+Ma famille ? Elle est restée au pays.
+J'ai toujours fait mon chemin sans eux... ou presque.
+peureux: Je préfère ne pas en parler, chef.
+
+[enfants]
+Oui : {nom}.
+J'ai des enfants, oui : {nom}.
+{nom} : ma fierté.
+{nom}. Ça grandit si vite !
+colerique: {nom}. Et gare à qui leur fait du tort.
+
+[enfants_aucun]
+Pas d'enfant, chef. Pas encore.
+Je n'ai pas d'enfant.
+Des enfants ? Non, pas encore.
+Non. L'ouvrage me prend tout mon temps.
+fourbe: Pas que je sache, chef.
+
+[enfant_ordre]
+Ce n'est pas un ouvrage pour un enfant, chef !
+Je suis trop jeune pour ça. Demande à mes parents !
+Quand j'aurai douze ans, je travaillerai. Promis !
+Je ne sais pas faire ça, moi. Je joue, plutôt.
+peureux: Je n'ose pas, chef... je n'ai pas l'âge.
+colerique: Non ! Je veux jouer !
+
+[enfant_metier]
+Le métier de {objet} ? Oui ! Quand j'aurai douze ans.
+Plus tard, j'apprendrai le métier de {objet}, promis.
+{objet} ? D'accord, chef ! Ce sera mon métier.
+J'apprendrai le métier de {objet}, quand j'en aurai l'âge.
+
+[apprenti_metier]
+Bien, chef : j'apprendrai le métier de {objet}.
+Le métier de {objet} ? Je m'y mets tout de suite.
+D'accord : on m'enseignera le métier de {objet}.
+Va pour le métier de {objet}, chef.
+colerique: Le métier de {objet} ? Soit, je le maîtriserai vite.
+
+[enfant_peur]
+Au secours ! Un monstre !
+J'ai peur ! Je me sauve !
+Maman ! Papa ! Un monstre !
+Je cours me cacher !
+peureux: Au secours, au secours !
+
+[enfant_jeu]
+Attrape-moi si tu peux !
+Je fais le guet, comme les grands !
+Un, deux, trois... je compte jusqu'à cent !
+Regardez, je saute plus haut que la barrière !
+Plus tard, j'aurai mon propre poste !
+
+[mineur_combat]
+Je suis trop jeune pour me battre, chef. Demande aux grands.
+Me battre ? Je n'ai pas l'âge de porter les armes.
+Les armes, ce sera pour plus tard, chef.
+Je crierai pour prévenir, mais je ne frapperai personne.
+peureux: Me battre ? Oh non, chef, je n'oserais jamais...
+colerique: Je voudrais bien, mais on dit que je suis trop jeune !
+
+[enfant_renvoi]
+Me renvoyer ? Mais je suis un enfant, chef ! Ma famille est ici.
+Où irais-je ? Je suis trop jeune pour courir les routes.
+Je veux rester avec les miens, chef.
+Non ! Je reste ici, près de ma famille.
+peureux: S'il te plaît, chef, ne me chasse pas...
+
+[guerre_trop_jeune]
+Je suis trop jeune pour la guerre, chef.
+On ne m'a pas encore appris à me battre contre des hommes.
+La guerre, ce sera quand j'aurai seize ans, chef.
+Je garde la colonie avec les autres, chef. Je n'ai pas l'âge des rangs.
+colerique: Trop jeune, qu'ils disent... Je reste ici, chef.
