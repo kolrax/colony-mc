@@ -215,6 +215,32 @@ public class TestsAutresJoueurs {
                 () -> fin(s));
     }
 
+    /** Lot 13-14 : un enfant ne se débauche pas, un apprenti ne se loue pas pour un ordre payé ; aucune pièce prise, le chef ne change pas. */
+    @GameTest(template = "vide", timeoutTicks = 400, batch = "autres_joueurs")
+    public static void mineurNiDebaucheNiPaye(GameTestHelper h) {
+        Scene s = scene(h, 428, 14);
+        s.t().age = 8;
+        Courrier c = Courrier.de(h.getLevel().getServer());
+        c.definirPoste(s.autre().getUUID(), h.getLevel(), s.base().west(3));
+        s.autre().getInventory().add(new ItemStack(Items.COPPER_INGOT, 64));
+        Runnable rienPris = () -> {
+            h.assertTrue(s.chef().getUUID().equals(s.t().chef), "il reste chez son chef : " + vu(s));
+            h.assertTrue(TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT) == 64 && TestsBoutique.compte(s.t().inventaire, Items.COPPER_INGOT) == 0,
+                    "aucune pièce ne bouge : " + TestsBoutique.compte(s.autre().getInventory(), Items.COPPER_INGOT));
+        };
+        TestsIA.etapes(h, s.chef(), new Travailleur[]{s.t()},
+                () -> s.t().parler(s.autre(), "Viens travailler pour moi, je te paie 50 pièces."),
+                () -> { rienPris.run(); h.assertTrue(TestsCaractere.aDit(s.t(), "debauche_mineur"), "l'enfant est trop jeune : " + vu(s)); },
+                TestsIA.attendre(h, 25),
+                () -> { s.t().age = 14; s.t().paroles.clear(); s.t().parler(s.autre(), "Tiens, 10 pièces : attends ici."); },
+                () -> {
+                    rienPris.run();
+                    h.assertTrue(s.t().mode == Travailleur.Mode.TRAVAIL, "l'apprenti n'attend pas : " + vu(s));
+                    h.assertTrue(TestsCaractere.aDit(s.t(), "etranger_mineur"), "l'apprenti est trop jeune : " + vu(s));
+                },
+                () -> fin(s));
+    }
+
     /** Cahier 6.6 : le nom affiché dit le prénom, le métier et le chef ; un chômeur, non. */
     @GameTest(template = "vide", timeoutTicks = 200, batch = "autres_joueurs")
     public static void nomAvecLeChef(GameTestHelper h) {

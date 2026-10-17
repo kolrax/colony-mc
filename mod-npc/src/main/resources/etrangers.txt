@@ -35,6 +35,8 @@
 #   debauche_lettre_depart     la lettre à l'ancien chef : il part chez {nom} pour {prix} pièces
 #   debauche_lettre_tentative  la lettre au chef : {nom} a voulu le débaucher, il a dit non
 #   debauche_formation         il est en formation payée par son chef : il ne part pas
+#   debauche_mineur            un enfant ou un apprenti : trop jeune pour quitter son chef
+#   etranger_mineur            un enfant ou un apprenti : trop jeune pour un ordre payé, il ne prend rien
 
 [commande_permis]
 Entendu, {chef} : j'obéirai aussi à {nom}. Je le dirai aux autres.
@@ -194,3 +196,19 @@ Je suis en apprentissage, payé par {chef}. Pas maintenant.
 Ma formation n'est pas finie. On en reparlera après.
 {chef} paie mon apprentissage. Je ne pars pas en plein milieu.
 Pas tant que j'apprends, {nom}.
+
+[debauche_mineur]
+Je suis trop jeune pour partir. Vois ça avec {chef}.
+Ma place est auprès des miens, {nom}. Je suis encore petit.
+Partir ? Je n'ai pas l'âge. C'est {chef} qui décide de moi.
+Non, {nom}. On ne m'a pas appris à quitter les miens.
+fourbe: Trop jeune pour qu'on m'achète, {nom}. Reviens dans quelques années.
+colerique: Je suis jeune, pas sot. Je reste chez {chef} !
+
+[etranger_mineur]
+Garde tes pièces : je suis trop jeune. C'est {chef} qui décide de moi.
+Je n'ai pas l'âge de me louer, {nom}. Demande à {chef}.
+Range ton argent, {nom}. Je suis encore en âge d'obéir aux miens.
+Non merci. Un jeune comme moi ne se loue pas à un autre que {chef}.
+fourbe: Tes pièces me tentent, mais {chef} me tirerait l'oreille.
+colerique: Je ne suis pas à vendre, {nom}, et trop jeune pour ça !

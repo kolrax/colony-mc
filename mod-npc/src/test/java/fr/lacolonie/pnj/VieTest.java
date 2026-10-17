@@ -65,7 +65,7 @@ class VieTest {
     @Test
     void etrangersSeLit() {
         Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/etrangers.txt"));
-        assertEquals(23, banque.size());
+        assertEquals(25, banque.size());
         for (var e : banque.entrySet()) {
             assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
             assertTrue(e.getValue().stream().filter(r -> r.temperament().isEmpty()).count() >= 4, e.getKey() + " : quatre répliques communes");
