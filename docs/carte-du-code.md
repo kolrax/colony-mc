@@ -13,7 +13,7 @@ Nouvelles classes :
 - `BarreCommandes` : touche B (client), `Recherche` (pure), `executer(p, t, idAction)` (serveur), paquet `Reseau.Barre`.
 - `Livret` : `livret.txt` → livre écrit, donné une fois avec le premier poste.
 - `Fantome` : commande `/fantome` (dev ou `reglages.json` `fantome: true`), rapport JSON ; `tools/fantome.py`, scénarios dans `mod-npc/fantome/`.
-- `Paroles` (bulles, heure) et `Essais` (outils de GameTests repris de l'ancien TestsIA).
+- `Paroles` (bulles, heure) et `Essais` (outils de GameTests repris de l'ancien TestsIA ; `Essais.choisir` : `COLONIE_TESTS=enRang,sortDeLaLave COLONIE_FOIS=10 ./gradlew runGameTestServer` ne lance que ces tests, chacun N fois dans des lots successifs. Les copies d'un test qui travaille loin de sa structure, dans un coin du monde plat (`TestsJeu.sol`), se gênent entre elles : pour ceux-là, plusieurs lancements avec `COLONIE_FOIS=1`).
 - Tests : `TestsMission`, `TestsPoste`, `TestsLieux`, `TestsMetiersMission`, `TestsBarre`, `TestsGuerre` (refait) ; JUnit `StatutTest`, `StatutMetiersTest`, `LieuxTest`, `BarreCommandesTest`, `LivretTest`, `FantomeTest`, `BoiteTest` (journal).
 - Changés de rôle : `Courrier.ecrire` écrit une ligne au journal du poste ; `Boite` = règles du journal ; `Client.EcranPoste` = 5 onglets ; `Client.EcranOuvrier` = fiche ; `Guerre`/`Armee` = guerre simple (declarer, paix, Rang, Repli) ; `Obeissance` = jauge de satisfaction unique.
 
