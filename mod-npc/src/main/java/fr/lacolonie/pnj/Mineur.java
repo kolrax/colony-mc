@@ -161,9 +161,12 @@ final class Mineur extends Metier {
         BlockPos sous = p.below();
         if (Monde.libre(l, sous)) {
             if (echecSur(t, sous)) return Case.BLOQUE;
-            if (t.compter(Actions.Filtre.de("#c:cobblestones")) > 0) {
+            // Du pavé, sinon tout bloc banal de son sac (la terre de l'escalier) ; sans rien, il en demande au chef.
+            int i = Itineraire.caseDeChantier(t, true);
+            if (i >= 0) {
                 t.memoire.putString("cible", cle(sous));
-                Cerveau.lancer(t, new Actions.Poser(sous, Actions.Filtre.de("#c:cobblestones")));
+                String bloc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(t.inventaire.getItem(i).getItem()).toString();
+                Cerveau.lancer(t, new Actions.Poser(sous, Actions.Filtre.de(t.compter(Actions.Filtre.de("#c:cobblestones")) > 0 ? "#c:cobblestones" : bloc)));
             } else Cerveau.lancer(t, new Actions.Demander("pierre_trou", Actions.Filtre.de("#c:cobblestones"), 8));
             return Case.ACTION;
         }
@@ -203,8 +206,34 @@ final class Mineur extends Metier {
         return new BlockPos(x, puits.getY() - k, z);
     }
 
+    /** Au plus tant de puits ratés de suite (escalier qui ne descend pas) avant de se dire bloqué. */
+    static final int RATES = 3;
+
+    /**
+     * Un puits raté : il oublie l'entrée de la colonie (il en cherchera une autre) ; après {@link #RATES} de suite, il est
+     * bloqué (« ⚠ Aucun lieu sûr pour miner ») au lieu de se dire « Mine » sans rien faire, et n'essaie plus qu'une
+     * fois toutes les 5 minutes.
+     */
+    static void puitsRate(Travailleur t) {
+        CompoundTag m = t.memoire;
+        m.remove("puits_colonie");
+        m.putInt("rates", m.getInt("rates") + 1);
+        if (m.getInt("rates") >= RATES) {
+            t.bloquer(Statut.LIEU_MINE);
+            m.putLong("rates_t", Cerveau.temps(t) + 300);
+        }
+    }
+
     void nouveauPuits(Travailleur t) {
         CompoundTag m = t.memoire;
+        if (m.getInt("rates") >= RATES) {
+            if (m.getLong("rates_t") > Cerveau.temps(t)) {
+                t.bloquer(Statut.LIEU_MINE);
+                Cerveau.attendre(t, 30);
+                return;
+            }
+            m.putInt("rates", RATES - 1); // un nouvel essai ; raté, il est de nouveau bloqué 5 minutes
+        }
         // Le plus près possible du bureau : il aura moins de marche pour rapporter le minerai.
         // Jamais sur une structure ni près de la base d'un autre joueur.
         // Loin des constructions, jamais dans une structure ni près d'un autre poste ({@link Lieux#puitsPermis}). Dans la
@@ -221,6 +250,7 @@ final class Mineur extends Metier {
         if (s == null && t.lieuImpose == null && !t.chezLui(t.blockPosition())) s = Monde.solNaturel(t, t.blockPosition(), 24, refus);
         if (s != null && t.lieuImpose == null && Lieux.dansColonie(t, s)) { m.putLong("puits_colonie", s.asLong()); m.putInt("sens_colonie", sens); }
         if (s == null && t.lieuImpose != null) {
+            t.bloquer(Statut.LIEU_MINE);
             Cerveau.dire(t, "pas_de_lieu", 600, "Aucun lieu sûr pour miner là où tu m'as dit : il y a des constructions trop près.");
             Cerveau.attendre(t, 30);
             return;
@@ -234,10 +264,12 @@ final class Mineur extends Metier {
                 if (p == Cerveau.Portee.DEMAIN) { Cerveau.attendre(t, 60); return; }
             }
             Cerveau.ecrire(t, "pas_de_sol", 1800, "pas_de_sol");
+            t.bloquer(Statut.LIEU_MINE);
             if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 30);
             return;
         }
         m.putLong("puits", s.asLong());
+        m.putLong("mine", s.asLong()); // sa mine : ses torches et son pavé n'y comptent pas comme constructions (Lieux.saMine)
         m.putInt("entree", s.getY());
         Lieux.choisi(t, s);
         m.putInt("marche", 0);
@@ -321,11 +353,13 @@ final class Mineur extends Metier {
                     }
                     t.dire(r == Case.LIQUIDE ? "De l'eau ou de la lave tout autour de mon escalier : je creuse ailleurs." : "Je n'arrive pas à creuser ici : je change d'endroit.");
                     m.remove("puits");
+                    puitsRate(t);
                     Cerveau.attendre(t, 2);
                     return;
                 }
                 m.putInt("marche", k);
                 m.putInt("tours", 0);
+                if (k >= PALIER) { m.remove("rates"); t.debloquer(Statut.LIEU_MINE); } // il descend : ce puits marche
                 avancer(t, p, k);
                 return;
             }

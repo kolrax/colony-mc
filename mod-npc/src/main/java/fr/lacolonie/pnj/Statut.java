@@ -16,7 +16,7 @@ public final class Statut {
     public static final String ATTENTE = "En attente", HORS_HORAIRES = "Hors horaires";
 
     // Les blocages, avec leur solution : posés par les métiers ({@code Travailleur.bloquer}).
-    public static final String SAC_PLEIN = "Sac plein, dépôt plein", LIEU_MINE = "Aucun lieu sûr pour miner ici",
+    public static final String SAC_PLEIN = "Sac plein, dépôt plein", LIEU_MINE = "Aucun lieu sûr pour miner : dis-lui « Travaille ici »",
             ENCLOS = "Pas d'enclos", SANS_POSTE = "Pas de poste de travail", SANS_MISSION = "Aucune mission : clic droit pour en donner une",
             A_TERRE = "À terre : à manger ou une potion de soin", GREVE = "En grève : la paie manque à la caisse";
 

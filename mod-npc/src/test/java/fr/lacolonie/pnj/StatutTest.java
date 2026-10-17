@@ -21,7 +21,7 @@ class StatutTest {
     void bloqueAvecLaSolution() {
         assertEquals("⚠ Pas de pioche au dépôt", Statut.texte(etat("mineur", Statut.outil("pioche"), "Fer", 0, 64, false)));
         assertEquals("⚠ Sac plein, dépôt plein", Statut.texte(etat("mineur", Statut.SAC_PLEIN, "Fer", 3, 64, false)));
-        assertEquals("⚠ Aucun lieu sûr pour miner ici", Statut.bloque(Statut.LIEU_MINE));
+        assertEquals("⚠ Aucun lieu sûr pour miner : dis-lui « Travaille ici »", Statut.bloque(Statut.LIEU_MINE));
         assertEquals("⚠ Pas d'enclos", Statut.bloque(Statut.ENCLOS));
         // sans mission : un mineur est bloqué (et on dit comment faire), un bûcheron coupe quand même
         assertTrue(Statut.texte(etat("mineur", null, null, 0, 0, false)).startsWith("⚠ Aucune mission"));

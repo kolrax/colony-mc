@@ -134,6 +134,26 @@ public class TestsLieux {
     }
 
     /**
+     * Ses propres torches ne l'arrêtent pas : dans la mine qu'il a ouverte ({@link Lieux#saMine}), une torche à 2 blocs ne
+     * l'empêche pas de creuser ; hors de sa mine, elle crée bien le tampon. Avant : ses torches et son pavé comptaient comme
+     * des constructions, et le fantôme a vu un mineur à 0 charbon en 2 jours.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "lieux")
+    public static void mineurCreuseMalgreSesTorches(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        h.setBlock(6, 2, 4, Blocks.TORCH);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 2, 2, 2, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos p = h.absolutePos(new BlockPos(4, 1, 4));
+        boolean sansMine = Lieux.peutCasser(t, p);
+        t.memoire.putLong("mine", h.absolutePos(new BlockPos(4, 2, 4)).asLong());
+        boolean avecMine = Lieux.peutCasser(t, p);
+        t.discard();
+        h.assertFalse(sansMine, "hors de sa mine, la torche crée le tampon");
+        h.assertTrue(avecMine, "dans sa mine, sa torche ne l'empêche pas de creuser");
+        h.succeed();
+    }
+
+    /**
      * Enfermé dans une cabane aux murs de pavés (posés par un joueur) de 4 blocs de haut, une pioche en main et aucun bloc à
      * poser, son bureau dehors : il ne se creuse pas de passage à travers les murs. Avant : le pavé n'était pas compté comme
      * une construction, et son escalier de déblocage le cassait.
