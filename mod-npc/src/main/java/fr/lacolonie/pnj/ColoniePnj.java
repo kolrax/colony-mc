@@ -324,6 +324,12 @@ public class ColoniePnj {
     // --- Commandes d'admin : /pnj ---------------------------------------------------------------------
 
     static void commandes(RegisterCommandsEvent e) {
+        // /rapport : pour tous les joueurs (essais), pas d'op requis.
+        e.getDispatcher().register(Commands.literal("rapport").then(Commands.argument("texte", StringArgumentType.greedyString()).executes(c -> {
+            String m = Rapports.envoyer(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "texte"));
+            c.getSource().sendSuccess(() -> Component.literal(m), false);
+            return 1;
+        })));
         e.getDispatcher().register(Commands.literal("pnj").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("chercheur").then(Commands.argument("metier", StringArgumentType.word())
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(Metier.TOUS.keySet(), b))
