@@ -210,25 +210,26 @@ final class Fermier extends Metier {
     /**
      * Le centre d'un champ de 9 sur 9 à faire, à 32 blocs au plus du poste : sur trois cercles de huit points, celui où le plus
      * de cases (une sur deux, 25 relevées) se sèment ({@link #sol} : libre, à ciel ouvert, ni bâti ni à un voisin), à 8 blocs
-     * au plus d'une eau à fleur de sol ; null s'il n'y en a pas (au moins 20 cases sur 25). Quelques milliers de blocs lus,
+     * au plus d'une eau à fleur de sol ; faute d'eau, la meilleure terre plate ; null s'il n'y en a pas (au moins 20 cases sur 25). Quelques milliers de blocs lus,
      * au plus toutes les 5 minutes, et seulement par un fermier sans champ.
      */
     static BlockPos terrain(Travailleur t) {
         if (t.bureau == null || !(t.level() instanceof ServerLevel l)) return null;
-        BlockPos mieux = null;
-        int note = 19;
+        BlockPos mieux = null, sec = null; // près de l'eau d'abord ; sinon la meilleure terre plate (le blé y pousse, moins vite)
+        int note = 19, noteSec = 19;
         for (int r = 10; r <= PORTEE - 6; r += 6)
             for (int k = 0; k < 8; k++) {
                 double a = k * Math.PI / 4;
                 int x = t.bureau.getX() + (int) Math.round(Math.cos(a) * r), z = t.bureau.getZ() + (int) Math.round(Math.sin(a) * r);
                 if (!l.hasChunkAt(x, z)) continue;
                 int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                if (!eauPres(l, x, y, z)) continue;
                 int n = 0;
                 for (int i = -4; i <= 4; i += 2) for (int j = -4; j <= 4; j += 2) if (sol(t, l, new BlockPos(x + i, y, z + j), y) != null) n++;
-                if (n > note) { note = n; mieux = new BlockPos(x, y, z); }
+                if (n <= Math.min(note, noteSec)) continue;
+                if (eauPres(l, x, y, z)) { if (n > note) { note = n; mieux = new BlockPos(x, y, z); } }
+                else if (n > noteSec) { noteSec = n; sec = new BlockPos(x, y, z); }
             }
-        return mieux;
+        return mieux != null ? mieux : sec;
     }
 
     /** De l'eau à fleur de sol (à 2 blocs près de la hauteur y) à 8 blocs au plus de (x, z), relevée une colonne sur deux. */
