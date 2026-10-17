@@ -168,7 +168,22 @@ final class Lieux {
         if (!regles(l)) return true;
         if (Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
         if ("mineur".equals(t.metier) && p.getY() < Monde.surface(l, p.getX(), p.getZ()) - 1 && sousFondation(l, p)) return false;
-        return ici(t, p) || !zoneConstruite(l, p);
+        return ici(t, p) || saMine(t, p) || !zoneConstruite(l, p);
+    }
+
+    /** Rayon (à l'horizontale) de la mine d'un mineur autour de son entrée : son escalier et ses galeries. */
+    static final int RAYON_MINE = 32;
+
+    /**
+     * p est dans la mine que ce mineur a ouverte ({@code mine} : l'entrée, choisie hors du tampon par {@link #puitsPermis}) :
+     * sous l'entrée, à moins de {@link #RAYON_MINE} blocs. Ses propres torches et le pavé dont il comble les trous sont des
+     * « constructions » : sans cette exception, leur tampon lui interdisait de continuer (fantôme : 0 charbon en 2 jours).
+     * Les fondations ({@link #sousFondation}) et les blocs construits eux-mêmes restent interdits.
+     */
+    static boolean saMine(Travailleur t, BlockPos p) {
+        if (!"mineur".equals(t.metier) || !t.memoire.contains("mine")) return false;
+        BlockPos e = BlockPos.of(t.memoire.getLong("mine"));
+        return p.getY() <= e.getY() + 2 && LieuxRegles.dist2(e.getX(), e.getZ(), p.getX(), p.getZ()) <= (long) RAYON_MINE * RAYON_MINE;
     }
 
     /** Le bloc lui-même est une construction qu'il ne doit pas casser (sans les règles de lieu) : pour {@link Actions.Casser}. */
