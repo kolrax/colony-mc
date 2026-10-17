@@ -252,6 +252,44 @@ public class TestsFermier {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Son champ de 3 sur 3 à semer, sans une graine sur lui ni au dépôt : « ⚠ Plus de graines au dépôt ». Puis {@code ensuite}
+     * (des graines au dépôt, ou le champ semé par quelqu'un d'autre) et un nouvel entretien : le statut s'efface.
+     */
+    static void plusDeGraines(GameTestHelper h, int coin, boolean auDepot) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, coin, b);
+        ServerLevel l = h.getLevel();
+        BlockPos centre = b[0].offset(4, -1, 0);
+        marquer(t, centre, 3, 3, "ble");
+        Cerveau.lancer(t, Fermier.Champ.de(t.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND).getCompound(0)));
+        h.runAtTickTime(h.getTick() + 60, () -> {
+            String avant = t.blocageActuel() + " / " + t.memoire.get("sans_graines");
+            if (!Statut.SANS_GRAINES.equals(t.blocageActuel())) { t.discard(); h.fail("sans graines, il le dit au-dessus de sa tête : " + avant); }
+            if (auDepot) TestsBucheron.depot(t).depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 9));
+            else {
+                for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) culture(l, centre.offset(x, 1, z), Blocks.WHEAT, 2);
+                Cerveau.lancer(t, Fermier.Champ.de(t.memoire.getList("champs", net.minecraft.nbt.Tag.TAG_COMPOUND).getCompound(0)));
+            }
+            // Il peut être en pause (rien de mûr : 20 à 30 secondes) : il le voit à sa décision suivante.
+            h.runAtTickTime(h.getTick() + 660, () -> {
+                String apres = t.blocageActuel() + " / " + t.memoire.get("sans_graines") + " (" + TestsJeu.etat(t, t.bureau) + ")";
+                t.discard();
+                h.assertTrue(!Statut.SANS_GRAINES.equals(t.blocageActuel()) && !t.memoire.contains("sans_graines"),
+                        (auDepot ? "des graines au dépôt" : "plus rien à semer") + " : « Plus de graines » s'efface : " + apres);
+                h.succeed();
+            });
+        });
+    }
+
+    /** Relecture : des graines arrivent au dépôt, « Plus de graines au dépôt » s'efface. Avant : il le disait jusqu'au prochain semis. */
+    @GameTest(template = "vide", timeoutTicks = 1000)
+    public static void plusDeGrainesSEffaceAvecLeDepot(GameTestHelper h) { plusDeGraines(h, 128, true); }
+
+    /** Relecture : son champ est tout semé, « Plus de graines au dépôt » s'efface. Avant : il le disait pour toujours. */
+    @GameTest(template = "vide", timeoutTicks = 1000)
+    public static void plusDeGrainesSEffaceChampSeme(GameTestHelper h) { plusDeGraines(h, 129, false); }
+
     /** Relecture : « Oublie ce champ », en le regardant : il le retire de ses champs, sans rien arracher. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void oublieLeChamp(GameTestHelper h) {

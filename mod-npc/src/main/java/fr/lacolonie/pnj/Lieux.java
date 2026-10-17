@@ -5,11 +5,15 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.levelgen.Heightmap;
+
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,7 +101,10 @@ final class Lieux {
     }
 
     /** Un bloc qui {@link #compte} dans la boîte (bornes comprises). */
-    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1) {
+    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1) { return chercher(l, x0, y0, z0, x1, y1, z1, null); }
+
+    /** Pareil, sans compter les torches et le pavé que ce mineur a posés aux positions {@code siens} ({@link #sien}). */
+    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1, LongSet siens) {
         y0 = Math.max(y0, l.getMinBuildHeight());
         y1 = Math.min(y1, l.getMaxBuildHeight() - 1);
         BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
@@ -113,7 +120,7 @@ final class Lieux {
                     for (int x = ax; x <= bx; x++)
                         for (int y = ay; y <= by; y++)
                             for (int z = az; z <= bz; z++)
-                                if (compte(s.getBlockState(x & 15, y & 15, z & 15))) return true;
+                                if (compte(s.getBlockState(x & 15, y & 15, z & 15)) && (siens == null || !sien(s.getBlockState(x & 15, y & 15, z & 15), siens, x, y, z))) return true;
                 }
             }
         return false;
@@ -168,7 +175,65 @@ final class Lieux {
         if (!regles(l)) return true;
         if (Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
         if ("mineur".equals(t.metier) && p.getY() < Monde.surface(l, p.getX(), p.getZ()) - 1 && sousFondation(l, p)) return false;
-        return ici(t, p) || !zoneConstruite(l, p);
+        return ici(t, p) || !zoneConstruite(l, p) || saMine(t, p) && !mineConstruite(t, p);
+    }
+
+    /** Au plus tant de blocs posés retenus par mineur (les plus récents) : une mine entière, escaliers et galeries. */
+    static final int POSES = 512;
+
+    /**
+     * Le mineur pose une torche ou du pavé en p : il le retient, pour que ce bloc-là ne compte pas dans le tampon de sa
+     * mine ({@link #mineConstruite}). Une torche ou un coffre qu'un joueur pose à côté compte toujours.
+     */
+    static void pose(Travailleur t, BlockPos p) {
+        if (!"mineur".equals(t.metier)) return;
+        long[] a = t.memoire.getLongArray("poses_mine");
+        long[] n = java.util.Arrays.copyOfRange(a, Math.max(0, a.length + 1 - POSES), a.length + 1);
+        n[n.length - 1] = p.asLong();
+        t.memoire.putLongArray("poses_mine", n);
+    }
+
+    /** Ce bloc en (x, y, z) est une torche ou du pavé que ce mineur a posé lui-même. */
+    static boolean sien(BlockState st, LongSet siens, int x, int y, int z) {
+        return (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(net.neoforged.neoforge.common.Tags.Blocks.COBBLESTONES))
+                && siens.contains(BlockPos.asLong(x, y, z));
+    }
+
+    /** Le résultat de {@link #mineConstruite}, par mineur et par case de 4 x 4 x 4 : comme {@link #ZONES}. */
+    private static final Map<Cle, Long> MINES = new ConcurrentHashMap<>();
+
+    /**
+     * Le tampon dans sa mine : une construction à moins de {@link #TAMPON} blocs de p, sans compter ses propres torches et
+     * son pavé ({@link #pose}). Lu seulement quand {@link #zoneConstruite} a vu quelque chose ; gardé 30 secondes.
+     */
+    static boolean mineConstruite(Travailleur t, BlockPos p) {
+        Level l = t.level();
+        Cle k = new Cle(java.util.List.of(t.getUUID(), l.dimension()), BlockPos.asLong(p.getX() >> 2, p.getY() >> 2, p.getZ() >> 2));
+        long maintenant = l.getGameTime();
+        Long v = MINES.get(k);
+        if (v != null && (v >> 1) > maintenant) return (v & 1) == 1;
+        int x0 = (p.getX() & ~3) - TAMPON, y0 = (p.getY() & ~3) - TAMPON, z0 = (p.getZ() & ~3) - TAMPON;
+        boolean r = chercher(l, x0, y0, z0, x0 + 3 + 2 * TAMPON, y0 + 3 + 2 * TAMPON, z0 + 3 + 2 * TAMPON,
+                new LongOpenHashSet(t.memoire.getLongArray("poses_mine")));
+        if (MINES.size() > 50_000) MINES.clear();
+        MINES.put(k, (maintenant + DUREE_ZONE) << 1 | (r ? 1 : 0));
+        return r;
+    }
+
+    /** Rayon (à l'horizontale) de la mine d'un mineur autour de son entrée : son escalier et ses galeries. */
+    static final int RAYON_MINE = 32;
+
+    /**
+     * p est dans la mine que ce mineur a ouverte ({@code mine} : l'entrée, choisie hors du tampon par {@link #puitsPermis}) :
+     * sous l'entrée, à moins de {@link #RAYON_MINE} blocs. Là, ses propres torches et le pavé dont il comble les trous
+     * ({@link #pose}) ne comptent pas dans le tampon : sinon il ne pouvait pas continuer (fantôme : 0 charbon en 2 jours).
+     * Toute autre construction (coffre, rails, torche d'un joueur) garde son tampon ({@link #mineConstruite}) ; les
+     * fondations ({@link #sousFondation}) et les blocs construits eux-mêmes restent interdits.
+     */
+    static boolean saMine(Travailleur t, BlockPos p) {
+        if (!"mineur".equals(t.metier) || !t.memoire.contains("mine")) return false;
+        BlockPos e = BlockPos.of(t.memoire.getLong("mine"));
+        return p.getY() <= e.getY() + 2 && LieuxRegles.dist2(e.getX(), e.getZ(), p.getX(), p.getZ()) <= (long) RAYON_MINE * RAYON_MINE;
     }
 
     /** Le bloc lui-même est une construction qu'il ne doit pas casser (sans les règles de lieu) : pour {@link Actions.Casser}. */

@@ -237,6 +237,7 @@ public class Travailleur extends PathfinderMob {
         for (Mission m : missions) if (m.lieu == null || p == null) m.lieu = lieuImpose;
         memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu (Lieux)
         memoire.remove("lieu");
+        Mineur.oublierMine(this); // bloqué « Aucun lieu sûr pour miner » : il réessaie tout de suite au nouveau lieu
     }
 
     /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */

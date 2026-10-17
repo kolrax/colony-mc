@@ -622,6 +622,12 @@ public final class Fantome {
             o.addProperty("pos", t.blockPosition().toShortString());
             o.addProperty("mode", String.valueOf(t.mode));
             o.addProperty("action", t.action == null ? "" : t.action.nom);
+            // Pourquoi il n'avance pas : le résultat de sa dernière action (« ok » ou la raison de l'échec), son blocage,
+            // et sa mémoire de travail (puits, marche, lieu…).
+            o.addProperty("dernier_resultat", t.resultat);
+            o.addProperty("blocage", t.blocage == null ? "" : t.blocage);
+            String mem = t.memoire.toString();
+            o.addProperty("memoire", mem.length() > 1500 ? mem.substring(0, 1500) : mem);
             if (b != null) o.addProperty("distance_poste", (int) Math.sqrt(t.blockPosition().distSqr(b.getBlockPos())));
             o.add("fiche", json(t.fiche(false)));
             o.add("sac", contenu(t.inventaire));

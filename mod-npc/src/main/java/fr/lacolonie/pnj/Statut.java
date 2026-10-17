@@ -16,7 +16,7 @@ public final class Statut {
     public static final String ATTENTE = "En attente", HORS_HORAIRES = "Hors horaires";
 
     // Les blocages, avec leur solution : posés par les métiers ({@code Travailleur.bloquer}).
-    public static final String SAC_PLEIN = "Sac plein, dépôt plein", LIEU_MINE = "Aucun lieu sûr pour miner ici",
+    public static final String SAC_PLEIN = "Sac plein, dépôt plein", LIEU_MINE = "Aucun lieu sûr pour miner : dis-lui « Travaille ici »",
             ENCLOS = "Pas d'enclos", SANS_POSTE = "Pas de poste de travail", SANS_MISSION = "Aucune mission : clic droit pour en donner une",
             A_TERRE = "À terre : à manger ou une potion de soin", GREVE = "En grève : la paie manque à la caisse";
 
@@ -169,6 +169,7 @@ public final class Statut {
 
     public static final String SANS_CHAMP = "Pas de terrain plat près du poste : dis-lui « Travaille ici »",
             RIEN_A_SEMER = "Rien à semer ici : il faut de la terre libre, des graines et une houe",
+            SANS_GRAINES = "Plus de graines au dépôt : son champ reste à moitié vide",
             SANS_EAU = "Pas d'eau près du poste : montre-lui un étang",
             SANS_EAU_ICI = "Pas d'eau à pêcher ici : choisis un autre lieu",
             SANS_ARME = "Pas d'arc ni de lame au dépôt",

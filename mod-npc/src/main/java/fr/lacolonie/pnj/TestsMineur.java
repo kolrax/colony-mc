@@ -359,4 +359,59 @@ public class TestsMineur {
             t.discard();
         });
     }
+
+    /** Il a raté ses puits : « ⚠ Aucun lieu sûr pour miner », 5 minutes sans essayer (comme {@link Mineur#puitsRate}). */
+    static void rate(Travailleur t, BlockPos mine) {
+        t.memoire.putInt("rates", Mineur.RATES);
+        t.memoire.putLong("rates_t", Cerveau.temps(t) + 300);
+        t.memoire.putLong("mine", mine.asLong());
+        t.bloquer(Statut.LIEU_MINE);
+    }
+
+    /**
+     * Bloqué « Aucun lieu sûr pour miner » : « Travaille ici » le débloque tout de suite (ses puits ratés et sa mine sont
+     * oubliés), un nouveau chantier aussi. Avant : il attendait encore 5 minutes, toujours bloqué.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void travailleIciDebloqueLeMineur(GameTestHelper h) {
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 8; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 3, 2, 3, new ItemStack(Items.IRON_PICKAXE));
+        t.mission("charbon", "stock", 64);
+        BlockPos vieille = h.absolutePos(new BlockPos(7, 2, 7));
+        rate(t, vieille);
+        t.travailleIci(h.absolutePos(new BlockPos(5, 2, 5)));
+        String ici = t.memoire.getInt("rates") + "/" + t.memoire.contains("rates_t") + "/" + t.memoire.contains("mine") + "/" + t.blocageActuel();
+        t.travailleIci(null);
+        rate(t, vieille);
+        t.memoire.putString("chantier", "fer@ailleurs/16");
+        Metier.de("mineur").travailler(t);
+        String chantier = t.memoire.getInt("rates") + "/" + t.memoire.contains("rates_t") + "/" + (t.memoire.getLong("mine") == vieille.asLong());
+        t.discard();
+        h.assertTrue(ici.equals("0/false/false/null"), "« Travaille ici » : plus de puits ratés, plus de mine, plus bloqué (" + ici + ")");
+        h.assertTrue(chantier.equals("0/false/false"), "nouveau chantier : plus de puits ratés ni d'ancienne mine (" + chantier + ")");
+        h.succeed();
+    }
+
+    /**
+     * Un trou sous ses pieds, de la terre et du pavé dans son sac : il bouche le trou avec la terre (elle ne compte pas comme
+     * une construction) ; sa mission est la pierre, il ne pose jamais le pavé qu'il doit livrer. Avant : le pavé d'abord.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void boucheLeTrouALaTerre(GameTestHelper h) {
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 3, 2, 3, new ItemStack(Items.IRON_PICKAXE));
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 10));
+        t.inventaire.addItem(new ItemStack(Items.DIRT, 5));
+        BlockPos p = h.absolutePos(new BlockPos(4, 3, 4)); // de l'air dessous : un trou
+        List<String> rates = new ArrayList<>();
+        for (String mission : new String[]{"charbon", "pierre"}) {
+            t.mission(mission, "stock", 64);
+            Mineur.Case r = Mineur.creuserCase(t, p, 2);
+            boolean terre = r == Mineur.Case.ACTION && t.action instanceof Actions.Poser po && po.pos.equals(p.below())
+                    && po.filtre.objet(new ItemStack(Items.DIRT)) && !po.filtre.objet(new ItemStack(Items.COBBLESTONE));
+            if (!terre) rates.add(mission + " : " + r + ", " + (t.action instanceof Actions.Poser po ? po.filtre.texte : String.valueOf(t.action)));
+        }
+        t.discard();
+        h.assertTrue(rates.isEmpty(), "il bouche le trou avec la terre, pas le pavé : " + rates);
+        h.succeed();
+    }
 }
