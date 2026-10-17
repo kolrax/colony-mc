@@ -1865,6 +1865,8 @@ public class Travailleur extends PathfinderMob {
 
     private String appliquerOrdre(Ordres.Lecture l, ServerPlayer enFace) {
         List<String> r = new ArrayList<>();
+        String finFormation = Apprentissage.interrompre(this, l, enFace); // tout ordre met fin à sa formation, le prix rendu (lot 13)
+        if (finFormation != null) r.add(finFormation);
         long maintenant = level().getGameTime();
         boolean confirmation = memoire.getLong("renvoi") > maintenant;
         if (enFace != null && confirmation && l.intentions.contains(Ordres.Intention.OUI)) {
@@ -2123,6 +2125,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Renvoyé : il redevient chercheur d'emploi et quitte l'effectif. */
     void licencier() {
+        Apprentissage.annuler(this, chefJoueur()); // sa formation s'arrête, le prix rendu à l'ancien chef s'il est en ligne
         Macon.oublier(this); // son chantier était celui de ce chef-là
         Transporteur.oublier(this); // ses trajets étaient ceux de ce chef-là ; ce qu'il portait va à son ancien dépôt (avant d'oublier le poste)
         if (chef != null && level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).retirer(chef, getUUID());

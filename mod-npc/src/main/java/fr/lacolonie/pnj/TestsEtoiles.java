@@ -125,4 +125,28 @@ public class TestsEtoiles {
         t.discard();
         h.succeed();
     }
+
+    /** Relecture : tout ordre de son chef met fin à la formation (« suis-moi », « arrête de te former ») ; pas d'étoile, le prix rendu. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "etoiles")
+    public static void unOrdreArreteLaFormation(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = mineur(h, chef, TestsMessages.poste(h, chef));
+        chef.getInventory().add(new ItemStack(Items.COPPER_INGOT, 20));
+        Ordres.Faire former = new Ordres.Faire("se_former", "", 0, 0, false);
+        Consignes.ordonner(t, former, chef, "va te former", 0, 1);
+        h.assertTrue(t.memoire.getLong("formation_fin") > 0 && chef.getInventory().countItem(Items.COPPER_INGOT) == 4, "en formation, payée");
+        Cerveau.decider(t, Metier.de(t.metier)); // il étudie
+        String r = t.appliquer(Ordres.lire("Suis-moi !", t.metier), chef);
+        h.assertTrue(t.memoire.getLong("formation_fin") == 0 && t.mode == Travailleur.Mode.SUIVRE, "« suis-moi » : il suit (" + t.mode + ") : " + r);
+        h.assertTrue(chef.getInventory().countItem(Items.COPPER_INGOT) == 20, "le prix rendu : " + chef.getInventory().countItem(Items.COPPER_INGOT) + " ; " + r);
+        h.assertTrue(r.contains("apprentissage") && t.niveau == 1, "il le dit, sans étoile : " + r);
+        Cerveau.decider(t, Metier.de(t.metier));
+        h.assertTrue(t.action != null && t.action.nom.equals("suivre"), "il suit : " + (t.action == null ? "-" : t.action.nom));
+        t.mode = Travailleur.Mode.TRAVAIL;
+        Consignes.ordonner(t, former, chef, "va te former", 0, 1);
+        r = t.appliquer(Ordres.lire("Arrête de te former", t.metier), chef);
+        h.assertTrue(t.memoire.getLong("formation_fin") == 0 && chef.getInventory().countItem(Items.COPPER_INGOT) == 20, "« arrête de te former » : " + r);
+        t.discard();
+        h.succeed();
+    }
 }

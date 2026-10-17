@@ -58,8 +58,11 @@ class EtoilesTest {
 
     @Test
     void leChefDemandeUneFormation() {
-        for (String s : new String[]{"Va te former", "pars en apprentissage", "Forme-toi, Gauthier", "va apprendre ton métier"})
+        for (String s : new String[]{"Va te former", "pars te former", "pars en apprentissage", "va en apprentissage, Gauthier"})
             RepertoireTest.demande(s, "mineur", "se_former");
+        // Relecture : « forme-toi en rang » lançait une formation payée. Une mise en rang n'en est jamais une.
+        for (String s : new String[]{"forme-toi en rang", "forme-toi en ligne", "forme-toi en file", "forme-toi en cercle"})
+            assertTrue(Repertoire.lire(s, "mineur").stream().noneMatch(x -> x.e().id().equals("se_former")), s);
         RepertoireTest.demande("formez les rangs", "mineur", "en_rang"); // l'ordre militaire ne change pas
         RepertoireTest.demande("apprends-moi ton métier", "mineur", "astuce_metier");
     }
