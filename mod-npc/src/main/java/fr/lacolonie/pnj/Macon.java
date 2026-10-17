@@ -338,11 +338,15 @@ final class Macon extends Metier {
         CompoundTag c = chantier(t);
         long maintenant = Cerveau.temps(t);
         if (c.isEmpty() || c.getBoolean("pause") || c.getLong("attente") > maintenant) {
-            if (c.isEmpty()) parler(t, "macon_sans_chantier", Cerveau.UN_JOUR, null, null, "Je n'ai rien à bâtir. Montre-moi l'endroit, et dis-moi quel plan suivre.");
+            if (c.isEmpty()) {
+                parler(t, "macon_sans_chantier", Cerveau.UN_JOUR, null, null, "Je n'ai rien à bâtir. Montre-moi l'endroit, et dis-moi quel plan suivre.");
+                t.bloquer(Statut.SANS_CHANTIER);
+            }
             if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 6 * 6) Cerveau.rentrer(t);
             else Cerveau.attendre(t, 10);
             return;
         }
+        t.debloquer(Statut.SANS_CHANTIER);
         Modele m = modele(l, c.getString("cle"), false);
         if (m == null || m.refus() != null) {
             Cerveau.ecrire(t, "schema_perdu", Cerveau.UN_JOUR, "schema_perdu", c.getString("nom"));
@@ -475,6 +479,7 @@ final class Macon extends Metier {
         String nom = Consignes.nom(new ItemStack(o));
         String id = BuiltInRegistries.ITEM.getKey(o).toString();
         parler(t, "macon_manque", 300, null, nom, "Il me manque " + nom + " pour l'ouvrage. J'attends qu'il y en ait au dépôt.");
+        t.bloquer(Statut.manque(nom)); // effacé une minute après le dernier manque (il a repris)
         Cerveau.ecrire(t, "manque_" + id + "_" + c.getLong("debut"), 30 * Cerveau.UN_JOUR, "materiau_manque", nom, c.getString("nom"), Math.max(1, n));
     }
 

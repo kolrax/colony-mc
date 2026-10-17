@@ -131,6 +131,7 @@ final class Fermier extends Metier {
             tour.recoltees = 0;
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -138,12 +139,41 @@ final class Fermier extends Metier {
             return;
         }
 
-        // Sans champ marqué, il ne touche à rien : il le dit à son chef.
+        // Sa mission a un lieu (ou « Travaille ici ») sans champ à lui autour : il y laboure et sème un champ de 9 sur 9
+        // (un essai toutes les 5 minutes au plus ; raté, faute de terre libre ou de graines, il le dit au-dessus de sa tête).
+        BlockPos lieu = t.lieuTravail();
+        if (lieu != null && parcelles(t).stream().noneMatch(p -> distance(p.centre, lieu) <= PRES_DU_LIEU * PRES_DU_LIEU)) {
+            if (t.memoire.getLong("champ_lieu") != lieu.asLong() || t.memoire.getLong("champ_lieu_t") <= Cerveau.temps(t)) {
+                t.memoire.putLong("champ_lieu", lieu.asLong());
+                t.memoire.putLong("champ_lieu_t", Cerveau.temps(t) + 300);
+                Cultures.Culture k = commandee(t);
+                Cerveau.lancer(t, new Champ(lieu, Cultures.mesures(""), k == null ? Cultures.TOUTES.get(0) : k, true));
+                return;
+            }
+            t.bloquer(Statut.RIEN_A_SEMER);
+            Cerveau.attendre(t, 20);
+            return;
+        }
+        t.debloquer(Statut.RIEN_A_SEMER);
+
+        // Sans champ marqué : il en fait un de 9 sur 9 sur un terrain plat et libre, près de l'eau (refonte, partie 2), cherché
+        // toutes les 5 minutes au plus ; faute de terrain, il le dit à son chef, et au-dessus de sa tête.
         if (champs.isEmpty()) {
+            if (t.memoire.getLong("champ_auto_t") <= Cerveau.temps(t)) {
+                t.memoire.putLong("champ_auto_t", Cerveau.temps(t) + 300);
+                BlockPos ici = terrain(t);
+                if (ici != null) {
+                    Cultures.Culture k = commandee(t);
+                    Cerveau.lancer(t, new Champ(ici, Cultures.mesures(""), k == null ? Cultures.TOUTES.get(0) : k, true));
+                    return;
+                }
+            }
+            t.bloquer(Statut.SANS_CHAMP);
             Cerveau.ecrire(t, "sans_champ", Cerveau.UN_JOUR, "sans_champ");
             Cerveau.attendre(t, 20);
             return;
         }
+        t.debloquer(Statut.SANS_CHAMP);
 
         // Une fois par tour, et au plus toutes les 5 minutes : un des champs marqués, ressemé s'il le faut.
         if (tour.zone == 0 && Cerveau.temps(t) >= tour.champsVus) {
@@ -154,6 +184,7 @@ final class Fermier extends Metier {
 
         // Le tour de ses champs : la prochaine zone qui en touche un ; ce qui est mûr, il le récolte.
         List<Parcelle> parcelles = parcelles(t);
+        if (lieu != null) parcelles.removeIf(p -> distance(p.centre, lieu) > PRES_DU_LIEU * PRES_DU_LIEU); // seulement le champ de ce lieu
         Cultures.Culture voulue = commandee(t);
         List<BlockPos> mures = new ArrayList<>();
         boolean[] vu = {false, false}; // {la zone touche un champ, un plant de la culture commandée}
@@ -171,8 +202,59 @@ final class Fermier extends Metier {
             tour.trouve = tour.vuCommande = false;
             if (vide) { Cerveau.attendre(t, 20 + t.getRandom().nextInt(11)); return; } // rien de mûr nulle part : une pause
         }
+        if (!mures.isEmpty()) mures.removeAll(autresMoissons(t)); // un autre fermier les récolte déjà : ils ne se gênent pas
         if (!mures.isEmpty()) { Cerveau.lancer(t, new Moisson(mures, tour, voulue)); return; }
         Cerveau.attendre(t, 1);
+    }
+
+    /**
+     * Le centre d'un champ de 9 sur 9 à faire, à 32 blocs au plus du poste : sur trois cercles de huit points, celui où le plus
+     * de cases (une sur deux, 25 relevées) se sèment ({@link #sol} : libre, à ciel ouvert, ni bâti ni à un voisin), à 8 blocs
+     * au plus d'une eau à fleur de sol ; null s'il n'y en a pas (au moins 20 cases sur 25). Quelques milliers de blocs lus,
+     * au plus toutes les 5 minutes, et seulement par un fermier sans champ.
+     */
+    static BlockPos terrain(Travailleur t) {
+        if (t.bureau == null || !(t.level() instanceof ServerLevel l)) return null;
+        BlockPos mieux = null;
+        int note = 19;
+        for (int r = 10; r <= PORTEE - 6; r += 6)
+            for (int k = 0; k < 8; k++) {
+                double a = k * Math.PI / 4;
+                int x = t.bureau.getX() + (int) Math.round(Math.cos(a) * r), z = t.bureau.getZ() + (int) Math.round(Math.sin(a) * r);
+                if (!l.hasChunkAt(x, z)) continue;
+                int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                if (!eauPres(l, x, y, z)) continue;
+                int n = 0;
+                for (int i = -4; i <= 4; i += 2) for (int j = -4; j <= 4; j += 2) if (sol(t, l, new BlockPos(x + i, y, z + j), y) != null) n++;
+                if (n > note) { note = n; mieux = new BlockPos(x, y, z); }
+            }
+        return mieux;
+    }
+
+    /** De l'eau à fleur de sol (à 2 blocs près de la hauteur y) à 8 blocs au plus de (x, z), relevée une colonne sur deux. */
+    static boolean eauPres(ServerLevel l, int x, int y, int z) {
+        for (int i = -8; i <= 8; i += 2)
+            for (int j = -8; j <= 8; j += 2) {
+                if (!l.hasChunkAt(x + i, z + j)) continue;
+                int h = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x + i, z + j) - 1;
+                if (Math.abs(h - y) <= 2 && l.getFluidState(new BlockPos(x + i, h, z + j)).is(FluidTags.WATER)) return true;
+            }
+        return false;
+    }
+
+    /** Un champ est « au lieu » de la mission si son centre en est à tant de blocs au plus. */
+    static final int PRES_DU_LIEU = 8;
+
+    /** Les plants que les autres fermiers alentour sont déjà en train de récolter. */
+    static java.util.Set<BlockPos> autresMoissons(Travailleur t) {
+        java.util.Set<BlockPos> r = new java.util.HashSet<>();
+        for (Travailleur o : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(Travailleur.ESPACE_DE_VIE, 16, Travailleur.ESPACE_DE_VIE),
+                o -> o != t && o.action instanceof Moisson)) {
+            Moisson m = (Moisson) o.action;
+            r.addAll(m.reste);
+            if (m.cible != null) r.add(m.cible);
+        }
+        return r;
     }
 
     // --- Les cultures mûres -------------------------------------------------------------------------------------

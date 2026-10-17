@@ -216,6 +216,15 @@ public class Travailleur extends PathfinderMob {
 
     public void debloquer() { blocage = null; }
 
+    /** Ne lève que ce blocage-là (un métier qui repart n'efface pas ce qu'un autre a signalé). */
+    public void debloquer(String raison) { if (raison.equals(blocage)) blocage = null; }
+
+    /** Où travailler : le lieu de sa mission en cours, sinon « Travaille ici », sinon null (il choisit lui-même). */
+    public BlockPos lieuTravail() {
+        Mission m = missionActive();
+        return m != null && m.lieu != null ? m.lieu : lieuImpose;
+    }
+
     /** Ce qui le bloque encore (null si rien, ou si plus personne ne l'a redit depuis une minute). */
     String blocageActuel() {
         if (blocage != null && level().getGameTime() > blocageJusqua) blocage = null;

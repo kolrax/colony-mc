@@ -67,6 +67,7 @@ final class Cuisinier extends Metier {
         if (aDeposer(t)) {
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -101,6 +102,10 @@ final class Cuisinier extends Metier {
 
         Plan p = plan(t, b, l, true);
         Cuisine.Choix c = p.choix;
+        // Rien à faire faute d'ingrédient, de four ou de combustible : la raison au-dessus de sa tête ; il repart : elle s'efface.
+        String bloc = c.quoi() == Cuisine.Quoi.PAIN || c.quoi() == Cuisine.Quoi.CUIRE ? null : Statut.cuisine(c.lettre());
+        if (bloc != null) t.bloquer(bloc);
+        else for (String x : new String[]{Statut.RIEN_A_CUIRE, Statut.SANS_FOUR, Statut.SANS_COMBUSTIBLE}) t.debloquer(x);
         if (c.lettre() != null) {
             if (c.lettre().equals("rien_a_cuire")) Cerveau.ecrire(t, c.lettre(), Cerveau.UN_JOUR, c.lettre(), Cuisine.manque(t.memoire.getString("dernier_cru")));
             else Cerveau.ecrire(t, c.lettre(), Cerveau.UN_JOUR, c.lettre());
@@ -346,7 +351,7 @@ final class Cuisinier extends Metier {
                 if (cuire == 0) return echec("rien_au_depot");
                 List<Item> quoi = new ArrayList<>();
                 Cuisine.Chauffe c = Cuisine.chauffe(cuire, feux(t, b, quoi));
-                if (c == null) { Cerveau.ecrire(t, "sans_combustible", Cerveau.UN_JOUR, "sans_combustible"); return echec("sans_combustible"); }
+                if (c == null) { Cerveau.ecrire(t, "sans_combustible", Cerveau.UN_JOUR, "sans_combustible"); t.bloquer(Statut.SANS_COMBUSTIBLE); return echec("sans_combustible"); }
                 feu = quoi.get(c.feu());
                 cuire = c.cuire();
                 Actions.Filtre ff = Actions.Filtre.de(BuiltInRegistries.ITEM.getKey(feu).toString());

@@ -1,5 +1,6 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.animal.Animal;
@@ -61,6 +62,7 @@ final class Chasseur extends Metier {
         if (t.compter(PRODUITS) > 0 && (Monde.libres(t) < 3 || nuit || repos)) {
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -78,9 +80,11 @@ final class Chasseur extends Metier {
         if (equiper(t)) return;
         if (!arme(t)) {
             manque(t);
+            t.bloquer(Statut.SANS_ARME);
             Cerveau.attendre(t, 10);
             return;
         }
+        t.debloquer(Statut.SANS_ARME);
         Commande c = commande(t);
         Cerveau.lancer(t, new Battue(Chasse.pour(c == null ? null : c.id), Chasse.PAR_TOUR, false));
     }
@@ -207,8 +211,14 @@ final class Chasseur extends Metier {
         if (p.jusqua <= maintenant) { p.ouvertes.clear(); p.enclos.clear(); p.douteuses.clear(); p.jusqua = maintenant + REVUE; }
         List<Animal> betes = new ArrayList<>();
         int r = Chasse.ZONE;
-        double bx = t.bureau.getX() + 0.5, bz = t.bureau.getZ() + 0.5;
-        l.getEntities(EntityTypeTest.forClass(Animal.class), new AABB(t.bureau).inflate(r, 16, r),
+        // Sa mission a un lieu (ou « Travaille ici ») : il chasse autour de ce lieu, sinon autour du poste.
+        BlockPos centre = t.lieuTravail() != null ? t.lieuTravail() : t.bureau;
+        double bx = centre.getX() + 0.5, bz = centre.getZ() + 0.5;
+        // Les bêtes qu'un autre chasseur traque déjà : il les lui laisse (deux chasseurs ne courent pas la même).
+        Set<Integer> traquees = new java.util.HashSet<>();
+        for (Travailleur o : l.getEntitiesOfClass(Travailleur.class, new AABB(centre).inflate(r, 16, r), o -> o != t && o.action instanceof Battue))
+            if (((Battue) o.action).sous instanceof Traque q) traquees.add(q.cible.getId());
+        l.getEntities(EntityTypeTest.forClass(Animal.class), new AABB(centre).inflate(r, 16, r),
                 a -> a.isAlive() && espece(a) != null && Math.pow(a.getX() - bx, 2) + Math.pow(a.getZ() - bz, 2) <= r * r, betes, BETES_MAX);
         betes.sort(Comparator.comparingDouble(a -> a.distanceToSqr(t)));
         long tard = maintenant;
@@ -226,7 +236,7 @@ final class Chasseur extends Metier {
                 if (sauvage == null) p.douteuses.add(a.getId());
             }
             if (sauvage == null) continue; // pas relevé, ou douteux : ni tiré, ni compté
-            boolean intouchable = Eleveur.intouchable(a) || t.inaccessibles.containsKey(a.getId()) || !Fermier.aLui(t, a.blockPosition());
+            boolean intouchable = Eleveur.intouchable(a) || t.inaccessibles.containsKey(a.getId()) || !Fermier.aLui(t, a.blockPosition()) || traquees.contains(a.getId());
             vues.add(new Chasse.Bete(a.getId(), espece(a).id(), !a.isBaby(), sauvage, intouchable, a.distanceToSqr(t)));
             parId.put(a.getId(), a);
         }
@@ -305,7 +315,8 @@ final class Chasseur extends Metier {
                     t.memoire.putLong("chasse_repos", Cerveau.temps(t) + (tues > 0 ? PAUSE : BREDOUILLE));
                     if (ordre) Paroles.dire(t, bilan(), "calme");
                     else if (sansArme) manque(t);
-                    else if (tues == 0) Cerveau.ecrire(t, "gibier", Cerveau.UN_JOUR, "sans_gibier");
+                    else if (tues == 0) { Cerveau.ecrire(t, "gibier", Cerveau.UN_JOUR, "sans_gibier"); if (!lasse) t.bloquer(Statut.SANS_GIBIER); }
+                    if (tues > 0) t.debloquer(Statut.SANS_GIBIER);
                     else Besoins.parler(t, "chasse_retour", null);
                     travail = tues > 0;
                     return tues > 0 ? Actions.Etat.OK : echec(sansArme ? "sans_arme" : "bredouille");

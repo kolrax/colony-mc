@@ -89,6 +89,7 @@ final class Eleveur extends Metier {
         if (t.compter(PRODUITS) > 0 || Monde.libres(t) < 3) {
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -98,9 +99,17 @@ final class Eleveur extends Metier {
 
         Map<Elevage.Enclos, List<Animal>> enclos = parEnclos(f);
         if (enclos.isEmpty()) {
+            t.bloquer(Statut.ENCLOS); // « ⚠ Pas d'enclos » au-dessus de sa tête (refonte, partie 2)
             Cerveau.ecrire(t, "enclos", Cerveau.UN_JOUR, "sans_enclos");
             Cerveau.attendre(t, 5);
             return;
+        }
+        t.debloquer(Statut.ENCLOS);
+        // Sa mission a un lieu (ou « Travaille ici ») : l'enclos le plus proche de ce lieu, et lui seul.
+        BlockPos lieu = t.lieuTravail();
+        if (lieu != null && enclos.size() > 1) {
+            Elevage.Enclos pres = java.util.Collections.min(enclos.keySet(), java.util.Comparator.comparingDouble(e -> carre(e, lieu)));
+            enclos = Map.of(pres, enclos.get(pres));
         }
         // Ses cisailles, prises au dépôt, s'il y a des moutons à tondre.
         boolean laine = enclos.values().stream().anyMatch(l -> l.stream().anyMatch(a -> a instanceof Sheep s && s.readyForShearing()));
@@ -108,6 +117,13 @@ final class Eleveur extends Metier {
 
         // Un enclos après l'autre (chacun son tour) : le premier où il y a quelque chose à faire.
         List<Elevage.Enclos> liste = new ArrayList<>(enclos.keySet());
+        // Un autre éleveur fait déjà sa corvée dans un enclos : il en prend un autre, s'il y en a (ils ne se gênent pas).
+        if (liste.size() > 1) {
+            List<Elevage.Enclos> pris = ((ServerLevel) t.level()).getEntitiesOfClass(Travailleur.class, new AABB(t.bureau).inflate(Travailleur.ESPACE_DE_VIE, 16, Travailleur.ESPACE_DE_VIE),
+                    o -> o != t && o.action instanceof Corvee).stream().map(o -> ((Corvee) o.action).enclos).toList();
+            List<Elevage.Enclos> libres = liste.stream().filter(e -> pris.stream().noneMatch(x -> meme(x, e))).toList();
+            if (!libres.isEmpty()) liste = new ArrayList<>(libres);
+        }
         for (int i = 0; i < liste.size(); i++) {
             Elevage.Enclos e = liste.get((f.suivant + i) % liste.size());
             Corvee c = plan(t, e, enclos.get(e), "tout", null, null);
@@ -184,6 +200,17 @@ final class Eleveur extends Metier {
         }
         f.betes = betes;
         return f;
+    }
+
+    /** La distance (au carré) du milieu de l'enclos à ce point, à l'horizontale. */
+    static double carre(Elevage.Enclos e, BlockPos p) {
+        double dx = (e.minX() + e.maxX()) / 2.0 - p.getX(), dz = (e.minZ() + e.maxZ()) / 2.0 - p.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    /** Le même enclos, relevé par deux éleveurs. */
+    static boolean meme(Elevage.Enclos a, Elevage.Enclos b) {
+        return a.minX() == b.minX() && a.minZ() == b.minZ() && a.maxX() == b.maxX() && a.maxZ() == b.maxZ() && Math.abs(a.y() - b.y()) <= 4;
     }
 
     /** L'enclos connu qui contient ce point (à 4 blocs près en hauteur), ou null. */

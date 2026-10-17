@@ -500,7 +500,7 @@ final class Guerrier extends Metier {
             id = "garder";
         }
 
-        BlockPos b = t.bureau;
+        BlockPos b = t.lieuTravail() != null ? t.lieuTravail() : t.bureau; // sa mission a un lieu (ou « Travaille ici ») : il garde ce lieu
         // La nuit, la garde devient une ronde autour du poste (lot 9) : huit postes à 8 et 12 blocs.
         // Défendre la colonie : la ronde dans toute la colonie, autour du poste (et, en guerre, les ennemis qui y entrent : veille).
         boolean nuitGarde = id.equals("garder") && Abri.nuit(t.level());

@@ -91,6 +91,7 @@ final class Pecheur extends Metier {
         if (Monde.libres(t) < 3 || t.memoire.getInt("prises") >= PRISES || finir || soir) {
             if ("depot_plein".equals(t.resultat)) {
                 Cerveau.ecrire(t, "depot", Cerveau.UN_JOUR, "depot_plein");
+                t.bloquer(Statut.SAC_PLEIN);
                 Cerveau.attendre(t, 30);
                 return;
             }
@@ -109,8 +110,22 @@ final class Pecheur extends Metier {
         // Le coin que le chef lui a donné est hors d'atteinte pour l'instant : il réessaiera.
         if (t.memoire.getLong("peche_pause") > Cerveau.temps(t)) { Cerveau.attendre(t, 10); return; }
         Coin coin = coin(t);
+        // Sa mission a un lieu (ou « Travaille ici ») : il pêche à cette eau-là (cherchée une fois par lieu, puis toutes les 5 minutes).
+        BlockPos lieu = t.lieuTravail();
+        if (lieu != null && (coin == null || Fermier.distance(coin.eau(), lieu) > 8 * 8)) {
+            if (t.memoire.getLong("peche_lieu") != lieu.asLong() || t.memoire.getLong("peche_lieu_t") <= Cerveau.temps(t)) {
+                t.memoire.putLong("peche_lieu", lieu.asLong());
+                t.memoire.putLong("peche_lieu_t", Cerveau.temps(t) + 300);
+                Cerveau.lancer(t, new Ici(lieu));
+                return;
+            }
+            t.bloquer(Statut.SANS_EAU_ICI);
+            Cerveau.attendre(t, 20);
+            return;
+        }
+        t.debloquer(Statut.SANS_EAU_ICI);
         if (coin == null) coin = chercher(t);
-        if (coin != null) Cerveau.lancer(t, new Pecher(coin));
+        if (coin != null) { t.debloquer(Statut.SANS_EAU); Cerveau.lancer(t, new Pecher(coin)); }
     }
 
     /**
@@ -196,7 +211,7 @@ final class Pecheur extends Metier {
      */
     static Coin chercher(Travailleur t) {
         long maintenant = Cerveau.temps(t);
-        if (t.memoire.getLong("eau_revue") > maintenant) { Cerveau.attendre(t, 20); return null; }
+        if (t.memoire.getLong("eau_revue") > maintenant) { t.bloquer(Statut.SANS_EAU); Cerveau.attendre(t, 20); return null; }
         ServerLevel l = (ServerLevel) t.level();
         int[] i = RECHERCHES.computeIfAbsent(t, k -> new int[1]);
         for (int n = 0; n < PAR_APPEL && i[0] < Peche.GRILLE.size(); n++, i[0]++) {
@@ -212,6 +227,7 @@ final class Pecheur extends Metier {
         i[0] = 0;
         t.memoire.putLong("eau_revue", maintenant + 300);
         Cerveau.ecrire(t, "sans_eau_peche", Cerveau.UN_JOUR, "sans_eau_peche");
+        t.bloquer(Statut.SANS_EAU);
         Cerveau.attendre(t, 20);
         return null;
     }

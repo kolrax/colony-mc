@@ -164,4 +164,33 @@ public final class Statut {
     static final Map<String, String> GARDES = Map.of(DEFENDRE, "Défend la colonie", ESCORTER, "Escorte son chef", ATTAQUER, "À l'attaque");
     /** « Attaquer » sans lieu ni guerre déclarée : il garde la colonie en attendant. */
     public static final String SANS_GUERRE = "Pas de guerre déclarée : déclare-la au poste, ou dis-lui « Travaille ici »";
+
+    // --- Les blocages des métiers (lot 16 : les métiers branchés sur les missions) -------------------------
+
+    public static final String SANS_CHAMP = "Pas de terre plate près de l'eau : dis-lui « Travaille ici »",
+            RIEN_A_SEMER = "Rien à semer ici : il faut de la terre libre, des graines et une houe",
+            SANS_EAU = "Pas d'eau près du poste : montre-lui un étang",
+            SANS_EAU_ICI = "Pas d'eau à pêcher ici : choisis un autre lieu",
+            SANS_ARME = "Pas d'arc ni de lame au dépôt",
+            SANS_GIBIER = "Pas de gibier par ici : envoie-le ailleurs",
+            SANS_TRAJET = "Rien à porter : montre-lui un coffre et sa destination",
+            SANS_CHANTIER = "Pas de chantier : donne-lui un schéma et un lieu",
+            BOUTIQUE_VIDE = "Étal vide : mets des marchandises au dépôt",
+            RIEN_A_CUIRE = "Rien à cuire au dépôt : de la viande, du poisson ou du blé",
+            SANS_FOUR = "Pas de four près du poste",
+            SANS_COMBUSTIBLE = "Ni charbon ni bois au dépôt pour le four";
+
+    /** « Il manque de la pierre au dépôt » (le maçon). */
+    public static String manque(String nom) { return "Il manque " + nom + " au dépôt"; }
+
+    /** Le blocage d'un cuisinier qui n'a rien à faire, d'après la raison de {@code Cuisine.choisir} ; null : rien ne le bloque. */
+    public static String cuisine(String lettre) {
+        if (lettre == null) return null;
+        return switch (lettre) {
+            case "rien_a_cuire", "sans_ble" -> RIEN_A_CUIRE;
+            case "sans_four" -> SANS_FOUR;
+            case "sans_combustible" -> SANS_COMBUSTIBLE;
+            default -> null;
+        };
+    }
 }

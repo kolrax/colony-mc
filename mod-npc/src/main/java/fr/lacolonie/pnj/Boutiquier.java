@@ -118,8 +118,11 @@ final class Boutiquier {
         if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) { Cerveau.rentrer(t); return true; }
         Bureau.Entite b = Bureau.entite(t);
         if (b != null && Cerveau.parfois(t, "boutique_etal", 60)) {
-            if (etal(t, b).isEmpty()) Cerveau.ecrire(t, "boutique_vide", Cerveau.UN_JOUR, "boutique_vide");
-            else if (Cerveau.parfois(t, "boutique_ouverte", 600)) Paroles.dire(t, texte(t, "boutique_ouverte", null, null, 0, ""), "calme");
+            if (etal(t, b).isEmpty()) { Cerveau.ecrire(t, "boutique_vide", Cerveau.UN_JOUR, "boutique_vide"); t.bloquer(Statut.BOUTIQUE_VIDE); }
+            else {
+                t.debloquer(Statut.BOUTIQUE_VIDE);
+                if (Cerveau.parfois(t, "boutique_ouverte", 600)) Paroles.dire(t, texte(t, "boutique_ouverte", null, null, 0, ""), "calme");
+            }
         }
         Cerveau.attendre(t, 5);
         return true;
