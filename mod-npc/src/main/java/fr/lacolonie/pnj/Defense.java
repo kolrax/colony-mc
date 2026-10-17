@@ -435,7 +435,7 @@ final class Defense {
         Actions.Action ensuite = t.action instanceof Interposer i && i.agresseur == v ? i.ensuite
                 : t.mode == Travailleur.Mode.ATTENDRE ? new Actions.Aller(t.position(), 1) : null;
         boolean epargne = GardeChef.epargne(t.memoire.getString("epargnes"), v.getGameProfile().getName());
-        boolean guerre = !epargne && Armee.ennemis(t).containsKey(v.getUUID()); // le chef ennemi, en guerre : l'ordre est implicite
+        boolean guerre = !epargne && Armee.ennemis(t).containsKey(v.getUUID()) && Armee.aOrdre(t, true); // le chef ennemi, en guerre, et sa mission défendre ou attaquer (refonte 6)
         boolean ordre = !epargne && GardeChef.posture(t.memoire.getString("garde_depot")) == GardeChef.Posture.ATTAQUE;
         if (guerre || (ordre && recidive)) {
             if (t.action instanceof Actions.Attaquer a && a.cible == v) return;
