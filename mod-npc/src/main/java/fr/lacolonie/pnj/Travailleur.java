@@ -1714,6 +1714,8 @@ public class Travailleur extends PathfinderMob {
         if (Souvenirs.question(l.texte)) { reactionSuffit = true; return souvenirs.raconter(l.texte, j, h); }
         // « Quelles nouvelles ? », « que sais-tu de Raoul ? » : il ne dit que ce qu'il a vu ou entendu (Rumeurs) ; ni ragot inventé, ni l'IA à sa place.
         Rumeurs.Question rumeur = Rumeurs.question(l.texte);
+        // « Raconte un ragot » : de vraies nouvelles, jamais un ragot inventé sur le monde (cahier 7.6).
+        if (rumeur == null && l.faire.stream().anyMatch(f -> f.id().equals("ragot"))) rumeur = new Rumeurs.Question(null);
         if (rumeur != null) {
             l.faire.removeIf(f -> f.id().equals("ragot"));
             l.intentions.remove(Ordres.Intention.AVANCEMENT);
