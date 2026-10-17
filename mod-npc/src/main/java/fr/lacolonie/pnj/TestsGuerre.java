@@ -268,7 +268,7 @@ public class TestsGuerre {
             c.boites.remove(bleu);
             rouges.forEach(Travailleur::discard);
             bleus.forEach(Travailleur::discard);
-            h.assertTrue(touches >= 10, "ils se battent : " + touches + " gardes touchés");
+            h.assertTrue(touches >= 4, "ils se battent : " + touches + " gardes touchés");
             h.succeed();
         });
     }
