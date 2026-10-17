@@ -136,7 +136,7 @@ def resume(rapport):
     print("\n=== Ce qu'un joueur verrait (jour %s, %s h) ===" % (rapport.get("jour"), rapport.get("heure")))
     for o in rapport.get("ouvriers", []):
         missions = o.get("fiche", {}).get("missions") or []
-        print(f"- {o['prenom']} ({o['metier']}) : « {o['au_dessus']} » | rôle « {o.get('role', '')} » | état « {o.get('etat', '')} »"
+        print(f"- {o['prenom']} ({o['metier']}) : statut « {o.get('statut', '')} » | « {o['au_dessus']} » | rôle « {o.get('role', '')} » | état « {o.get('etat', '')} »"
               f" | {o.get('mode')} / {o.get('action') or '-'} | à {o.get('distance_poste', '?')} blocs du poste"
               + (f" | missions : {missions}" if missions else ""))
         sac = o.get("sac") or {}
