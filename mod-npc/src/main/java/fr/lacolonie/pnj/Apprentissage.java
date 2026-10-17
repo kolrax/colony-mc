@@ -27,7 +27,8 @@ final class Apprentissage {
      */
     static String interrompre(Travailleur t, Ordres.Lecture l, ServerPlayer enFace) {
         if (t.memoire.getLong("formation_fin") <= 0) return null;
-        boolean arret = false, ordre = false;
+        boolean arret = Ordres.dit(Ordres.normaliser(l.texte), "arrete de te former", "arrete ta formation", "arrete ton apprentissage",
+                "cesse de te former", "cesse ton apprentissage", "laisse ta formation", "laisse ton apprentissage"), ordre = false;
         for (Ordres.Faire f : l.faire) {
             if (f.id().equals("se_former")) { arret |= f.fin(); continue; }
             Repertoire.Entree e = Repertoire.PAR_ID.get(f.id());
