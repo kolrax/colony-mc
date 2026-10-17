@@ -1,9 +1,11 @@
 # Reprise : où on en est
 
-Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 17/10/2026, 04 h 20 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 0.9.38** (01 h 34 UTC le 17/10), un seul jar dans `/mods`. `reglages.json` du serveur : `pnj_max_par_joueur` = 30, chercheurs 0,35 / 15 min (`plus_rares`).
+- **Serveur : 0.9.40** (17/10, vers 04 h 15 UTC), un seul jar dans `/mods`.
+- 0.9.40 = **familles** (`Ages` pur, `Famille`, `TestsFamille`, `AgesTest`, `famille.txt` ; âge, vieillesse, mort de vieillesse, naissances dans les couples, enfants, apprentis 12-16 ans). Rendu des enfants (`Attributes.SCALE`) jamais vu à l'écran.
+- 0.9.39 = **travailleurs de nuit** (`Nuit` pur, `TestsNuit` coins 410-414, `NuitTest` ; « travaille de nuit », dort le jour, fatigue, santé, moral `NUIT`). `reglages.json` du serveur : `pnj_max_par_joueur` = 30, chercheurs 0,35 / 15 min (`plus_rares`).
 - 0.9.38 = **étoiles** (`Etoiles` pur, `Apprentissage`, `TestsEtoiles`, `EtoilesTest` ; « va te former » : formation payée, arrêtée par tout ordre avec remboursement).
 - 0.9.37 = **recrutement** (`Talents`, `Recrutement`, réputation dans `Courrier`, affiche, cloche de village ; `TestsRecrutement`, `RecrutementTest`). 0.9.36 = **machines de Create** par le transporteur (`Machines`, `TestsMachines` coins 390-398, `machines.txt`) ; jamais essayé avec le vrai Create (il plante le serveur de test : paquets aux faux joueurs).
 - 0.9.35 = **boutiques** (`Boutique` pur, `Boutiquier`, `TestsBoutique` coins 380-387, lots `boutique` et `boutique_nuit`). 0.9.34 = **coût des ouvriers** (`Cout`, `TestsCout` lot `cout`). 0.9.33 = **économie entre PNJ** (`Economie`, `Achats`, `TestsEconomie` coins 370-374).
@@ -15,7 +17,9 @@ Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, a
 - **Décision de KOLRAX (16/10, 17 h 12 UTC)** : le serveur n'ouvre que quand le mod est fini ; le chantier continue ; monde de test encore jetable (régénération permise).
 
 ## Branches à reprendre
-- Aucune : `create`, `recrutement`, `etoiles` sont fusionnées. `en-cours` = `main` (sa suppression est refusée depuis le cloud).
+- **`autres-joueurs`** (lot 14, cases « autoriser un joueur / débauche » et « nom, métier, chef visibles », 0.9.41) : 1re passe verte (bf89bcf : 345 JUnit, 387/387), puis relecture : **1 bloquant** (en jeu, un autre joueur ne peut ni ouvrir la fenêtre de conversation ni parler au micro : `Travailleur.mobInteract` 1549-1558, `Voix.viser` 296, `Voix.traiter` 343) et 4 importants (pièces encaissées avant la décision d'obéir ; une paie achète des trajets durables = vol du dépôt ; un joueur payeur/autorisé ordonne la retraite de l'armée ; la débauche emporte le sac) + mineurs. Corrections en cours à la fin de la session : voir le dernier commit de la branche et `docs/journal.md`. Ensuite : fusionner `main` (familles : un enfant ne se débauche pas), passe complète, livrer 0.9.41.
+  - Liste complète à corriger (relecture 17/10) : 1) fenêtre et micro ouverts à tout joueur (si ça exige un changement client : modpack obligatoire, le dire) ; 2) `Commandement.reserver` et décision d'obéir avant d'encaisser (`Etranger` 56-59) ; 3) une paie n'achète qu'un ordre ponctuel (pas trajets, champs, construire, missions quotidiennes, règles : `Commandement.GESTES_AU_CHEF`) ; 4) refuser paie/ordres d'un joueur en guerre avec le chef, sauter `Guerre.repli`/`Armee.finir` si ce n'est pas le chef (`Travailleur` 1966, 1971) ; 5) débauche : il laisse au dépôt de l'ancien chef tout sauf ses pièces ; mineurs : OUI d'un autre ne confirme pas un renvoi (1928), un ordre d'un autre n'arrête pas la formation (1924), refus de débauche pendant la formation, sac plein = refus de paie (pas de pièces au sol), « viens me rejoindre au four » n'est pas une débauche, `Commandement.PERMIS` seulement pour des joueurs connus, `metiers_inactifs` vérifié, ordre d'étranger refusé pas gardé dans `enAttente`, enfant/apprenti ni débauché ni payé pour un ordre.
+- `en-cours` = ancien `main` (suppression refusée depuis le cloud).
 
 ## Ce que le mod sait faire aujourd'hui
 - **Recrutement** : chercheurs d'emploi à pied près des joueurs, embauche par fiche, salaire en pièces Numismatics à la caisse du poste. Plafond 5 PNJ par joueur (réglable).
@@ -34,10 +38,10 @@ Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, a
 
 ## Prochaine étape (exacte)
 **Lire d'abord « Rythme : travail en continu » et « Graphify » dans CLAUDE.md.**
-1. Lot 13 : familles, enfants, vieillesse, apprenti ; travailleurs de nuit. Puis lot 14 (autoriser un joueur, débauche/corruption ; nom, métier, chef visibles ; rumeurs).
+1. Finir `autres-joueurs` (ci-dessus), livrer 0.9.41, cocher les 2 cases du lot 14. Puis la dernière case : **rumeurs** (lot 14).
 3. Avant l'ouverture : banc de charge avec 30 ouvriers par joueur ; essai réel des machines de Create sur le serveur (moulin, presse, bassin, tapis) ; rendre fiables les tests instables.
 4. Restes : `docs/plus-tard.md` (crieur, débauche, achat d'équipement, guerre, boutiques, machines…).
-5. Instables connus (passent à la relance) : `bucheronPresDeLaLave`, `compagnonsEnParlent`, `chasseSurOrdreLEspeceDite`, `coupsDArme`, `peureuxFuitDeLoin`, `fourbeSEclipse`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `tondUnMouton`, `calmeFrappeSeDefend`, `figeToiPuisAuTravail`, `iavoix`, `sortDeLaLave`, `chasseDeNuit` (vu le 17/10).
+5. Instables connus (passent à la relance) : `bucheronPresDeLaLave`, `compagnonsEnParlent`, `chasseSurOrdreLEspeceDite`, `coupsDArme`, `peureuxFuitDeLoin`, `fourbeSEclipse`, `fourbeEnvoieUnCollegue`, `creeperAlerteLeGuerrier`, `tondUnMouton`, `calmeFrappeSeDefend`, `figeToiPuisAuTravail`, `iavoix`, `sortDeLaLave`, `chasseDeNuit` (vu le 17/10), `neBlessePersonneDerriereLaProie`, `filonSousDuGravier` (vus le 17/10). `iaMicro` réparé le 17/10 (dépendait de la place des tests).
 6. Méthode qui a marché : un worktree par case (outil Agent, isolation worktree), 2 développeurs en parallèle, `flock /tmp/gametest.lock`, relecteur dès qu'une case est verte ; avant de livrer, fusionner `main` dans la branche et refaire build + passe complète.
 
 ## Envoi du jar depuis le cloud
@@ -55,4 +59,4 @@ Mise à jour : 17/10/2026, 01 h 15 UTC. Une page à lire en début de session, a
 - `docs/carte-du-code.md` pour le reste.
 
 ## Session en cours
-- aucune.
+- aucune (session 02 h - 04 h 30 UTC du 17/10 terminée).
