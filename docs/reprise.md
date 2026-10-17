@@ -3,7 +3,7 @@
 Mise à jour : 17/10/2026, 06 h 30 UTC. Une page à lire en début de session, avec `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 0.9.42** (17/10, 06 h 21 UTC), un seul jar dans `/mods`.
+- **Serveur : 0.9.43** (17/10, 11 h 31 UTC, commande `/rapport`), un seul jar dans `/mods`. Monde « colonie » (17/10, Nielscutt y joue : ne pas le régénérer sans l accord de KOLRAX).
 - **Plan à 100 %** (`tools/suivi.py reste` = 0) : la routine est désactivée à la fin de la session du 17/10 matin.
 - 0.9.42 = **rumeurs** (`Rumeurs` pur, `Espions`, `TestsRumeurs` coins 420-439, `RumeursTest`, `rumeurs.txt` 20 clés) : faits vus près d'une autre colonie (coup d'œil toutes les 1200 ticks), bouche à oreille (causeries, colonies en paix), événements (mort, naissance, débauche, guerre ; la paix efface), « quelles nouvelles ? » / « que sais-tu de X ? », « espionne X », rien d'inventé (IA comprise).
 - 0.9.41 = **autres joueurs** (`Commandement`, `Debauche`, `Etranger`, `TestsAutresJoueurs`) : joueur autorisé, débauche, ordre payé, « Prénom (Métier) · Chef » ; enfants et apprentis ni débauchés ni loués.

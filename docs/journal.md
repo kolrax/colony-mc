@@ -508,3 +508,9 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Graphify : a répondu (index sur 464552a) mais sans résultat utile pour les rumeurs ni les nouveaux symboles ; appelants vérifiés par Grep.
 - Point du jour : pas encore l'heure pour le 17/10 (8 h 30 à Paris).
 - Prochaine étape : plan fini. Avant l'ouverture, à ajouter au plan si KOLRAX le veut : banc de charge à 30 ouvriers par joueur, essai réel des machines de Create, tests instables, retard du serveur.
+
+## 2026-10-17 11 h 30 UTC : 0.9.43, commande /rapport (demande de KOLRAX par l'Admin)
+- `/rapport <texte>` pour tous les joueurs, sans op : une ligne JSON dans `config/colonie_pnj/rapports.jsonl` (date UTC, joueur, dimension, x y z, version, texte, et le PNJ regardé ou le plus proche à 5 blocs : prénom, métier, état, chef), une ligne `[rapport] joueur : texte` dans le journal du serveur, confirmation « Merci, rapport n°N transmis à l'Intendant. » ; 1 rapport par 10 s, 500 caractères au plus.
+- Classe pure `Rapport` (refus, ligne JSON) + `Rapports` (serveur) ; `RapportsTest`. Serveur seul : pas de changement du client, modpack inchangé (0.5.1).
+- Tests : 367 JUnit et 406 en jeu verts sur le PC. Livrée à 11 h 31 UTC sur le nouveau monde « colonie » (personne connecté, après la fin de Chunky), un seul jar dans /mods, démarrage sans erreur du mod. Commande vérifiée depuis la console (« A player is required ») ; pas encore essayée par un vrai joueur.
+- Lecture : `python tools/panel.py cat /config/colonie_pnj/rapports.jsonl`.
