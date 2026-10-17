@@ -73,8 +73,8 @@ public class TestsDepot {
             h.assertFalse(vu[0], "il ne doit pas attaquer l'autre joueur");
             h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "l'autre ne prend aucun coup");
             h.assertTrue(vu[1], "il se met entre le dépôt et l'autre (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "depot_interpose"), "il l'avertit (" + s.g().paroles + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "depot_prevenir"), "il prévient le chef (" + s.g().paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "depot_interpose"), "il l'avertit (" + s.g().paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "depot_prevenir"), "il prévient le chef (" + s.g().paroles + ")");
             finir(s);
             h.succeed();
         });
@@ -96,12 +96,12 @@ public class TestsDepot {
             h.assertFalse(vu[0], "première fois : pas d'attaque");
             h.assertTrue(s.autre().getHealth() == s.autre().getMaxHealth(), "première fois : aucun coup");
             h.assertTrue(vu[1], "il s'interpose (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "depot_sommation"), "il le somme (" + s.g().paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "depot_sommation"), "il le somme (" + s.g().paroles + ")");
             ouvrir(h, s, s.autre());
         });
         h.succeedWhen(() -> {
             h.assertTrue(s.autre().getHealth() < s.autre().getMaxHealth(), "il rouvre : il le frappe (attaque lancée " + vu[0] + ", " + s.g().paroles + ")");
-            h.assertTrue(TestsCaractere.aDit(s.g(), "depot_riposte"), "il le dit (" + s.g().paroles + ")");
+            h.assertTrue(Essais.aDit(s.g(), "depot_riposte"), "il le dit (" + s.g().paroles + ")");
             s.g().appliquer(Ordres.lire("Reste tranquille.", "guerrier"), s.chef());
             h.assertTrue(GardeChef.posture(s.g().memoire.getString("garde_depot")) == GardeChef.Posture.TRANQUILLE, "« reste tranquille » calme aussi le dépôt");
             finir(s);
@@ -126,7 +126,7 @@ public class TestsDepot {
         h.runAtTickTime(h.getTick() + 10, () -> ouvrir(h, s, s.autre()));
         h.runAtTickTime(h.getTick() + 90, () -> {
             h.assertFalse(vu[0] || vu[1], "autorisé : rien (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
-            h.assertFalse(TestsCaractere.aDit(s.g(), "depot_interpose") || TestsCaractere.aDit(s.g(), "depot_riposte") || TestsCaractere.aDit(s.g(), "depot_prevenir"),
+            h.assertFalse(Essais.aDit(s.g(), "depot_interpose") || Essais.aDit(s.g(), "depot_riposte") || Essais.aDit(s.g(), "depot_prevenir"),
                     "pas un mot (" + s.g().paroles + ")");
             String r2 = m.appliquer(Ordres.lire(nom + " n'a plus le droit.", "mineur"), s.chef());
             h.assertTrue(Vie.vient("depot_ordre_retire", r2), "le mineur le redit : " + r2);
@@ -173,7 +173,7 @@ public class TestsDepot {
         h.runAtTickTime(h.getTick() + 10, () -> ouvrir(h, s, s.autre()));
         h.runAtTickTime(h.getTick() + 40, () -> ouvrir(h, s, s.autre()));
         h.runAtTickTime(h.getTick() + 80, () -> {
-            h.assertTrue(TestsCaractere.aDit(m, "depot_vu"), "le mineur le signale (" + m.paroles + ")");
+            h.assertTrue(Essais.aDit(m, "depot_vu"), "le mineur le signale (" + m.paroles + ")");
             long dits = m.paroles.stream().filter(p -> Vie.vient("depot_vu", p)).count();
             h.assertTrue(dits == 1, "une seule fois (" + m.paroles + ")");
             int lettres = m.lettresADeposer.size() + c.boites.getOrDefault(s.chef().getUUID(), java.util.List.of()).size() - avant

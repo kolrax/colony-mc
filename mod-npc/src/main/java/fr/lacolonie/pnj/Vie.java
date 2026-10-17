@@ -37,8 +37,6 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/vie.txt"), e -> System.err.println("[colonie_pnj] Section de vie.txt ignorée : " + e.getMessage())));
         // Les remarques spontanées, l'humour devant l'impossible et les réactions selon le caractère (lot 7) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/remarques.txt"), e -> System.err.println("[colonie_pnj] Section de remarques.txt ignorée : " + e.getMessage())));
-        // Deuil, enterrement, amitiés, inimitiés et couples (lots 5 et 7) : même format.
-        TOUTES.putAll(lire(Repertoire.lignes("/relations.txt"), e -> System.err.println("[colonie_pnj] Section de relations.txt ignorée : " + e.getMessage())));
         // Défense du chantier, rondes du guerrier, nuits dehors (lot 9) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/defense.txt"), e -> System.err.println("[colonie_pnj] Section de defense.txt ignorée : " + e.getMessage())));
         // Quand on frappe le chef, et ses ordres à ce sujet (lot 9, GardeChef) : même format.
@@ -57,9 +55,6 @@ final class Vie {
         TOUTES.putAll(lire(Repertoire.lignes("/machines.txt"), e -> System.err.println("[colonie_pnj] Section de machines.txt ignorée : " + e.getMessage())));
         // Un autre que le chef parle à l'ouvrier, lui donne des ordres ou veut le débaucher (lot 14, Etranger) : même format.
         TOUTES.putAll(lire(Repertoire.lignes("/etrangers.txt"), e -> System.err.println("[colonie_pnj] Section de etrangers.txt ignorée : " + e.getMessage())));
-        // Les rumeurs et l'espionnage (lot 14, Rumeurs, Espions) : même format.
-        TOUTES.putAll(lire(Repertoire.lignes("/rumeurs.txt"), e -> System.err.println("[colonie_pnj] Section de rumeurs.txt ignorée : " + e.getMessage())));
-        TOUTES.putAll(lire(Repertoire.lignes("/famille.txt"), e -> System.err.println("[colonie_pnj] Section de famille.txt ignorée : " + e.getMessage()))); // lot 13
     }
 
     /** Lit le fichier, strictement : la première erreur arrête tout, avec le numéro de ligne. */
@@ -97,16 +92,28 @@ final class Vie {
         return r;
     }
 
+    static final Set<String> TEMPERAMENTS = Set.of("calme", "peureux", "fourbe", "colerique");
+    static final Pattern VARIABLE = Pattern.compile("\\{([^}]*)}");
+
+    /** Le texte avec ses variables remplacées ({a}, {chef}…). */
+    static String remplir(String texte, Map<String, String> valeurs) {
+        Matcher m = VARIABLE.matcher(texte);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) m.appendReplacement(sb, Matcher.quoteReplacement(valeurs.getOrDefault(m.group(1), m.group())));
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
     static Replique replique(String l, int n) {
         String temperament = "", texte = l;
         Matcher p = PREFIXE.matcher(l);
         if (p.matches()) {
-            if (!Conversations.TEMPERAMENTS.contains(p.group(1))) throw erreur(n, "tempérament inconnu « " + p.group(1) + " »");
+            if (!TEMPERAMENTS.contains(p.group(1))) throw erreur(n, "tempérament inconnu « " + p.group(1) + " »");
             temperament = p.group(1);
             texte = p.group(2).strip();
         }
         if (texte.isEmpty()) throw erreur(n, "réplique vide");
-        Matcher v = Conversations.VARIABLE.matcher(texte);
+        Matcher v = VARIABLE.matcher(texte);
         while (v.find()) if (!VARIABLES.contains(v.group(1))) throw erreur(n, "variable inconnue {" + v.group(1) + "}");
         if (texte.replaceAll("\\{[^}]*}", "").matches(".*[{}].*")) throw erreur(n, "accolade seule");
         return new Replique(temperament, texte);
@@ -116,7 +123,7 @@ final class Vie {
 
     /** Vrai si toutes les variables de la réplique ont une valeur. */
     static boolean remplissable(Replique r, Map<String, String> valeurs) {
-        Matcher v = Conversations.VARIABLE.matcher(r.texte());
+        Matcher v = VARIABLE.matcher(r.texte());
         while (v.find()) if (valeurs.get(v.group(1)) == null || valeurs.get(v.group(1)).isBlank()) return false;
         return true;
     }
@@ -139,7 +146,7 @@ final class Vie {
         }
         List<Replique> choix = !propres.isEmpty() && (communes.isEmpty() || hasard.getAsDouble() < 0.5) ? propres : communes;
         if (choix.isEmpty()) return null;
-        String s = Conversations.remplir(choix.get(Math.min(choix.size() - 1, (int) (hasard.getAsDouble() * choix.size()))).texte(), valeurs);
+        String s = remplir(choix.get(Math.min(choix.size() - 1, (int) (hasard.getAsDouble() * choix.size()))).texte(), valeurs);
         return Character.toUpperCase(s.charAt(0)) + s.substring(1); // « {chef}, … » avec « chef » pour nom
     }
 
@@ -159,7 +166,7 @@ final class Vie {
     // --- Seuils des besoins (faim 0 à 20, fatigue et moral 0 à 100) ----------------------------------------------
 
     static final int FAIM_LEGERE = 12, FAIM_FORTE = 6, FATIGUE = 80;
-    static final int PLAINTE_DOUCE = Conversations.MORAL_BAS, PLAINTE_FORTE = 25, CONTENT = Conversations.MORAL_HAUT, FIER = 90;
+    static final int PLAINTE_DOUCE = 40, PLAINTE_FORTE = 25, CONTENT = 80, FIER = 90;
     /** Une pause : moral moyen ou bas (sous 60, strictement), après tant de ticks de travail (6 heures du jeu), pour 20 à 40 s. */
     static final int PAUSE_MORAL = Obeissance.REPOS, PAUSE_APRES = 6000, PAUSE_MIN = 400, PAUSE_MAX = 800;
 

@@ -36,7 +36,7 @@ final class Cerveau {
         Metier m = Metier.de(t.metier);
         if (m == null) return;
         try {
-            if (Famille.penser(t)) return; // un enfant joue, mange, dort et fuit les monstres : il ne travaille pas (lot 13)
+
             decider(t, m);
         } catch (RuntimeException e) {
             journal("[" + t.prenom + " / " + t.metier + "] erreur : " + e);
@@ -73,15 +73,11 @@ final class Cerveau {
         // le calme frappé se défend ici, avant la fuite plus bas (Defense).
         if (!m.combattant && Defense.ouvrier(t)) return;
         // Toutes les 5 s environ : ce que son corps et son humeur lui font dire (faim, fatigue, lit, blessure, moral).
-        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); Espions.echanger(t); } // de loin en loin, le bilan de son moral et une remarque
-        // Une fois par minute : ce qu'il voit des autres colonies autour de lui (Espions, Rumeurs).
-        if ((t.tickCount + t.getId()) % Espions.PERIODE == 0) Espions.observer(t);
-        // Oisif près d'un autre ouvrier oisif de son chef : de temps en temps, ils bavardent un peu (Causeries).
-        if (Causeries.essayer(t)) return;
+        if ((t.tickCount + t.getId()) % 100 == 0) { Besoins.veiller(t); Humeur.veiller(t); Deuil.veiller(t); Remarques.essayer(t); } // de loin en loin, le bilan de son moral et une remarque
         // Une action est en cours : le métier peut seulement surveiller (le guerrier lâche tout s'il voit un monstre).
         // Très grave en plein combat (sans consigne du chef) : il rompt et recule ; sinon, il ne cherche pas de nouveau combat.
         if (t.action != null) {
-            Espions.compter(t); // en route pour espionner : le temps de marche compte
+
             if (!Blessures.horsDeCombat(t)) m.vigilance(t);
             else if (t.action instanceof Actions.Attaquer a) {
                 dire(t, "fuite", 30, "Je suis trop mal en point pour me battre !");
@@ -98,7 +94,7 @@ final class Cerveau {
         LivingEntity agresseur = t.getLastHurtByMob();
         if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
             // En guerre, le chef ennemi qui le frappe : il riposte (Armee).
-            if (Famille.arme(t) && !Blessures.horsDeCombat(t) && agresseur instanceof Player p && Armee.ennemis(t).containsKey(p.getUUID())) lancer(t, Armee.attaque(t, p, 32)); // jamais un mineur (lot 13)
+            if (Armee.arme(t) && !Blessures.horsDeCombat(t) && agresseur instanceof Player p && Armee.ennemis(t).containsKey(p.getUUID())) lancer(t, Armee.attaque(t, p, 32)); // jamais un mineur (lot 13)
             else if (m.combattant && Monde.combattable(agresseur) && !Blessures.horsDeCombat(t)) lancer(t, new Actions.Attaquer(agresseur));
             else {
                 if (!m.combattant || Blessures.horsDeCombat(t)) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");
@@ -137,12 +133,12 @@ final class Cerveau {
             return;
         }
 
-        // La faim : il mange ce qu'il a ; s'il n'a rien, il se sert au dépôt, en achète à un producteur voisin, ou le demande à son chef.
+        // La faim : il mange ce qu'il a ; s'il n'a rien, il se sert au dépôt, ou le demande à son chef.
         if (t.faim <= 14 && t.manger()) return;
         if (t.faim <= 8) {
             Bureau.Entite b = Bureau.entite(t);
             if (b != null && b.compter(Actions.Filtre.de("nourriture")) > 0) lancer(t, new Actions.Prendre(Actions.Filtre.de("nourriture"), 16, 4)); // 4 de chaque sorte : des repas variés
-            else if (!Achats.acheter(t)) lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1)); // sinon il en achète à un voisin (lot 11)
+            else lancer(t, new Actions.Demander("faim", Actions.Filtre.de("nourriture"), 1));
             return;
         }
 
@@ -226,8 +222,8 @@ final class Cerveau {
         mem.remove("sacVide");
         mem.remove("camp");
 
-        // Envoyé espionner une autre colonie (Espions) : il y va, guette, revient le dire.
-        if (Espions.mission(t)) return;
+
+
 
         // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {

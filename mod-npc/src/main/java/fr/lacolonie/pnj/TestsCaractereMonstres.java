@@ -38,7 +38,7 @@ public class TestsCaractereMonstres {
     }
 
     /** La réplique de defense.txt, ou sa phrase de secours. */
-    static boolean dit(Travailleur t, String cle, String nom) { return TestsCaractere.aDit(t, cle) || t.paroles.contains(Defense.secours(cle, nom)); }
+    static boolean dit(Travailleur t, String cle, String nom) { return Essais.aDit(t, cle) || t.paroles.contains(Defense.secours(cle, nom)); }
 
     static boolean dit(Travailleur t, String cle) { return dit(t, cle, null); }
 

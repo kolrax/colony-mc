@@ -55,6 +55,9 @@ public class Essais {
         };
     }
 
+    /** Il a dit une réplique de cette situation (vie.txt, etrangers.txt…). */
+    static boolean aDit(Travailleur t, String cle) { return t.paroles.stream().anyMatch(p -> Vie.vient(cle, p)); }
+
     /** Le chef regarde cet ouvrier droit dans les yeux. */
     static void regarder(net.minecraft.server.level.ServerPlayer chef, Travailleur t) {
         Vec3 d = t.getEyePosition().subtract(chef.getEyePosition()); // sans paquet envoyé : le faux joueur n'a pas de vraie connexion

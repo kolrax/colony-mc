@@ -286,7 +286,7 @@ final class Defense {
     static Travailleur garde(Travailleur t, double r) {
         if (t.chef == null) return null;
         return t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(r, 24, r),
-                        g -> g != t && g.isAlive() && "guerrier".equals(g.metier) && t.chef.equals(g.chef) && !Famille.mineur(g))
+                        g -> g != t && g.isAlive() && "guerrier".equals(g.metier) && t.chef.equals(g.chef))
                 .stream().min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
     }
 
@@ -353,7 +353,7 @@ final class Defense {
         Metier m = Metier.de(t.metier);
         boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && (x.cible == a || Monde.hostile(x.cible))
                 || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
-        if (m == null || !m.combattant || Famille.mineur(t) || Blessures.horsDeCombat(t) || combat) {
+        if (m == null || !m.combattant || Blessures.horsDeCombat(t) || combat) {
             // Les autres ouvriers : un mot, indigné ou effrayé selon leur caractère ; pas plus.
             if (!combat && Cerveau.parfois(t, "chef_frappe_vu", 30) && !Besoins.dire(t, "chef_frappe_vu", null)) t.dire("Hé ! On ne frappe pas le chef !");
             return;
@@ -423,7 +423,7 @@ final class Defense {
             Metier m = Metier.de(t.metier);
             boolean combat = t.action instanceof Actions.Attaquer x && x.cible.isAlive() && x.cible != v && Monde.hostile(x.cible)
                     || t.action instanceof Consignes.Faire f && f.e.comportement().equals("combat");
-            if (m != null && m.combattant && !Famille.mineur(t) && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v, recidive); if (garde == null) garde = t; }
+            if (m != null && m.combattant && !Blessures.horsDeCombat(t) && !combat) { garderDepot(t, lieu, v, recidive); if (garde == null) garde = t; }
             else if (temoin == null) temoin = t;
         }
         // Sans guerrier : un ouvrier le signale, d'un mot, pas plus.

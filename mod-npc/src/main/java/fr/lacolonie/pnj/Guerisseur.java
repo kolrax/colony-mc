@@ -340,7 +340,6 @@ final class Guerisseur extends Metier {
                     else t.ranger(new ItemStack(Items.GLASS_BOTTLE));
                 }
                 blesse.relever(null);
-                Relations.aide(t, blesse);
                 blesse.memoire.putLong("soigne_t", blesse.level().getGameTime());
                 Besoins.dire(t, "guerisseur_soigne", blesse.prenom);
                 return Actions.Etat.OK;
@@ -351,7 +350,6 @@ final class Guerisseur extends Metier {
             else blesse.memoire.putLong("soigne_le", blesse.memoire.getLong("blessure_le"));
             blesse.memoire.putLong("soigne_t", blesse.level().getGameTime());
             blesse.setHealth(Soins.vie(blesse.getHealth(), blesse.getMaxHealth()));
-            Relations.aide(t, blesse);
             Besoins.dire(blesse, "soigne", t.prenom);
             Besoins.dire(t, "guerisseur_soigne", blesse.prenom);
             return Actions.Etat.OK;

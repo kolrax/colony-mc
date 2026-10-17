@@ -246,55 +246,6 @@ public class TestsOrdres {
 
     // --- L'obéissance (cahier 8.4 et 8.5) ------------------------------------------------------------------------
 
-    /** Moral bas et colérique : il refuse l'expédition ; le chef insiste, il obéit en râlant (et son moral baisse encore). */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void refusePuisObeitSiOnInsiste(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 53);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.temperament = "colerique";
-                    b.moral = 20;
-                    regarder(chef, b);
-                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
-                    h.assertTrue(b.missions.isEmpty() && b.joursExpedition == 3 && b.enAttente != null && !b.attenteMarche,
-                            "il refuse (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, " + Paroles.echange(b, 1) + ")");
-                },
-                () -> {
-                    b.parler(chef, "C'est un ordre !");
-                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.moral == 20 + Obeissance.FORCE,
-                            "il obéit en râlant (" + b.missions.size() + " mission, " + b.joursExpedition + " jours, moral " + b.moral + ", " + Paroles.echange(b, 1) + ")");
-                },
-                () -> fin(h, e));
-    }
-
-    /** Fourbe au moral moyen : il marchande ; le chef dit « d'accord », il part, et la prime l'attend à sa prochaine paie. */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void negocieUnePrime(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 54);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.temperament = "fourbe";
-                    b.moral = 40;
-                    regarder(chef, b);
-                    b.parler(chef, "Pars en expédition 7 jours et ramène 10 diamants.");
-                    h.assertTrue(b.missions.isEmpty() && b.enAttente != null && b.attenteMarche && Paroles.echange(b, 1).contains("paie"),
-                            "il marchande (" + b.missions.size() + " mission, " + Paroles.echange(b, 1) + ")");
-                },
-                () -> {
-                    long paie = b.salaireVerse();
-                    b.parler(chef, "D'accord, marché conclu.");
-                    h.assertTrue(b.missions.size() == 1 && b.joursExpedition == 7 && b.prime == Obeissance.prime(paie) && b.moral == 40 + Obeissance.MARCHE,
-                            "il part, la prime est due (" + b.missions.size() + " mission, prime " + b.prime + ", moral " + b.moral + ", " + Paroles.echange(b, 1) + ")");
-                    b.prochainePaie = 0; // la paie est due : la prime s'y ajoute
-                    h.assertTrue(b.du() == paie + b.prime, "dû à la caisse : " + b.du());
-                },
-                () -> fin(h, e));
-    }
-
     /** « Saute dans la lave » : il refuse, même quand le chef insiste, et ne bouge pas. */
     @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
     public static void refuseLaLaveMemeSiOnInsiste(GameTestHelper h) {
@@ -321,30 +272,6 @@ public class TestsOrdres {
     }
 
     // --- La mémoire longue (cahier 7.5, 14.7) -------------------------------------------------------------------
-
-    /** Le chef l'insulte : il se vexe (moral en baisse) ; deux jours plus tard, « tu te souviens ? » : il le lui rappelle. */
-    @GameTest(template = "vide", batch = "ordres", timeoutTicks = 300)
-    public static void insulteRappeleeDeuxJoursPlusTard(GameTestHelper h) {
-        ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur[] e = equipe(h, chef, 56);
-        Travailleur b = e[0];
-        etapes(h, chef, e,
-                () -> {
-                    b.moral = 60;
-                    regarder(chef, b);
-                    b.parler(chef, "Tu es un bon à rien !");
-                    h.assertTrue(b.moral == 60 + Obeissance.INSULTE && b.souvenirs.liste.size() == 1,
-                            "il se vexe (moral " + b.moral + ", souvenirs " + b.souvenirs.liste + ", " + Paroles.echange(b, 1) + ")");
-                    // Deux jours de jeu passent (sans toucher à l'heure du monde, que les autres tests du lot partagent).
-                    b.souvenirs.liste.replaceAll(s -> new Souvenirs.Souvenir(s.genre(), s.jour() - 2, s.heure(), s.texte()));
-                },
-                () -> {
-                    b.parler(chef, "Tu te souviens de ce que je t'ai dit ?");
-                    String r = Paroles.echange(b, 1);
-                    h.assertTrue(r.startsWith("Toi") && r.contains("bon à rien") && r.contains("il y a 2 jours"), "il s'en souvient (" + r + ")");
-                },
-                () -> fin(h, e));
-    }
 
     // --- Ce n'est pas mon métier (cahier 14.1) ----------------------------------------------------------------
 

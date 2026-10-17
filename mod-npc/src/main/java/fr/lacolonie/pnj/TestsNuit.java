@@ -200,7 +200,7 @@ public class TestsNuit {
         t.debut = 20;
         t.fin = 6;
         h.succeedWhen(() -> {
-            h.assertTrue(TestsCaractere.aDit(t, "nuit_sans_ouvrage"), "il dit qu'il n'a rien à faire de nuit (" + t.paroles + ")");
+            h.assertTrue(Essais.aDit(t, "nuit_sans_ouvrage"), "il dit qu'il n'a rien à faire de nuit (" + t.paroles + ")");
             h.assertTrue(TestsJeu.distance(t, s.base()) <= 8, "il reste au poste (" + TestsJeu.etat(t, s.base()) + ")");
             h.assertTrue(t.paroles.stream().filter(p -> Vie.vient("nuit_sans_ouvrage", p)).count() == 1, "une seule fois");
             fin(t);

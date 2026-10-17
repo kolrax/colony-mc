@@ -821,8 +821,8 @@ final class Consignes {
             }
             case "salaire" -> new Fait("Je touche " + Reglages.texte(t.salaireVerse()) + " par paie"
                     + (t.impayes > 0 ? ", et tu me dois " + t.impayes + " paie(s)." : ", prochaine paie dans " + Math.max(0, (t.prochainePaie - System.currentTimeMillis()) / 60_000) + " minutes."), null);
-            case "bourse" -> new Fait(Achats.bourse(t), null);
-            case "achats" -> new Fait(Achats.dernierAchat(t), null);
+            case "bourse" -> new Fait(Reglages.valeur(t.inventaire) <= 0 ? "Ma bourse est vide, chef." : "J'ai " + Reglages.texte(Reglages.valeur(t.inventaire)) + " dans ma bourse.", null);
+            case "achats" -> new Fait("Je n'achète rien, chef : je mange ce qu'il y a au dépôt.", null);
             case "ventes" -> new Fait(Boutiquier.ventes(t), null);
             case "boutique" -> new Fait(Boutiquier.etalPourLeChef(t), null);
             case "anciennete" -> {

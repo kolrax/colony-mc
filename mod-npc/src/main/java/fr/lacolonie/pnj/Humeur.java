@@ -68,8 +68,7 @@ final class Humeur {
         int bilansPluie = pluie ? m.getInt("bilans_pluie") + 1 : 0;
         m.putInt("bilans_pluie", bilansPluie);
         // Le chef l'a frappé ou insulté ce jour-ci (le moral a déjà baissé sur le moment : ici, la rancune qui reste).
-        boolean coup = m.contains("coup_chef") && l.getGameTime() - m.getLong("coup_chef") < 24000
-                || t.souvenirs.liste.stream().anyMatch(x -> x.genre() == Souvenirs.Genre.INSULTE && x.jour() == t.jour());
+        boolean coup = m.contains("coup_chef") && l.getGameTime() - m.getLong("coup_chef") < 24000;
         int ouvriers = 0;
         if (l.getServer() != null) {
             var eff = Courrier.de(l.getServer()).effectifs.get(t.chef);
@@ -80,14 +79,13 @@ final class Humeur {
         if (b != null) for (int i = 0; i < b.depot.getContainerSize(); i++) depot += b.depot.getItem(i).getCount();
         return new Moral.Etat(t.impayes, m.contains("paie_le") && t.jour() - m.getLong("paie_le") <= 1, Moral.lire(m.getString("repas")),
                 t.lit != null, toit, Blessures.gravite(t) != Gravite.AUCUNE, blesseVu, jourDeuil, pluie, orage, bilansPluie,
-                !pluie && l.isDay(), coup, ouvriers, depot, (Relations.actifs() ? Relations.de(t).moral() : 0) + Famille.moral(t), // la famille réunie (lot 13)
+                !pluie && l.isDay(), coup, ouvriers, depot, 0,
                 // Les nuits d'affilée (lot 13) : une prime promise ou une paie au-dessus de sa demande en reprennent un peu.
                 Nuit.moral(m.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus, t.prime > 0 || t.facteurPaie() > 1));
     }
 
     /** Le bilan : le moral bouge un peu, il dit ce qui lui pèse (ou ce qui lui plaît), et il écrit au chef si ça ne va plus. */
     static Moral.Bilan bilan(Travailleur t) {
-        List<Travailleur> pres = Relations.bilan(t); // ceux qui travaillent près de lui, le couple s'il est temps
         Moral.Bilan b = Moral.bilan(etat(t));
         t.changerMoral(b.total());
         t.memoire.putInt("bilan", b.total());
@@ -96,8 +94,7 @@ final class Humeur {
         else t.memoire.remove("bilan_cause");
         Moral.Cause dite = b.total() < 0 ? pire : b.total() > 0 ? b.meilleure() : null;
         String cle = dite == null ? null : b.total() < 0 ? dite.plainte : dite.joie;
-        // Rien dit sur son moral : un mot à l'ami, à l'être aimé ou à l'ennemi qui est là.
-        if (cle == null || !Besoins.parler(t, cle, null)) Relations.parler(t, pres);
+        if (cle != null) Besoins.parler(t, cle, null);
         suite(t, pire);
         mefaits(t, pire);
         return b;
@@ -198,7 +195,7 @@ final class Humeur {
         // Son butin caché (« butin ») et ses vols du jour, il les garde : ils partent avec lui.
         for (String k : List.of("demission", "demission_essais", "chef_lu", "avertis", "avertis_depuis", "bilans_bas", "bilan", "bilan_cause",
                 "bilan_le", "deuil_le", "deuil_nom", "deuil_coup", "deuil_brut", "deuil_poids", "deuils", "deuil_apprend", "deuil_enterre", "repas", "bilans_pluie", "coup_chef", "fuite", "fuite_etape", "fuite_dit", "menaces",
-                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", Relations.CLE, "mange_t", "liens_bilans", "offense_le", "offense_perte"))
+                "menace_depuis", "revolte", "revolte_impayes", "vol_ou", "sabotage_ou", "sabotage", "mange_t", "liens_bilans", "offense_le", "offense_perte"))
             t.memoire.remove(k);
         t.moral = Obeissance.DEPART;
     }
@@ -219,7 +216,6 @@ final class Humeur {
     /** Il vient de manger {@code s} : retenu parmi ses derniers repas. */
     static void repas(Travailleur t, ItemStack s) {
         t.memoire.putString("repas", Moral.retenir(t.memoire.getString("repas"), net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath()));
-        Relations.repas(t); // mangé avec d'autres : ils se rapprochent
     }
 
     /** Un ouvrier du même chef est mort : le deuil (moral −10 tout de suite, puis moins chaque jour). La suite (la nouvelle, les souvenirs, l'enterrement) : {@link Deuil}. */
@@ -231,7 +227,7 @@ final class Humeur {
             // double, l'être aimé triple : Relations), quel que soit l'ordre des morts.
             boolean memeJour = t.memoire.contains("deuil_le") && t.memoire.getLong("deuil_le") == t.jour();
             int deja = memeJour ? t.memoire.getInt("deuil_coup") : 0, brut = memeJour ? t.memoire.getInt("deuil_brut") : 0;
-            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = Math.max(Relations.deuil(t, mort), Famille.poidsDeuil(t, mort)); // un parent, un enfant : comme l'être aimé (lot 13)
+            int poidsMax = memeJour ? Math.max(1, t.memoire.getInt("deuil_poids")) : 1, poids = 1;
             if (memeJour && !t.memoire.contains("deuil_brut")) brut = deja; // mémoire d'avant les liens
             brut += Moral.DEUIL_COUP * poids;
             poidsMax = Math.max(poidsMax, poids);
@@ -265,7 +261,7 @@ final class Humeur {
         ServerPlayer chef = t.chefJoueur();
         boolean present = chef != null && chef.level() == t.level() && !chef.isSpectator() && chef.distanceTo(t) < PRESENT;
         int compagnons = 0;
-        boolean revolte = r.moral_revolte && !Famille.mineur(t); // un mineur ne prend pas les armes (lot 13) : il vole, sabote ou s'en va
+        boolean revolte = r.moral_revolte; // un mineur ne prend pas les armes (lot 13) : il vole, sabote ou s'en va
         if (revolte && m.getInt("avertis") >= 2)
             for (Travailleur x : ColoniePnj.pnjDe(t.level().getServer(), t.chef))
                 if (x != t && x.mode != Travailleur.Mode.CHOMEUR && x.moral < r.moral_seuil_demission) compagnons++;
@@ -424,7 +420,7 @@ final class Humeur {
             ItemStack pris = c == null ? ItemStack.EMPTY : voler(t, c, fuite ? Moral.VOL_COUP : resteDuJour(t));
             if (pris.isEmpty()) return echec("rien");
             t.swing(InteractionHand.MAIN_HAND);
-            String nom = Consignes.nom(pris), objet = "un peu " + Souvenirs.de(nom) + nom;
+            String nom = Consignes.nom(pris), objet = "un peu " + Paroles.de(nom) + nom;
             if (!fuite) Besoins.parler(t, "vol", null, objet); // il marmonne : qui passe tout près l'entend
             denoncer(t, "prendre " + objet + (ou.equals(t.bureau) ? " au dépôt" : " dans un coffre"));
             return Actions.Etat.OK;
@@ -437,7 +433,6 @@ final class Humeur {
         boolean dit = false;
         for (Travailleur x : t.level().getEntitiesOfClass(Travailleur.class, t.getBoundingBox().inflate(16),
                 x -> x != t && t.chef.equals(x.chef) && x.mode != Travailleur.Mode.CHOMEUR && x.hasLineOfSight(t))) {
-            Relations.vol(t, x); // tous ceux qui l'ont vu le voient d'un autre œil
             if (!dit && x.moral >= Reglages.actuel.moral_seuil_demission && x.getRandom().nextBoolean()) { Courrier.ecrire(x, "denonce", t.prenom, quoi); dit = true; }
         }
     }
@@ -637,7 +632,6 @@ final class Humeur {
      * portée (lui seul, jamais un autre), ou l'attend, les bras croisés.
      */
     static boolean revolter(Travailleur t) {
-        if (Famille.mineur(t)) { t.memoire.remove("revolte"); t.memoire.remove("revolte_impayes"); return false; } // jamais les armes (lot 13)
         if (calmer(t)) return false;
         if (paieEnCaisse(t)) { Cerveau.lancer(t, new Actions.ToucherPaie()); return true; }
         if (t.faim <= 8 || t.faim <= 14 && t.compter(Actions.Filtre.de("nourriture")) > 0) return false;

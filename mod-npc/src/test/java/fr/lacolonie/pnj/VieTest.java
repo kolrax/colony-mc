@@ -77,22 +77,6 @@ class VieTest {
         }
     }
 
-    /** Lot 14 : les rumeurs et l'espionnage (Rumeurs, Espions), au moins quatre répliques communes par situation. */
-    @Test
-    void rumeursSeLit() {
-        Map<String, List<Vie.Replique>> banque = Vie.lire(Repertoire.lignes("/rumeurs.txt"));
-        assertEquals(20, banque.size());
-        for (var e : banque.entrySet()) {
-            assertTrue(Vie.TOUTES.containsKey(e.getKey()), e.getKey() + " chargée");
-            assertTrue(Rumeurs.SECOURS.containsKey(e.getKey()), e.getKey() + " : une clé que le code dit");
-            assertTrue(e.getValue().stream().filter(r -> r.temperament().isEmpty()).count() >= 4, e.getKey() + " : quatre répliques communes");
-            for (Vie.Replique r : e.getValue()) {
-                for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
-                assertTrue(r.texte().length() <= 90, r.texte());
-            }
-        }
-    }
-
     /** Lot 9 : quand on se sert au dépôt du poste (GardeDepot), au moins quatre répliques communes par situation. */
     @Test
     void depotSeLit() {
