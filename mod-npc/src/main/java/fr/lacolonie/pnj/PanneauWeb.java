@@ -88,13 +88,8 @@ public final class PanneauWeb {
                 case "/api/reglages" -> surServeur(() -> reglages(corps));
                 case "/api/pnj/apparaitre" -> surServeur(() -> apparaitre(corps));
                 case "/api/pnj/action" -> surServeur(() -> actionPnj(corps));
-                case "/api/recharger" -> surServeur(() -> { Reglages.charger(); ReglagesIA.charger(); return resultat(null); });
-                case "/api/ia" -> IA.etat();
+                case "/api/recharger" -> surServeur(() -> { Reglages.charger(); return resultat(null); });
                 case "/api/repertoire" -> Map.of("actions", Repertoire.tableau());
-                case "/api/incompris" -> Map.of("total", Incompris.JOURNAL.taille(), "entrees", Incompris.JOURNAL.plusFrequentes(Incompris.MAX));
-                case "/api/ia/ecoute" -> Map.of("journal", Dialogue.journal(), "parametres", Adressage.ecrire(Adressage.P).toString());
-                case "/api/ia/reglages" -> { ReglagesIA.modifier(corps); yield resultat(null); }
-                case "/api/ia/tester" -> Map.of("resultats", IA.tester().get(40, TimeUnit.SECONDS));
                 default -> null;
             };
             if (reponse == null) envoyer(ex, 404, "text/plain", "introuvable");

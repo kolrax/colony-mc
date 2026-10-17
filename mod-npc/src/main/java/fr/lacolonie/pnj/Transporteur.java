@@ -605,7 +605,7 @@ final class Transporteur extends Metier {
             switch (mode) {
                 case "oublier_trajets" -> {
                     oublier(t, false);
-                    Voix.dire(t, "J'oublie tous mes trajets. Je reste au poste.", "calme");
+                    Paroles.dire(t, "J'oublie tous mes trajets. Je reste au poste.", "calme");
                     return Actions.Etat.OK;
                 }
                 case "trajet_prendre" -> {
@@ -613,7 +613,7 @@ final class Transporteur extends Metier {
                     t.memoire.putString("trajet_depart_o", objet);
                     t.memoire.putString("trajet_depart_n", nom);
                     String ici = vu == Trajets.DEPOT ? "au dépôt" : "dans " + Machines.nom(id(t.level(), BlockPos.of(vu))).replaceFirst("^le ", "ce ").replaceFirst("^la ", "cette ").replaceFirst("^l'", "cet ");
-                    Voix.dire(t, "Je prendrai " + (nom.isEmpty() ? "" : nom + " ") + ici
+                    Paroles.dire(t, "Je prendrai " + (nom.isEmpty() ? "" : nom + " ") + ici
                             + ". Montre-moi maintenant où le porter, et dis-moi « dépose dans celui-là ».", "calme");
                     return Actions.Etat.OK;
                 }
@@ -633,12 +633,12 @@ final class Transporteur extends Metier {
 
         Actions.Etat retenir(Travailleur t, Trajet tr, String nom) {
             if (tr.source() == tr.dest()) {
-                Voix.dire(t, "C'est le même coffre, chef : je n'ai rien à porter de lui à lui.", "calme");
+                Paroles.dire(t, "C'est le même coffre, chef : je n'ai rien à porter de lui à lui.", "calme");
                 return echec("meme_coffre");
             }
             List<Trajet> l = Trajets.ajouter(lire(t), tr);
             if (l == null) {
-                Voix.dire(t, "J'ai déjà " + Trajets.MAX + " trajets, chef : je n'en retiens pas plus. Dis-moi d'abord d'oublier les miens.", "calme");
+                Paroles.dire(t, "J'ai déjà " + Trajets.MAX + " trajets, chef : je n'en retiens pas plus. Dis-moi d'abord d'oublier les miens.", "calme");
                 return echec("trop_de_trajets");
             }
             ecrire(t, l);
@@ -650,11 +650,11 @@ final class Transporteur extends Metier {
             String md = machineDe(t, tr.dest()), ms = machineDe(t, tr.source());
             String dit = !md.isEmpty() ? replique(t, "machine_remplir_ok", md, nom) : !ms.isEmpty() ? replique(t, "machine_vider_ok", ms, null) : null;
             if (dit != null) {
-                Voix.dire(t, dit, "calme");
+                Paroles.dire(t, dit, "calme");
                 return Actions.Etat.OK;
             }
             String sens = tr.source() == Trajets.DEPOT ? "du dépôt à ce coffre" : tr.dest() == Trajets.DEPOT ? "de ce coffre au dépôt" : "d'un coffre à l'autre";
-            Voix.dire(t, "Je porterai " + (tr.objet().isEmpty() ? "tout" : nom.isEmpty() ? "ce que tu m'as dit" : nom) + " " + sens
+            Paroles.dire(t, "Je porterai " + (tr.objet().isEmpty() ? "tout" : nom.isEmpty() ? "ce que tu m'as dit" : nom) + " " + sens
                     + ", et je referai le chemin tant qu'il y aura à porter.", "calme");
             return Actions.Etat.OK;
         }

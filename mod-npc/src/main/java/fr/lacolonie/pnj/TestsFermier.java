@@ -132,7 +132,7 @@ public class TestsFermier {
         BlockPos centre = o.offset(7, -1, 0); // le sol regardé
         List<BlockPos> cases = new ArrayList<>();
         for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) if (x != 0 || z != 0) cases.add(centre.offset(x, 0, z));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     g.parler(chef, "Plante un champ de blé ici, 5 sur 5");
@@ -160,7 +160,7 @@ public class TestsFermier {
         g.inventaire.addItem(new ItemStack(Items.WHEAT, 2));
         Bureau.Entite d = TestsBucheron.depot(g);
         d.depot.setItem(0, new ItemStack(Items.WHEAT, 7));
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> g.parler(chef, "Fais du pain"),
                 () -> h.assertTrue(TestsBucheron.compte(d, Items.BREAD) == 3 && g.consigne == null,
                         "3 pains au dépôt : " + TestsBucheron.compte(d, Items.BREAD) + " (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
@@ -236,7 +236,7 @@ public class TestsFermier {
         BlockPos centre = o.offset(7, -1, 0);
         l.setBlockAndUpdate(centre.east(), Blocks.AIR.defaultBlockState()); // un trou à côté du centre
         l.setBlockAndUpdate(centre.east().below(), Blocks.AIR.defaultBlockState());
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     g.parler(chef, "Plante un champ de blé ici, 3 sur 3");
@@ -262,7 +262,7 @@ public class TestsFermier {
         BlockPos centre = chef.blockPosition().offset(7, -1, 0);
         culture(l, centre.offset(1, 1, 1), Blocks.WHEAT, 3);
         marquer(g, centre, 5, 5, "ble");
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> {
                     TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
                     g.parler(chef, "Oublie ce champ");

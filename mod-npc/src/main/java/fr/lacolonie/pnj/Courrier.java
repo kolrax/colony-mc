@@ -27,33 +27,33 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Le courrier, les postes de travail et l'effectif de chaque joueur. Sauvegardé avec le monde.
+ * Le journal du poste, les postes de travail et l'effectif de chaque joueur. Sauvegardé avec le monde.
  * <ul>
- * <li>Plus de messages dans le chat : face à face, l'ouvrier parle (bulle) ; sinon, il écrit une lettre. Dans
- *   l'espace de vie, il l'apporte au poste à pied ; plus loin (ou si c'est urgent), un corbeau la porte.</li>
- * <li>Le chef écrit aussi à ses ouvriers depuis son poste : proche, l'ouvrier passe la prendre ; loin, un corbeau
- *   la lui porte. Il exécute les ordres qu'elle contient et répond.</li>
- * <li>Un corbeau vole à 15 blocs par seconde. On le voit partir et arriver ; entre les deux, son vol est seulement
- *   compté (le faire voler pour de vrai chargerait et générerait tout le terrain sous lui).</li>
+ * <li>Depuis la 1.0.0, plus de lettres ni de corbeau : ce qu'un ouvrier a à dire à son chef devient une ligne courte
+ *   du journal de son poste (« Raoul : Mission terminée »), les 100 dernières gardées. Face à face, il le dit aussi.</li>
+ * <li>Une ligne importante (à terre, grève, coincé, décès…) s'affiche aussi au chef, en jeu, s'il est connecté.</li>
  * </ul>
  */
 final class Courrier extends SavedData {
     static final String NOM = "colonie_pnj_courrier";
-    static final double VITESSE_CORBEAU = 15; // blocs par seconde
-    static final int MAX_LETTRES = 200;
+    /** Les lignes gardées au journal de chaque poste. */
+    static final int MAX_LIGNES = 100;
 
     /**
-     * Une lettre. {@code pour} : le chef (courrier reçu au poste) ou un ouvrier. {@code type} : sa situation
-     * (« torches », « faim »…), pour regrouper les lettres de routine ; vide, elle ne se regroupe jamais (voir
-     * {@link Boite}). {@code nombre} : combien de lettres semblables elle rassemble.
+     * Une ligne du journal du poste (une « lettre » avant la 1.0.0 : le nom reste, les sauvegardes et les tests s'en
+     * servent). {@code de} : l'ouvrier, ou « Le poste ». {@code objet} : la ligne courte ; {@code texte} : le détail,
+     * montré au survol. {@code type} : sa situation (« torches », « faim »…), pour regrouper la routine ; vide, elle ne
+     * se regroupe jamais (voir {@link Boite}). {@code nombre} : combien de fois elle est arrivée. {@code date} : l'heure du jeu.
      */
     static final class Lettre {
         long id;
         String de = "", objet = "", texte = "", date = "", type = "";
-        /** Lettre regroupée de plusieurs ouvriers : tous les noms (bornés, {@link Boite#AUTEURS_MAX}) ; vide sinon. */
+        /** Ligne regroupée de plusieurs ouvriers : tous les noms (bornés, {@link Boite#AUTEURS_MAX}) ; vide sinon. */
         String auteurs = "";
         UUID deUuid, pour;
-        boolean lue, duChef, importante, archivee;
+        boolean importante;
+        /** Ancienne lettre du chef à un ouvrier (avant la 1.0.0) : plus rien ne s'en sert. */
+        boolean duChef;
         int nombre = 1;
 
         CompoundTag sauver() {
@@ -65,11 +65,8 @@ final class Courrier extends SavedData {
             t.putString("date", date);
             if (deUuid != null) t.putUUID("deUuid", deUuid);
             if (pour != null) t.putUUID("pour", pour);
-            t.putBoolean("lue", lue);
-            t.putBoolean("duChef", duChef);
             t.putString("type", type);
             t.putBoolean("importante", importante);
-            t.putBoolean("archivee", archivee);
             t.putInt("nombre", nombre);
             if (!auteurs.isEmpty()) t.putString("auteurs", auteurs);
             return t;
@@ -84,11 +81,8 @@ final class Courrier extends SavedData {
             l.date = t.getString("date");
             l.deUuid = t.hasUUID("deUuid") ? t.getUUID("deUuid") : null;
             l.pour = t.hasUUID("pour") ? t.getUUID("pour") : null;
-            l.lue = t.getBoolean("lue");
-            l.duChef = t.getBoolean("duChef");
-            l.type = t.getString("type"); // absents des anciennes sauvegardes : valeurs par défaut
+            l.type = t.getString("type");
             l.importante = t.getBoolean("importante");
-            l.archivee = t.getBoolean("archivee");
             l.nombre = t.contains("nombre") ? Math.max(1, t.getInt("nombre")) : 1;
             l.auteurs = t.getString("auteurs");
             return l;
@@ -109,23 +103,19 @@ final class Courrier extends SavedData {
         boolean enterre, propose;
     }
 
-    /** Un corbeau en vol : la lettre, d'où il part, et à quel moment (temps du jeu) il arrive. */
+    /** Ancien corbeau en vol : il n'y en a plus (1.0.0), la liste {@link #vols} reste vide. Gardé pour les anciens tests qui la lisent. */
     static final class Vol {
         Lettre lettre;
         UUID chef;
-        boolean versPoste;
-        BlockPos depart;
-        long arrivee;
-        /** Le corbeau est en train de se poser (il livrera lui-même) ; s'il disparaît avant, la lettre est livrée à {@code limite}. */
-        boolean atterrissage;
-        long limite;
     }
 
+    /** Le journal du poste de chaque chef, la ligne la plus récente en tête. */
     final Map<UUID, List<Lettre>> boites = new HashMap<>();
     final Map<UUID, Poste> postes = new HashMap<>();
     /** La réserve d'un poste cassé (cahier 14.4), gardée pour son chef et rendue à son prochain poste (format de `Bureau.Entite.reserveTag`). */
     final Map<UUID, ListTag> reserves = new HashMap<>();
     final Map<UUID, LinkedHashMap<UUID, Membre>> effectifs = new HashMap<>();
+    /** Toujours vide depuis la 1.0.0 (plus de corbeau). */
     final List<Vol> vols = new ArrayList<>();
     long prochainId = 1;
     /** Ceux que chaque chef autorise à se servir au dépôt de son poste (« Nielscutt,Raoul ») : toute sa colonie le sait (GardeDepot). */
@@ -192,19 +182,6 @@ final class Courrier extends SavedData {
             e.add(x);
         }));
         t.put("Effectifs", e);
-        ListTag v = new ListTag();
-        for (Vol vo : vols) {
-            CompoundTag x = new CompoundTag();
-            x.put("lettre", vo.lettre.sauver());
-            if (vo.chef != null) x.putUUID("chef", vo.chef);
-            x.putBoolean("versPoste", vo.versPoste);
-            x.put("depart", NbtUtils.writeBlockPos(vo.depart));
-            x.putLong("arrivee", vo.arrivee);
-            x.putBoolean("atterrissage", vo.atterrissage);
-            x.putLong("limite", vo.limite);
-            v.add(x);
-        }
-        t.put("Vols", v);
         ListTag pe = new ListTag();
         permis.forEach((chef, noms) -> {
             CompoundTag x = new CompoundTag();
@@ -274,18 +251,6 @@ final class Courrier extends SavedData {
             m.enterre = e.getBoolean("enterre");
             m.propose = e.getBoolean("propose");
             c.effectifs.computeIfAbsent(e.getUUID("chef"), k -> new LinkedHashMap<>()).put(e.getUUID("id"), m);
-        }
-        for (Tag x : t.getList("Vols", Tag.TAG_COMPOUND)) {
-            CompoundTag v = (CompoundTag) x;
-            Vol vo = new Vol();
-            vo.lettre = Lettre.lire(v.getCompound("lettre"));
-            vo.chef = v.hasUUID("chef") ? v.getUUID("chef") : null;
-            vo.versPoste = v.getBoolean("versPoste");
-            vo.depart = NbtUtils.readBlockPos(v, "depart").orElse(BlockPos.ZERO);
-            vo.arrivee = v.getLong("arrivee");
-            vo.atterrissage = v.getBoolean("atterrissage");
-            vo.limite = v.getLong("limite");
-            c.vols.add(vo);
         }
         for (Tag x : t.getList("Permis", Tag.TAG_COMPOUND)) c.permis.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
         for (Tag x : t.getList("Commandants", Tag.TAG_COMPOUND)) c.commandants.put(((CompoundTag) x).getUUID("chef"), ((CompoundTag) x).getString("noms"));
@@ -413,7 +378,7 @@ final class Courrier extends SavedData {
         setDirty();
     }
 
-    // --- Le courrier --------------------------------------------------------------------------------
+    // --- Le journal du poste ----------------------------------------------------------------------------
 
     Lettre nouvelle(String de, UUID deUuid, UUID pour, String objet, String texte, Level l) {
         Lettre x = new Lettre();
@@ -428,165 +393,78 @@ final class Courrier extends SavedData {
         return x;
     }
 
+    /** Le journal du poste de ce chef, la ligne la plus récente en tête (toujours la même liste). */
     List<Lettre> boite(UUID chef) { return boites.computeIfAbsent(chef, k -> new ArrayList<>()); }
 
-    long nonLues(UUID chef) { return boite(chef).stream().filter(l -> !l.lue && !l.archivee).count(); }
-
     /**
-     * Une lettre arrive au poste du chef : on la range (une lettre de routine se fond dans sa semblable encore non lue,
-     * voir {@link Boite#ranger}), et le chef (s'il est là) l'apprend d'un mot discret, sans le chat : seulement pour
-     * une nouvelle lettre, pas quand une lettre déjà là compte une fois de plus.
+     * Une ligne arrive au journal du chef (la routine se fond dans sa semblable, voir {@link Boite#ranger}). Une ligne
+     * importante, nouvelle, s'affiche aussi au chef s'il est connecté (sauf {@code dejaDit} : l'ouvrier vient de le lui dire en face).
      */
-    void recevoir(MinecraftServer s, UUID chef, Lettre l) {
-        boolean nouvelle = Boite.ranger(boite(chef), l, MAX_LETTRES);
+    void noter(MinecraftServer s, UUID chef, Lettre l, boolean dejaDit) {
+        if (chef == null) return;
+        boolean nouvelle = Boite.ranger(boite(chef), l, MAX_LIGNES);
         setDirty();
         ServerPlayer p = s.getPlayerList().getPlayer(chef);
-        if (p != null && nouvelle) {
-            p.displayClientMessage(Component.literal("✉ Une lettre de " + l.de + " t'attend au poste : « " + l.objet + " »").withStyle(ChatFormatting.GOLD), true);
+        if (p != null && nouvelle && l.importante && !dejaDit) {
+            p.displayClientMessage(Component.literal("⚠ " + Boite.ligne(l)).withStyle(ChatFormatting.GOLD), true);
             p.playNotifySound(SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8f, 1.1f);
         }
     }
 
     /**
-     * Un avis du poste lui-même. Les avis non lus du même {@code type} se regroupent (« ramene ») ; un avis important
-     * (un décès) ne se regroupe jamais.
+     * Un avis du poste lui-même. Les avis du même {@code type} se regroupent (« ramene ») ; un avis important (un décès)
+     * ne se regroupe jamais.
      */
     static void avis(MinecraftServer s, UUID chef, String type, boolean importante, String objet, String texte) {
         Courrier c = de(s);
         Lettre l = c.nouvelle("Le poste", null, chef, objet, texte, s.overworld());
         l.type = type;
         l.importante = importante;
-        c.recevoir(s, chef, l);
+        c.noter(s, chef, l, false);
     }
 
-    // --- Ce que les ouvriers écrivent ---------------------------------------------------------------
+    // --- Ce que les ouvriers disent au journal ---------------------------------------------------------
 
     /**
-     * Un ouvrier a quelque chose à dire à son chef. Face à face, il le lui dit ; sinon, il lui écrit : dans l'espace
-     * de vie, il apporte la lettre au poste à pied ; plus loin, ou si c'est urgent, un corbeau la porte.
+     * Un ouvrier a quelque chose à dire à son chef : une ligne au journal du poste. Face à face, il le lui dit aussi.
+     * (Le nom vient des lettres d'avant la 1.0.0 ; tout le code l'appelle ainsi.)
      */
     static void ecrire(Travailleur t, String type, Object... vals) {
-        envoyer(t, Messages.SEULES.contains(type) ? "" : type, Messages.IMPORTANTES.contains(type), Messages.objet(type),
-                Messages.corps(t, type, vals), Messages.URGENTES.contains(type));
+        envoyer(t, Messages.SEULES.contains(type) ? "" : type, Messages.IMPORTANTES.contains(type) || Messages.URGENTES.contains(type),
+                Messages.objet(type), Messages.corps(t, type, vals));
     }
 
-    /** Pareil, avec son propre texte (une réponse écrite par l'IA, par exemple) : une lettre seule, jamais regroupée. */
-    static void ecrireTexte(Travailleur t, String objet, String corps, boolean urgent) { envoyer(t, "", false, objet, corps, urgent); }
+    /** Pareil, avec son propre texte : une ligne seule, jamais regroupée. {@code urgent} : elle s'affiche aussi au chef. */
+    static void ecrireTexte(Travailleur t, String objet, String corps, boolean urgent) { envoyer(t, "", urgent, objet, corps); }
 
-    private static void envoyer(Travailleur t, String type, boolean importante, String objet, String corps, boolean urgent) {
+    private static void envoyer(Travailleur t, String type, boolean importante, String objet, String corps) {
         if (t.chef == null || !(t.level() instanceof ServerLevel sl)) return;
         ServerPlayer chef = t.chefJoueur();
-        if (chef != null && chef.level() == t.level() && chef.distanceTo(t) < 12 && t.hasLineOfSight(chef)) { t.dire(corps); return; }
+        boolean enFace = chef != null && chef.level() == t.level() && chef.distanceTo(t) < 12 && t.hasLineOfSight(chef);
+        if (enFace) t.dire(corps);
         Courrier c = de(sl.getServer());
-        Lettre l = c.nouvelle(t.prenom, t.getUUID(), t.chef, objet, Messages.lettre(t, corps), t.level());
+        Lettre l = c.nouvelle(t.prenom, t.getUUID(), t.chef, objet, corps, t.level());
         l.type = type;
         l.importante = importante;
-        c.expedier(t, l, urgent);
+        c.noter(sl.getServer(), t.chef, l, enFace);
     }
 
-    /** Proche et rien d'urgent : il la garde pour la poser au poste en passant. Sinon : un corbeau. */
-    void expedier(Travailleur t, Lettre l, boolean urgent) {
-        if (!urgent && t.bureau != null && t.chezLui(t.blockPosition()) && !t.aTerre && poste(t.chef) != null) {
-            t.lettresADeposer.add(l);
-            return;
-        }
-        envoyerCorbeau(t.level(), t.blockPosition(), t.chef, l, true);
-    }
-
-    /** Il est au poste : il y pose ses lettres. */
+    /** Ancien dépôt des lettres au poste : s'il lui en reste (vieille sauvegarde), elles vont au journal. */
     static void deposer(Travailleur t) {
         if (t.lettresADeposer.isEmpty() || !(t.level() instanceof ServerLevel sl)) return;
-        Sons.lettre(t, t.bureau != null ? t.bureau : t.blockPosition());
         Courrier c = de(sl.getServer());
-        for (Lettre l : t.lettresADeposer) c.recevoir(sl.getServer(), t.chef, l);
+        for (Lettre l : t.lettresADeposer) c.noter(sl.getServer(), t.chef, l, false);
         t.lettresADeposer.clear();
     }
 
-    // --- Les corbeaux -------------------------------------------------------------------------------
-
-    /** Un corbeau part de {@code depart} avec la lettre, vers le poste du chef ou vers l'ouvrier destinataire. */
+    /** Ancien envoi par corbeau (1.0.0 : plus de corbeau) : une ligne pour le poste va tout de suite au journal ; rien d'autre. */
     void envoyerCorbeau(Level l, BlockPos depart, UUID chef, Lettre lettre, boolean versPoste) {
-        Vol v = new Vol();
-        v.lettre = lettre;
-        v.chef = chef;
-        v.versPoste = versPoste;
-        v.depart = depart.immutable();
-        BlockPos arrivee = versPoste ? (poste(chef) != null ? poste(chef).pos() : depart) : depart;
-        if (!versPoste && l.getServer() != null) {
-            Travailleur dest = trouver(l.getServer(), lettre.pour);
-            if (dest != null) arrivee = dest.blockPosition();
-        }
-        double d = Math.sqrt(depart.distSqr(arrivee));
-        v.arrivee = l.getGameTime() + Math.max(100, (long) (d / VITESSE_CORBEAU * 20));
-        vols.add(v);
-        setDirty();
-        Corbeau.envol(l, depart, arrivee, lettre);
+        if (versPoste && l.getServer() != null) noter(l.getServer(), chef, lettre, false);
     }
 
     static Travailleur trouver(MinecraftServer s, UUID id) {
         if (id == null) return null;
         for (ServerLevel lvl : s.getAllLevels()) if (lvl.getEntity(id) instanceof Travailleur t && t.isAlive()) return t;
         return null;
-    }
-
-    /** Chaque seconde : les corbeaux arrivés se montrent et se posent ; s'il n'y a personne pour les voir, la lettre est livrée tout de suite. */
-    static void tick(MinecraftServer s) {
-        Courrier c = de(s);
-        if (c.vols.isEmpty()) return;
-        long maintenant = s.overworld().getGameTime();
-        for (Vol v : List.copyOf(c.vols)) {
-            if (v.arrivee > maintenant) continue;
-            if (v.atterrissage) { if (maintenant > v.limite) c.livrer(s, v); continue; }
-            Level lvl = null;
-            BlockPos dest = null;
-            if (v.versPoste) {
-                Poste p = c.poste(v.chef);
-                if (p != null) { lvl = s.getLevel(p.monde()); dest = p.pos(); }
-            } else {
-                Travailleur t = trouver(s, v.lettre.pour);
-                if (t != null) { lvl = t.level(); dest = t.blockPosition(); }
-            }
-            if (lvl != null && Corbeau.arrivee(lvl, v.depart, dest, v.versPoste, v.lettre.id)) {
-                v.atterrissage = true;
-                v.limite = maintenant + 600;
-                c.setDirty();
-                continue;
-            }
-            c.livrer(s, v);
-        }
-    }
-
-    /** Le corbeau qui porte cette lettre s'est posé : il la livre. */
-    static void livrer(MinecraftServer s, long id) {
-        Courrier c = de(s);
-        for (Vol v : List.copyOf(c.vols)) if (v.lettre.id == id) c.livrer(s, v);
-    }
-
-    void livrer(MinecraftServer s, Vol v) {
-        vols.remove(v);
-        setDirty();
-        if (v.versPoste) { recevoir(s, v.chef, v.lettre); return; }
-        Travailleur t = trouver(s, v.lettre.pour);
-        if (t == null) { // l'ouvrier n'est plus là (mort, renvoyé) : la lettre revient au poste
-            v.lettre.objet = "Retour : " + v.lettre.objet;
-            recevoir(s, v.chef, v.lettre);
-            return;
-        }
-        t.recevoirLettre(v.lettre);
-    }
-
-    // --- Ce que le chef écrit -------------------------------------------------------------------------
-
-    /** Le chef écrit à un ouvrier depuis son poste. */
-    static void ecrireAuPnj(ServerPlayer chef, Travailleur t, String texte) {
-        Courrier c = de(chef.server);
-        Lettre l = c.nouvelle(chef.getName().getString(), chef.getUUID(), t.getUUID(), "Lettre du chef", texte, chef.level());
-        l.duChef = true;
-        Poste p = c.poste(chef.getUUID());
-        if (p != null && t.level().dimension() == p.monde() && t.chezLui(t.blockPosition())) {
-            t.lettresALire.add(l); // il passera la prendre au poste
-            return;
-        }
-        c.envoyerCorbeau(chef.level(), p != null ? p.pos() : chef.blockPosition(), chef.getUUID(), l, false);
     }
 }

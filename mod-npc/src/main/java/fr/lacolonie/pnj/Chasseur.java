@@ -313,7 +313,7 @@ final class Chasseur extends Metier {
                 }
                 default -> {
                     t.memoire.putLong("chasse_repos", Cerveau.temps(t) + (tues > 0 ? PAUSE : BREDOUILLE));
-                    if (ordre) Voix.dire(t, bilan(), "calme");
+                    if (ordre) Paroles.dire(t, bilan(), "calme");
                     else if (sansArme) manque(t);
                     else if (tues == 0) { Cerveau.ecrire(t, "gibier", Cerveau.UN_JOUR, "sans_gibier"); if (!lasse) t.bloquer(Statut.SANS_GIBIER); }
                     if (tues > 0) t.debloquer(Statut.SANS_GIBIER);

@@ -121,7 +121,7 @@ final class Boutiquier {
             if (etal(t, b).isEmpty()) { Cerveau.ecrire(t, "boutique_vide", Cerveau.UN_JOUR, "boutique_vide"); t.bloquer(Statut.BOUTIQUE_VIDE); }
             else {
                 t.debloquer(Statut.BOUTIQUE_VIDE);
-                if (Cerveau.parfois(t, "boutique_ouverte", 600)) Achats.dire(t, "boutique_ouverte", null, null, 0);
+                if (Cerveau.parfois(t, "boutique_ouverte", 600)) Paroles.dire(t, texte(t, "boutique_ouverte", null, null, 0, ""), "calme");
             }
         }
         Cerveau.attendre(t, 5);
@@ -156,7 +156,19 @@ final class Boutiquier {
         for (String k : prix.getAllKeys()) if (Actions.Filtre.de(k).objet(s)) return Math.max(1, prix.getInt(k));
         Integer p = Reglages.actuel.prix.get(BuiltInRegistries.ITEM.getKey(s.getItem()).toString());
         if (p != null && p > 0) return p;
-        return Achats.vendable(s) ? Achats.prix(s) : -1;
+        return nourriture(s) ? prixNourriture(s) : -1;
+    }
+
+    /** Une nourriture ordinaire, sans effet néfaste (comme ce qu'il mange). */
+    static boolean nourriture(ItemStack s) {
+        var fp = s.getFoodProperties(null);
+        return fp != null && fp.nutrition() > 0 && s.getRarity() == net.minecraft.world.item.Rarity.COMMON && Reglages.piece(s) < 0
+                && fp.effects().stream().noneMatch(e -> e.effect().getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL);
+    }
+
+    static int prixNourriture(ItemStack s) {
+        var fp = s.getFoodProperties(null);
+        return Economie.prix(Reglages.actuel.prix, BuiltInRegistries.ITEM.getKey(s.getItem()).toString(), fp == null ? 0 : fp.nutrition());
     }
 
     /** Ce qui est à vendre au dépôt du poste (bureau, coffres collés, réserve), le plus abondant d'abord. */
@@ -298,7 +310,7 @@ final class Boutiquier {
         Marchandise m = etal.stream().filter(x -> fl.objet(x.modele())).findFirst().orElse(null);
         if (m == null) return texte(t, "vente_absent", null, null, 0, "Ça, je n'en vends pas.") + " " + catalogue(t, etal);
         int n = Math.min(d.nombre(), m.nombre());
-        String quoi = Souvenirs.nombre(n, m.nom());
+        String quoi = Paroles.nombre(n, m.nom());
         String r = vendre(t, b, m, d.nombre(), p.getInventory(), s -> donner(p, s), p::spawnAtLocation,
                 s -> { ItemStack reste = donner(p, s); if (!reste.isEmpty()) p.spawnAtLocation(reste); });
         String nom = p.getName().getString();
@@ -340,37 +352,9 @@ final class Boutiquier {
         if (Consignes.MOTS_OBJETS.containsKey(mot)) return true;
         for (String nom : Consignes.NOMS.values()) {
             String x = Ordres.normaliser(nom).strip();
-            if (x.equals(mot) || Souvenirs.nombre(2, x).substring(2).equals(mot)) return true;
+            if (x.equals(mot) || Paroles.nombre(2, x).substring(2).equals(mot)) return true;
         }
         return false;
-    }
-
-    /** Un affamé d'une autre colonie (Achats) : la nourriture qu'il trouverait à cette boutique, si elle est ouverte. */
-    static Marchandise manger(Travailleur v) {
-        if (!ouverte(v)) return null;
-        Bureau.Entite b = Bureau.entite(v);
-        if (b == null) return null;
-        for (Marchandise m : etal(v, b)) if (Achats.vendable(m.modele())) return m;
-        return null;
-    }
-
-    /** L'affamé {@code a}, arrivé devant la boutique de {@code v}, achète une part de {@code m} au prix du chef (sans marchander). */
-    static boolean vendreAPnj(Travailleur a, Travailleur v, Marchandise m) {
-        Bureau.Entite b = Bureau.entite(v);
-        String objet = Achats.objet(m.modele());
-        String r = b == null ? RUPTURE : vendre(v, b, m, 1, a.inventaire, a.inventaire::addItem, a::spawnAtLocation, a::ranger);
-        if (r.equals(RUPTURE)) { Achats.dire(v, "vente_rupture", a.prenom, null, 0); return false; }
-        if (r.equals(MONNAIE)) { Achats.dire(v, "vente_sans_monnaie", a.prenom, null, 0); return false; }
-        if (!r.equals(VENDU)) { Achats.dire(a, "achat_pas_assez", v.prenom, objet, m.prix()); return false; }
-        Achats.dire(a, "achat_demande", v.prenom, objet, 0);
-        Achats.dire(v, "vente_conclue", a.prenom, objet, m.prix());
-        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        CompoundTag x = new CompoundTag();
-        x.putString("objet", objet);
-        x.putString("nom", v.prenom);
-        x.putInt("prix", m.prix());
-        a.memoire.put("achat", x);
-        return true;
     }
 
     // --- Ce qu'il en dit à son chef --------------------------------------------------------------------------------
@@ -382,7 +366,7 @@ final class Boutiquier {
             return tient(t) ? "Rien vendu aujourd'hui, chef." : "Je ne tiens pas de boutique, chef. Dis-moi « tiens la boutique », et je m'y mets.";
         List<String> l = new ArrayList<>();
         CompoundTag v = e.getCompound("vendu");
-        for (String k : v.getAllKeys()) l.add(Souvenirs.nombre(v.getInt(k), k));
+        for (String k : v.getAllKeys()) l.add(Paroles.nombre(v.getInt(k), k));
         String quoi = l.size() == 1 ? l.get(0) : String.join(", ", l.subList(0, l.size() - 1)) + " et " + l.get(l.size() - 1);
         return "Aujourd'hui, j'ai vendu " + quoi + ", pour " + Boutique.pieces(e.getLong("recette")) + " en tout. Les pièces sont à la caisse du poste.";
     }

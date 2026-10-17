@@ -1,22 +1,19 @@
 package fr.lacolonie.pnj;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * Les règles de la boîte aux lettres du poste (pur Java). La boîte est rangée de la plus récente (en tête) à la plus
- * ancienne.
+ * Les règles du journal du poste (pur Java), qui remplace les lettres depuis la 1.0.0. Le journal est rangé de la ligne
+ * la plus récente (en tête) à la plus ancienne.
  * <ul>
- * <li>Une lettre de routine (pas importante, avec un type) se fond dans la lettre non lue du même auteur et du même
- *   type : texte le plus récent (un avis du poste garde aussi les précédents), date, et un compteur. Les situations
- *   communes ({@link #TOUS_OUVRIERS}) se regroupent tous ouvriers confondus, la lettre citant chacun.</li>
- * <li>Trop de lettres : partent d'abord les plus vieilles lues, puis les plus vieilles archivées ; une non lue de routine
- *   seulement s'il ne reste rien d'autre, une importante non lue en tout dernier.</li>
- * <li>À l'écran : les importantes non lues, puis les non lues, puis les lues ; les plus récentes d'abord.</li>
+ * <li>Une ligne de routine (pas importante, avec un type) se fond dans la même ligne du même ouvrier si elle est parmi
+ *   les {@link #RECENTES} dernières : elle remonte en tête, avec l'heure et un compteur (« J'ai faim ×3 »). Les situations
+ *   communes ({@link #TOUS_OUVRIERS}) se regroupent tous ouvriers confondus, la ligne citant chacun.</li>
+ * <li>Trop de lignes : partent d'abord les plus vieilles de routine, puis les plus vieilles importantes.</li>
  * </ul>
+ * Et un petit outil de l'écran du poste : déplacer une mission dans une file ({@link #deplacer}).
  */
 final class Boite {
     private Boite() {}
@@ -24,47 +21,51 @@ final class Boite {
     /** Au-delà, le texte cumulé d'un avis regroupé est coupé. */
     static final int TEXTE_MAX = 1500;
 
-    /** Au-delà, la liste des auteurs d'une lettre regroupée ({@code Lettre.auteurs}) s'arrête (« … »). */
+    /** Au-delà, la liste des auteurs d'une ligne regroupée ({@code Lettre.auteurs}) s'arrête (« … »). */
     static final int AUTEURS_MAX = 200;
 
+    /** Une ligne ne se fond que dans une semblable parmi les dernières : plus loin, c'est une nouvelle ligne. */
+    static final int RECENTES = 10;
+
     /**
-     * Les situations communes à tous : une seule lettre non lue par situation, tous ouvriers confondus, qui cite
-     * chacun. {@code poste_detruit} reste importante mais se regroupe quand même (une lettre, pas trente). Pas
-     * « toujours en grève » : chacun a sa somme due.
+     * Les situations communes à tous : une seule ligne par situation, tous ouvriers confondus, qui cite chacun.
+     * {@code poste_detruit} reste importante mais se regroupe quand même (une ligne, pas trente). Pas « toujours en
+     * grève » : chacun a sa somme due.
      */
     static final Set<String> TOUS_OUVRIERS = Set.of("depot_plein", "depot_reserve", "paie_retard", "sans_poste", "poste_detruit");
 
     static boolean commune(Courrier.Lettre l) { return TOUS_OUVRIERS.contains(l.type); }
 
-    static boolean regroupable(Courrier.Lettre l) { return !l.duChef && !l.type.isEmpty() && (!l.importante || commune(l)); }
+    static boolean regroupable(Courrier.Lettre l) { return !l.type.isEmpty() && (!l.importante || commune(l)); }
 
-    /** La lettre non lue, non archivée, du même type (et du même auteur, sauf situation commune), où {@code l} se fond ; ou null. */
-    static Courrier.Lettre semblable(List<Courrier.Lettre> boite, Courrier.Lettre l) {
+    /** La ligne récente du même type (et du même auteur, sauf situation commune) où {@code l} se fond ; ou null. */
+    static Courrier.Lettre semblable(List<Courrier.Lettre> journal, Courrier.Lettre l) {
         if (!regroupable(l)) return null;
-        for (Courrier.Lettre x : boite)
-            if (!x.lue && !x.archivee && regroupable(x) && x.type.equals(l.type)
-                    && (commune(l) || Objects.equals(x.deUuid, l.deUuid) && x.de.equals(l.de))) return x;
+        for (int i = 0; i < Math.min(RECENTES, journal.size()); i++) {
+            Courrier.Lettre x = journal.get(i);
+            if (regroupable(x) && x.type.equals(l.type) && (commune(l) || Objects.equals(x.deUuid, l.deUuid) && x.de.equals(l.de))) return x;
+        }
         return null;
     }
 
-    /** Range une lettre arrivée. Vrai si c'est une nouvelle lettre ; faux si elle s'est fondue dans une autre. */
-    static boolean ranger(List<Courrier.Lettre> boite, Courrier.Lettre l, int max) {
-        Courrier.Lettre x = semblable(boite, l);
+    /** Range une ligne arrivée. Vrai si c'est une nouvelle ligne ; faux si elle s'est fondue dans une autre. */
+    static boolean ranger(List<Courrier.Lettre> journal, Courrier.Lettre l, int max) {
+        Courrier.Lettre x = semblable(journal, l);
         if (x != null) {
-            boite.remove(x);
+            journal.remove(x);
             x.nombre += Math.max(1, l.nombre);
-            if (commune(x)) { // le texte du dernier ; tous ceux qui l'ont écrit, en tête du texte ; l'auteur, en court
-                if (!Objects.equals(x.deUuid, l.deUuid)) x.deUuid = null; // plusieurs auteurs : pas de « Répondre »
+            if (commune(x)) { // le texte du dernier ; tous ceux qui l'ont dit, en tête du texte ; l'auteur, en court
+                if (!Objects.equals(x.deUuid, l.deUuid)) x.deUuid = null;
                 x.auteurs = auteurs(x.auteurs.isEmpty() ? x.de : x.auteurs, l.de);
                 x.de = court(x.auteurs);
-                x.texte = x.auteurs.contains(", ") ? "Ont écrit : " + x.auteurs + ".\n\n" + l.texte : l.texte;
+                x.texte = x.auteurs.contains(", ") ? "Ont dit : " + x.auteurs + ".\n\n" + l.texte : l.texte;
             } else x.texte = x.deUuid == null ? cumul(l.texte, x.texte) : l.texte;
             x.date = l.date;
-            boite.add(0, x);
+            journal.add(0, x);
             return false;
         }
-        boite.add(0, l);
-        purger(boite, max);
+        journal.add(0, l);
+        purger(journal, max);
         return true;
     }
 
@@ -80,7 +81,7 @@ final class Boite {
         return liste.length() + nom.length() + 2 <= AUTEURS_MAX ? liste + ", " + nom : liste + ", …";
     }
 
-    /** L'auteur tel que la liste le montre : « Aliénor », « Aliénor et Bertrand », « Aliénor et 9 autres ». */
+    /** L'auteur tel que la ligne le montre : « Aliénor », « Aliénor et Bertrand », « Aliénor et 9 autres ». */
     static String court(String liste) {
         List<String> noms = List.of(liste.split(", "));
         if (noms.getLast().equals("…")) return noms.getFirst() + " et bien d'autres";
@@ -91,59 +92,29 @@ final class Boite {
         };
     }
 
-    /**
-     * Ramène la boîte à {@code max} lettres, les plus vieilles d'abord : les lues, puis les archivées, puis (seulement
-     * s'il le faut) les non lues de routine, et les importantes non lues en tout dernier.
-     */
-    static void purger(List<Courrier.Lettre> boite, int max) {
-        for (int passe = 0; passe < 4 && boite.size() > max; passe++)
-            for (int i = boite.size() - 1; i >= 0 && boite.size() > max; i--) {
-                Courrier.Lettre x = boite.get(i);
-                boolean part = switch (passe) {
-                    case 0 -> x.lue && !x.archivee;
-                    case 1 -> x.archivee;
-                    case 2 -> !x.importante;
-                    default -> true;
-                };
-                if (part) boite.remove(i);
-            }
+    /** Ramène le journal à {@code max} lignes, les plus vieilles d'abord : la routine, puis (s'il le faut) les importantes. */
+    static void purger(List<Courrier.Lettre> journal, int max) {
+        for (int passe = 0; passe < 2 && journal.size() > max; passe++)
+            for (int i = journal.size() - 1; i >= 0 && journal.size() > max; i--)
+                if (passe == 1 || !journal.get(i).importante) journal.remove(i);
     }
 
-    /** 0 : importante non lue ; 1 : non lue ; 2 : lue. */
-    static int rang(Courrier.Lettre l) { return l.lue ? 2 : l.importante ? 0 : 1; }
-
-    /** Les lettres à montrer (celles des archives, ou les autres), dans l'ordre de l'écran. */
-    static List<Courrier.Lettre> affichees(List<Courrier.Lettre> boite, boolean archives) {
-        List<Courrier.Lettre> l = new ArrayList<>();
-        for (Courrier.Lettre x : boite) if (x.archivee == archives) l.add(x);
-        l.sort(Comparator.comparingInt(Boite::rang)); // tri stable : les plus récentes d'abord dans chaque groupe
-        return l;
-    }
-
-    /** L'objet tel que la liste le montre : « Plus de torches ×3 ». */
+    /** L'objet avec son compteur : « Plus de torches ×3 ». */
     static String objet(Courrier.Lettre l) { return l.nombre > 1 ? l.objet + " ×" + l.nombre : l.objet; }
 
-    static Courrier.Lettre trouver(List<Courrier.Lettre> boite, long id) {
-        for (Courrier.Lettre x : boite) if (x.id == id) return x;
-        return null;
+    /** La ligne telle que le journal la montre : « Raoul : Mission terminée ×2 » ; un avis du poste, sans auteur. */
+    static String ligne(Courrier.Lettre l) {
+        return l.de.isEmpty() || l.de.equals("Le poste") ? objet(l) : l.de + " : " + objet(l);
     }
 
-    /** « Tout lu » (sauf les importantes : elles se lisent en les ouvrant) : vrai si quelque chose a changé. */
-    static boolean toutLu(List<Courrier.Lettre> boite) {
-        boolean change = false;
-        for (Courrier.Lettre x : boite) if (!x.lue && !x.archivee && !x.importante) { x.lue = true; change = true; }
-        return change;
-    }
-
-    /** Range la lettre aux archives (elle compte alors comme lue), ou l'en ressort. */
-    static boolean archiver(List<Courrier.Lettre> boite, long id, boolean archivee) {
-        Courrier.Lettre x = trouver(boite, id);
-        if (x == null || x.archivee == archivee) return false;
-        x.archivee = archivee;
-        x.lue = true;
+    /**
+     * Déplace l'élément {@code i} de {@code sens} places (−1 : monte, +1 : descend) dans la liste. Faux (rien ne bouge)
+     * si {@code i} n'existe pas ou s'il est déjà au bout.
+     */
+    static <T> boolean deplacer(List<T> l, int i, int sens) {
+        int j = i + sens;
+        if (i < 0 || i >= l.size() || j < 0 || j >= l.size() || sens == 0) return false;
+        l.add(j, l.remove(i));
         return true;
     }
-
-    /** « Tout effacer » : les lettres lues, hors archives. Les non lues et les archivées restent. */
-    static boolean effacerLues(List<Courrier.Lettre> boite) { return boite.removeIf(x -> x.lue && !x.archivee); }
 }

@@ -176,7 +176,7 @@ public class TestsChasseur {
         List<Chicken> poules = betes(l, EntityType.CHICKEN, base, 9, 4);
         List<Pig> cochons = betes(l, EntityType.PIG, base, 5, 3);
         g.memoire.putLong("chasse_repos", Long.MAX_VALUE); // seul, il ne chasserait pas : seulement sur ordre
-        TestsIA.etapes(h, chef, e,
+        Essais.etapes(h, chef, e,
                 () -> g.parler(chef, "Chasse deux poules"),
                 () -> {
                     h.assertTrue(g.consigne == null, "la consigne est finie (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")");

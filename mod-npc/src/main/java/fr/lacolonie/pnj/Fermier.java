@@ -466,7 +466,7 @@ final class Fermier extends Metier {
             sous = null;
         }
 
-        void dire(Travailleur t, String texte) { if (ordre) Voix.dire(t, texte, "calme"); }
+        void dire(Travailleur t, String texte) { if (ordre) Paroles.dire(t, texte, "calme"); }
 
         Actions.Etat tick(Travailleur t) {
             ServerLevel l = (ServerLevel) t.level();
@@ -741,7 +741,7 @@ final class Fermier extends Metier {
                     for (int i = 0; i < 2 && zone < ZONES_VIE.size(); i++) mures.addAll(mures(t, ZONES_VIE, zone++, null, null, new boolean[2]));
                     if (zone < ZONES_VIE.size()) return Actions.Etat.EN_COURS;
                     etape = 1;
-                    if (mures.isEmpty() && recoltees == 0) { Voix.dire(t, "Rien n'est mûr dans les champs pour l'instant, chef.", "calme"); return Actions.Etat.OK; }
+                    if (mures.isEmpty() && recoltees == 0) { Paroles.dire(t, "Rien n'est mûr dans les champs pour l'instant, chef.", "calme"); return Actions.Etat.OK; }
                     sous = new Moisson(mures, null, commandee(t));
                     mures.clear();
                 }
@@ -752,7 +752,7 @@ final class Fermier extends Metier {
                 }
                 default -> {
                     if (plein && ++tours < 3) { plein = false; etape = 0; zone = 0; return Actions.Etat.EN_COURS; }
-                    Voix.dire(t, recoltees == 0 ? "Je n'ai rien pu récolter, chef." : "La récolte est au dépôt, chef : " + recoltees + " plants récoltés et ressemés.", "calme");
+                    Paroles.dire(t, recoltees == 0 ? "Je n'ai rien pu récolter, chef." : "La récolte est au dépôt, chef : " + recoltees + " plants récoltés et ressemés.", "calme");
                     return Actions.Etat.OK;
                 }
             }
@@ -798,12 +798,12 @@ final class Fermier extends Metier {
             if (seul) { Guerrier.garder(t, b, pain); return Actions.Etat.EN_COURS; } // ce qui n'entre pas au sac reste au dépôt
             ItemStack reste = b.ranger(pain);
             if (!reste.isEmpty()) t.ranger(reste);
-            if (!reste.isEmpty()) { Voix.dire(t, faits + " pain" + (faits > 1 ? "s" : "") + " de faits, chef. Le dépôt est plein : je garde le reste sur moi.", "calme"); return echec("depot_plein"); }
+            if (!reste.isEmpty()) { Paroles.dire(t, faits + " pain" + (faits > 1 ? "s" : "") + " de faits, chef. Le dépôt est plein : je garde le reste sur moi.", "calme"); return echec("depot_plein"); }
             return Actions.Etat.EN_COURS;
         }
 
         Actions.Etat dire(Travailleur t) {
-            Voix.dire(t, faits == 0 ? "Je n'ai pas assez de blé, chef : il en faut trois pour un pain, et il n'y en a ni sur moi ni au dépôt."
+            Paroles.dire(t, faits == 0 ? "Je n'ai pas assez de blé, chef : il en faut trois pour un pain, et il n'y en a ni sur moi ni au dépôt."
                     : faits + " pain" + (faits > 1 ? "s" : "") + " au dépôt, chef.", "calme");
             return faits == 0 ? echec("pas_de_ble") : Actions.Etat.OK;
         }
@@ -835,10 +835,10 @@ final class Fermier extends Metier {
                 double dd = p.contient(vu.getX(), vu.getZ()) ? -1 : distance(p.centre, vu);
                 if (dd < mieux) { mieux = dd; k = i; }
             }
-            if (k < 0) { Voix.dire(t, "Je n'ai pas de champ par là, chef.", "calme"); return echec("pas_de_champ"); }
+            if (k < 0) { Paroles.dire(t, "Je n'ai pas de champ par là, chef.", "calme"); return echec("pas_de_champ"); }
             champs.remove(k);
             t.memoire.put("champs", champs);
-            Voix.dire(t, "Bien, chef : je laisse ce champ, je n'y sème plus et je n'y récolte plus.", "calme");
+            Paroles.dire(t, "Bien, chef : je laisse ce champ, je n'y sème plus et je n'y récolte plus.", "calme");
             return Actions.Etat.OK;
         }
     }

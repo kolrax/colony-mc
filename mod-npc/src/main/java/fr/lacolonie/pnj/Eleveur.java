@@ -806,7 +806,7 @@ final class Eleveur extends Metier {
                     Corvee c = plan(t, e, parEnclos.get(e), mode, espece, voulu);
                     if (c != null) corvees.add(c);
                 }
-                if (corvees.isEmpty()) { Voix.dire(t, rien(), "calme"); return echec("rien_a_faire"); }
+                if (corvees.isEmpty()) { Paroles.dire(t, rien(), "calme"); return echec("rien_a_faire"); }
             }
             if (i < corvees.size()) { sous = corvees.get(i++); return Actions.Etat.EN_COURS; }
             if (etape == 1) {
@@ -814,7 +814,7 @@ final class Eleveur extends Metier {
                 Metier m = Metier.de(t.metier);
                 if (t.compter(PRODUITS) > 0) { sous = new Actions.Deposer(m == null ? List.of() : m.garder); return Actions.Etat.EN_COURS; }
             }
-            Voix.dire(t, bilan(), "calme");
+            Paroles.dire(t, bilan(), "calme");
             return nourries + tondus + abattues > 0 ? Actions.Etat.OK : echec("rien_fait");
         }
 
