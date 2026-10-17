@@ -86,7 +86,7 @@ Journal : les dernières nouvelles de ta colonie.
 ---
 LA BARRE DE COMMANDES
 
-Appuie sur sa touche (vois tes réglages de touches). Tape le début d'un ordre, comme "gar", puis choisis une ligne dans la liste.
+Appuie sur la touche B (réglable). Tape le début d'un ordre, comme "gar", puis choisis une ligne dans la liste.
 
 Pas besoin d'écrire une phrase entière.
 ---
