@@ -226,6 +226,8 @@ public class Travailleur extends PathfinderMob {
     public void travailleIci(BlockPos p) {
         lieuImpose = p == null ? null : p.immutable();
         for (Mission m : missions) if (m.lieu == null || p == null) m.lieu = lieuImpose;
+        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu (Lieux)
+        memoire.remove("lieu");
     }
 
     /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */
@@ -380,15 +382,6 @@ public class Travailleur extends PathfinderMob {
 
     /** Profondeur imposée (tests) ; Integer.MIN_VALUE = celle du catalogue. */
     public int profondeurForcee = Integer.MIN_VALUE;
-    /** « Travaille ici » : le lieu de travail que son chef lui a désigné (null : il choisit seul, {@link Lieux}). Sauvegardé. */
-    public BlockPos lieuImpose;
-
-    /** « Travaille ici » (bouton de la fiche) : il travaillera autour de p, dans le respect des constructions ; null : il choisit seul. */
-    public void travailleIci(BlockPos p) {
-        lieuImpose = p == null ? null : p.immutable();
-        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu
-        memoire.remove("lieu");
-    }
     public int fatigue;
     int fatigueCompteur;
     /** Ticks de travail depuis sa dernière pause ou son dernier repos (lot 5, loisirs ; non sauvegardé). */
