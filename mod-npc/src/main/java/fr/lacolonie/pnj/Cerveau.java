@@ -95,7 +95,7 @@ final class Cerveau {
         LivingEntity agresseur = t.getLastHurtByMob();
         if (agresseur != null && agresseur.isAlive() && !t.estDe(agresseur) && Monde.recent(t, t.getLastHurtByMobTimestamp())) {
             // En guerre, le chef ennemi qui le frappe : il riposte (Armee).
-            if (m.combattant && !Blessures.horsDeCombat(t) && agresseur instanceof Player p && Armee.ennemis(t).containsKey(p.getUUID())) lancer(t, Armee.attaque(t, p, 32));
+            if (Famille.arme(t) && !Blessures.horsDeCombat(t) && agresseur instanceof Player p && Armee.ennemis(t).containsKey(p.getUUID())) lancer(t, Armee.attaque(t, p, 32)); // jamais un mineur (lot 13)
             else if (m.combattant && Monde.combattable(agresseur) && !Blessures.horsDeCombat(t)) lancer(t, new Actions.Attaquer(agresseur));
             else {
                 if (!m.combattant || Blessures.horsDeCombat(t)) dire(t, "fuite", 30, "À l'aide ! On m'attaque !");

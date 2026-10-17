@@ -1903,6 +1903,10 @@ public class Travailleur extends PathfinderMob {
             return adieu;
         }
         if (confirmation && l.intentions.contains(Ordres.Intention.NON)) { memoire.remove("renvoi"); return Messages.corps(this, "dit_garde"); }
+        if (l.intentions.contains(Ordres.Intention.RENVOYER) && Famille.enfant(this)) { // on ne renvoie pas un enfant (lot 13)
+            String s = Besoins.texte(this, "enfant_renvoi", null, null);
+            return s != null ? s : "Me renvoyer ? Mais je suis un enfant, chef ! Ma famille est ici.";
+        }
         if (l.intentions.contains(Ordres.Intention.RENVOYER)) {
             if (enFace == null) return "Si tu veux te passer de moi, dis-le-moi en face, chef.";
             memoire.putLong("renvoi", maintenant + 600);
@@ -1970,8 +1974,7 @@ public class Travailleur extends PathfinderMob {
         // Il redit clairement ce qu'il a compris : c'est le mod qui répond, pas l'IA. Un homme qui ne porte pas les armes ne promet pas de frapper.
         if (!parRegle && l.posture != null) {
             memoire.putString("garde_chef", l.posture.name());
-            Metier mt = Metier.de(metier);
-            boolean arme = mt != null && mt.combattant;
+            boolean arme = Famille.arme(this); // un combattant, pas un mineur (lot 13)
             String cle = l.posture != GardeChef.Posture.ATTAQUE ? "chef_ordre_tranquille" : arme ? "chef_ordre_attaque" : "chef_ordre_attaque_civil";
             String dit = Besoins.texte(this, cle, null, null);
             r.add(dit != null ? dit : l.posture != GardeChef.Posture.ATTAQUE ? "Compris : si on te frappe, je m'interposerai, sans frapper."
@@ -1991,8 +1994,7 @@ public class Travailleur extends PathfinderMob {
             memoire.putString("garde_depot", GardeDepot.garde(GardeChef.posture(memoire.getString("garde_depot")), l).name());
         if (!parRegle && l.depot != null) {
             memoire.putString("garde_depot", l.depot.name());
-            Metier mt = Metier.de(metier);
-            boolean arme = mt != null && mt.combattant;
+            boolean arme = Famille.arme(this); // un combattant, pas un mineur (lot 13)
             String cle = l.depot != GardeChef.Posture.ATTAQUE ? "depot_ordre_tranquille" : arme ? "depot_ordre_attaque" : "depot_ordre_attaque_civil";
             String dit = Besoins.texte(this, cle, null, null);
             r.add(dit != null ? dit : l.depot != GardeChef.Posture.ATTAQUE ? "Compris : qui se sert au dépôt me trouvera devant lui, sans coup donné."
@@ -2215,6 +2217,7 @@ public class Travailleur extends PathfinderMob {
 
     void embaucher(ServerPlayer p) {
         if (mode != Mode.CHOMEUR) return;
+        if (Famille.enfant(this)) { signaler(p, "Un enfant ne s'embauche pas."); return; } // lot 13
         if (Reglages.actuel.metiers_inactifs.contains(metier) || !Metier.existe(metier)) {
             signaler(p, "Ce métier n'est plus proposé sur le serveur.");
             return;

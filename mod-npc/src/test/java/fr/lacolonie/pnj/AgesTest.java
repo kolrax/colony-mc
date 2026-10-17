@@ -38,6 +38,10 @@ class AgesTest {
         assertEquals(16, Ages.passage(11.9, 16.5), "le plus haut seuil franchi");
         assertEquals(70, Ages.passage(69.99, 70));
         assertEquals(-1, Ages.passage(30, 31));
+        // Relecture : tous les seuils franchis d'un coup, dans l'ordre (sinon l'apprenti de 11 à 16 ans restait sans paie).
+        assertEquals(List.of(12, 16), Ages.passages(11.9, 16.2));
+        assertEquals(List.of(60, 70), Ages.passages(59, 71));
+        assertEquals(List.of(), Ages.passages(30, 31));
     }
 
     @Test
@@ -124,6 +128,13 @@ class AgesTest {
         assertFalse(Ages.parmi(Ages.texte(l), "c-3"));
         assertEquals("Raoul et Agnès", Ages.noms(l));
         assertTrue(Ages.lire("abîmé;;x:").isEmpty(), "mémoire abîmée ignorée");
+        // Relecture : parent et enfant, frères et sœurs ne se mettent jamais en couple ; deux inconnus, si.
+        String parents = Ages.texte(l);
+        assertTrue(Ages.proches("e-1", parents, "", "a-1", "", "e-1:Thibaut"), "parent et enfant");
+        assertTrue(Ages.proches("a-1", "", "e-1:Thibaut", "e-1", parents, ""), "dans l'autre sens");
+        assertTrue(Ages.proches("e-1", parents, "", "e-2", "b-2:Agnès", ""), "un parent en commun");
+        assertFalse(Ages.proches("e-1", parents, "", "x-9", "", ""), "deux inconnus");
+        assertFalse(Ages.proches("e-1", "", "", "e-2", "", ""), "sans famille connue");
     }
 
     @Test

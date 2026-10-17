@@ -28,6 +28,9 @@
 #   apprenti_metier    pareil à un apprenti
 #   enfant_peur        l'enfant voit un monstre ou on le frappe : il se sauve
 #   enfant_jeu         l'enfant qui joue près du poste
+#   mineur_combat      un ordre de se battre (ou de frapper qui touche au chef, au dépôt) à un enfant ou un apprenti
+#   enfant_renvoi      on veut renvoyer un enfant
+#   guerre_trop_jeune  un apprenti guerrier à qui l'on lève l'armée
 
 [naissance]
 Un enfant ! {nom} est là, si menu dans mes bras.
@@ -161,3 +164,25 @@ Je fais le guet, comme les grands !
 Un, deux, trois... je compte jusqu'à cent !
 Regardez, je saute plus haut que la barrière !
 Plus tard, j'aurai mon propre poste !
+
+[mineur_combat]
+Je suis trop jeune pour me battre, chef. Demande aux grands.
+Me battre ? Je n'ai pas l'âge de porter les armes.
+Les armes, ce sera pour plus tard, chef.
+Je crierai pour prévenir, mais je ne frapperai personne.
+peureux: Me battre ? Oh non, chef, je n'oserais jamais...
+colerique: Je voudrais bien, mais on dit que je suis trop jeune !
+
+[enfant_renvoi]
+Me renvoyer ? Mais je suis un enfant, chef ! Ma famille est ici.
+Où irais-je ? Je suis trop jeune pour courir les routes.
+Je veux rester avec les miens, chef.
+Non ! Je reste ici, près de ma famille.
+peureux: S'il te plaît, chef, ne me chasse pas...
+
+[guerre_trop_jeune]
+Je suis trop jeune pour la guerre, chef.
+On ne m'a pas encore appris à me battre contre des hommes.
+La guerre, ce sera quand j'aurai seize ans, chef.
+Je garde la colonie avec les autres, chef. Je n'ai pas l'âge des rangs.
+colerique: Trop jeune, qu'ils disent... Je reste ici, chef.

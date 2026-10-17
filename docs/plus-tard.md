@@ -140,8 +140,9 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Étoiles (lot 13) : une formation arrêtée quand le chef n'est pas en ligne (renvoi par lettre, ordre écrit chef parti) ne lui rend pas le prix ; pendant la formation, il reste au poste (pas de vraie absence) et sans geste d'étude ; l'avancement vers l'étoile suivante (`Etoiles.progres`) n'est montré nulle part ; une désobéissance (moral bas) laisse la formation continuer.
 
 ## Familles (lot 13, première passe du 17/10)
-- **Renvoi** : renvoyer un parent n'emmène pas l'enfant ; renvoyer un enfant en fait un chercheur d'emploi (petit) qui finit par s'en aller comme les autres. Un enfant dont les deux parents sont partis reste chez le chef.
-- L'enfant n'obéit à aucun ordre, même « suis-moi » ou « rentre » (il joue près du poste ou de ses parents) ; seuls « apprends le métier de X » et les questions passent.
+- **À dire à KOLRAX : les enfants comptent dans le plafond de PNJ par joueur** (`pnj_max_par_joueur`, 30 sur le serveur). Une famille nombreuse prend des places d'ouvriers ; quand la colonie est au plafond, plus aucune naissance. Ils ne comptent pas dans le surcoût des salaires. À lui de dire s'il préfère un plafond à part pour les enfants.
+- **Renvoi** : renvoyer un parent n'emmène pas l'enfant. Un enfant (moins de 12 ans) ne peut être ni renvoyé (il le dit) ni embauché par un autre ; un apprenti, si. Un enfant dont les deux parents sont partis reste chez le chef.
+- L'enfant n'obéit à aucun ordre, même « suis-moi » ou « rentre » (il joue près du poste ou de ses parents) ; seuls « apprends le métier de X » et les questions passent. Un mineur (moins de 16 ans) refuse tout ordre de se battre, n'entre pas dans l'armée, ne garde ni le chef ni le dépôt et ne se révolte pas les armes à la main ; un apprenti guerrier se défend quand même contre un monstre.
 - Les enfants peuvent être pris pour une causerie (`Causeries`) avec des répliques d'adultes ; pas de conversations propres aux enfants.
 - L'apprenti garde les étoiles gagnées en apprenant (★★ possible avant 16 ans, l'expérience va 1,5 fois plus vite) ; le cahier disait « ★ à 16 ans ».
 - Le nom de famille (`memoire.famille`, le prénom d'un parent) n'apparaît que sur la fiche et dans les réponses, pas au-dessus de la tête. Les couples de deux hommes n'ont pas d'enfant ; pas d'adoption.

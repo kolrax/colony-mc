@@ -76,7 +76,7 @@ public class TestsFamille {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         Bureau.Entite poste = TestsMessages.poste(h, chef);
         Travailleur raoul = ouvrier(h, chef, poste, "Raoul", "bucheron", 30, 3.5);
-        Travailleur agnes = ouvrier(h, chef, poste, "Agnès", "mineur", 28, 5.5);
+        Travailleur agnes = ouvrier(h, chef, poste, "Agnès", "mineur", 28, 8.5); // à quatre blocs et demi du poste
         Relations.unir(raoul, agnes);
         // Raoul ne porte pas l'enfant : rien ne se passe de son côté.
         raoul.ageLe -= 1200;
@@ -86,9 +86,10 @@ public class TestsFamille {
         Famille.veiller(agnes);
         List<Ages.Proche> enfants = Ages.lire(agnes.memoire.getString("enfants"));
         h.assertTrue(enfants.size() == 1, "un enfant est né : " + agnes.memoire);
-        Travailleur e = h.getLevel().getEntitiesOfClass(Travailleur.class, agnes.getBoundingBox().inflate(4),
+        Travailleur e = h.getLevel().getEntitiesOfClass(Travailleur.class, agnes.getBoundingBox().inflate(8),
                 x -> x.getStringUUID().equals(enfants.get(0).id())).stream().findFirst().orElse(null);
-        h.assertTrue(e != null, "l'enfant est là, près de sa mère");
+        h.assertTrue(e != null, "l'enfant est là");
+        h.assertTrue(e.position().distanceTo(Vec3.atBottomCenterOf(poste.getBlockPos())) < 2, "il voit le jour au poste, pas au fond d'une mine : " + e.position());
         h.assertTrue(e.chef.equals(chef.getUUID()) && e.mode == Travailleur.Mode.TRAVAIL && e.age < 1, "du même chef, nouveau-né : " + e.age);
         h.assertTrue(Math.abs(e.getAttributeValue(Attributes.SCALE) - 0.5) < 0.01 && e.getBbHeight() < 1.2, "petit : " + e.getAttributeValue(Attributes.SCALE) + ", " + e.getBbHeight());
         h.assertTrue(e.metier.equals("bucheron") || e.metier.equals("mineur"), "le métier d'un parent : " + e.metier);
@@ -129,6 +130,10 @@ public class TestsFamille {
         h.assertTrue(!t.paieDue(), "pas de paie pour un enfant");
         String r = t.appliquer(Ordres.lire("Thibaut, ramène-moi 10 fers.", t.metier), chef);
         h.assertTrue(t.missions.isEmpty() && Vie.vient("enfant_ordre", r), "pas d'ordre de travail : " + r + " ; " + t.missions.size());
+        r = t.appliquer(Ordres.lire("Thibaut, je te renvoie.", t.metier), chef);
+        h.assertTrue(t.chef != null && t.memoire.getLong("renvoi") == 0 && Vie.vient("enfant_renvoi", r), "on ne renvoie pas un enfant : " + r);
+        r = Consignes.ordonner(t, new Ordres.Faire("se_former", "", 0, 0, false), chef, "va te former", 0, 1);
+        h.assertTrue(t.memoire.getLong("formation_fin") == 0 && r.contains("trop jeune"), "pas de formation payée avant douze ans : " + r);
         r = t.appliquer(Ordres.lire("Apprends le métier de bûcheron", t.metier), chef);
         h.assertTrue(t.metier.equals("bucheron"), "il apprendra le métier de bûcheron : " + r);
         r = t.appliquer(Ordres.lire("Quel âge as-tu ?", t.metier), chef);
@@ -148,6 +153,14 @@ public class TestsFamille {
         double apprenti = t.facteurTravail();
         long demiPaie = t.salaireDemande();
         h.assertTrue(t.getCustomName().getString().contains("Apprenti"), "« Apprenti mineur » : " + t.getCustomName().getString());
+        // Un mineur ne se bat pas sur ordre, ne se révolte pas les armes à la main.
+        t.metier = "guerrier";
+        String r = t.appliquer(Ordres.lire("Attaque quiconque me frappe.", t.metier), chef);
+        h.assertTrue(!Famille.arme(t) && !t.memoire.contains("garde_chef") && Vie.vient("mineur_combat", r), "trop jeune pour frapper : " + r);
+        t.memoire.putBoolean("revolte", true);
+        h.assertTrue(!Humeur.revolter(t) && !t.memoire.getBoolean("revolte"), "pas de révolte armée");
+        t.metier = "mineur";
+        t.majNom();
         Famille.vieillir(t, 0.2);
         Famille.veiller(t);
         h.assertTrue(t.age >= 16 && Ages.etape(t.age) == Ages.Etape.ADULTE, "seize ans : " + t.age);
@@ -157,6 +170,64 @@ public class TestsFamille {
         h.assertTrue(t.niveau >= 1 && !t.getCustomName().getString().contains("Apprenti"), "un ouvrier ★ : " + t.getCustomName().getString());
         h.assertTrue(t.paroles.stream().anyMatch(s -> s.contains("Seize ans") || s.contains("seize ans") || Vie.vient("adulte", s)), "il le dit : " + t.paroles);
         t.discard();
+        h.succeed();
+    }
+
+    /**
+     * Relecture : ni un apprenti ni un proche (frère et sœur) ne se mettent en couple, même grands amis depuis longtemps ;
+     * deux inconnus, si (le décor du test marche).
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "famille")
+    public static void pasDeCoupleNiMineurNiProche(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite poste = TestsMessages.poste(h, chef);
+        Travailleur a = ouvrier(h, chef, poste, "Thibaut", "mineur", 14, 3.5), b = ouvrier(h, chef, poste, "Isabeau", "mineur", 14, 4.5);
+        h.assertTrue(!couple(a, b), "deux apprentis de 14 ans : pas de couple (" + a.memoire.getString(Relations.CLE) + ")");
+        Travailleur c = ouvrier(h, chef, poste, "Godefroy", "mineur", 30, 6.5), d = ouvrier(h, chef, poste, "Blanche", "mineur", 30, 7.5);
+        String parents = Ages.texte(List.of(new Ages.Proche("00000000-0000-0000-0000-000000000001", "Raoul")));
+        c.memoire.putString("parents", parents);
+        d.memoire.putString("parents", parents);
+        h.assertTrue(!couple(c, d), "frère et sœur : pas de couple");
+        d.memoire.remove("parents");
+        h.assertTrue(couple(c, d), "deux inconnus, grands amis depuis cinq jours : en couple");
+        for (Travailleur x : List.of(a, b, c, d)) x.discard();
+        h.succeed();
+    }
+
+    /** Grands amis depuis cinq jours, côte à côte, puis le bilan des liens : sont-ils en couple ? */
+    static boolean couple(Travailleur a, Travailleur b) {
+        long jour = a.jour() - 5;
+        for (Travailleur[] x : new Travailleur[][]{{a, b}, {b, a}}) {
+            Liens l = Relations.de(x[0]);
+            l.changer(x[1].getStringUUID(), x[1].prenom, 100, jour);
+            Relations.garder(x[0], l);
+        }
+        Relations.bilan(a);
+        return a.getStringUUID().equals(Relations.de(b).conjoint()) || b.getStringUUID().equals(Relations.de(a).conjoint());
+    }
+
+    /** Relecture : de 11 ans à 16 d'un coup (une longue absence), il passe tous les seuils et touche sa paie ; même familles coupées. */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "famille")
+    public static void dOnzeASeizeAnsDUnCoup(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Bureau.Entite poste = TestsMessages.poste(h, chef);
+        Travailleur t = ouvrier(h, chef, poste, "Perceval", "mineur", 11.9, 3.5);
+        t.memoire.putString("parents", Ages.texte(List.of(new Ages.Proche("00000000-0000-0000-0000-000000000002", "Agnès"))));
+        t.prochainePaie = Monnaie.SANS_PAIE; // né dans la colonie : pas de paie
+        Famille.vieillir(t, 4.3);
+        Famille.veiller(t);
+        h.assertTrue(t.age >= 16 && t.prochainePaie != Monnaie.SANS_PAIE, "seize ans, et payé : " + t.age + ", " + t.prochainePaie);
+        h.assertTrue(Math.abs(t.getAttributeValue(Attributes.SCALE) - 1) < 0.01, "à sa taille d'adulte");
+        // Familles coupées : l'enfant est traité en ouvrier ; il doit être payé.
+        Travailleur e = ouvrier(h, chef, poste, "Ysolde", "mineur", 6, 5.5);
+        e.memoire.putString("parents", t.memoire.getString("parents"));
+        e.prochainePaie = Monnaie.SANS_PAIE;
+        Reglages.actuel.familles = false;
+        try { Famille.veiller(e); }
+        finally { Reglages.actuel.familles = true; }
+        h.assertTrue(e.prochainePaie != Monnaie.SANS_PAIE, "familles coupées : sa paie reprend");
+        t.discard();
+        e.discard();
         h.succeed();
     }
 

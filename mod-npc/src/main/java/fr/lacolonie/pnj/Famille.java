@@ -66,22 +66,25 @@ final class Famille {
     // --- Le temps qui passe (une fois par minute) ---------------------------------------------------------------------
 
     static void veiller(Travailleur t) {
-        if (!actives() || t.chef == null || t.aTerre || !(t.level() instanceof ServerLevel)) return;
+        if (t.chef == null || t.aTerre || !(t.level() instanceof ServerLevel)) return;
+        paie(t); // même familles coupées : un enfant devenu ouvrier est payé
+        if (!actives()) return;
         long maintenant = t.level().getGameTime();
         if (t.age < 0) naitreAdulte(t, 20, 45);
         if (t.ageLe == 0 || maintenant < t.ageLe) { t.ageLe = maintenant; return; }
         double avant = t.age;
         t.age = Ages.avancer(avant, maintenant - t.ageLe, reglage());
         t.ageLe = maintenant;
-        int seuil = Ages.passage(avant, t.age);
-        if (seuil > 0 || Ages.etape(avant) == Ages.Etape.ENFANT) appliquer(t); // il grandit
-        switch (seuil) {
-            case Ages.APPRENTI -> apprenti(t, avant);
-            case Ages.ADULTE -> adulte(t);
-            case Ages.VIEUX -> vieux(t, true);
-            case Ages.TRES_VIEUX -> vieux(t, false);
-            default -> {}
-        }
+        List<Integer> seuils = Ages.passages(avant, t.age);
+        if (!seuils.isEmpty() || avant < Ages.ADULTE) appliquer(t); // il grandit jusqu'à seize ans
+        for (int seuil : seuils) // tous les seuils franchis (une longue absence : de 11 à 16 ans d'un coup)
+            switch (seuil) {
+                case Ages.APPRENTI -> apprenti(t, avant);
+                case Ages.ADULTE -> adulte(t);
+                case Ages.VIEUX -> vieux(t, true);
+                case Ages.TRES_VIEUX -> vieux(t, false);
+                default -> {}
+            }
         boolean repos = !t.enService() || t.isSleeping() || t.action instanceof Actions.Reposer;
         if (Ages.fin(t.age, t.ageFin, repos) && !t.menace()) { eteindre(t); return; }
         naissance(t, false);
@@ -93,7 +96,16 @@ final class Famille {
         String metier = Metier.nom(t.metier).toLowerCase();
         if (!Besoins.dire(t, "apprenti_debut", null, metier)) t.dire("Me voilà en âge d'apprendre le métier de " + metier + " !");
         Courrier.ecrire(t, "apprenti", metier);
-        t.prochainePaie = System.currentTimeMillis() + Travailleur.periodePaie(); // sa première demi-paie, au prochain terme
+        paie(t); // sa première demi-paie, au prochain terme
+    }
+
+    /**
+     * Né dans la colonie (il a des parents), il n'est plus un enfant et n'avait pas de paie ({@link Monnaie#SANS_PAIE}) :
+     * elle reprend au prochain terme. Pas les ouvriers des tests et du banc, qui n'ont pas de parents.
+     */
+    static void paie(Travailleur t) {
+        if (t.prochainePaie == Monnaie.SANS_PAIE && !enfant(t) && t.memoire.contains("parents"))
+            t.prochainePaie = System.currentTimeMillis() + Travailleur.periodePaie();
     }
 
     /** 16 ans : un ouvrier comme les autres, ★ au moins ; une chance sur deux d'un talent de ses parents. */
@@ -107,6 +119,7 @@ final class Famille {
             appliquer(t);
         }
         t.niveau = Math.max(1, t.niveau);
+        paie(t);
         t.majNom();
         String metier = Metier.nom(t.metier).toLowerCase();
         if (!Besoins.dire(t, "adulte", null, metier)) t.dire("Seize ans ! Le métier de " + metier + " est le mien pour de bon.");
@@ -161,7 +174,9 @@ final class Famille {
         Travailleur e = ColoniePnj.TRAVAILLEUR.get().create(sl);
         if (e == null) return null;
         var r = mere.getRandom();
-        e.moveTo(mere.getX(), mere.getY(), mere.getZ(), mere.getYRot(), 0);
+        Vec3 lieu = auPoste(sl, mere.bureau);
+        if (lieu == null) lieu = mere.position();
+        e.moveTo(lieu.x, lieu.y, lieu.z, mere.getYRot(), 0);
         e.tirerAuSort(Ages.metierHerite(mere.metier, autre.metier, r.nextDouble()), 1);
         e.talents = List.of(); // ses talents viendront avec l'âge (Ages.talentHerite)
         e.age = 0;
@@ -196,6 +211,32 @@ final class Famille {
         Besoins.dire(mere, "naissance", e.prenom);
         Courrier.ecrire(mere, "naissance", e.prenom, autre.prenom);
         return e;
+    }
+
+    /** Une place libre à côté du poste (deux blocs d'air sur un sol), là où l'enfant voit le jour ; null s'il n'y en a pas. */
+    static Vec3 auPoste(ServerLevel sl, BlockPos poste) {
+        if (poste == null || !sl.isLoaded(poste)) return null;
+        for (int dy : new int[]{0, -1, 1})
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                BlockPos p = poste.relative(d).above(dy);
+                if (sl.getBlockState(p).getCollisionShape(sl, p).isEmpty() && sl.getBlockState(p.above()).getCollisionShape(sl, p.above()).isEmpty()
+                        && sl.getBlockState(p.below()).isFaceSturdy(sl, p.below(), net.minecraft.core.Direction.UP)) return Vec3.atBottomCenterOf(p);
+            }
+        return null;
+    }
+
+    /** Ces deux-là ne se mettent jamais en couple : un mineur (moins de 16 ans), ou des proches (parent, enfant, frère ou sœur). */
+    static boolean pasDeCouple(Travailleur a, Travailleur b) {
+        if (!actives()) return false;
+        if (mineur(a) || mineur(b)) return true;
+        return Ages.proches(a.getStringUUID(), a.memoire.getString("parents"), a.memoire.getString("enfants"),
+                b.getStringUUID(), b.memoire.getString("parents"), b.memoire.getString("enfants"));
+    }
+
+    /** Il peut porter les armes contre un homme : un combattant, pas un mineur. */
+    static boolean arme(Travailleur t) {
+        Metier m = Metier.de(t.metier);
+        return m != null && m.combattant && !mineur(t);
     }
 
     // --- La famille et le moral ------------------------------------------------------------------------------------------
@@ -264,6 +305,13 @@ final class Famille {
             String nom = Metier.nom(m).toLowerCase();
             String s = Besoins.texte(t, enfant(t) ? "enfant_metier" : "apprenti_metier", null, nom);
             return s != null ? s : change ? "Oui, chef ! J'apprendrai le métier de " + nom + "." : "C'est déjà le métier que j'apprends, chef.";
+        }
+        // Un mineur ne se bat pas sur ordre (ni joueur, ni bête) : « trop jeune ».
+        boolean combat = l.faire.stream().anyMatch(f -> { Repertoire.Entree x = Repertoire.PAR_ID.get(f.id()); return x != null && x.comportement().equals("combat"); })
+                || l.posture == GardeChef.Posture.ATTAQUE || l.depot == GardeChef.Posture.ATTAQUE;
+        if (combat) {
+            String s = Besoins.texte(t, "mineur_combat", null, null);
+            return s != null ? s : "Je suis trop jeune pour me battre, chef. Demande aux grands.";
         }
         if (!enfant(t) || Obeissance.sansOrdre(l) && l.faire.isEmpty()) return null;
         String s = Besoins.texte(t, "enfant_ordre", null, null);

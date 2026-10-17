@@ -77,6 +77,13 @@ final class Ages {
         return r;
     }
 
+    /** Tous les seuils franchis entre deux âges, dans l'ordre (de 11,9 à 16,2 : 12 puis 16). */
+    static List<Integer> passages(double avant, double apres) {
+        List<Integer> l = new ArrayList<>();
+        for (int s : new int[]{APPRENTI, ADULTE, VIEUX, TRES_VIEUX}) if (avant < s && apres >= s) l.add(s);
+        return l;
+    }
+
     /** Sa taille : la moitié d'un adulte à la naissance, puis il grandit jusqu'à 16 ans. */
     static double echelle(double age) { return 0.5 + 0.5 * Math.clamp(age, 0, ADULTE) / ADULTE; }
 
@@ -174,6 +181,13 @@ final class Ages {
     }
 
     static boolean parmi(String texte, String id) { return lire(texte).stream().anyMatch(p -> p.id().equals(id)); }
+
+    /** Parent et enfant, ou frères et sœurs (un parent en commun) : jamais en couple. Les textes : « parents », « enfants ». */
+    static boolean proches(String idA, String parentsA, String enfantsA, String idB, String parentsB, String enfantsB) {
+        if (parmi(parentsA, idB) || parmi(enfantsA, idB) || parmi(parentsB, idA) || parmi(enfantsB, idA)) return true;
+        for (Proche p : lire(parentsA)) if (parmi(parentsB, p.id())) return true;
+        return false;
+    }
 
     /** « Raoul », « Raoul et Agnès », « Raoul, Agnès et Thibaut ». */
     static String noms(List<Proche> l) { return Liens.et(l.stream().map(Proche::nom).toList()); }
