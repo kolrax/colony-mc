@@ -982,10 +982,6 @@ public class Travailleur extends PathfinderMob {
         else if ((tickCount + getId()) % 10 == 0) { Cerveau.penser(this); mesure.mesurer(Charge.Partie.CERVEAU, h); }
     }
 
-    /**
-     * Toutes les secondes : son poste de travail (le poste de son chef, où qu'il soit), son inscription à l'effectif,
-     * la lettre qu'il tient à la main, et celles qu'il ne peut plus porter à pied (il est sorti de l'espace de vie).
-     */
     /** Son poste : celui de son chef, s'il est dans ce monde. Aussi tout de suite à l'embauche et avant une mission (sans attendre la seconde). */
     void majPoste(Courrier c) {
         Courrier.Poste p = c.poste(chef);
@@ -994,6 +990,10 @@ public class Travailleur extends PathfinderMob {
 
     void majPoste() { if (chef != null && level() instanceof ServerLevel sl) majPoste(Courrier.de(sl.getServer())); }
 
+    /**
+     * Toutes les secondes : son poste de travail (le poste de son chef, où qu'il soit), son inscription à l'effectif,
+     * la lettre qu'il tient à la main, et celles qu'il ne peut plus porter à pied (il est sorti de l'espace de vie).
+     */
     void tickCourrier() {
         if (chef == null || !(level() instanceof ServerLevel sl)) return;
         Courrier c = Courrier.de(sl.getServer());

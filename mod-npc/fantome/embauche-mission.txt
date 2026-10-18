@@ -1,0 +1,9 @@
+# Une mission donnée tout de suite après l'embauche, sans la pause d'avant : elle doit être acceptée
+# (avant la 1.0.4 : « n'a pas de poste de travail » tant que l'ouvrier n'avait pas fait son premier tour).
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 16
+fantome embauche mineur 1
+fantome mission mineur charbon fois 8
+fantome rapport embauche-mission
