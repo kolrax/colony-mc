@@ -142,6 +142,31 @@ public class Reglages {
     public String jeton_panneau = "";
     /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
     public boolean fantome = false;
+    /** Trajets (plan A2) : immobile depuis tant de ticks sans être arrivé (ni attendre son tour), il refait un trajet qui évite l'endroit (60 = 3 s). */
+    public int trajet_immobile_ticks = 60;
+    /** Trajets (plan A2) : l'endroit qui l'a bloqué reste évité pendant tant de ticks (600 = 30 s). */
+    public int trajet_evitement_ticks = 600;
+    /**
+     * Le mineur sous terre (corrections A4 et E3) : quand son couloir est barré ou ses galeries finies, il ouvre jusqu'à tant
+     * de galeries de côté, à son niveau, vers un nouveau coin à miner, avant de remonter creuser un autre escalier ; et quand il
+     * n'a plus de torches, il en reprend tant au dépôt.
+     */
+    public int mineur_detours = 2;
+    public int mineur_torches_prises = 16;
+    /** Fuir avant d'être à terre (plan E2) : sous cette part de sa vie, un ouvrier (pas le guerrier) lâche le travail, s'éloigne du danger et mange (0 : jamais). */
+    public double fuite_vie = 0.5;
+    /** Il reprend le travail revenu à cette part de sa vie. */
+    public double fuite_reprise = 0.8;
+    /** À cette distance (en blocs) du monstre qui l'a frappé, il se sent à l'abri. */
+    public int fuite_distance = 10;
+    /** Au plus tant de secondes à l'abri (sans rien à manger, il guérit mal) ; ensuite, pas de nouvelle fuite avant fuite_pause_secondes, sauf s'il est frappé. */
+    public int fuite_secondes_max = 120;
+    public int fuite_pause_secondes = 180;
+    /** Guérison comme un joueur : hors combat (pas frappé depuis 10 s) et nourri (faim d'au moins regen_faim), un point de vie toutes ces secondes (0 : seulement la guérison lente). */
+    public int regen_secondes = 4;
+    public int regen_faim = 15;
+    /** S'équiper (plan E3) : passé au dépôt, chaque ouvrier prend la meilleure armure qu'il y trouve, case par case. */
+    public boolean armure_depot = true;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();

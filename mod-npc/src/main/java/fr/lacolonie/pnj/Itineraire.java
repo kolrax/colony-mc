@@ -186,6 +186,7 @@ final class Itineraire {
             }
         }
         ageCourant = age;
+        if (immobile(t, age)) return;
         if (sortie != null) { t.diag = "sort de sous terre " + indexSortie + "/" + sortie.size(); suivreSortie(t, v, age); return; }
         // Une grande étendue d'eau devant lui, et un bateau dans son sac : il le met à l'eau.
         if (age % 20 == 0 && age >= bateauPas && embarquer(t)) return;
@@ -202,7 +203,10 @@ final class Itineraire {
                 if (direct.canReach()) t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v);
                 return;
             }
-            if (age % 20 == 0 || nav.isDone() && age - directDate >= RECALCUL) {
+            // Un chemin complet qu'il suit encore n'est pas recalculé (plan A1 : pas d'hésitation) : Minecraft le refait de
+            // lui-même si un bloc change dessus, et un arrêt sur place est vu par immobile().
+            boolean suit = !nav.isDone() && direct != null && direct.canReach() && nav.getPath() == direct;
+            if (age % 20 == 0 && !suit || nav.isDone() && age - directDate >= RECALCUL) {
                 if (!t.onGround() && !t.isInWater()) return;
                 directDate = age;
                 Path c = chercher(t, BlockPos.containing(but), 0, Charge.Origine.DIRECT);
@@ -462,6 +466,86 @@ final class Itineraire {
             r.add(b.toString());
         }
         return r;
+    }
+
+    // --- Immobile sans être arrivé (plan A2) -------------------------------------------------------
+
+    /** Où il était au début de l'arrêt en cours, et depuis quand (âge de l'action). */
+    private Vec3 repere;
+    private int repereAge;
+
+    /**
+     * Il n'a presque pas bougé (moins d'un demi-bloc) depuis {@link Reglages#trajet_immobile_ticks} ticks, sans être arrivé
+     * ni attendre son tour pour chercher une étape (ce n'est pas être coincé), ni se tenir au bout d'un chemin accepté
+     * (le but est de l'autre côté d'un trou) : quelque chose que le calcul croit franchissable le retient (une noix de coco
+     * d'un autre mod, une souche). Il évite cet endroit un moment et refait son trajet. Vrai s'il vient de le faire.
+     * Le déblocage par pilier et pont, puis le retour au poste ({@link Coince}), restent derrière.
+     */
+    private boolean immobile(Travailleur t, int age) {
+        Vec3 p = t.position();
+        var nav = t.getNavigation();
+        if (repere == null || horizontale(p, repere) >= 0.5 || t.onClimbable() || Math.abs(p.y - repere.y) >= 1.5 || attend(t.level().getGameTime()) || p.distanceToSqr(but) < 2.25
+                || nav.isDone() && auBout(t, direct)) { repere = p; repereAge = age; return false; }
+        // Sans chemin en cours, il ne cherche pas à marcher (il choisit, il attend, il pose) : seulement quand il en suit un.
+        if (age - repereAge < Math.max(20, Reglages.actuel.trajet_immobile_ticks) || nav.isDone()) return false;
+        repere = p;
+        repereAge = age;
+        if (!(nav.getNodeEvaluator() instanceof Evaluateur e)) return false;
+        // L'endroit qui le retient : le prochain point de son chemin, et le bloc devant lui (vers ce point, ou vers le but),
+        // à hauteur des pieds et de la tête. Jamais sa propre place, ni le but.
+        BlockPos ici = t.blockPosition(), viseBut = BlockPos.containing(but);
+        List<BlockPos> obstacles = new ArrayList<>();
+        Path c = nav.getPath();
+        Vec3 vers = etape != null ? etape : but;
+        if (c != null && !c.isDone()) {
+            BlockPos n = c.getNextNodePos();
+            if (n.equals(ici) && c.getNextNodeIndex() + 1 < c.getNodeCount()) n = c.getNodePos(c.getNextNodeIndex() + 1);
+            obstacles.add(n);
+            vers = Vec3.atBottomCenterOf(n);
+        }
+        Vec3 cap = vers.subtract(p).multiply(1, 0, 1);
+        if (cap.lengthSqr() > 1e-4) obstacles.add(BlockPos.containing(p.add(cap.normalize().scale(0.9))));
+        long maintenant = t.level().getGameTime();
+        BlockPos premier = null;
+        for (BlockPos o : obstacles)
+            for (BlockPos q : List.of(o, o.above())) {
+                // Quelqu'un se tient là (un autre ouvrier, une bête) : il s'en ira, ce n'est pas un endroit à éviter.
+                if (q == o && occupe(t, o.below())) break;
+                if (q.getX() == ici.getX() && q.getZ() == ici.getZ() || q.equals(viseBut) || q.equals(viseBut.above())) continue;
+                e.eviter(q, maintenant, maintenant + Reglages.actuel.trajet_evitement_ticks);
+                if (premier == null) premier = q;
+            }
+        if (premier == null) return false;
+        nav.stop();
+        direct = null;
+        directDate = -1000;
+        chemin = null;
+        etape = null;
+        if (phase >= 0) finChoix();
+        t.diag = "évite " + premier.toShortString();
+        Cerveau.dire(t, "detour", 600, "Quelque chose me barre la route : je passe ailleurs.");
+        return true;
+    }
+
+    /** La marche de Minecraft, qui tient pour murs les endroits qu'il a décidé d'éviter (plan A2), jusqu'à la fin de l'évitement. */
+    static final class Evaluateur extends net.minecraft.world.level.pathfinder.WalkNodeEvaluator {
+        private final Map<Long, Long> evites = new HashMap<>();
+
+        Evaluateur() { setCanPassDoors(true); } // comme celui de Minecraft pour la marche
+
+        void eviter(BlockPos q, long maintenant, long fin) {
+            if (evites.size() > 64) evites.values().removeIf(f -> f <= maintenant);
+            evites.put(q.asLong(), fin);
+        }
+
+        @Override
+        public net.minecraft.world.level.pathfinder.PathType getPathType(net.minecraft.world.level.pathfinder.PathfindingContext c, int x, int y, int z) {
+            if (!evites.isEmpty() && mob != null) {
+                Long f = evites.get(BlockPos.asLong(x, y, z));
+                if (f != null && f > mob.level().getGameTime()) return net.minecraft.world.level.pathfinder.PathType.BLOCKED;
+            }
+            return super.getPathType(c, x, y, z);
+        }
     }
 
     // --- Sortir de sous terre ------------------------------------------------------------------------

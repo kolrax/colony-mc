@@ -310,6 +310,23 @@ final class Guerrier extends Metier {
     }
 
     /**
+     * La meilleure pièce d'armure du dépôt, case par case, si elle protège mieux que celle qu'il porte. Sans {@code faire}, il
+     * regarde seulement (vrai s'il y a quelque chose à prendre) ; avec, il l'enfile et la sienne retourne au dépôt (ou à la
+     * réserve s'il est plein ; sinon dans son sac). Aussi pour tous les ouvriers ({@link Metier#armureAuDepot}).
+     */
+    static boolean armure(Travailleur t, Bureau.Entite b, boolean faire) {
+        boolean mieux = false;
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            ItemStack porte = t.getItemBySlot(slot);
+            ItemStack piece = auDepot(b, s -> protection(s, slot), protection(porte, slot), faire);
+            if (piece.isEmpty()) continue;
+            mieux = true;
+            if (faire) { t.setItemSlot(slot, piece); rendre(t, b, porte); }
+        }
+        return mieux;
+    }
+
+    /**
      * Ce que le dépôt a de mieux pour lui : une meilleure arme de mêlée, une meilleure pièce d'armure par case, un arc (ou
      * une arbalète) s'il n'en a pas, des flèches, des potions de soin. Sans {@code faire}, il regarde seulement (vrai s'il y a
      * quelque chose à prendre) ; avec, il échange : ce qu'il remplace va au dépôt. Rien ne se perd, rien ne se crée.
@@ -335,13 +352,7 @@ final class Guerrier extends Metier {
             }
         }
         // L'armure, case par case.
-        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-            ItemStack porte = t.getItemBySlot(slot);
-            ItemStack piece = auDepot(b, s -> protection(s, slot), protection(porte, slot), faire);
-            if (piece.isEmpty()) continue;
-            mieux = true;
-            if (faire) { t.setItemSlot(slot, piece); rendre(t, b, porte); }
-        }
+        if (armure(t, b, faire)) mieux = true;
         // Un bouclier à la main gauche, s'il a la main libre (refonte, partie 6).
         if (t.getOffhandItem().isEmpty()) {
             ItemStack bouclier = auDepot(b, s -> s.getItem() instanceof net.minecraft.world.item.ShieldItem ? 1 : 0, 0, faire);
