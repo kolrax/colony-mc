@@ -71,6 +71,8 @@ public class TestsTransporteur {
                     "tout au dépôt : fer " + TestsBucheron.compte(d, Items.IRON_INGOT) + ", pierre " + TestsBucheron.compte(d, Items.COBBLESTONE) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             h.assertTrue(compte(c, Items.IRON_INGOT) == 0 && compte(c, Items.COBBLESTONE) == 0, "le coffre est vide");
             h.assertTrue(sac(t, Items.IRON_INGOT) == 0 && parTerre(l, b[0]) == 0, "rien sur lui ni par terre");
+            // Crash du 18/10 : arrivé au dépôt, il faisait charger le chunk de BlockPos.of(DEPOT), aux confins du monde.
+            h.assertFalse(l.hasChunkAt(BlockPos.of(Trajets.DEPOT)), "aucun chunk chargé aux confins du monde");
             t.discard();
         });
     }
