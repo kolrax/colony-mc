@@ -23,7 +23,7 @@ import java.util.UUID;
 /**
  * Le transporteur (lot 6) : un trajet coffre → dépôt vide le coffre, un objet dit seulement, une destination pleine (lettre,
  * rien de perdu), le coffre d'un voisin refusé, un coffre cassé (lettre, trajet suspendu), et l'ordre du chef qui regarde un
- * coffre. Chaque test dans son coin du monde plat (coins 190 à 195).
+ * coffre. Chaque test dans son coin du monde plat (coins 190 à 196).
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -260,5 +260,21 @@ public class TestsTransporteur {
             h.assertTrue(compte(c, Items.IRON_INGOT) == 10, "le coffre de l'ancien chef reste plein : " + compte(c, Items.IRON_INGOT) + " (" + TestsJeu.etat(t, t.bureau) + ")");
             t.discard();
         });
+    }
+
+    /**
+     * Plantage du serveur du 18/10 (16 h 53 UTC) : en ouvrant le dépôt, le transporteur jouait le son du coffre à la position
+     * codée du dépôt ({@link Trajets#DEPOT}, à 33 millions de blocs), et lire ce bloc faisait générer le terrain là-bas. Le son
+     * d'un coffre ne charge plus jamais un coin du monde.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void sonDuDepotSansChargerLeMonde(GameTestHelper h) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, 196, b);
+        BlockPos loin = BlockPos.of(Trajets.DEPOT);
+        Sons.coffre(t, loin);
+        h.assertFalse(h.getLevel().hasChunk(loin.getX() >> 4, loin.getZ() >> 4), "le coin du dépôt codé (" + loin.toShortString() + ") a été chargé");
+        t.discard();
+        h.succeed();
     }
 }
