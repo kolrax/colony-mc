@@ -79,12 +79,15 @@ final class Armee {
      * de lui, que ses camarades de la zone frappent le moins ({@link Guerre#cible}) ; un autre ouvrier, le plus proche (pour
      * fuir, prévenir la garde). Une seule recherche, au moment de choisir.
      */
-    static LivingEntity ennemi(Travailleur t, AABB zone) {
+    static LivingEntity ennemi(Travailleur t, AABB zone) { return ennemi(t, zone, e -> true); }
+
+    /** Comme {@link #ennemi(Travailleur, AABB)}, parmi les seuls ennemis {@code admis}. */
+    static LivingEntity ennemi(Travailleur t, AABB zone, java.util.function.Predicate<LivingEntity> admis) {
         Map<UUID, String> en = ennemis(t);
         if (en.isEmpty()) return null;
         List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, zone, e -> e != t);
         List<LivingEntity> vus = new ArrayList<>();
-        for (LivingEntity e : autour) if (ennemi(t, en, e) && t.getSensing().hasLineOfSight(e)) vus.add(e);
+        for (LivingEntity e : autour) if (ennemi(t, en, e) && admis.test(e) && t.getSensing().hasLineOfSight(e)) vus.add(e);
         if (vus.size() < 2) return vus.isEmpty() ? null : vus.get(0);
         double[] d = new double[vus.size()];
         int[] n = new int[vus.size()];
@@ -98,9 +101,12 @@ final class Armee {
         return vus.get(Guerre.cible(d, n));
     }
 
-    /** Un ennemi qu'un ouvrier a signalé : un autre tout près de lui, que ses camarades frappent moins, s'il en voit un ; sinon lui. */
+    /**
+     * Un ennemi qu'un ouvrier a signalé : un autre tout près de lui, que ses camarades frappent moins, s'il en voit un chez nous
+     * (dans l'espace de vie, comme celui qu'on signale : {@link #fuir}) et qu'il peut atteindre ; sinon lui.
+     */
     static LivingEntity aupres(Travailleur t, LivingEntity signale) {
-        LivingEntity e = ennemi(t, signale.getBoundingBox().inflate(8, 4, 8));
+        LivingEntity e = ennemi(t, signale.getBoundingBox().inflate(8, 4, 8), x -> t.chezLui(x.blockPosition()) && !t.inaccessibles.containsKey(x.getId()));
         return e != null ? e : signale;
     }
 

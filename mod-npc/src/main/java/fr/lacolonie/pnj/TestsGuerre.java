@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -261,6 +262,49 @@ public class TestsGuerre {
             h.assertTrue(plus[0] >= 4, "chacun son homme : " + vu);
             h.succeed();
         });
+    }
+
+    /**
+     * Un ouvrier signale un ennemi A à la garde ; un autre ennemi B, plus près du garde, se tient à côté de A. La veille du
+     * garde ({@link Guerrier#veille}) est lue directement, garde et ouvriers immobiles ; {@code avant} prépare B (et le garde).
+     */
+    static void signale(GameTestHelper h, int coin, java.util.function.BiConsumer<TestsChef.Scene, Travailleur> avant) {
+        TestsChef.Scene s = TestsChef.scene(h, coin);
+        Rival r = rival(h, s, coin, loin(h, coin), 20.5, 20.5);
+        Travailleur b = Travailleur.auTravail(h.getLevel(), "mineur", r.poste(), new Vec3(s.b().getX() + 20.5, s.b().getY(), s.b().getZ() + 22.5), r.chef(), ItemStack.EMPTY);
+        b.chefNom = r.nom();
+        Travailleur o = s.ouvrier("mineur", 8.5, 8.5, ItemStack.EMPTY);
+        for (Travailleur w : List.of(r.o(), b, o, s.g())) w.mode = Travailleur.Mode.ATTENDRE;
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        Armee.declarer(s.chef(), r.chef().toString());
+        h.runAtTickTime(h.getTick() + 10, () -> {
+            Travailleur g = s.g();
+            g.teleportTo(s.b().getX() + 1.5, s.b().getY(), s.b().getZ() + 4.5);
+            r.o().teleportTo(s.b().getX() + 6.5, s.b().getY(), s.b().getZ() + 4.5); // A, signalé, à 5 blocs du garde
+            b.teleportTo(s.b().getX() + 3.5, s.b().getY(), s.b().getZ() + 4.5); // B, à 3 blocs de A et 2 du garde
+            o.teleportTo(s.b().getX() + 8.5, s.b().getY(), s.b().getZ() + 8.5);
+            avant.accept(s, b);
+            Defense.signaler(o, r.o());
+            g.memoire.remove("veille");
+            LivingEntity m = Guerrier.veille(g, false);
+            String vu = m == null ? "personne" : m == r.o() ? "A" : m == b ? "B" : m.getName().getString();
+            r.finir(s, b, o);
+            h.assertTrue(m == r.o(), "il va sur l'ennemi signalé, A (et non " + vu + ")");
+            h.succeed();
+        });
+    }
+
+    /** L'autre ennemi, près de celui qu'on lui a signalé, lui est inaccessible : il garde l'ennemi signalé au lieu de passer outre. */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void signaleSiLAutreEstInaccessible(GameTestHelper h) {
+        signale(h, 329, (s, b) -> s.g().inaccessibles.put(b.getId(), h.getLevel().getGameTime() + 1200));
+    }
+
+    /** L'autre ennemi, près de celui qu'on lui a signalé, est hors de l'espace de vie de la colonie : il garde l'ennemi signalé. */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void signaleSiLAutreEstDehors(GameTestHelper h) {
+        // Son poste (sans bloc), 55 blocs à l'est de la scène : A est à 49 blocs (chez nous), B à 52 (dehors).
+        signale(h, 330, (s, b) -> s.g().bureau = s.b().offset(55, 0, 4));
     }
 
     /** En plein combat, sous 30 % de sa vie : il rompt et recule jusqu'au poste. */
