@@ -84,6 +84,29 @@ public class TestsDeblocage {
     }
 
     /**
+     * Plan A3 (montagne) : au fond d'un puits de pierre naturelle de 3 blocs, sans pioche, de la terre en poche, son bureau
+     * en haut. Avant, il creusait un escalier dans la pierre à mains nues (7 s par bloc, rien de récolté). Maintenant il
+     * monte sur des blocs de terre posés sous lui, sans toucher à la pierre, et les reprend tous une fois en haut.
+     */
+    @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true)
+    public static void monteSurSesBlocsSansPioche(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++)
+            if (x != 12 || z != 12 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.DIRT, 16), new BlockPos(12, 7, 4));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", terre " + t.compter(Actions.Filtre.de("minecraft:dirt"));
+            int pierres = 0;
+            for (int x = 9; x <= 15; x++) for (int z = 9; z <= 15; z++) for (int y = 4; y <= 6; y++)
+                if (h.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) pierres++;
+            h.assertTrue(pierres == 7 * 7 * 3 - 3, "il ne doit pas creuser la pierre à mains nues (" + pierres + " pierres, " + e + ")");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + e + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:dirt")) == 16, "il doit avoir repris toute sa terre (" + e + ")");
+            t.discard();
+        });
+    }
+
+    /**
      * Sur un îlot de pierre de 3 x 3, entouré d'une douve vide d'un bloc de large et de 10 de profondeur (trop haut pour
      * sauter), de la pierre en poche, son bureau de l'autre côté : il pose un bloc de pont et passe.
      */

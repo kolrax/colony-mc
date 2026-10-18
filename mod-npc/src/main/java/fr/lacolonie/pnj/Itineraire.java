@@ -335,6 +335,9 @@ final class Itineraire {
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
+        // Plan A3 : la paroi devant lui ne se récolte pas avec ce qu'il a (de la pierre sans pioche) : la creuser serait long
+        // et ne rendrait rien. Il monte d'abord sur des blocs de son sac (qu'il reprend ensuite), puis creuse s'il le faut.
+        if (evasionPermise(t) && sansOutilPourLaParoi(t) && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -709,6 +712,12 @@ final class Itineraire {
         aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
         if (aCreuser == null && !reprise) monter(t);
         if (aCreuser == null) reprise = false;
+    }
+
+    /** La paroi devant lui, vers le but, n'est pas vide et il n'a rien pour la récolter (de la pierre, sans pioche). */
+    private boolean sansOutilPourLaParoi(Travailleur t) {
+        BlockPos q = t.blockPosition().relative(Direction.getNearest(but.x - t.getX(), 0, but.z - t.getZ())).above();
+        return !Monde.traversable(t.level(), q) && !recolte(t, t.level().getBlockState(q));
     }
 
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
