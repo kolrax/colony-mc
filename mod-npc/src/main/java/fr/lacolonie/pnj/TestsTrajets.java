@@ -133,12 +133,15 @@ public class TestsTrajets {
     @GameTest(template = "vide", timeoutTicks = 900, skyAccess = true)
     public static void passeUnePorteSansRecalculer(GameTestHelper h) {
         Travailleur t = longTrajet(h, 152000, true, 900);
+        BlockPos porte = PORTES.get(h);
+        boolean[] ouverte = {false};
         Vec3 depart = t.position(), but = Vec3.atBottomCenterOf(TestsJeu.sol(h, 100, 152000));
         int[] auDepart = {-1}, arret = {0}, depuis = {0};
         Vec3[] repere = {depart};
         h.onEachTick(() -> {
             Vec3 p = t.position();
             if (auDepart[0] < 0 && Itineraire.horizontale(p, depart) > 3) auDepart[0] = t.recherchesEtape;
+            if (h.getLevel().getBlockState(porte).getOptionalValue(net.minecraft.world.level.block.DoorBlock.OPEN).orElse(false)) ouverte[0] = true;
             if (auDepart[0] < 0 || Itineraire.horizontale(p, repere[0]) >= 0.5) { repere[0] = p; depuis[0] = 0; }
             else arret[0] = Math.max(arret[0], ++depuis[0]);
         });
@@ -148,11 +151,13 @@ public class TestsTrajets {
             h.assertTrue(t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
             t.discard();
             liberer(h);
+            h.assertTrue(ouverte[0], "il doit passer par la porte (" + e + ")");
             h.assertTrue(auDepart[0] > 0 && t.recherchesEtape == auDepart[0], "la porte ne doit pas faire recalculer son trajet (" + e + ")");
             h.assertTrue(arret[0] < 20, "il ne doit pas s'arrêter une seconde à la porte (" + e + ")");
         });
     }
 
+    static final java.util.Map<GameTestHelper, BlockPos> PORTES = new java.util.HashMap<>();
     static final java.util.Map<GameTestHelper, java.util.List<net.minecraft.world.level.ChunkPos>> FORCES = new java.util.HashMap<>();
 
     /**
@@ -177,6 +182,7 @@ public class TestsTrajets {
             for (int z = -24; z <= 24; z++) for (int y = 0; y < 3; y++) l.setBlockAndUpdate(m.offset(0, y, z), Blocks.STONE_BRICKS.defaultBlockState());
             var d = Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST);
             l.setBlock(m, d.setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2);
+            PORTES.put(h, m);
             l.setBlock(m.above(), d.setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2);
         }
         Travailleur t = TestsJeu.employe(h, "mineur", depart, Vec3.atBottomCenterOf(depart), ItemStack.EMPTY);
@@ -187,6 +193,7 @@ public class TestsTrajets {
     }
 
     static void liberer(GameTestHelper h) {
+        PORTES.remove(h);
         var forces = FORCES.remove(h);
         if (forces != null) for (var c : forces) h.getLevel().setChunkForced(c.x, c.z, false);
     }
