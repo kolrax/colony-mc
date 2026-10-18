@@ -43,4 +43,4 @@ iris client
 # --- Ajouts demandés par KOLRAX le 2026-10-18 (rapports 16, 19, 20) ---
 burnt                       # le feu brûle vraiment tout (avec GeckoLib)
 do-a-barrel-roll client     # vol en élytre façon avion
-distanthorizons             # voir loin ; la partie serveur envoie le relief déjà généré
+# distanthorizons           # retiré le 18/10 (1.0.11) : fait planter le démarrage du serveur (Chunky is not loaded), voir docs/demandes-admin.md

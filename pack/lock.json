@@ -143,19 +143,6 @@
     "server": "required"
   },
   {
-    "slug": "distanthorizons",
-    "title": "Distant Horizons",
-    "version": "3.3.3-1.21.1",
-    "file": "DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
-    "url": "https://cdn.modrinth.com/data/uCdwusMi/versions/9w34y8ai/DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
-    "sha1": "4357b4d19fab818780c94f0e43dad1cc931634b2",
-    "sha512": "d14b32d3fd143a06514d6ad388eee11e9d657c84e1a937aaf8d033b1137fb43ef8b05cff1011a994cc42f3106823c51234f8bc18d72bb05bc317a20ea83c50ed",
-    "size": 28289212,
-    "required_by": null,
-    "client": "required",
-    "server": "required"
-  },
-  {
     "slug": "do-a-barrel-roll",
     "title": "Do a Barrel Roll",
     "version": "3.7.3+1.21-neoforge",
