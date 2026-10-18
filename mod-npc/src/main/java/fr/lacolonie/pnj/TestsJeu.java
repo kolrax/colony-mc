@@ -279,6 +279,7 @@ public class TestsJeu {
         Travailleur t = ouvrier(h, "mineur", 3, 2, 4, new ItemStack(Items.IRON_PICKAXE));
         t.hurt(t.damageSources().generic(), 100);
         h.assertTrue(t.aTerre && t.isAlive(), "il doit être à terre, pas mort");
+        t.memoire.putLong(Blessures.RELEVE_SEUL, h.getLevel().getGameTime()); // plan E : déjà relevé seul tout à l'heure, il ne se relève plus
         t.aTerreTicks = 5;
         h.succeedWhen(() -> {
             h.assertFalse(t.isAlive(), "il doit être mort");

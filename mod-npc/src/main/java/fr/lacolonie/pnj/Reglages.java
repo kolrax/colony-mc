@@ -142,6 +142,13 @@ public class Reglages {
     public String jeton_panneau = "";
     /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
     public boolean fantome = false;
+    /**
+     * Se relever seul (plan E) : au bout du temps à terre, sans aide, il se relève une fois avec tant de points de vie,
+     * très gravement blessé (ralenti, au repos au poste). Retombé à terre dans les N minutes de jeu qui suivent, il ne se
+     * relève plus seul : sans aide, il meurt au bout de son temps à terre.
+     */
+    public int releve_seul_vie = 4;
+    public int releve_seul_minutes = 20;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();

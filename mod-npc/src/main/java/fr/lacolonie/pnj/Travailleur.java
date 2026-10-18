@@ -1363,6 +1363,7 @@ public class Travailleur extends PathfinderMob {
     void tickATerre() {
         getNavigation().stop();
         if (--aTerreTicks <= 0) {
+            if (Blessures.seRelever(this)) return; // plan E : la première fois, il se relève seul
             mortDefinitive = true;
             kill();
             return;
@@ -1387,6 +1388,7 @@ public class Travailleur extends PathfinderMob {
         for (Mob m : level().getEntitiesOfClass(Mob.class, getBoundingBox().inflate(32), m -> m.getTarget() == this)) m.setTarget(null);
         majNom();
         Courrier.ecrire(this, "a_terre", blockPosition().toShortString());
+        Blessures.prevenirChef(this);
         Besoins.dire(this, "a_terre", null);
         Blessures.accourir(this); // les ouvriers de son chef, tout près, viennent autour de lui
     }
@@ -1439,8 +1441,8 @@ public class Travailleur extends PathfinderMob {
     @Override
     public boolean hurt(DamageSource src, float amount) {
         if (aTerre && !level().isClientSide) {
-            // À terre : seuls un joueur (qui l'achève) ou la mort absolue (vide, /kill) peuvent l'atteindre.
-            if (!(src.getEntity() instanceof Player) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false;
+            // À terre : seuls un joueur (qui l'achève), la lave ou la mort absolue (vide, /kill) peuvent l'atteindre.
+            if (!(src.getEntity() instanceof Player) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY) && !src.is(net.minecraft.world.damagesource.DamageTypes.LAVA)) return false;
             mortDefinitive = true;
             if (dAutrui(src.getEntity(), chef)) memoire.putBoolean("tombe_autrui", true); // achevé par un autre joueur
         } else if (!level().isClientSide) memoire.putBoolean("tombe_autrui", dAutrui(src.getEntity(), chef)); // le dernier coup reçu debout
@@ -1463,7 +1465,8 @@ public class Travailleur extends PathfinderMob {
 
     @Override
     public void die(DamageSource src) {
-        if (!level().isClientSide && !mortDefinitive && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+        // Le vide (comme /kill) et un bain de lave tuent net : pas de temps à terre.
+        if (!level().isClientSide && !mortDefinitive && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY) && !src.is(net.minecraft.world.damagesource.DamageTypes.LAVA)) {
             // Au journal du serveur, la cause de la chute (sinon perdue : seule la mort définitive, « was killed », y paraît).
             ColoniePnj.LOG.info("{} ({}, chef {}) tombe à terre en {} : {}", prenom, metier, chef, blockPosition().toShortString(),
                     src.getLocalizedDeathMessage(this).getString());

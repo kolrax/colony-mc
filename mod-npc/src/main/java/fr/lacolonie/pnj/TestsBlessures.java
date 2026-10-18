@@ -36,8 +36,8 @@ public class TestsBlessures {
 
     /**
      * Deux ouvriers à terre : l'un d'un coup très grave (100 points, 8 min), l'autre d'un coup léger qui l'achève (3 points,
-     * 3 min). Tous deux vivent encore après 2 min 05 (avant : morts au bout de 2 min). Puis le temps du léger écourté : il
-     * meurt au bout, comme avant (pas de relevé seul), le très grave reste à terre.
+     * 3 min). Tous deux vivent encore après 2 min 05 (avant : morts au bout de 2 min). Puis le temps du léger écourté : déjà
+     * relevé seul il y a peu (plan E, TestsRelever), il meurt au bout ; le très grave reste à terre.
      */
     @GameTest(template = "vide", timeoutTicks = 2700)
     public static void aTerrePlusLongtempsSiTresGrave(GameTestHelper h) {
@@ -59,6 +59,7 @@ public class TestsBlessures {
                 h.assertTrue(grave.aTerre && grave.isAlive() && leger.aTerre && leger.isAlive(),
                         "après 2 min 05, tous deux à terre et vivants (" + grave.aTerreTicks + " / " + leger.aTerreTicks + ")");
                 vivants[0] = true;
+                leger.memoire.putLong(Blessures.RELEVE_SEUL, h.getLevel().getGameTime()); // plan E : déjà relevé seul, il ne se relève plus
                 leger.aTerreTicks = 5; // la fin de ses 3 minutes
             }
         });
