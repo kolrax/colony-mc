@@ -9,9 +9,8 @@ fantome donne minecraft:gold_ingot 32
 fantome embauche mineur 2
 fantome embauche bucheron 2
 fantome embauche fermier 2
-# Un ouvrier tout juste embauché ne connaît son poste qu'à sa seconde suivante (Travailleur.tickCourrier), et seulement
-# une fois les chunks autour générés (du temps réel, pas des ticks) : sans cette pause, la mission est refusée
-# (« n'a pas de poste de travail »).
+# Une pause pour que les chunks autour soient générés (du temps réel, pas des ticks). Depuis la 1.0.4, une mission
+# donnée tout de suite est acceptée aussi (scénario embauche-mission.txt).
 attendre 20
 ticks 40
 # Leurs outils, des graines et du pain au dépôt (par l'écran du dépôt), le reste de l'or à la caisse.
