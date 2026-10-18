@@ -1,11 +1,11 @@
 # Reprise : où on en est
 
-Mise à jour : 18/10/2026, 02 h 55 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/plan.md` (lot 16) et la fin de `docs/journal.md`.
+Mise à jour : 18/10/2026, 06 h 25 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/plan.md` (lot 16) et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 1.0.3** (18/10, 02 h 48 UTC), un seul jar dans `/mods` (1.0.0 à 1.0.2 rangés dans `/mods-off`), sur le **monde neuf `essai-v2`**. Les mondes `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
+- **Serveur : 1.0.4** (18/10, 06 h 17 UTC), un seul jar dans `/mods` (1.0.0 à 1.0.3 rangés dans `/mods-off`), sur le **monde neuf `essai-v2`**. Les mondes `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
 - **Modpack : 1.0.0, obligatoire** (canal réseau 9). Autres mods inchangés depuis la 0.5.1 (`build.py` voulait monter JEI et lithostitched : `lock.json` remis comme avant, à demander à l'Admin si utile).
-- `main` : 1.0.3 (= serveur), **292/292 JUnit, 335/335 en jeu**.
+- `main` : 1.0.4 (= serveur), **294/294 JUnit, 338/338 en jeu**.
 - Panneau : **« Refonte des ouvriers »** https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ (`plan/etapes`, `etat/courant`, `journal`, `essais` V01-V25). L'ancien panneau ne sert plus.
 
 ## La 1.0.0 en bref (refonte « ouvriers robots »)
@@ -17,18 +17,18 @@ Mise à jour : 18/10/2026, 02 h 55 UTC. Une page à lire en début de session, a
 - Retirés (étiquette `v1-finale`) : IA, voix, chat libre, lettres et corbeau, moral détaillé, caractères, familles, rumeurs, économie entre ouvriers, conversations.
 
 ## Prochaine étape (exacte)
-1. (fait 18/10 : sacs vidés au dépôt, 1.0.3 livrée ; scénario `sacs-3-jours.txt`.)
+1. (fait 18/10 : sacs vidés au dépôt, 1.0.3 ; mission juste après l'embauche et mares du fermier sur champ en escalier, 1.0.4.)
 2. Lundi 19/10 : monde d'ouverture neuf (procédure de `CLAUDE.md`) avec la dernière version ; puis cocher la case.
-3. Restes (`docs/plus-tard.md`) : fermier sur champ à plusieurs niveaux, `abatLExcedent` groupé, `enRang`, pic de 110 ms à 100 ouvriers, troupe lente en bataille, chasseur hors colonie, carrière, écrans jamais vus avec un vrai client.
+3. Restes (`docs/plus-tard.md`), en attendant lundi : `abatLExcedent` groupé, `enRang`, pic de 110 ms à 100 ouvriers, troupe lente en bataille, chasseur hors colonie, carrière, écrans jamais vus avec un vrai client.
 4. La branche `origin/en-cours` existe encore (suppression refusée, 403) mais ne contient rien qui ne soit sur `main` : la supprimer si possible, sinon l'ignorer.
 
 ## Méthode qui a marché (17/10)
 - Un développeur par morceau, chacun sur ses fichiers (`isolation: worktree`), branche locale `integration` où le chef fusionne au fil de l'eau, `git push -f origin HEAD:en-cours` après chaque fusion, passe complète `build` + `runGameTestServer` (5 min) avant `main`.
-- `flock /tmp/gametest.lock` pour tout serveur de test ou du fantôme ; un seul à la fois.
+- `flock /tmp/gametest.lock` pour `runGameTestServer` ; **pas** devant `tools/fantome.py`, qui prend ce verrou lui-même (sinon il s'attend lui-même jusqu'à son délai).
 - Chaque agent fait `git merge integration` avant son dernier test : les fusions finales se font sans conflit.
 
 ## Envoi du jar depuis le cloud
 `panel.py upload` échoue. Ce qui marche : `panel.py write /mods-off/colonie_pnj-X.jar <jar>`, vérifier la taille (`panel.py ls /mods-off`), puis `panel.py mv` vers `/mods`.
 
 ## Session en cours
-- aucune (session 18/10 01 h 00 - 02 h 55 UTC, terminée).
+- aucune (session 18/10 05 h 00 - 06 h 30 UTC, terminée : 1.0.4 livrée, serveur seul).
