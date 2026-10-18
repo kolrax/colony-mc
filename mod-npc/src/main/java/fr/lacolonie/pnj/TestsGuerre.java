@@ -293,7 +293,7 @@ public class TestsGuerre {
             c.boites.remove(bleu);
             rouges.forEach(Travailleur::discard);
             bleus.forEach(Travailleur::discard);
-            h.assertTrue(touches >= 4, "ils se battent : " + touches + " gardes touchés");
+            h.assertTrue(touches >= 20, "ils se battent : " + touches + " gardes touchés"); // 36 à 46 sur 10 essais (2 à 13 quand ils s'acharnaient sur un homme à terre)
             h.succeed();
         });
     }
