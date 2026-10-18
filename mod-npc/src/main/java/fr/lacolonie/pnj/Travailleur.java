@@ -120,10 +120,12 @@ public class Travailleur extends PathfinderMob {
     /** Ce qu'il parcourt en une heure du jeu, compté large (il marche à 4 blocs par seconde sur le plat). */
     static final double BLOCS_PAR_HEURE = 120;
     /**
-     * Heures de travail générales, en heures du jeu (0 à 24). Corrections du 18/10 : plus réglables au poste ni enregistrées ;
-     * de 0 h à 0 h (toute la journée), seuls les horaires de ses missions décident ({@link Cerveau#enService}).
+     * Heures de travail générales, en heures du jeu (0 à 24). Corrections du 18/10 : plus réglables au poste ni enregistrées.
+     * Une mission « toujours » suit ces heures de jour (6 h - 18 h, comme avant) : sans quoi il travaillerait aussi la nuit,
+     * dehors, et perdrait de la vie aux nuits blanches ({@link Nuit}). Les autres horaires de mission décident seuls
+     * ({@link Cerveau#enService}).
      */
-    public int debut = 0, fin = 0;
+    public int debut = 6, fin = 18;
     /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
     public long salaire = -1;
     /** Le facteur de son salaire, fixé à l'embauche selon le nombre d'ouvriers qu'avait déjà son chef ({@link Cout}) ; 1 pour les anciens. */
