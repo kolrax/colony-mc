@@ -98,4 +98,56 @@ public class TestsMetiersMission {
             t.discard();
         });
     }
+
+    /** Les chunks autour de p restent chargés, comme quand le chef s'y tient pour donner la mission « ici » ; rendu : pour les lâcher. */
+    static Runnable charger(ServerLevel l, BlockPos p, int rayon) {
+        int x0 = (p.getX() - rayon) >> 4, x1 = (p.getX() + rayon) >> 4, z0 = (p.getZ() - rayon) >> 4, z1 = (p.getZ() + rayon) >> 4;
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) l.setChunkForced(x, z, true);
+        return () -> { for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) l.setChunkForced(x, z, false); };
+    }
+
+    /**
+     * « Mine du fer, ici », donné par l'écran Nouvelle mission (pas « Travaille ici ») à 40 blocs du poste : il ouvre son
+     * puits à ce lieu. Avant : la mission retenait le lieu, mais le mineur ne lisait que « Travaille ici » et creusait au poste.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600, batch = "metiers_mission")
+    public static void mineurAuLieuDeLaMission(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 775, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos lieu = t.bureau.east(40);
+        Runnable lacher = charger(h.getLevel(), lieu, Lieux.RAYON_ICI);
+        h.assertTrue(Missions.donner(chef, t, "fer", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
+        h.succeedWhen(() -> {
+            h.assertTrue(t.memoire.contains("puits"), "pas encore de puits (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            BlockPos puits = BlockPos.of(t.memoire.getLong("puits"));
+            double d = Math.sqrt(LieuxRegles.dist2(puits.getX(), puits.getZ(), lieu.getX(), lieu.getZ()));
+            h.assertTrue(d <= Lieux.RAYON_ICI, "puits à " + (int) d + " blocs du lieu de la mission (" + (int) Math.sqrt(puits.distSqr(t.bureau)) + " du poste)");
+            h.assertTrue(Lieux.lieu(t).pos().equals(lieu), "lieu affiché : " + Lieux.lieu(t).pos().toShortString());
+            lacher.run();
+            t.discard();
+        });
+    }
+
+    /**
+     * « Coupe du chêne, ici », donné par l'écran à 40 blocs du poste ; un autre chêne à 5 blocs du poste : il va couper celui
+     * du lieu, et laisse l'autre. Avant : il coupait le chêne du poste, comme sans lieu.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1600, batch = "metiers_mission")
+    public static void bucheronAuLieuDeLaMission(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "bucheron", 776, new ItemStack(Items.IRON_AXE));
+        ServerLevel l = h.getLevel();
+        BlockPos lieu = t.bureau.east(40);
+        Runnable lacher = charger(l, lieu, 8);
+        BlockPos pres = t.bureau.east(5), loin = lieu.north(2);
+        TestsBucheron.arbre(l, pres, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        TestsBucheron.arbre(l, loin, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        h.assertTrue(Missions.donner(chef, t, "chene", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
+        h.succeedWhen(() -> {
+            h.assertTrue(l.getBlockState(pres).is(Blocks.OAK_LOG), "le chêne du poste, hors du lieu de la mission, est coupé");
+            h.assertFalse(l.getBlockState(loin).is(Blocks.OAK_LOG), "le chêne du lieu doit être coupé (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            lacher.run();
+            t.discard();
+        });
+    }
 }

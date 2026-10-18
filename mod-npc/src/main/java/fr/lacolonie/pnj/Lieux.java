@@ -164,7 +164,7 @@ final class Lieux {
         return t.bureau != null && LieuxRegles.dansColonie(t.bureau.getX(), t.bureau.getZ(), Reglages.actuel.rayon_colonie, p.getX(), p.getZ());
     }
 
-    /** p est dans la zone que son chef lui a désignée par « Travaille ici ». */
+    /** p est dans la zone que son chef lui a désignée (le lieu de sa mission en cours, ou « Travaille ici » : {@link Travailleur#lieuImpose}). */
     static boolean ici(Travailleur t, BlockPos p) {
         return t.lieuImpose != null && LieuxRegles.dist2(t.lieuImpose.getX(), t.lieuImpose.getZ(), p.getX(), p.getZ()) <= (long) RAYON_ICI * RAYON_ICI;
     }

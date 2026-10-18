@@ -54,6 +54,7 @@ public final class Missions {
             t.missions.removeIf(x -> x.id.equals(id) && x.horaires.equals(horaires)); // la même mission, redonnée : elle est remplacée
             t.missions.add(m);
             t.missionAjoutee();
+            t.majLieu(); // son lieu « ici » vaut tout de suite (mineur, bûcheron, règles de lieu)
             Consignes.annuler(t); // un « garde à vous » ou une tâche du répertoire s'arrête
             t.ordreChef = t.level().getGameTime();
             reprendre(t);
@@ -148,6 +149,7 @@ public final class Missions {
                 if (d.getInt("n") != t.missions.size()) Travailleur.signaler(p, "Sa file a changé : rouvre sa fiche.");
                 else if (k >= 0 && k < t.missions.size()) {
                     Travailleur.Mission m = t.missions.remove(k);
+                    t.majLieu();
                     if (t.action != null) t.finirAction("ordre");
                     Travailleur.signaler(p, "Mission annulée : " + Metier.nomMission(t.metier, m) + ".");
                 }
