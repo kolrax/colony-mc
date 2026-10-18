@@ -61,8 +61,9 @@ public class TestsCarte {
     /**
      * Plan E, point 5 : un ouvrier à terre est signalé sur la carte de son chef (repère rouge, « à terre »), même sans avoir
      * bougé ; relevé, son repère redevient normal. Coin 913. Échoue sur l'ancien code : le repère ne savait rien de sa chute.
+     * Son propre lot, et Oriane retirée à la fin : le chef est le même joueur fantôme que dans le test d'à côté.
      */
-    @GameTest(template = "vide", timeoutTicks = 200)
+    @GameTest(template = "vide", timeoutTicks = 200, batch = "carte_terre")
     public static void aTerreEnRougeSurLaCarte(GameTestHelper h) {
         BlockPos base = TestsJeu.sol(h, 913 * 400, 60000);
         Fantome.Joueur moi = new Fantome.Joueur(h.getLevel());
@@ -75,16 +76,23 @@ public class TestsCarte {
             CarteOuvriers.ENVOYE.remove(moi);
             if (oriane.aTerre) oriane.relever(null); // un essai précédent de ce même test a pu la laisser à terre
             CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
-            h.assertTrue(Fantome.carte != null && Fantome.carte.size() == 1 && !Fantome.carte.get(0).aTerre(), "debout : " + Fantome.carte);
+            h.assertTrue(Fantome.carte != null && !sonRepere(oriane).aTerre(), "debout : " + Fantome.carte);
             Fantome.carte = null;
             oriane.tomberATerre();
             CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
-            h.assertTrue(Fantome.carte != null && Fantome.carte.get(0).aTerre(), "à terre, le chef le voit : " + Fantome.carte);
-            h.assertTrue(Reperes.nom(Fantome.carte.get(0)).equals("Oriane (à terre)"), "son nom : " + Reperes.nom(Fantome.carte.get(0)));
+            h.assertTrue(Fantome.carte != null && sonRepere(oriane).aTerre(), "à terre, le chef le voit : " + Fantome.carte);
+            h.assertTrue(Reperes.nom(sonRepere(oriane)).equals("Oriane (à terre)"), "son nom : " + Reperes.nom(sonRepere(oriane)));
             Fantome.carte = null;
             oriane.relever(null);
             CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
-            h.assertTrue(Fantome.carte != null && !Fantome.carte.get(0).aTerre(), "relevée, repère normal : " + Fantome.carte);
+            h.assertTrue(Fantome.carte != null && !sonRepere(oriane).aTerre(), "relevée, repère normal : " + Fantome.carte);
+            oriane.discard();
         });
+    }
+
+    /** Le repère de cet ouvrier dans la dernière liste reçue (le joueur fantôme peut avoir d'autres ouvriers dans d'autres tests). */
+    static Reperes.Repere sonRepere(Travailleur t) {
+        return Fantome.carte.stream().filter(r -> r.id().equals(t.getUUID())).findFirst()
+                .orElseThrow(() -> new net.minecraft.gametest.framework.GameTestAssertException(t.prenom + " absent de la carte"));
     }
 }
