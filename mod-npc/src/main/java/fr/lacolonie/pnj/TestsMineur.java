@@ -337,6 +337,31 @@ public class TestsMineur {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Rapport de KOLRAX (1.0.7) : « un mineur mine du fer, mais le compteur au-dessus de sa tête ne monte pas ». Il casse un
+     * minerai de fer et un minerai de fer des profondeurs : le fer brut est dans son sac, pas encore livré, et on lit déjà
+     * « 2/20 fer » au-dessus de sa tête (avant : « 0/20 » jusqu'au dépôt).
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void compteurMonteQuandIlMine(GameTestHelper h) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 851, new ItemStack(Items.IRON_PICKAXE));
+        h.assertTrue(Missions.donner(chef, t, "fer", "fois", 20, "toujours", null).ok(), "mission acceptée");
+        ServerLevel l = h.getLevel();
+        BlockPos fer = t.bureau.offset(-3, -1, 1), profond = t.bureau.offset(-4, -1, -1);
+        l.setBlockAndUpdate(fer, Blocks.IRON_ORE.defaultBlockState());
+        l.setBlockAndUpdate(profond, Blocks.DEEPSLATE_IRON_ORE.defaultBlockState());
+        h.succeedWhen(() -> {
+            String s = t.statutTete();
+            int brut = t.compter(Actions.Filtre.de("minecraft:raw_iron"));
+            h.assertTrue(!l.getBlockState(fer).is(Blocks.IRON_ORE) && !l.getBlockState(profond).is(Blocks.DEEPSLATE_IRON_ORE) && brut >= 2,
+                    "il doit miner les deux minerais (fer brut au sac : " + brut + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.missions.get(0).livre == 0, "pas encore livré (" + t.missions.get(0).livre + ")");
+            h.assertTrue(s.contains("2/20") && s.contains("fer"), "le compteur doit compter le fer qu'il porte : « " + s + " »");
+            t.discard();
+        });
+    }
+
     /** Au dépôt, le minerai va dans le coffre voisin qui a déjà du minerai, la pierre dans celui qui a déjà de la pierre. */
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void triAuDepot(GameTestHelper h) {
