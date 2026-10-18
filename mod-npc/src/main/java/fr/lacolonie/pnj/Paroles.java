@@ -38,13 +38,7 @@ final class Paroles {
     }
 
     /** « 1 diamant », « 3 diamants », « 2 lingots d'or » (le premier mot prend la marque du pluriel). */
-    static String nombre(int n, String nom) {
-        if (n <= 1 || nom.isEmpty()) return n + " " + nom;
-        int e = nom.indexOf(' ');
-        String premier = e < 0 ? nom : nom.substring(0, e);
-        if (!premier.endsWith("s") && !premier.endsWith("x") && !premier.endsWith("z")) premier += "s";
-        return n + " " + premier + (e < 0 ? "" : nom.substring(e));
-    }
+    static String nombre(int n, String nom) { return Monnaie.nombre(n, nom); }
 
     /** « de » ou « d' » devant ce mot. */
     static String de(String mot) { return "aeiouyhéèêâîôû".indexOf(mot.charAt(0)) >= 0 ? "d'" : "de "; }

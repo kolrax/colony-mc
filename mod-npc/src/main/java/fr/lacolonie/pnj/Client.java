@@ -1092,7 +1092,8 @@ public final class Client {
                 texte(g, couper(o.getString("nom"), 90), x, y2, o.getBoolean("absent") ? GRIS : BLANC);
                 if (o.getBoolean("absent")) continue;
                 texte(g, couper(o.getString("salaire") + " " + (o.getString("periode").isEmpty() ? "" : o.getString("periode")), 130), x + 96, y2, BLANC);
-                texte(g, couper(o.getString("paie"), largeur - 250), x + 230, y2, o.getInt("impayes") > 0 ? ROUGE : GRIS);
+                int impayes = o.getInt("impayes");
+                texte(g, couper(impayes > 0 ? "En retard de paie" + (impayes > 1 ? " (" + impayes + " paies)" : "") : o.getString("paie"), largeur - 250), x + 230, y2, impayes > 0 ? ROUGE : GRIS);
             }
             // La guerre : contre qui, et le champ pour la déclarer ou faire la paix.
             g.fill(x0 + 6, y0 + 172, x0 + largeur - 6, y0 + 173, 0xFF8A6A2A);

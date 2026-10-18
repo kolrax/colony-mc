@@ -56,10 +56,29 @@ class StatutTest {
         assertFalse(Statut.horairesValides("25-3"));
     }
 
+    /** Toutes les combinaisons de l'écran : une fois, chaque jour ou en stock ; à toute heure, le jour, la nuit ou une plage ; ici ou pas. */
+    @Test
+    void confirmationSansRepetition() {
+        assertEquals("Compris : Raoul mine du fer, 64 chaque jour.", Statut.confirmation("Raoul", "mineur", "Fer", true, "jour", 64, "toujours", false));
+        assertEquals("Compris : Raoul mine du fer, 64 chaque jour, en journée.", Statut.confirmation("Raoul", "mineur", "Fer", true, "jour", 64, "jour", false));
+        assertEquals("Compris : Raoul mine du fer, 64 chaque nuit, ici.", Statut.confirmation("Raoul", "mineur", "Fer", true, "jour", 64, "nuit", true));
+        assertEquals("Compris : Raoul mine du fer, 64 chaque jour, de 8 h à 12 h.", Statut.confirmation("Raoul", "mineur", "Fer", true, "jour", 64, "8-12", false));
+        assertEquals("Compris : Raoul mine du fer jusqu'à 64, le jour.", Statut.confirmation("Raoul", "mineur", "Fer", true, "fois", 64, "jour", false));
+        assertEquals("Compris : Raoul mine du fer et en garde 64 au dépôt, la nuit, ici.", Statut.confirmation("Raoul", "mineur", "Fer", true, "stock", 64, "nuit", true));
+        for (String rep : new String[]{"fois", "jour", "stock"})
+            for (String h : new String[]{"toujours", "jour", "nuit", "8-12"})
+                for (boolean compte : new boolean[]{true, false})
+                    for (boolean ici : new boolean[]{true, false}) {
+                        String s = Statut.confirmation("Raoul", "mineur", "Fer", compte, rep, 64, h, ici);
+                        assertFalse(s.matches(".*jour.*\\bjour\\b.*") || s.matches(".*nuit.*\\bnuit\\b.*"), "le jour ou la nuit dit deux fois : " + s);
+                        assertTrue(s.endsWith(".") && !s.contains(",,") && !s.contains(" ."), s);
+                    }
+    }
+
     @Test
     void confirmation() {
         assertEquals("Compris : Raoul mine du fer jusqu'à 64.", Statut.confirmation("Raoul", "mineur", "Fer", true, "fois", 64, "toujours", false));
-        assertEquals("Compris : Raoul mine de l'or, 10 chaque jour, le jour.", Statut.confirmation("Raoul", "mineur", "Or", true, "jour", 10, "jour", false));
+        assertEquals("Compris : Raoul mine de l'or, 10 chaque jour, en journée.", Statut.confirmation("Raoul", "mineur", "Or", true, "jour", 10, "jour", false));
         assertEquals("Compris : Jeanne récolte des carottes et en garde 32 au dépôt, ici.", Statut.confirmation("Jeanne", "fermier", "Carottes", true, "stock", 32, "toujours", true));
         assertEquals("Compris : Odon va faire la ronde (50 blocs), la nuit.", Statut.confirmation("Odon", "guerrier", "Faire la ronde (50 blocs)", false, "fois", 1, "nuit", false));
         assertEquals("Compris : Raoul mine de la pierre jusqu'à 5, de 8 h à 12 h.", Statut.confirmation("Raoul", "mineur", "Pierre", true, "fois", 5, "8-12", false));
