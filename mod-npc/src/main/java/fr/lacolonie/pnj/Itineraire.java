@@ -194,7 +194,8 @@ final class Itineraire {
         // De près : le chemin direct, s'il mène bien au but.
         if (dh <= 40 && dv <= 20 && directRate < 2 && plan.isEmpty()) {
             t.diag = "chemin direct";
-            if (phase >= 0) finChoix(); // un choix d'étape laissé en route : ses positions ne valent plus rien
+            if (phase >= 0) finChoix();
+            attendDepuis = -1; // un choix d'étape laissé en route : ses positions ne valent plus rien
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
             // Au bout du chemin accepté, sans le recalculer à chaque tick (seulement toutes les 20 ticks) : s'il mène au but,
             // il fait les derniers pas tout droit ; s'il s'arrête à côté (bloc à casser, coffre, ou but de l'autre côté
@@ -431,7 +432,7 @@ final class Itineraire {
         etape = cible;
         plan.add(c);
         planFini = q.equals(BlockPos.containing(but));
-        prolonge = !planFini;
+        prolonge = !planFini && !cibleMobile;
         return true;
     }
 
@@ -465,7 +466,11 @@ final class Itineraire {
         planFini = prolonge = parti = false;
         suite = null;
         etape = null;
+        attendDepuis = -1; // sinon attend() resterait vrai, et l'évitement des 3 s (immobile) ne viendrait plus
     }
+
+    /** La cible bouge (le chef, un autre ouvrier) : il ne calcule pas son trajet d'avance, une étape à la fois suffit. */
+    boolean cibleMobile;
 
     /**
      * Suit le trajet calculé. Au bout d'une étape, il enchaîne la suivante sans rien recalculer. Il ne le refait que s'il
@@ -482,15 +487,24 @@ final class Itineraire {
         }
         Path seg = plan.get(morceau);
         etape = Vec3.atBottomCenterOf(seg.getEndNode().asBlockPos());
-        if (!nav.isDone() && (nav.getPath() == seg || seg.sameAs(nav.getPath()))) {
-            t.diag = "trajet : étape " + (morceau + 1) + "/" + plan.size() + (planFini ? "" : " (suite à calculer)") + ", but à " + (int) horizontale(t.position(), but) + " blocs";
+        Path suivi = nav.getPath();
+        if (!nav.isDone() && (suivi == seg || seg.sameAs(suivi))) {
+            if (t.tickCount % 20 == 0) t.diag = "trajet : étape " + (morceau + 1) + "/" + plan.size() + (planFini ? "" : " (suite à calculer)") + ", but à " + (int) horizontale(t.position(), but) + " blocs";
             return;
         }
+        // Le jeu a refait le chemin de lui-même (une porte ouverte, un bloc posé près du trajet) jusqu'au bout de cette
+        // étape : il le garde, sans s'arrêter ni recalculer le reste.
+        if (!nav.isDone() && suivi != null && suivi.canReach() && suivi.getEndNode() != null
+                && suivi.getEndNode().asBlockPos().distSqr(seg.getEndNode().asBlockPos()) <= 2) { plan.set(morceau, suivi); return; }
         if (auBout(t, seg)) {
+            visites.merge(cellule(t.blockPosition()), 1, Integer::sum); // seulement les endroits vraiment atteints
             if (morceau + 1 < plan.size()) {
-                nav.moveTo(plan.get(++morceau), v);
+                morceau++;
+                // Une étape calculée il y a un moment : un coup d'œil sur ses cases (un bloc posé, de la lave) ; sinon il la refait seule.
+                if (!praticable(t.level(), plan.get(morceau)) && !refaireEtape(t, v)) return;
+                nav.moveTo(plan.get(morceau), v);
                 // Sa dernière étape connue : il essaie de prolonger le trajet en marchant (le terrain devant lui s'est chargé).
-                if (morceau == plan.size() - 1 && !planFini && plan.size() < PLAN_MAX) prolonge = true;
+                if (morceau == plan.size() - 1 && !planFini && plan.size() < PLAN_MAX && !cibleMobile) prolonge = true;
                 return;
             }
             // Au bout du trajet : les derniers pas tout droit seulement si ce chemin mène bien au but.
@@ -498,8 +512,36 @@ final class Itineraire {
             if (!prolonge) oublierPlan(); // d'ici, il choisit la suite (choisirEtape)
             return;
         }
-        // Coupé avant le bout : il refait son trajet d'ici (jamais un chemin partiel).
-        if (t.onGround() || t.isInWater()) { t.diag = "trajet coupé"; nav.stop(); oublierPlan(); }
+        // Coupé avant le bout : il refait seulement cette étape, d'où il est, en gardant les suivantes (jamais un chemin partiel).
+        if (t.onGround() || t.isInWater()) refaireEtape(t, v);
+    }
+
+    /**
+     * Refait l'étape en cours depuis sa place, jusqu'au même bout : les étapes suivantes restent bonnes. Faux s'il attend un
+     * jeton (il réessaie au tick suivant) ; sans chemin complet, tout le trajet est refait d'ici.
+     */
+    private boolean refaireEtape(Travailleur t, double v) {
+        var nav = t.getNavigation();
+        BlockPos bout = plan.get(morceau).getEndNode().asBlockPos();
+        if (!jeton(t.level().getGameTime())) { nav.stop(); return false; }
+        Path c = chercher(t, bout, 0, Charge.Origine.ETAPE, Math.max(PORTEE_MIN, portee(t.blockPosition(), bout)), 1);
+        if (c == null || !c.canReach()) { t.diag = "trajet coupé"; nav.stop(); oublierPlan(); return false; }
+        plan.set(morceau, c);
+        nav.moveTo(c, v);
+        return true;
+    }
+
+    /** Les cases d'un chemin calculé sont toujours libres (pas de bloc posé à hauteur des pieds ou de la tête, pas de lave). */
+    static boolean praticable(Level l, Path c) {
+        for (int i = 0; i < c.getNodeCount(); i++) {
+            BlockPos n = c.getNodePos(i);
+            for (BlockPos q : List.of(n, n.above())) {
+                BlockState st = l.getBlockState(q);
+                if (st.is(BlockTags.DOORS) || st.is(BlockTags.FENCE_GATES)) continue; // il les ouvre
+                if (!Monde.traversable(l, q)) return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -528,7 +570,6 @@ final class Itineraire {
                     return;
                 }
             }
-            visites.merge(cellule(d), 1, Integer::sum);
             suite = candidats(t, l, d, pd, dh).stream().filter(c -> horizontale(Vec3.atBottomCenterOf(c), but) < dh - 4).toList();
             curseurSuite = 0;
             essaisSuite = 0;

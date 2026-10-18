@@ -938,6 +938,8 @@ public class Travailleur extends PathfinderMob {
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
+    /** Dont les recherches d'étape (choix et calcul du trajet d'avance, Itineraire) : lues par les tests. */
+    int recherchesEtape;
     private int recherchesCeTick;
     private long tickRecherches = -1;
 
@@ -946,6 +948,7 @@ public class Travailleur extends PathfinderMob {
         long tick = level().getGameTime();
         if (tick != tickRecherches) { tickRecherches = tick; recherchesCeTick = 0; }
         recherches++;
+        if (origineChemin == Charge.Origine.ETAPE) recherchesEtape++;
         recherchesPireTick = Math.max(recherchesPireTick, ++recherchesCeTick);
         Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick, nanos);
     }
@@ -967,6 +970,24 @@ public class Travailleur extends PathfinderMob {
                         return c;
                     }
                 };
+            }
+
+            /**
+             * Un bloc a changé près du chemin (porte ouverte, feuilles, bloc posé) : Minecraft le refait vers la cible de sa
+             * dernière recherche, qui peut être une autre étape (plan A1 : les étapes suivantes sont cherchées depuis la fin de la
+             * précédente). On le refait vers le bout du chemin suivi ; l'Itineraire l'adopte s'il y mène.
+             */
+            @Override
+            public void recomputePath() {
+                Path p = getPath();
+                if (level.isClientSide || p == null || p.isDone() || p.getTarget() == null) { super.recomputePath(); return; }
+                if (level.getGameTime() - timeLastRecompute > 20L) {
+                    BlockPos cible = p.getTarget();
+                    path = null;
+                    path = createPath(cible, 1);
+                    timeLastRecompute = level.getGameTime();
+                    hasDelayedRecomputation = false;
+                } else hasDelayedRecomputation = true;
             }
 
             @Override
