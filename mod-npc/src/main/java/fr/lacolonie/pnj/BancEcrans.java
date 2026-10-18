@@ -136,11 +136,7 @@ public final class BancEcrans {
         Travailleur gaspard = Travailleur.auTravail(l, "fermier", b, o.add(-1.5, 0, 0), p.getUUID(), ItemStack.EMPTY);
         Travailleur perdu = Travailleur.auTravail(l, "guerrier", b, o.add(0, 0, 1.5), p.getUUID(), ItemStack.EMPTY);
         long maintenant = System.currentTimeMillis();
-        for (Travailleur t : List.of(raoul, berthe, gaspard)) {
-            t.prochainePaie = maintenant + 83 * 60_000L;
-            t.debut = 6;
-            t.fin = 18;
-        }
+        for (Travailleur t : List.of(raoul, berthe, gaspard)) t.prochainePaie = maintenant + 83 * 60_000L;
         gaspard.impayes = 1;
         raoul.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE));
         raoul.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));

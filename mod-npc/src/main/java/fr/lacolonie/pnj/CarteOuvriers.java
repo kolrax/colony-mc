@@ -70,7 +70,7 @@ public final class CarteOuvriers {
         for (Travailleur t : ColoniePnj.tous(s)) {
             if (t.chef == null || t.mortDefinitive) continue;
             var b = t.blockPosition();
-            tous.add(new Reperes.Ouvrier(t.chef, new Reperes.Repere(t.getUUID(), t.prenom,
+            tous.add(new Reperes.Ouvrier(t.chef, new Reperes.Repere(t.getUUID(), court(t.prenom),
                     t.level().dimension().location().toString(), b.getX(), b.getY(), b.getZ())));
         }
         Map<java.util.UUID, List<Reperes.Repere>> parChef = Reperes.parChef(tous);
@@ -81,4 +81,7 @@ public final class CarteOuvriers {
             PacketDistributor.sendToPlayer(p, new Paquet(l));
         }
     }
+
+    /** Le paquet n'admet que 64 caractères par prénom (un nom donné au panneau web peut être plus long). */
+    static String court(String prenom) { return prenom == null ? "" : prenom.length() > 60 ? prenom.substring(0, 60) : prenom; }
 }
