@@ -543,15 +543,17 @@ final class Fermier extends Metier {
                     etape = 4;
                     voulues = cases.size();
                     int graines = t.compter(graine);
-                    if (graines == 0 && !ordre && !mares.isEmpty()) { cases.clear(); return Actions.Etat.EN_COURS; } // sans graines, la mare quand même
-                    if (graines == 0 && !ordre && plants > 0) { plusSansGraines(t); return Actions.Etat.OK; } // ses plants poussent : il ressèmera de la récolte
-                    if (graines == 0) {
+                    if (graines == 0 && !ordre && plants > 0) { // ses plants poussent : il ressèmera de la récolte
+                        plusSansGraines(t);
+                        if (mares.isEmpty()) return Actions.Etat.OK;
+                    } else if (graines == 0) {
                         t.memoire.putString("sans_graines", graine.texte);
                         t.bloquer(Statut.SANS_GRAINES);
                         if (ordre) dire(t, "Je n'ai pas de " + nomGraines() + ", chef, ni sur moi ni au dépôt.");
                         else Cerveau.ecrire(t, "graines", Cerveau.UN_JOUR, "graines", nomGraines());
-                        return echec("pas_de_graines");
+                        if (ordre || mares.isEmpty()) return echec("pas_de_graines");
                     }
+                    if (graines == 0) { cases.clear(); return Actions.Etat.EN_COURS; } // sans graines, la mare de l'entretien quand même
                     plusSansGraines(t);
                     if (aLabourer(l) && !equiperMeilleur(t, HOUES::objet)) {
                         if (ordre) dire(t, "Il me faut une houe pour labourer, chef, et il n'y en a pas au dépôt.");
