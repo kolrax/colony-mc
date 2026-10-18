@@ -939,6 +939,9 @@ public class Travailleur extends PathfinderMob {
     private int precisionCree = 1;
     /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
+    /** L'eau qu'il a versée de son seau pour monter à la nage (plan A3), et quand il s'en est servi en dernier : il la reprend toujours. */
+    BlockPos eau;
+    long eauVue;
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
     /** Dont les recherches d'étape (choix et calcul du trajet d'avance, Itineraire) : lues par les tests. */
@@ -1016,6 +1019,7 @@ public class Travailleur extends PathfinderMob {
         Charge mesure = Charge.ICI;
         long h = System.nanoTime();
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
+        if (tickCount % 20 == 0) Itineraire.eauOubliee(this); // un trajet abandonné en pleine montée à la nage : l'eau ne reste pas
         if ((tickCount + getId()) % 20 == 3) majTete();
         if ((tickCount + getId()) % 100 == 3) { majLieu(); majStatut(); }
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
@@ -1591,6 +1595,7 @@ public class Travailleur extends PathfinderMob {
 
     @Override
     public void remove(RemovalReason reason) {
+        if (!level().isClientSide) Itineraire.retirerEau(this);
         if (reason.shouldDestroy() || reason == RemovalReason.CHANGED_DIMENSION) libererChunk();
         super.remove(reason);
     }
