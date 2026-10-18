@@ -12,6 +12,7 @@ create-stuff-additions
 
 # --- Génération du monde (choix de KOLRAX le 2026-10-04 : combo B du rapport) ---
 terralith server
+lithostitched==1.8.0-neoforge-21.1 server   # épinglé : version déjà sur le serveur
 tectonic server
 towns-and-towers server
 create-let-the-adventure-begin server
@@ -20,7 +21,7 @@ create-let-the-adventure-begin server
 # Règles du chef de projet (KOLRAX_MC), non négociables : pas de keepInventory (tombe à la place),
 # aucune téléportation / home (transport réel en jeu), aucune protection de terrain (RP).
 gravestone-mod
-jei
+jei==19.51.0.418
 simple-voice-chat
 # Cartes en jeu (décision du 2026-10-05 : remplacent la carte web, ne montrent que ce que chacun a exploré).
 # Aussi sur le serveur, qui impose les réglages (pas de mode grotte, pas de radar des joueurs).
@@ -38,3 +39,8 @@ chunky server
 # --- Performance / shaders côté joueurs ---
 sodium==mc1.21.1-0.6.13-neoforge client   # épinglé : Iris 1.8.12 exige Sodium 0.6.13 (la 0.8 fait planter le jeu, 0.4.0)
 iris client
+
+# --- Ajouts demandés par KOLRAX le 2026-10-18 (rapports 16, 19, 20) ---
+burnt                       # le feu brûle vraiment tout (avec GeckoLib)
+do-a-barrel-roll client     # vol en élytre façon avion
+distanthorizons             # voir loin ; la partie serveur envoie le relief déjà généré
