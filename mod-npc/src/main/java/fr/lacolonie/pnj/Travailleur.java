@@ -209,7 +209,7 @@ public class Travailleur extends PathfinderMob {
     BlockPos ici;
     /**
      * Où il doit travailler maintenant : le lieu de sa mission en cours, sinon « Travaille ici » ; null : il choisit lui-même.
-     * Tenu à jour par {@link #majLieu} (mission donnée, annulée, « Travaille ici », et toutes les 5 s) : les règles de lieu le
+     * Tenu à jour par {@link #majLieu} (file changée, « Travaille ici », chaque décision du Cerveau, et toutes les 5 s) : les règles de lieu le
      * lisent à chaque bloc ({@link Lieux#ici}), sans recompter le dépôt.
      */
     public BlockPos lieuImpose;
@@ -228,13 +228,30 @@ public class Travailleur extends PathfinderMob {
     /** Où travailler : le lieu de sa mission en cours, sinon « Travaille ici », sinon null (il choisit lui-même). */
     public BlockPos lieuTravail() { return lieuImpose; }
 
-    /** Recalcule {@link #lieuImpose} ; s'il change, le mineur rouvre son puits au nouveau lieu (comme « Travaille ici »). */
-    void majLieu() {
-        Mission m = missionActive();
+    /** Le dernier lieu en vigueur non nul : un stock plein ou la fin de ses horaires ne lui fait pas oublier son puits. */
+    private BlockPos dernierLieu;
+
+    void majLieu() { majLieu(missionActive()); }
+
+    /**
+     * Recalcule {@link #lieuImpose} avec sa mission en cours {@code m} (déjà calculée par le Cerveau). Plus de mission en
+     * cours (stock plein, hors horaires) : il ne perd rien. Une mission en cours sans lieu, après un lieu : il choisit de
+     * nouveau le sien. Un lieu loin du précédent et de sa mine : il rouvre son puits là-bas (comme « Travaille ici »).
+     */
+    void majLieu(Mission m) {
         BlockPos p = m != null && m.lieu != null ? m.lieu : ici;
         if (java.util.Objects.equals(p, lieuImpose)) return;
         lieuImpose = p;
-        oublierLieu();
+        if (p == null) {
+            if (m != null && dernierLieu != null) { dernierLieu = null; oublierLieu(); }
+            return;
+        }
+        if (!pres(dernierLieu, p) && !pres(memoire.contains("mine") ? BlockPos.of(memoire.getLong("mine")) : null, p)) oublierLieu();
+        dernierLieu = p;
+    }
+
+    private static boolean pres(BlockPos a, BlockPos p) {
+        return a != null && LieuxRegles.dist2(a.getX(), a.getZ(), p.getX(), p.getZ()) <= (long) Lieux.RAYON_ICI * Lieux.RAYON_ICI;
     }
 
     private void oublierLieu() {
@@ -249,13 +266,18 @@ public class Travailleur extends PathfinderMob {
         return blocage;
     }
 
-    /** « Travaille ici » : sa mission en cours (et les suivantes qui n'ont pas de lieu) prend cette position. */
+    /**
+     * « Travaille ici » : sa mission en cours, celles qui n'ont pas de lieu et celles qui avaient le « Travaille ici »
+     * d'avant prennent cette position (null : toutes la perdent).
+     */
     public void travailleIci(BlockPos p) {
+        BlockPos avant = ici;
         ici = p == null ? null : p.immutable();
         Mission active = missionActive();
-        for (Mission m : missions) if (m.lieu == null || p == null || m == active) m.lieu = ici;
-        majLieu();
+        for (Mission m : missions) if (m.lieu == null || p == null || m == active || m.lieu.equals(avant)) m.lieu = ici;
+        majLieu(active);
         oublierLieu(); // le même lieu redit : il oublie quand même ses puits ratés
+        dernierLieu = lieuImpose;
     }
 
     /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */
@@ -1969,6 +1991,7 @@ public class Travailleur extends PathfinderMob {
                 missionAjoutee();
             }
             auTravail = true;
+            majLieu(); // une mission sans lieu : l'ancien lieu ne vaut plus, tout de suite
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
         }
         // La guerre entre colonies (Guerre, Armee) : déclaration, paix, levée, retraite ; « rentre » ramène aussi l'armée.
@@ -2420,6 +2443,7 @@ public class Travailleur extends PathfinderMob {
         bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
         ici = NbtUtils.readBlockPos(t, "LieuImpose").orElse(null);
         lieuImpose = t.contains("LieuEnCours") ? NbtUtils.readBlockPos(t, "LieuEnCours").orElse(null) : ici; // sauvé avant : « Travaille ici »
+        dernierLieu = lieuImpose;
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
         joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;

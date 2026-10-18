@@ -99,11 +99,17 @@ public class TestsMetiersMission {
         });
     }
 
-    /** Les chunks autour de p restent chargés, comme quand le chef s'y tient pour donner la mission « ici » ; rendu : pour les lâcher. */
-    static Runnable charger(ServerLevel l, BlockPos p, int rayon) {
+    /**
+     * Les chunks autour de p restent chargés, comme quand le chef s'y tient pour donner la mission « ici ». Rendu : pour les
+     * lâcher (en cas de succès) ; ils sont aussi lâchés juste avant la fin du temps du test ({@code timeout}), en cas d'échec.
+     */
+    static Runnable charger(GameTestHelper h, BlockPos p, int rayon, int timeout) {
+        ServerLevel l = h.getLevel();
         int x0 = (p.getX() - rayon) >> 4, x1 = (p.getX() + rayon) >> 4, z0 = (p.getZ() - rayon) >> 4, z1 = (p.getZ() + rayon) >> 4;
         for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) l.setChunkForced(x, z, true);
-        return () -> { for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) l.setChunkForced(x, z, false); };
+        Runnable lacher = () -> { for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) l.setChunkForced(x, z, false); };
+        h.runAfterDelay(timeout - 2, lacher);
+        return lacher;
     }
 
     /**
@@ -115,7 +121,7 @@ public class TestsMetiersMission {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
         Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 775, new ItemStack(Items.IRON_PICKAXE));
         BlockPos lieu = t.bureau.east(40);
-        Runnable lacher = charger(h.getLevel(), lieu, Lieux.RAYON_ICI);
+        Runnable lacher = charger(h, lieu, Lieux.RAYON_ICI, 600);
         h.assertTrue(Missions.donner(chef, t, "fer", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
         h.succeedWhen(() -> {
             h.assertTrue(t.memoire.contains("puits"), "pas encore de puits (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
@@ -138,7 +144,7 @@ public class TestsMetiersMission {
         Travailleur t = TestsMission.ouvrier(h, chef, "bucheron", 776, new ItemStack(Items.IRON_AXE));
         ServerLevel l = h.getLevel();
         BlockPos lieu = t.bureau.east(40);
-        Runnable lacher = charger(l, lieu, 8);
+        Runnable lacher = charger(h, lieu, 8, 1600);
         BlockPos pres = t.bureau.east(5), loin = lieu.north(2);
         TestsBucheron.arbre(l, pres, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
         TestsBucheron.arbre(l, loin, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
@@ -149,5 +155,86 @@ public class TestsMetiersMission {
             lacher.run();
             t.discard();
         });
+    }
+
+    /**
+     * « Fer, garder 64, ici » : le stock plein (plus de mission en cours), puis de nouveau entamé : il garde le même puits, au
+     * lieu d'en ouvrir un nouveau à chaque sac. Avant : chaque passage à « rien à faire » lui faisait oublier puits et mine.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600, batch = "metiers_mission")
+    public static void mineurGardeSonPuitsStockPlein(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 777, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos lieu = t.bureau.east(40);
+        Runnable lacher = charger(h, lieu, Lieux.RAYON_ICI, 600);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        h.assertTrue(Missions.donner(chef, t, "fer", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
+        h.succeedWhen(() -> {
+            h.assertTrue(t.memoire.contains("puits"), "pas encore de puits (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            long puits = t.memoire.getLong("puits"), mine = t.memoire.getLong("mine");
+            d.depot.setItem(26, new ItemStack(Items.RAW_IRON, 64)); // le stock est plein
+            t.majLieu();
+            boolean plein = t.missionActive() == null;
+            d.depot.setItem(26, new ItemStack(Items.RAW_IRON, 63)); // un fer pris : la mission repart
+            t.majLieu();
+            h.assertTrue(plein && t.missionActive() != null, "stock plein puis entamé : mission en cours " + plein + "/" + (t.missionActive() != null));
+            h.assertTrue(t.memoire.contains("puits") && t.memoire.getLong("puits") == puits && t.memoire.getLong("mine") == mine,
+                    "le même puits et la même mine (" + BlockPos.of(puits).toShortString() + " ; maintenant " + (t.memoire.contains("puits") ? BlockPos.of(t.memoire.getLong("puits")).toShortString() : "aucun") + ")");
+            h.assertTrue(java.util.Objects.equals(t.lieuTravail(), lieu), "toujours au lieu de la mission");
+            lacher.run();
+            t.discard();
+        });
+    }
+
+    /**
+     * « Chêne, garder 64, ici » à 40 blocs, puis de vive voix « Garde toujours 32 bûches de bouleau en stock » (sans lieu),
+     * un bouleau à 5 blocs du poste : son lieu tombe aussitôt, il coupe le bouleau et ne part jamais vers l'ancien lieu.
+     * Avant : l'ancien lieu valait encore jusqu'à 5 s, et il pouvait partir vers lui.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200, batch = "metiers_mission")
+    public static void ordreSansLieuOublieLAncien(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "bucheron", 778, new ItemStack(Items.IRON_AXE));
+        ServerLevel l = h.getLevel();
+        BlockPos lieu = t.bureau.east(40), bouleau = t.bureau.east(5);
+        TestsBucheron.arbre(l, bouleau, Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 5, 1);
+        h.assertTrue(Missions.donner(chef, t, "chene", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
+        h.assertTrue(lieu.equals(t.lieuTravail()), "au lieu de la mission");
+        t.appliquer(Ordres.lire("Garde toujours 32 bûches de bouleau en stock", t.metier), chef); // de vive voix (Dialogue.parler)
+        String[] perime = {null};
+        double[] loin = {0};
+        h.onEachTick(() -> {
+            if (perime[0] == null && t.missions.stream().noneMatch(m -> m.lieu != null) && t.lieuTravail() != null)
+                perime[0] = "file " + t.missions.stream().map(m -> m.id).toList() + ", lieu encore " + t.lieuTravail().toShortString() + " au tick " + h.getTick();
+            loin[0] = Math.max(loin[0], t.getX() - t.bureau.getX());
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(perime[0] == null, "l'ancien lieu valait encore : " + perime[0]);
+            h.assertTrue(loin[0] < 20, "parti vers l'ancien lieu : " + (int) loin[0] + " blocs à l'est du poste");
+            h.assertTrue(t.missions.size() == 1 && t.missions.get(0).id.equals("bouleau"), "la file : " + t.missions.stream().map(m -> m.id).toList());
+            h.assertFalse(l.getBlockState(bouleau).is(Blocks.BIRCH_LOG), "le bouleau du poste doit être coupé (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * « Travaille ici » redit : en X, puis en Y. Toutes ses missions passent en Y, même celle qui n'est pas en cours (elle
+     * avait pris X) ; une autre mission au lieu à elle le garde. Avant : la mission suivante restait en X, et l'y ramenait.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "metiers_mission")
+    public static void travailleIciRedit(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 779, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos x = t.bureau.east(10), y = t.bureau.south(10), autre = t.bureau.north(12);
+        h.assertTrue(Missions.donner(chef, t, "fer", "stock", 64, "toujours", null).ok(), "fer acceptée");
+        h.assertTrue(Missions.donner(chef, t, "charbon", "stock", 64, "toujours", null).ok(), "charbon acceptée");
+        h.assertTrue(Missions.donner(chef, t, "or", "stock", 64, "toujours", autre).ok(), "or acceptée");
+        t.travailleIci(x);
+        t.travailleIci(y);
+        String lieux = t.missions.stream().map(m -> m.id + "@" + (m.lieu == null ? "-" : m.lieu.equals(x) ? "X" : m.lieu.equals(y) ? "Y" : m.lieu.equals(autre) ? "A" : m.lieu.toShortString())).toList().toString();
+        t.discard();
+        h.assertTrue(lieux.equals("[fer@Y, charbon@Y, or@A]"), "lieux des missions : " + lieux);
+        h.assertTrue(y.equals(t.lieuTravail()), "il travaille en Y");
+        h.succeed();
     }
 }
