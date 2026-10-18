@@ -48,9 +48,13 @@ final class Reperes {
         return !avant.equals(maintenant);
     }
 
-    /** L'initiale affichée dans le repère : la première lettre du prénom, en capitale. */
-    static String initiale(String prenom) {
-        if (prenom == null || prenom.isBlank()) return "O";
-        return prenom.strip().substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+    /** Au plus autant de lettres dans le repère (un prénom très long ferait un drapeau trop large). */
+    static final int LETTRES = 10;
+
+    /** Le texte du repère sur la carte : le prénom de l'ouvrier (coupé s'il est très long), « Ouvrier » s'il n'en a pas. */
+    static String symbole(String prenom) {
+        if (prenom == null || prenom.isBlank()) return "Ouvrier";
+        String p = prenom.strip();
+        return p.length() <= LETTRES ? p : p.substring(0, LETTRES);
     }
 }

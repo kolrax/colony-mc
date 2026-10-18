@@ -75,12 +75,12 @@ final class XaeroOuvriers {
                 w.setZ(r.z());
                 if (!w.getName().equals(r.prenom())) {
                     w.setName(r.prenom());
-                    w.setInitials(Reperes.initiale(r.prenom()));
+                    w.setInitials(Reperes.symbole(r.prenom()));
                 }
                 continue;
             }
             if (p != null) p.groupe().remove(id); // il a changé de dimension
-            Waypoint w = new Waypoint(r.x(), r.y(), r.z(), r.prenom(), Reperes.initiale(r.prenom()), WaypointColor.GOLD, WaypointPurpose.NORMAL);
+            Waypoint w = new Waypoint(r.x(), r.y(), r.z(), r.prenom(), Reperes.symbole(r.prenom()), WaypointColor.GOLD, WaypointPurpose.NORMAL);
             groupe.add(id, w);
             AFFICHES.put(id, new Place(groupe, w));
             change = true;

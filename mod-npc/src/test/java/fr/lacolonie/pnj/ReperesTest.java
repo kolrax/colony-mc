@@ -53,9 +53,10 @@ class ReperesTest {
     }
 
     @Test
-    void initiale() {
-        assertEquals("J", Reperes.initiale("jean"));
-        assertEquals("É", Reperes.initiale("Éloi"));
-        assertEquals("O", Reperes.initiale(""));
+    void sonPrenomSurLeRepere() {
+        assertEquals("Jean", Reperes.symbole(" Jean "));
+        assertEquals("Barthélemy", Reperes.symbole("Barthélemy"));
+        assertEquals("Maximilien", Reperes.symbole("Maximilienne"), "au plus " + Reperes.LETTRES + " lettres");
+        assertEquals("Ouvrier", Reperes.symbole(""));
     }
 }

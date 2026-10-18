@@ -27,15 +27,17 @@ public final class BancCarte {
 
     static final boolean ACTIF = Boolean.getBoolean("colonie.carte");
     static final String MONDE = "carte";
-    static int tick = -200;
+    static int tick = -200, attente;
     static boolean cree;
 
     @SubscribeEvent
     static void tick(ClientTickEvent.Post e) {
         if (!ACTIF) return;
         Minecraft mc = Minecraft.getInstance();
-        if (!cree && mc.level == null && (mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen || mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen)
-                && !mc.getLevelSource().levelExists(MONDE)) {
+        // Xaero peut montrer son propre écran au démarrage (une mise à jour à annoncer) : on attend 5 s sans chargement en cours.
+        if (mc.level == null && mc.getOverlay() == null && ++attente % 100 == 0)
+            ColoniePnj.LOG.info("banc carte : en attente, écran {}", mc.screen == null ? "aucun" : mc.screen.getClass().getName());
+        if (!cree && mc.level == null && attente > 100 && !mc.getLevelSource().levelExists(MONDE)) {
             cree = true;
             mc.createWorldOpenFlows().createFreshLevel(MONDE, new net.minecraft.world.level.LevelSettings(MONDE, net.minecraft.world.level.GameType.CREATIVE, false,
                             net.minecraft.world.Difficulty.PEACEFUL, true, new net.minecraft.world.level.GameRules(), net.minecraft.world.level.WorldDataConfiguration.DEFAULT),
@@ -45,7 +47,11 @@ public final class BancCarte {
         if (mc.player == null || mc.getSingleplayerServer() == null) return;
         tick++;
         if (tick == -150) BancEcrans.serveur(BancCarte::scene);
-        if (tick == 0) mc.setScreen(null);
+        if (tick == 0) { // face à Jean (à l'est) : son repère dans le monde aussi, s'il y en a un
+            mc.setScreen(null);
+            mc.player.setYRot(-90);
+            mc.player.setXRot(10);
+        }
         if (tick == 120) photo(mc, "carte_1_minicarte.png");
         if (tick == 130 && CarteClient.XAERO) XaeroCarteDuMonde.ouvrir();
         if (tick == 260) photo(mc, "carte_2_monde.png");
