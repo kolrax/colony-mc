@@ -529,6 +529,85 @@ public class TestsFermier {
         });
     }
 
+    /**
+     * Relecture des mares : « plante un champ ici, 9 sur 9 » sur un potager labouré et semé (5 sur 5, au milieu) qui n'est
+     * pas à lui. Il creuse sa mare dans l'herbe autour, jamais dans le potager : aucun plant arraché, la terre intacte.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void pasDeMareDansLePotagerDUnAutre(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 109);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        BlockPos centre = o.offset(9, -1, 0);
+        List<BlockPos> potager = new ArrayList<>();
+        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) potager.add(centre.offset(x, 1, z));
+        for (BlockPos p : potager) culture(l, p, Blocks.CARROTS, 2);
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    List<String> abimes = new ArrayList<>();
+                    for (BlockPos p : potager)
+                        if (!l.getBlockState(p).is(Blocks.CARROTS) || !l.getBlockState(p.below()).is(Blocks.FARMLAND)) abimes.add(p.subtract(centre).toShortString() + " " + l.getBlockState(p.below()));
+                    h.assertTrue(abimes.isEmpty(), "le potager d'un autre reste intact : " + abimes);
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /**
+     * Un champ retenu de 9 sur 9, tout semé et sec (aucune terre vide) ; {@code vide} : une case labourée sans plant, à côté
+     * du milieu. Tout semé : une mare, un seul plant arraché, sa graine au sac. Une case vide : la mare y va, aucun plant
+     * arraché.
+     */
+    static void champToutSeme(GameTestHelper h, int coin, boolean vide) {
+        BlockPos[] b = new BlockPos[1];
+        Travailleur t = seul(h, coin, b);
+        ServerLevel l = h.getLevel();
+        BlockPos centre = b[0].offset(7, -1, 0), libre = centre.offset(1, 0, 0);
+        for (int x = -4; x <= 4; x++)
+            for (int z = -4; z <= 4; z++) {
+                BlockPos q = centre.offset(x, 0, z);
+                if (vide && q.equals(libre)) l.setBlockAndUpdate(q, Blocks.FARMLAND.defaultBlockState());
+                else culture(l, q.above(), Blocks.WHEAT, 2);
+            }
+        marquer(t, centre, 9, 9, "ble");
+        Fermier.TOURS.get(t).champsVus = 0; // l'entretien du champ dès son premier tour
+        h.succeedWhen(() -> {
+            List<BlockPos> eau = new ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -2, -6), centre.offset(6, 1, 6))) {
+                if (l.getFluidState(q).isEmpty()) continue;
+                h.assertTrue(l.getFluidState(q).isSource(), "l'eau ne coule pas : " + q.subtract(centre).toShortString());
+                eau.add(q.immutable());
+            }
+            h.assertTrue(eau.size() == 1, "une mare dans le champ : " + eau.size() + " (" + TestsJeu.etat(t, t.bureau) + ")");
+            int ble = 0;
+            for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) if (l.getBlockState(centre.offset(x, 1, z)).is(Blocks.WHEAT)) ble++;
+            int graines = t.compter(Actions.Filtre.de("minecraft:wheat_seeds")) + TestsBucheron.compte(TestsBucheron.depot(t), Items.WHEAT_SEEDS);
+            if (vide) {
+                h.assertTrue(eau.get(0).equals(libre), "la mare sur la terre vide, pas sous un plant : en " + eau.get(0).subtract(centre).toShortString());
+                h.assertTrue(ble == 80 && graines == 0, "aucun plant arraché : " + ble + " blés, " + graines + " graines");
+            } else h.assertTrue(ble == 80 && graines == 1, "un seul plant arraché, sa graine au sac : " + ble + " blés, " + graines + " graines");
+            h.assertTrue(parTerre(l, centre) == 0, "rien par terre : " + parTerre(l, centre));
+            t.discard();
+        });
+    }
+
+    /** Relecture des mares : un vieux champ tout semé et sec reçoit sa mare ; un seul plant arraché, sa graine au sac. */
+    @GameTest(template = "vide", timeoutTicks = 2000)
+    public static void mareDansUnChampToutSeme(GameTestHelper h) { champToutSeme(h, 108, false); }
+
+    /** Relecture des mares : une terre labourée vide convient, la mare y va ; aucun plant n'est arraché. Avant : le plant du milieu. */
+    @GameTest(template = "vide", timeoutTicks = 2000)
+    public static void mareSurLaTerreVidePlutotQueSousUnPlant(GameTestHelper h) { champToutSeme(h, 107, true); }
+
     /** Relecture : « Oublie ce champ », en le regardant : il le retire de ses champs, sans rien arracher. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void oublieLeChamp(GameTestHelper h) {

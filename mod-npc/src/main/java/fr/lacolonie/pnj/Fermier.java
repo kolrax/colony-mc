@@ -547,8 +547,8 @@ final class Fermier extends Metier {
                         plusSansGraines(t);
                         if (mares.isEmpty()) return Actions.Etat.OK;
                     } else if (graines == 0) {
-                        t.memoire.putString("sans_graines", graine.texte);
-                        t.bloquer(Statut.SANS_GRAINES);
+                        t.memoire.putString("sans_graines", graine.texte); // une mare à creuser d'abord : il le montrera après (travailler)
+                        if (ordre || mares.isEmpty()) t.bloquer(Statut.SANS_GRAINES);
                         if (ordre) dire(t, "Je n'ai pas de " + nomGraines() + ", chef, ni sur moi ni au dépôt.");
                         else Cerveau.ecrire(t, "graines", Cerveau.UN_JOUR, "graines", nomGraines());
                         if (ordre || mares.isEmpty()) return echec("pas_de_graines");
@@ -589,17 +589,17 @@ final class Fermier extends Metier {
         }
 
         /**
-         * Où creuser les mares : sur les cases d'herbe, de terre ou de sa terre labourée, de niveau (l'eau n'y coulera pas,
-         * {@link #bassin}) qu'il peut creuser ({@link Lieux#peutCasser} : ni le potager d'un joueur, ni le tampon d'une
-         * construction ; sa propre terre labourée et ses plants ne comptent pas, {@link #siens}), pour arroser les cases
-         * sèches du champ, semées ou non (à 4 blocs, au même niveau ou un plus bas), une mare par niveau au plus
+         * Où creuser les mares : sur les cases de niveau (l'eau n'y coulera pas, {@link #bassin}) qui peuvent en recevoir une
+         * ({@link #place}) et qu'il peut creuser ({@link Lieux#peutCasser} : ni le potager d'un joueur, ni le tampon d'une
+         * construction ; sa terre labourée et ses plants d'un champ retenu ne comptent pas, {@link #siens}), pour arroser les
+         * cases sèches du champ, semées ou non (à 4 blocs, au même niveau ou un plus bas), une mare par niveau au plus
          * ({@link Cultures#mares}). Le tampon du poste de son chef, et sa terre labourée, seulement pour les cases qu'aucune
-         * autre place n'arrose (un champ collé au poste, un vieux champ tout labouré). À la création du champ, et à
-         * l'entretien une fois par jour au plus ; {@link #seches} : les cases sèches comptées (une terre labourée humide l'est
-         * sans relire l'eau autour).
+         * autre place n'arrose (un champ collé au poste, un vieux champ tout labouré) ; sous un de ses plants, seulement si
+         * aucune autre place ne convient (un champ tout semé). À la création du champ, et à l'entretien une fois par jour au
+         * plus ; {@link #seches} : les cases sèches comptées (une terre labourée humide l'est sans relire l'eau autour).
          */
         List<BlockPos> mares(Travailleur t, ServerLevel l) {
-            List<Cultures.Point> seches = new ArrayList<>(), libres = new ArrayList<>(), poste = new ArrayList<>();
+            List<Cultures.Point> seches = new ArrayList<>();
             List<BlockPos> champ = new ArrayList<>(cases);
             champ.addAll(terres);
             for (BlockPos q : champ) {
@@ -608,14 +608,34 @@ final class Fermier extends Metier {
             }
             this.seches = seches.size();
             if (seches.isEmpty()) return List.of();
-            for (BlockPos q : champ) {
-                BlockState s = l.getBlockState(q);
-                if ((labourable(s) || s.is(Blocks.FARMLAND)) && bassin(l, q)) (Lieux.peutCasser(t, q) ? libres : poste).add(new Cultures.Point(q.getX(), q.getY(), q.getZ()));
-            }
+            List<BlockPos> r = mares(t, l, seches, champ, false);
+            return r.isEmpty() && !terres.isEmpty() ? mares(t, l, seches, champ, true) : r;
+        }
+
+        /** Les mares pour ces cases sèches, sur les places du champ ; sous un de ses plants seulement si {@code plant}. */
+        List<BlockPos> mares(Travailleur t, ServerLevel l, List<Cultures.Point> seches, List<BlockPos> champ, boolean plant) {
+            List<Cultures.Point> libres = new ArrayList<>(), poste = new ArrayList<>();
+            for (BlockPos q : champ) if (place(l, q, plant)) (Lieux.peutCasser(t, q) ? libres : poste).add(new Cultures.Point(q.getX(), q.getY(), q.getZ()));
             // Le tampon (coûteux, sans compter son champ) ne se relit que pour les places retenues ; mettreEau le revérifie de même.
-            return Cultures.mares(seches, libres, poste, p -> Lieux.peutCasserPresDuPoste(t, new BlockPos(p.x(), p.y(), p.z()), siens), champ.size(), centre.getX(), centre.getZ())
+            return Cultures.mares(seches, libres, poste, p -> Lieux.peutCasserPresDuPoste(t, new BlockPos(p.x(), p.y(), p.z()), siens()), champ.size(), centre.getX(), centre.getZ())
                     .stream().map(p -> new BlockPos(p.x(), p.y(), p.z())).toList();
         }
+
+        /**
+         * Une mare peut aller en q : de l'herbe ou de la terre ; à l'entretien d'un champ retenu, aussi sa terre labourée du
+         * champ ({@link #siens}, jamais pendant un ordre : le potager d'un autre), sous un de ses plants si {@code plant} ;
+         * et l'eau n'y coulera pas ({@link #bassin}).
+         */
+        boolean place(ServerLevel l, BlockPos q, boolean plant) {
+            BlockState s = l.getBlockState(q);
+            boolean sienne = s.is(Blocks.FARMLAND) && siens.contains(q.asLong());
+            if (!labourable(s) && !sienne) return false;
+            if (l.getBlockState(q.above()).getBlock() instanceof CropBlock && !(plant && sienne)) return false;
+            return bassin(l, q);
+        }
+
+        /** Sa terre labourée et ses plants, pour {@link Lieux#peutCasserPresDuPoste} ; null s'il n'en a pas (un ordre). */
+        it.unimi.dsi.fastutil.longs.LongSet siens() { return siens.isEmpty() ? null : siens; }
 
         /** Ce champ dans ses champs retenus (la mémoire, où il note sa dernière recherche de mare), ou null. */
         CompoundTag fiche(Travailleur t) {
@@ -667,10 +687,11 @@ final class Fermier extends Metier {
             Fouille.Plan p = ordre ? plan : Cultures.agrandi(plan);
             for (int[] k : Cultures.cases(p)) {
                 BlockPos col = centre.relative(d, k[0]).relative(d.getClockWise(), k[1]);
+                boolean sienne = !ordre && Cultures.dans(plan, k[0], k[1]); // sa terre labourée : celle d'un champ retenu, pas le rang autour
                 for (int y = centre.getY() + 3; y >= centre.getY() - 3; y--) // ses plants, à toute hauteur du champ (terrain en marches)
-                    if (l.getBlockState(col.atY(y)).getBlock() instanceof CropBlock) { if (aLui(t, col.atY(y))) { plants++; terre(l, col.atY(y - 1), true); } break; }
+                    if (l.getBlockState(col.atY(y)).getBlock() instanceof CropBlock) { if (aLui(t, col.atY(y))) { plants++; if (sienne) terre(l, col.atY(y - 1), true); } break; }
                 BlockPos q = sol(t, l, col, centre.getY());
-                if (q != null && (ordre || Cultures.dans(plan, k[0], k[1]) || l.getBlockState(q).is(Blocks.FARMLAND) || arrose(l, q))) { cases.add(q); terre(l, q, false); }
+                if (q != null && (ordre || Cultures.dans(plan, k[0], k[1]) || l.getBlockState(q).is(Blocks.FARMLAND) || arrose(l, q))) { cases.add(q); if (sienne) terre(l, q, false); }
             }
         }
 
@@ -692,8 +713,7 @@ final class Fermier extends Metier {
                 return Actions.Etat.EN_COURS;
             }
             marche = 0;
-            BlockState sol = l.getBlockState(q);
-            if (!labourable(sol) && !sol.is(Blocks.FARMLAND) || Monde.construit(l, q) || !bassin(l, q) || !Lieux.peutCasserPresDuPoste(t, q, siens))
+            if (!place(l, q, true) || Monde.construit(l, q) || !Lieux.peutCasserPresDuPoste(t, q, siens()))
                 return sansEau(t, "L'endroit de la mare a changé, chef : l'eau s'en irait, je n'en mets pas.");
             if (Monde.libres(t) < 2) return sansEau(t, "Mon sac est trop plein pour creuser la mare, chef : pas d'eau là.");
             // Son seau d'eau s'il en a un (le seau vide lui reste) ; sinon il creuse une mare : l'eau monte du sol.
