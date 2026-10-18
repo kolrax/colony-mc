@@ -34,7 +34,7 @@ modernfix
 ferrite-core
 simple-backups server
 sdlink server
-chunky server
+# chunky server              # rangé dans /mods-off le 18/10 : incompatible avec Distant Horizons. Pour regénérer, ranger DH le temps de Chunky.
 
 # --- Performance / shaders côté joueurs ---
 sodium==mc1.21.1-0.6.13-neoforge client   # épinglé : Iris 1.8.12 exige Sodium 0.6.13 (la 0.8 fait planter le jeu, 0.4.0)
@@ -43,4 +43,4 @@ iris client
 # --- Ajouts demandés par KOLRAX le 2026-10-18 (rapports 16, 19, 20) ---
 burnt                       # le feu brûle vraiment tout (avec GeckoLib)
 do-a-barrel-roll client     # vol en élytre façon avion
-# distanthorizons           # retiré le 18/10 (1.0.11) : fait planter le démarrage du serveur (Chunky is not loaded), voir docs/demandes-admin.md
+distanthorizons             # voir loin ; sur le serveur depuis le 18/10 19 h 35 UTC, SANS Chunky (les deux ensemble font planter le démarrage)
