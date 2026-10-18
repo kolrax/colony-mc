@@ -217,7 +217,7 @@ final class Guerrier extends Metier {
             LivingEntity a = o.getLastHurtByMob();
             if (a != null && Monde.hostile(a) && Monde.recent(o, o.getLastHurtByMobTimestamp())) m = a;
             if (m == null && o.memoire.getLong("alerte_t") > maintenant - 600 && t.level().getEntity(o.memoire.getInt("alerte")) instanceof LivingEntity c
-                    && (Monde.hostile(c) || Armee.ennemi(t, Armee.ennemis(t), c))) m = c; // un monstre, ou un ennemi en guerre (Armee.fuir)
+                    && (Monde.hostile(c) || Armee.ennemi(t, Armee.ennemis(t), c))) m = Monde.hostile(c) ? c : Armee.aupres(t, c); // un monstre, ou un ennemi en guerre (Armee.fuir)
             if (m == null) m = t.level().getEntitiesOfClass(LivingEntity.class, o.getBoundingBox().inflate(6, 3, 6), Monde::hostile).stream().findFirst().orElse(null);
             if (m != null && !t.inaccessibles.containsKey(m.getId()) && aSaPortee(t, m)) {
                 Cerveau.dire(t, "secours", 20, "Tiens bon, " + o.prenom + ", j'arrive !");

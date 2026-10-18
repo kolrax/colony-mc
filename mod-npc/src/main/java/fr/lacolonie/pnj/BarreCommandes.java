@@ -217,6 +217,7 @@ public final class BarreCommandes {
     /** La barre : une saisie en bas de l'écran, les propositions au-dessus. */
     static final class Ecran extends Screen {
         static final int LARGEUR = 320, HAUTEUR_LIGNE = 12;
+        static final String INVITE = "Tape le début d'un ordre…";
         final Travailleur cible;
         final String metier, prenom;
         EditBox saisie;
@@ -241,8 +242,9 @@ public final class BarreCommandes {
             saisie.setMaxLength(48);
             saisie.setBordered(true);
             saisie.setValue(avant);
-            saisie.setHint(Component.literal("Tape le début d'un ordre…").withColor(Client.GRIS));
-            saisie.setResponder(s -> majListe());
+            // Le jeu ne montre l'invite (setHint) que si la saisie n'a pas la main ; elle l'a toujours ici : une suggestion, en gris après le curseur.
+            saisie.setResponder(s -> { saisie.setSuggestion(s.isEmpty() ? INVITE : null); majListe(); });
+            saisie.setSuggestion(avant.isEmpty() ? INVITE : null);
             addRenderableWidget(saisie);
             setInitialFocus(saisie);
             majListe();
@@ -291,7 +293,7 @@ public final class BarreCommandes {
         public void render(GuiGraphics g, int mx, int my, float pt) {
             int x = gauche(), bas = basListe();
             int haut = bas - Math.max(1, vues.size()) * HAUTEUR_LIGNE - 14;
-            g.fill(x, haut, x + LARGEUR, height - 2, 0xC0101010);
+            g.fill(x, haut, x + LARGEUR, height - 2, 0xE8101010); // assez sombre : les cœurs de la barre de vie, dessous, ne se lisent plus à travers
             g.drawString(font, "Ordre à " + prenom + " (" + Metier.nom(metier).toLowerCase(Locale.ROOT) + ")", x + 4, haut + 3, Client.OR);
             if (vues.isEmpty()) g.drawString(font, "Aucun ordre ne commence ainsi.", x + 6, bas - HAUTEUR_LIGNE + 2, Client.GRIS);
             for (int i = 0; i < vues.size(); i++) {
@@ -300,7 +302,8 @@ public final class BarreCommandes {
                 if (i == choix) g.fill(x + 2, y, x + LARGEUR - 2, y + HAUTEUR_LIGNE, 0x60F2C14E);
                 g.drawString(font, l.libelle(), x + 6, y + 2, i == choix ? Client.BLANC : 0xDDDDDD);
                 int w = font.width(l.libelle()) + 12;
-                String d = font.plainSubstrByWidth(l.detail(), Math.max(0, LARGEUR - w - 10));
+                int place = Math.max(0, LARGEUR - w - 10);
+                String d = font.width(l.detail()) <= place ? l.detail() : font.plainSubstrByWidth(l.detail(), Math.max(0, place - font.width("…"))) + "…";
                 g.drawString(font, d, x + w, y + 2, Client.GRIS);
             }
             super.render(g, mx, my, pt);

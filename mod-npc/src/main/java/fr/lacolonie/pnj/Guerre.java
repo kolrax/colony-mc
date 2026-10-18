@@ -171,6 +171,24 @@ final class Guerre {
         return new double[]{-dx * derriere - dz * cote, -dz * derriere + dx * cote};
     }
 
+    /** Un camarade qui frappe déjà un ennemi le rend aussi peu tentant qu'un ennemi libre tant de blocs plus loin : chacun son homme. */
+    static final double PRESSE = 6;
+
+    /**
+     * Lequel charger, parmi des ennemis à {@code distances} blocs de lui que {@code assaillants} de ses camarades frappent déjà :
+     * le plus proche, chaque camarade sur lui comptant pour {@link #PRESSE} blocs de plus (deux ou trois gardes par homme
+     * tant qu'il en reste de libres pas trop loin, au lieu d'une mêlée en grappe sur le premier venu). -1 s'il n'y en a pas.
+     */
+    static int cible(double[] distances, int[] assaillants) {
+        int m = -1;
+        double mieux = Double.MAX_VALUE;
+        for (int i = 0; i < distances.length; i++) {
+            double v = distances[i] + PRESSE * assaillants[i];
+            if (v < mieux) { mieux = v; m = i; }
+        }
+        return m;
+    }
+
     /** Ce que lisent les deux chefs à la déclaration et à la paix. */
     static String declaration(String de, String a) { return "⚔ " + de + " déclare la guerre à " + a + "."; }
 

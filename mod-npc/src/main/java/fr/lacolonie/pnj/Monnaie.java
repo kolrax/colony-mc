@@ -75,11 +75,19 @@ public final class Monnaie {
         Integer[] ordre = new Integer[valeurs.length];
         for (int i = 0; i < ordre.length; i++) ordre[i] = i;
         java.util.Arrays.sort(ordre, (a, b) -> Integer.compare(valeurs[b], valeurs[a]));
-        for (int i : ordre) {
-            if (q[i] == 0) continue;
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(q[i]).append(' ').append(noms[i]);
-        }
-        return sb.length() == 0 ? "rien" : sb.toString();
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (int i : ordre) if (q[i] != 0) parts.add(nombre(q[i], noms[i]));
+        if (parts.isEmpty()) return "rien";
+        int d = parts.size() - 1;
+        return d == 0 ? parts.get(0) : String.join(", ", parts.subList(0, d)) + " et " + parts.get(d);
+    }
+
+    /** « 1 rouage », « 3 rouages en laiton », « 2 pièces de bronze » (le premier mot prend la marque du pluriel). */
+    static String nombre(int n, String nom) {
+        if (n <= 1 || nom.isEmpty()) return n + " " + nom;
+        int e = nom.indexOf(' ');
+        String premier = e < 0 ? nom : nom.substring(0, e);
+        if (!premier.endsWith("s") && !premier.endsWith("x") && !premier.endsWith("z")) premier += "s";
+        return n + " " + premier + (e < 0 ? "" : nom.substring(e));
     }
 }

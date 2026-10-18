@@ -43,7 +43,23 @@ class MonnaieTest {
 
     @Test
     void texteLisible() {
-        assertEquals("1 laiton, 3 bronze", Monnaie.texte(67, new int[]{1, 64}, new String[]{"bronze", "laiton"}));
+        assertEquals("1 laiton et 3 bronzes", Monnaie.texte(67, new int[]{1, 64}, new String[]{"bronze", "laiton"}));
+    }
+
+    /** Les noms français des pièces Numismatics (Reglages.monnaie), dans l'ordre de {@link #V}. */
+    static final String[] NOMS = {"rouage en laiton", "pièce de bronze", "pièce d'andésite", "rouage", "rouage en or", "rouage en netherite"};
+
+    @Test
+    void lesPiecesSAccordentAuPluriel() {
+        assertEquals("2 pièces de bronze", Monnaie.texte(2, V, NOMS), "« 2 pièce de bronze par jour » vu à l'écran");
+        assertEquals("1 pièce de bronze", Monnaie.texte(1, V, NOMS));
+        assertEquals("2 rouages", Monnaie.texte(32, V, NOMS));
+        assertEquals("3 rouages en laiton", Monnaie.texte(3 * 64, V, NOMS));
+        assertEquals("2 rouages en or", Monnaie.texte(1024, V, NOMS));
+        assertEquals("2 rouages en netherite", Monnaie.texte(8192, V, NOMS));
+        assertEquals("1 rouage en laiton, 1 rouage, 1 pièce d'andésite et 3 pièces de bronze", Monnaie.texte(64 + 16 + 8 + 3, V, NOMS));
+        assertEquals("4 rouages et 1 pièce d'andésite", Monnaie.texte(72, new int[]{8, 16}, new String[]{"pièce d'andésite", "rouage"}));
+        assertEquals("rien", Monnaie.texte(0, V, NOMS));
     }
 
     @Test

@@ -120,6 +120,22 @@ class GuerreTest {
         assertFalse(Guerre.repli(0, 0));
     }
 
+    /** Chacun son homme : le plus proche, sauf si ses camarades le frappent déjà et qu'un autre, libre, n'est pas beaucoup plus loin. */
+    @Test
+    void chacunSonHomme() {
+        assertEquals(-1, Guerre.cible(new double[0], new int[0]));
+        assertEquals(0, Guerre.cible(new double[]{5, 7, 9}, new int[]{0, 0, 0}), "personne dessus : le plus proche");
+        assertEquals(1, Guerre.cible(new double[]{5, 7, 9}, new int[]{1, 0, 0}), "un camarade sur le premier : le suivant, libre");
+        assertEquals(2, Guerre.cible(new double[]{5, 7, 9}, new int[]{1, 1, 0}));
+        assertEquals(0, Guerre.cible(new double[]{5, 30}, new int[]{1, 0}), "l'autre est trop loin : il rejoint son camarade");
+        // Six gardes qui choisissent l'un après l'autre parmi six hommes en file (5, 6,5, 8… blocs) : au moins quatre hommes visés, trois gardes au plus par homme.
+        double[] d = {5, 6.5, 8, 9.5, 11, 12.5};
+        int[] n = new int[d.length];
+        for (int g = 0; g < 6; g++) n[Guerre.cible(d, n)]++;
+        assertTrue(java.util.Arrays.stream(n).filter(x -> x > 0).count() >= 4, java.util.Arrays.toString(n));
+        assertTrue(java.util.Arrays.stream(n).max().getAsInt() <= 3, java.util.Arrays.toString(n));
+    }
+
     /** Les rangs : le chef de file en tête, trois de front derrière lui, à 2 blocs d'écart ; une colonne avec un seul de front. */
     @Test
     void formation() {

@@ -126,7 +126,12 @@ public final class Statut {
         else {
             s.append(FAIT.getOrDefault(metier, "fournit")).append(' ').append(partitif(nomCommande));
             switch (repetition) {
-                case "jour" -> s.append(", ").append(nombre).append(" chaque jour");
+                case "jour" -> {
+                    // « 10 chaque jour, le jour » se répète : « 10 chaque jour, en journée », et « 10 chaque nuit » de nuit.
+                    if ("nuit".equals(horaires)) { s.append(", ").append(nombre).append(" chaque nuit"); horaires = "toujours"; }
+                    else s.append(", ").append(nombre).append(" chaque jour");
+                    if ("jour".equals(horaires)) { s.append(", en journée"); horaires = "toujours"; }
+                }
                 case "stock" -> s.append(" et en garde ").append(nombre).append(" au dépôt");
                 default -> s.append(" jusqu'à ").append(nombre);
             }

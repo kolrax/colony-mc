@@ -74,12 +74,34 @@ final class Armee {
         return true;
     }
 
-    /** L'ennemi le plus proche qu'il voit dans {@code zone} ; null en paix (sans recherche). */
+    /**
+     * L'ennemi qu'il voit dans {@code zone} et qu'il charge ; null en paix (sans recherche). Un combattant prend celui, proche
+     * de lui, que ses camarades de la zone frappent le moins ({@link Guerre#cible}) ; un autre ouvrier, le plus proche (pour
+     * fuir, prévenir la garde). Une seule recherche, au moment de choisir.
+     */
     static LivingEntity ennemi(Travailleur t, AABB zone) {
         Map<UUID, String> en = ennemis(t);
         if (en.isEmpty()) return null;
-        return t.level().getEntitiesOfClass(LivingEntity.class, zone, e -> e != t && ennemi(t, en, e)).stream()
-                .filter(e -> t.getSensing().hasLineOfSight(e)).min(Comparator.comparingDouble(t::distanceToSqr)).orElse(null);
+        List<LivingEntity> autour = t.level().getEntitiesOfClass(LivingEntity.class, zone, e -> e != t);
+        List<LivingEntity> vus = new ArrayList<>();
+        for (LivingEntity e : autour) if (ennemi(t, en, e) && t.getSensing().hasLineOfSight(e)) vus.add(e);
+        if (vus.size() < 2) return vus.isEmpty() ? null : vus.get(0);
+        double[] d = new double[vus.size()];
+        int[] n = new int[vus.size()];
+        for (int i = 0; i < d.length; i++) d[i] = Math.sqrt(t.distanceToSqr(vus.get(i)));
+        if (arme(t)) for (LivingEntity e : autour) {
+            if (e instanceof Travailleur w && t.chef.equals(w.chef) && w.action instanceof Actions.Attaquer a) {
+                int i = vus.indexOf(a.cible);
+                if (i >= 0) n[i]++;
+            }
+        }
+        return vus.get(Guerre.cible(d, n));
+    }
+
+    /** Un ennemi qu'un ouvrier a signalé : un autre tout près de lui, que ses camarades frappent moins, s'il en voit un ; sinon lui. */
+    static LivingEntity aupres(Travailleur t, LivingEntity signale) {
+        LivingEntity e = ennemi(t, signale.getBoundingBox().inflate(8, 4, 8));
+        return e != null ? e : signale;
     }
 
     /** Il le frappe : une attaque de guerre, qui cesse à la paix ({@link #paixFaite}). */
