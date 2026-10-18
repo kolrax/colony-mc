@@ -992,6 +992,8 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
         if ((tickCount + getId()) % 20 == 7 && mode != Mode.CHOMEUR) tickRegles();
         if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
+        Fuite.tick(this); // plan E2 : trop blessé, il se replie ; hors combat et nourri, il guérit comme un joueur
+        if ((tickCount + getId()) % 20 == 11 && mode != Mode.CHOMEUR) Metier.armureAuDepot(this); // plan E3 : l'armure du dépôt
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {
