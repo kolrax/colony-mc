@@ -115,7 +115,7 @@ public final class Reseau {
         // 7 : la tenue des ouvriers (lot 8, après la 0.9.6 : encore une donnée sur l'entité)
         // 8 : rôle et état au-dessus des têtes (lot 8 : deux données de plus sur l'entité)
         // 9 : refonte 1.0.0 (statut unique au-dessus des têtes, fiche de l'ouvrier, missions)
-        var r = e.registrar("9");
+        var r = e.registrar("10");
         r.playToClient(FicheOuvrier.TYPE, FicheOuvrier.CODEC, (p, ctx) -> Client.ouvrirFicheOuvrier(p));
         r.playToServer(OrdreOuvrier.TYPE, OrdreOuvrier.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t && sp.distanceToSqr(t) <= 16 * 16 && !t.aTerre)
