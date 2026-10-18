@@ -1,0 +1,164 @@
+<title>Corrections des ouvriers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Mise en page : une feuille de corrections, chaque rapport de KOLRAX suivi de « signalé » à « réglé » ; état de l'équipe en tête */
+:root{
+  --bg:#EEECE7; --sheet:#FBFAF6; --ink:#211F1C; --muted:#625D55; --line:#D8D3C9;
+  --accent:#8A4B1E; --accent-wash:#F3E3D3; --ok:#27725F; --ok-wash:#D9ECE5;
+  --run:#2D5C86; --run-wash:#DCE7F1; --warn:#9C5A10; --warn-wash:#F6E3CC; --bad:#9A3626; --bad-wash:#F5DCD6;
+  --display:"Alegreya SC", Georgia, "Times New Roman", serif;
+  --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171513; --sheet:#1F1C19; --ink:#E9E5DE; --muted:#A39C91; --line:#3A3530;
+  --accent:#E0A06A; --accent-wash:#3A2818; --ok:#62BBA5; --ok-wash:#1A302A;
+  --run:#8DB8E2; --run-wash:#1B2A3A; --warn:#E6A35A; --warn-wash:#3A2A17; --bad:#E5907B; --bad-wash:#3B201B; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#171513; --sheet:#1F1C19; --ink:#E9E5DE; --muted:#A39C91; --line:#3A3530;
+  --accent:#E0A06A; --accent-wash:#3A2818; --ok:#62BBA5; --ok-wash:#1A302A;
+  --run:#8DB8E2; --run-wash:#1B2A3A; --warn:#E6A35A; --warn-wash:#3A2A17; --bad:#E5907B; --bad-wash:#3B201B; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body)}
+button,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.wrap{max-width:1000px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:12px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+h1{font:700 clamp(26px,4.2vw,40px)/1.05 var(--display);margin:0;text-wrap:balance}
+.live{display:inline-flex;gap:6px;align-items:center;font-size:14px;color:var(--muted)}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live.on::before{background:var(--ok)} .live.off::before{background:var(--bad)}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:18px;min-width:0}
+.card h2{font:700 20px/1.2 var(--display);margin:0 0 10px;text-wrap:balance}
+.card h2 small{font:500 12px var(--mono);color:var(--muted);margin-left:8px}
+.muted{color:var(--muted)} .empty{color:var(--muted);font-style:italic;margin:0}
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;border-left:4px solid var(--muted)}
+.hero.work{border-left-color:var(--run)}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--muted);margin-top:8px}
+.hero.work .dot{background:var(--run);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--run) 55%,transparent)}70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion: reduce){.hero.work .dot{animation:none}}
+.hero h2{margin:0 0 4px} .hero p{margin:0 0 6px}
+.agents{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.agents li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:15px;align-items:start}
+.track{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:4px}
+.track span{height:8px;border-radius:2px;background:var(--line)}
+.track span.on{background:var(--ok)}
+.legend{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;font:500 11px var(--mono);color:var(--muted);margin-top:4px}
+.pill{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap;background:var(--line);color:var(--ink)}
+.pill.ok{background:var(--ok-wash);color:var(--ok)} .pill.run{background:var(--run-wash);color:var(--run)}
+.pill.warn{background:var(--warn-wash);color:var(--warn)} .pill.bad{background:var(--bad-wash);color:var(--bad)} .pill.acc{background:var(--accent-wash);color:var(--accent)}
+.fix{border-top:1px solid var(--line);padding-block:14px;display:flex;flex-direction:column;gap:6px}
+.fix:first-of-type{border-top:0;padding-top:0}
+.fix .head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.fix h3{font-size:17px;margin:0;overflow-wrap:anywhere}
+.num{font:500 12px var(--mono);color:var(--accent)}
+.quote{margin:0;padding:6px 10px;border-left:3px solid var(--line);color:var(--muted);font-style:italic;font-size:15px;overflow-wrap:anywhere}
+.note{margin:0;font-size:15px;overflow-wrap:anywhere}
+.ans{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.vbtn{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 12px;font-weight:500;cursor:pointer}
+.vbtn:hover{border-color:var(--muted)} .vbtn:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;min-height:64px;resize:vertical;font-size:16px}
+.msg{font-size:14px;margin:0} .msg.err{color:var(--bad)}
+.summary{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:15px}
+.summary b{font:700 20px var(--display);font-variant-numeric:tabular-nums;margin-right:4px}
+.foot{font-size:14px;color:var(--muted);max-width:75ch}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div><p class="eyebrow">La Colonie · rapports en jeu du 18 octobre</p><h1>Corrections des ouvriers</h1></div>
+    <span class="live" id="live">Connexion…</span>
+  </header>
+  <section class="card hero" id="direct"><span class="dot" aria-hidden="true"></span><div><h2>Chargement…</h2></div></section>
+  <section class="card" id="bilan"></section>
+  <section id="plans" style="display:flex;flex-direction:column;gap:16px"></section>
+  <div class="foot">
+    <p>Chaque rapport que tu as fait en jeu avec /rapport devient une correction, et chaque correction passe par cinq étapes : signalé, en cours, prêt, sur le serveur, confirmé par toi. Quand une correction arrive sur le serveur, essaie-la en jeu et dis si c'est réglé. Sinon, écris ce que tu as vu : l'équipe reprend la correction.</p>
+    <p>Le chargement des chunks et les mods à ajouter ne sont pas du travail pour l'équipe du mod : ils sont transmis à la session Admin, qui tranche.</p>
+  </div>
+</div>
+
+<script>
+const ETAPES = ["a_faire", "en_cours", "pret", "livre", "regle"];
+const ST = { a_faire: ["", "signalé"], en_cours: ["run", "en cours"], pret: ["acc", "prêt, pas encore installé"], livre: ["warn", "sur le serveur, à essayer"], regle: ["ok", "réglé (confirmé par toi)"], toujours: ["bad", "toujours là"], admin: ["", "chez l'Admin"] };
+const PLANS = { A: "Plan A · Déplacements « GPS »", B: "Plan B · Petites corrections", D: "Plan D · Les ouvriers sur la carte Xaero", Admin: "Transmis à la session Admin" };
+const AGENTS = { "chef-de-chantier": "Chef de chantier", developpeur: "Développeur", testeur: "Testeur", relecteur: "Relecteur", auteur: "Auteur", artiste: "Artiste", livreur: "Livreur" };
+let C = [], E = null, db = null;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pill = (k) => { const s = ST[k] || ["", k || ""]; return `<span class="pill ${s[0]}">${esc(s[1])}</span>`; };
+function quand(iso) {
+  const d = new Date(iso); if (isNaN(d)) return "";
+  const s = (Date.now() - d) / 1000;
+  if (s < 60) return "à l'instant"; if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+  if (s < 6 * 3600) return `il y a ${Math.floor(s / 3600)} h ${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`;
+  return d.toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+}
+function renderDirect() {
+  const s = (E && E.session) || {}, ag = (E && E.agents) || [];
+  const vieux = E && E.maj && Date.now() - new Date(E.maj) > 3.5 * 3600e3;
+  const work = s.statut === "en_cours" && !vieux;
+  const actifs = ag.filter((a) => a.statut === "en_cours");
+  $("#direct").className = "card hero" + (work ? " work" : "");
+  $("#direct").innerHTML = `<span class="dot" aria-hidden="true"></span><div>
+    <h2>${!E ? "En attente de l'équipe" : work ? "L'équipe travaille" : vieux && s.statut === "en_cours" ? "Session interrompue" : "Au repos"}</h2>
+    <p class="muted">${E && E.maj ? "Mis à jour " + esc(quand(E.maj)) : "La prochaine session écrira ici dès son démarrage."}${s.lien && /^https:\/\/claude\.ai\//.test(s.lien) ? ` · <a href="${esc(s.lien)}" target="_blank" rel="noopener">voir la session</a>` : ""}</p>
+    ${s.objectif ? `<p><strong>En ce moment :</strong> ${esc(s.objectif)}</p>` : ""}
+    ${actifs.length ? `<ul class="agents">${actifs.map((a) => `<li>${pill("en_cours")}<span><strong>${esc(AGENTS[a.nom] || a.nom)}</strong> · ${esc(a.tache || "")}</span></li>`).join("")}</ul>` : ""}
+    ${!work && s.prochaine_etape ? `<p><strong>Ensuite :</strong> ${esc(s.prochaine_etape)}</p>` : ""}
+  </div>`;
+}
+function renderBilan() {
+  const mod = C.filter((c) => c.plan !== "Admin"), n = (k) => mod.filter((c) => c.statut === k).length;
+  $("#bilan").innerHTML = `<h2>Où en sont les corrections<small>${mod.length} corrections du mod</small></h2>
+    <div class="summary"><span><b>${n("regle")}</b>réglées</span><span><b>${n("livre")}</b>à essayer en jeu</span><span><b>${n("pret") + n("en_cours")}</b>en travail</span><span><b>${n("a_faire")}</b>pas commencées</span>${n("toujours") ? `<span><b>${n("toujours")}</b>toujours là</span>` : ""}</div>`;
+}
+function piste(c) {
+  const i = c.statut === "toujours" ? 1 : ETAPES.indexOf(c.statut);
+  return `<div class="track" aria-hidden="true">${ETAPES.map((_, k) => `<span class="${k <= i ? "on" : ""}"></span>`).join("")}</div><div class="legend" aria-hidden="true"><span>signalé</span><span>en cours</span><span>prêt</span><span>serveur</span><span>réglé</span></div>`;
+}
+function renderPlans() {
+  const act = document.activeElement;
+  if (act && act.closest && act.closest("[data-fix]")) return;
+  const plans = Object.keys(PLANS).filter((p) => C.some((c) => c.plan === p));
+  $("#plans").innerHTML = !C.length ? `<div class="card"><p class="empty">Les corrections apparaîtront ici dès que l'équipe les aura chargées.</p></div>` :
+    plans.map((p) => `<div class="card"><h2>${esc(PLANS[p])}</h2>${C.filter((c) => c.plan === p).sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).map((c) => `
+      <article class="fix" data-fix="${esc(c.id)}">
+        <div class="head">${(c.rapports || []).length ? `<span class="num">Rapport${c.rapports.length > 1 ? "s" : ""} ${esc(c.rapports.join(", "))}</span>` : ""}${pill(c.statut)}${c.version ? `<span class="pill">version ${esc(c.version)}</span>` : ""}<span class="muted" style="font-size:13px">${esc(quand(c.maj))}</span></div>
+        <h3>${esc(c.titre)}</h3>
+        ${c.citation ? `<p class="quote">${esc(c.citation)}</p>` : ""}
+        ${p !== "Admin" ? piste(c) : ""}
+        ${c.note ? `<p class="note"><strong>${p === "Admin" ? "Réponse de l'Admin" : "L'équipe"} :</strong> ${esc(c.note)}</p>` : ""}
+        ${c.remarque ? `<p class="note"><strong>Ta remarque :</strong> ${esc(c.remarque)}</p>` : ""}
+        ${c.statut === "livre" || c.statut === "toujours" ? `<div class="ans"><p class="note"><strong>Tu as essayé en jeu ?</strong></p>
+          <div class="opts"><button class="vbtn" data-v="regle">✓ C'est réglé</button><button class="vbtn" data-v="toujours">✗ Toujours pas</button></div>
+          <textarea id="r-${esc(c.id)}" aria-label="Ce que tu as vu" placeholder="Si ce n'est pas réglé : ce que tu as vu (obligatoire)."></textarea><p class="msg" role="status"></p></div>` : ""}
+      </article>`).join("")}</div>`).join("");
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-v]"); if (!b) return;
+  const art = b.closest("[data-fix]"), id = art.dataset.fix, msg = art.querySelector(".msg"), rem = art.querySelector("textarea").value.trim();
+  if (b.dataset.v === "toujours" && !rem) { msg.className = "msg err"; msg.textContent = "Écris ce que tu as vu : l'équipe en a besoin pour reprendre."; return; }
+  if (!db) { msg.className = "msg err"; msg.textContent = "Pas de connexion : ouvre ce panneau depuis claude.ai."; return; }
+  msg.className = "msg"; msg.textContent = "Envoi…";
+  try { await db.doc("corrections/" + id).update({ statut: b.dataset.v, remarque: rem, maj: new Date().toISOString() }); if (document.activeElement) document.activeElement.blur(); renderPlans(); renderBilan(); }
+  catch (err) { msg.className = "msg err"; msg.textContent = "Non enregistré (" + ((err && err.code) || "erreur") + "). Réessaie."; }
+});
+document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (!(a && a.closest && a.closest("[data-fix]"))) renderPlans(); }, 0));
+function live(k, t) { const el = $("#live"); el.className = "live " + k; el.textContent = t; }
+renderDirect(); renderBilan(); renderPlans();
+setInterval(() => { renderDirect(); }, 60000);
+(window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null)).then((d) => {
+  if (!d) { live("off", "Hors ligne : ouvre ce panneau depuis claude.ai"); return; }
+  db = d; live("on", "En direct");
+  const err = (x) => live("off", "Mise à jour interrompue (" + ((x && x.code) || "erreur") + "). Recharge la page.");
+  db.doc("direct/etat").onSnapshot((s) => { E = s.exists ? s.data() : null; renderDirect(); }, err);
+  db.collection("corrections").limit(200).onSnapshot((q) => { C = q.docs.map((x) => ({ id: x.id, ...x.data() })); renderBilan(); renderPlans(); }, err);
+}, () => live("off", "Hors ligne : ouvre ce panneau depuis claude.ai"));
+</script>
