@@ -20,6 +20,15 @@ import java.util.UUID;
 @PrefixGameTestTemplate(false)
 public class TestsRelever {
 
+    /** Ce que fait le compagnon, pour dire pourquoi il ne relève pas le blessé. */
+    static String etat(Travailleur a, Travailleur blesse) {
+        String act = a.action == null ? "aucune" : a.action.getClass().getSimpleName()
+                + (a.action instanceof Blessures.Accourir x ? " arrivé " + x.arrive + " auprès " + x.aupres : "");
+        return act + ", mode " + a.mode + ", à " + (int) Math.sqrt(a.distanceToSqr(blesse)) + " blocs, remède " + Blessures.remede(a)
+                + ", faim " + a.faim + ", consigne " + a.consigne + ", peut accourir " + Blessures.peutAccourir(a) + ", vivant " + a.isAlive()
+                + ", paroles " + a.paroles;
+    }
+
     static Travailleur aTerre(GameTestHelper h, BlockPos base, BlockPos pos, UUID chef) {
         Travailleur t = TestsBlessures.ouvrier(h, "mineur", base, pos, chef, new ItemStack(Items.IRON_PICKAXE));
         t.forcerChunk();
@@ -97,7 +106,7 @@ public class TestsRelever {
         h.assertTrue(!journal.isEmpty() && journal.getCompound(0).getString("ligne").startsWith(net.minecraft.ChatFormatting.RED.toString()),
                 "ligne rouge au journal : " + (journal.isEmpty() ? "rien" : journal.getCompound(0).getString("ligne")));
         h.succeedWhen(() -> {
-            h.assertTrue(blesse.isAlive() && !blesse.aTerre, "relevé par son compagnon");
+            h.assertTrue(blesse.isAlive() && !blesse.aTerre, "relevé par son compagnon (aide : " + etat(aide, blesse) + ")");
             h.assertTrue(aide.compter(Actions.Filtre.de("minecraft:bread")) == 1, "un pain donné : " + aide.compter(Actions.Filtre.de("minecraft:bread")));
             h.assertFalse(Blessures.releveSeul(blesse), "pas relevé seul");
             blesse.discard();
