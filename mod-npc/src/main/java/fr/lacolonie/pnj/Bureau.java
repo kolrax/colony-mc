@@ -676,6 +676,7 @@ public final class Bureau {
                 case "mission_descendre" -> Boite.deplacer(t.missions, i, 1);
                 default -> { t.missions.remove(i); yield true; }
             };
+            if (change) t.majLieu();
             if (change && (t.missions.isEmpty() || t.missions.get(0) != avant) && t.action != null
                     && !(t.action instanceof Actions.Attaquer || t.action instanceof Actions.Fuir || t.action instanceof Actions.Echapper))
                 t.finirAction("ordre");
