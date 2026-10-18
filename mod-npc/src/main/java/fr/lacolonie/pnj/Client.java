@@ -985,7 +985,7 @@ public final class Client {
                     + (choisi.getInt("impayes") > 0 ? "   Paies en retard : " + choisi.getInt("impayes") : "")
                     + (choisi.getString("besoin").isEmpty() ? "" : "   Il demande : " + choisi.getString("besoin")), x, y + 21, GRIS);
             texte(g, "PAIE (bronzes)", x, y + 31, OR);
-            texte(g, couper("Les horaires se choisissent pour chaque mission, sur sa fiche.", largeur - 176), x + 162, y + 46, GRIS);
+            texte(g, couper("Horaires : sur chaque mission.", largeur - 176), x + 162, y + 46, GRIS);
             texte(g, couper(choisi.getString("paie") + " · il demande " + choisi.getLong("salaireDemande"), largeur - 16), x, y + 64, GRIS);
         }
 
