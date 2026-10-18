@@ -932,6 +932,8 @@ public class Travailleur extends PathfinderMob {
     Charge.Origine origineChemin = Charge.Origine.AUTRE;
     /** Portée réduite de la prochaine recherche (posée par {@link Itineraire} le temps de l'appel) ; 0 : la portée normale (FOLLOW_RANGE). */
     float porteeChemin;
+    /** Son chercheur de chemin (plan A1 : {@code Itineraire.depuis} cherche aussi depuis la fin d'une étape pas encore atteinte). */
+    net.minecraft.world.level.pathfinder.PathFinder chercheur;
     /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
@@ -956,7 +958,7 @@ public class Travailleur extends PathfinderMob {
             protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int max) {
                 super.createPathFinder(max); // pose l'évaluateur de la marche (portes comprises)
                 nodeEvaluator = new Itineraire.Evaluateur(); // le même, qui sait éviter un endroit où il est resté bloqué (plan A2)
-                return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
+                return chercheur = new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
                     @Override
                     public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
                         long debut = System.nanoTime();

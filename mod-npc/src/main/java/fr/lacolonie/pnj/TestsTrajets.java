@@ -97,6 +97,46 @@ public class TestsTrajets {
         });
     }
 
+    /**
+     * Plan A1 : un long trajet sur du plat (100 blocs, terrain chargé) est calculé en entier avant de partir, comme par un
+     * GPS, puis suivi d'un bout à l'autre : plus aucune recherche de chemin une fois parti, et jamais un pas en arrière.
+     * Avant, il cherchait une nouvelle étape à chaque fois qu'il en atteignait une, puis le chemin direct près du but.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900, skyAccess = true)
+    public static void trajetCalculeAvantDePartir(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos depart = TestsJeu.sol(h, 0, 151000), arrivee = TestsJeu.sol(h, 100, 151000);
+        java.util.List<net.minecraft.world.level.ChunkPos> forces = new java.util.ArrayList<>();
+        for (int x = depart.getX() - 32; x <= arrivee.getX() + 32; x += 16)
+            for (int dz = -32; dz <= 32; dz += 16) {
+                var c = new net.minecraft.world.level.ChunkPos(new BlockPos(x, 0, depart.getZ() + dz));
+                forces.add(c);
+                l.setChunkForced(c.x, c.z, true);
+            }
+        Travailleur t = TestsJeu.employe(h, "mineur", depart, Vec3.atBottomCenterOf(depart), ItemStack.EMPTY);
+        t.mode = Travailleur.Mode.ATTENDRE; // le cerveau ne lui donne rien d'autre à faire
+        t.forcerChunk();
+        Vec3 but = Vec3.atBottomCenterOf(arrivee);
+        Cerveau.lancer(t, new Actions.Aller(but, 2));
+        int[] auDepart = {-1};
+        double[] meilleure = {Double.MAX_VALUE}, recul = {0};
+        h.onEachTick(() -> {
+            if (auDepart[0] < 0 && Itineraire.horizontale(t.position(), Vec3.atBottomCenterOf(depart)) > 3) auDepart[0] = t.recherches;
+            double d = Itineraire.horizontale(t.position(), but);
+            meilleure[0] = Math.min(meilleure[0], d);
+            recul[0] = Math.max(recul[0], d - meilleure[0]);
+        });
+        h.succeedWhen(() -> {
+            String e = "à " + (int) Itineraire.horizontale(t.position(), but) + " blocs du but, " + t.recherches + " recherches dont "
+                    + auDepart[0] + " avant de partir, plus grand recul " + String.format("%.1f", recul[0]) + " blocs, " + t.diag;
+            h.assertTrue(t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
+            t.discard();
+            for (var c : forces) l.setChunkForced(c.x, c.z, false);
+            h.assertTrue(auDepart[0] > 0 && t.recherches - auDepart[0] <= 1, "le trajet doit être calculé avant de partir, pas en route (" + e + ")");
+            h.assertTrue(recul[0] < 2, "il ne doit jamais revenir sur ses pas (" + e + ")");
+        });
+    }
+
     /** Témoin : sans le changement de chemin (lot « trajets_temoin »), la même cabosse le retient bien sur place. */
     @GameTest(template = "grand", timeoutTicks = 300, skyAccess = true, batch = "trajets_temoin")
     public static void temoinResteRetenuSansDetour(GameTestHelper h) {
