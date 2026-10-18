@@ -17,3 +17,7 @@ tools/etat.json
 __pycache__/
 *.pyc
 .claude/settings.local.json
+
+# Copies de travail des agents et cache de la commande supabase
+.claude/worktrees/
+supabase/.temp/
