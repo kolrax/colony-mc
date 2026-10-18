@@ -1423,6 +1423,9 @@ public class Travailleur extends PathfinderMob {
     @Override
     public void die(DamageSource src) {
         if (!level().isClientSide && !mortDefinitive && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            // Au journal du serveur, la cause de la chute (sinon perdue : seule la mort définitive, « was killed », y paraît).
+            ColoniePnj.LOG.info("{} ({}, chef {}) tombe à terre en {} : {}", prenom, metier, chef, blockPosition().toShortString(),
+                    src.getLocalizedDeathMessage(this).getString());
             tomberATerre();
             return;
         }
