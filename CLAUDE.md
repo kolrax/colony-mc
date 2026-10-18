@@ -146,6 +146,12 @@ Quand écrire :
 5. **Décision qui revient à KOLRAX** : `demandes/<mot>` (pour `kolrax`, avec des `options` si possible), puis avance sur autre chose. Si c'est urgent, envoie aussi un message privé.
 6. **Demande à l'Admin** : `docs/demandes-admin.md`, et une copie dans `demandes/<mot>` (pour `admin`) pour que KOLRAX la voie. Recopie la réponse de l'Admin quand elle arrive.
 
+## Panneau « Corrections des ouvriers » (lot 17, depuis le 18/10)
+Artefact **https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW** (source : `docs/panneau-corrections.html`), en plus du panneau « Refonte des ouvriers ». KOLRAX y suit les corrections tirées de ses rapports en jeu (`docs/corrections.md`). Tiens-le à jour **en direct** :
+- `direct/etat` : `{maj, session:{statut: en_cours|terminee|en_attente, objectif, prochaine_etape, lien}, agents:[{nom, tache, statut}]}`, mis à jour au début, à chaque agent lancé ou fini, et à la fin.
+- `corrections/<id>` (déjà créées : `a1`…`a4`, `b1`…`b3`, `d1`, `admin-chunks`, `admin-mods`) : `{plan, ordre, titre, rapports, citation, statut: a_faire|en_cours|pret|livre|regle|toujours|admin, version, note, remarque, maj}`. Passe `statut` à `en_cours` dès que tu commences, à `pret` quand c'est vert sur `main`, à `livre` (avec `version`) quand c'est sur le serveur. `note` = une phrase simple de ce qui a changé ou de ce que KOLRAX doit essayer. **Jamais `regle`** : c'est KOLRAX qui confirme. S'il met `toujours` avec une `remarque`, cette correction passe avant tout le reste.
+- Les fiches `admin-…` : recopie dans `note` la réponse de l'Admin (`docs/demandes-admin.md`) quand elle arrive.
+
 ## Tests en jeu de KOLRAX (panneau, collection `essais`)
 KOLRAX fait la feuille de tests en jeu dans l'onglet « Tests » du panneau. Chaque document `essais/<id>` : `{num, ordre, groupe, titre, preparation, etapes, attendu, important, statut: a_faire|ok|ko|bloque|corrige, remarque, note, maj}`.
 - **Au début de chaque session**, après les consignes : lis les essais en `ko` ou `bloque`. Ils **passent avant le plan**, les `important` d'abord. Sa `remarque` décrit ce qu'il a vu : reproduis-le par un test (en jeu de test si possible), corrige, livre.
