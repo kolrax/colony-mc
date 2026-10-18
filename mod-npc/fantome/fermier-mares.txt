@@ -1,0 +1,21 @@
+# Le fermier seul (restes de la refonte : les mares). Il fait son champ automatique près du poste, sans seau : il y creuse
+# ses mares (une par niveau au plus, le tampon du poste seulement faute d'autre place). Attendu : du blé au dépôt en
+# deux jours, aucun bloc construit cassé, des statuts lisibles.
+# La monnaie du monde d'essai (écrite par tools/fantome.py) : cuivre 1, or 8, émeraude 64.
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 16
+fantome embauche fermier 2
+# Un ouvrier tout juste embauché ne connaît son poste qu'à sa seconde suivante (voir trois-ouvriers.txt).
+attendre 20
+ticks 40
+fantome donne minecraft:iron_hoe 1
+fantome donne minecraft:wheat_seeds 32
+fantome donne minecraft:bread 16
+fantome depose
+fantome paie
+fantome mission fermier ble stock 32
+fantome rapport fermier-mares-debut
+attendre 5
+jours 2
