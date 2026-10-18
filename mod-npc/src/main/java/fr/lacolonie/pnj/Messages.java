@@ -71,6 +71,9 @@ final class Messages {
         m("graines", "Plus de semences",
                 "Je n'ai plus de {0} pour semer nos champs. Laisse-m'en au dépôt.",
                 "Les champs attendent leurs semences : il n'y a plus de {0}, ni sur moi ni au dépôt.");
+        m("sans_mare", "Pas de place pour l'eau",
+                "La terre de notre champ est sèche, et je n'y trouve aucune place pour creuser une mare : des constructions sont trop près. Le blé poussera moins vite ; un seau d'eau au dépôt, ou un champ plus à l'écart, y remédierait.",
+                "Notre champ a soif, mais l'eau n'y a pas sa place : trop de constructions autour. Il poussera lentement.");
         m("sans_enclos", "Pas de bêtes à soigner",
                 "Je ne trouve aucune bête dans un enclos autour du poste. Il me faut des vaches, des moutons, des cochons ou des poules, derrière une barrière avec un portillon.",
                 "Mes enclos sont vides, ou il n'y en a pas : sans bêtes à garder, je tourne en rond.");

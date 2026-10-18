@@ -104,7 +104,10 @@ final class Lieux {
     static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1) { return chercher(l, x0, y0, z0, x1, y1, z1, null); }
 
     /** Pareil, sans compter les torches et le pavé que ce mineur a posés aux positions {@code siens} ({@link #sien}). */
-    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1, LongSet siens) {
+    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1, LongSet siens) { return chercher(l, x0, y0, z0, x1, y1, z1, siens, false); }
+
+    /** Pareil ; avec {@code cultures}, la terre labourée et les cultures de quiconque ne comptent pas ({@link #culture}). */
+    static boolean chercher(Level l, int x0, int y0, int z0, int x1, int y1, int z1, LongSet siens, boolean cultures) {
         y0 = Math.max(y0, l.getMinBuildHeight());
         y1 = Math.min(y1, l.getMaxBuildHeight() - 1);
         BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
@@ -120,7 +123,10 @@ final class Lieux {
                     for (int x = ax; x <= bx; x++)
                         for (int y = ay; y <= by; y++)
                             for (int z = az; z <= bz; z++)
-                                if (compte(s.getBlockState(x & 15, y & 15, z & 15)) && (siens == null || !sien(s.getBlockState(x & 15, y & 15, z & 15), siens, x, y, z))) return true;
+                                {
+                                    BlockState st = s.getBlockState(x & 15, y & 15, z & 15);
+                                    if (compte(st) && !(cultures && culture(st)) && (siens == null || !sien(st, siens, x, y, z))) return true;
+                                }
                 }
             }
         return false;
@@ -192,14 +198,20 @@ final class Lieux {
         if (!regles(l) || ici(t, p)) return true; // sa terre labourée, hors des règles (essais) ou dans la zone « Travaille ici »
         int x0 = (p.getX() & ~3) - TAMPON, y0 = (p.getY() & ~3) - TAMPON, z0 = (p.getZ() & ~3) - TAMPON;
         int x1 = x0 + 3 + 2 * TAMPON, y1 = y0 + 3 + 2 * TAMPON, z1 = z0 + 3 + 2 * TAMPON;
-        if (siens != null && !chercher(l, x0, y0, z0, x1, y1, z1, siens)) return true; // rien d'autre que son champ dans le tampon
+        if (!chercher(l, x0, y0, z0, x1, y1, z1, siens, true)) return true; // rien d'autre que des champs dans le tampon
         if (b == null) return false;
         int bx = b.getX(), by = b.getY(), bz = b.getZ();
         if (bx < x0 || bx > x1 || by < y0 || by > y1 || bz < z0 || bz > z1) return false; // la construction n'est pas le poste
-        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1, siens)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1, siens))
-                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1, siens)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1, siens))
-                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1, siens)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1, siens));
+        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1, siens, true)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1, siens, true))
+                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1, siens, true)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1, siens, true))
+                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1, siens, true)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1, siens, true));
     }
+
+    /**
+     * La terre labourée ou une culture, de quiconque (le potager d'un voisin collé au champ) : pour une mare, elle ne compte
+     * pas dans le tampon (l'eau à côté ne lui fait rien) ; la case de la mare, elle, n'est jamais la terre d'un autre.
+     */
+    static boolean culture(BlockState st) { return st.is(Blocks.FARMLAND) || st.getBlock() instanceof net.minecraft.world.level.block.CropBlock; }
 
     /** Au plus tant de blocs posés retenus par mineur (les plus récents) : une mine entière, escaliers et galeries. */
     static final int POSES = 512;

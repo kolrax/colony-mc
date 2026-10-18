@@ -515,6 +515,8 @@ final class Fermier extends Metier {
                     if (fiche != null && fiche.getLong("mare_t") <= Cerveau.temps(t)) {
                         mares.addAll(mares(t, l));
                         if (seches > 0) fiche.putLong("mare_t", Cerveau.temps(t) + Cerveau.UN_JOUR);
+                        // Pas de place pour l'eau (des constructions tout autour) : il le dit au journal du poste, une fois par jour.
+                        if (mares.isEmpty() && seches * 2 > cases.size() + terres.size()) Cerveau.ecrire(t, "sans_mare", Cerveau.UN_JOUR, "sans_mare");
                     }
                     if (cases.isEmpty() && mares.isEmpty()) {
                         plusSansGraines(t); // plus rien à semer : il ne manque plus de graines

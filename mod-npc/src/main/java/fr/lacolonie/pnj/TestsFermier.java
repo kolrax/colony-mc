@@ -530,6 +530,52 @@ public class TestsFermier {
     }
 
     /**
+     * Joueur fantôme (1.0.7) : un vieux champ sec retenu, tout semé, avec le potager d'un autre collé à ses bords est et
+     * ouest, dans le lot « lieux » (le tampon des constructions vaut). Avant : la terre et les plants du potager comptaient
+     * comme une construction dans le tampon de chaque place, il ne creusait aucune mare, sans rien dire. Maintenant : la
+     * mare dans son champ, la terre humide, le potager intact (ni terre ni plant cassés).
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000, batch = "lieux")
+    public static void mareMalgreLePotagerVoisin(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "fermier", 128, ItemStack.EMPTY);
+        ServerLevel l = h.getLevel();
+        BlockPos centre = t.bureau.offset(10, -1, 0);
+        for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) culture(l, centre.offset(x, 1, z), Blocks.WHEAT, 0);
+        List<BlockPos> potager = new ArrayList<>();
+        for (int x : new int[]{-6, -5, 5, 6}) for (int z = -1; z <= 1; z++) potager.add(centre.offset(x, 1, z));
+        for (BlockPos p : potager) culture(l, p, Blocks.WHEAT, 3);
+        marquer(t, centre, 9, 9, "ble");
+        Fermier.TOURS.get(t).champsVus = 0;
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        h.assertTrue(Missions.donner(chef, t, "ble", "stock", 64, "toujours", centre.above()).ok(), "mission acceptée");
+        h.succeedWhen(() -> {
+            for (BlockPos p : potager)
+                h.assertTrue(l.getBlockState(p).is(Blocks.WHEAT) && l.getBlockState(p.below()).is(Blocks.FARMLAND), "le potager intact en " + p.subtract(centre).toShortString());
+            List<String> eau = new ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(centre.offset(-7, -2, -6), centre.offset(7, 1, 6))) {
+                if (l.getFluidState(q).isEmpty()) continue;
+                h.assertTrue(l.getFluidState(q).isSource() && q.getY() == centre.getY() && Math.abs(q.getX() - centre.getX()) <= 4 && Math.abs(q.getZ() - centre.getZ()) <= 4,
+                        "l'eau ne coule pas et reste dans son champ : " + q.subtract(centre).toShortString());
+                eau.add(q.subtract(centre).toShortString());
+            }
+            h.assertTrue(!eau.isEmpty(), "une mare malgré le potager voisin (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            int humides = 0;
+            for (int x = -4; x <= 4; x++)
+                for (int z = -4; z <= 4; z++) {
+                    BlockPos q = centre.offset(x, 0, z);
+                    if (!l.getBlockState(q).is(Blocks.FARMLAND)) continue;
+                    if (l.getBlockState(q).getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) < 7) l.getBlockState(q).randomTick(l, q, l.random);
+                    if (l.getBlockState(q).getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) == 7) humides++;
+                }
+            h.assertTrue(humides >= 40, "la terre de son champ humide : " + humides + " cases (mare en " + eau + ")");
+            t.discard();
+        });
+    }
+
+    /**
      * Relecture des mares : « plante un champ ici, 9 sur 9 » sur un potager labouré et semé (5 sur 5, au milieu) qui n'est
      * pas à lui. Il creuse sa mare dans l'herbe autour, jamais dans le potager : aucun plant arraché, la terre intacte.
      */
