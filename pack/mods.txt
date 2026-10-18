@@ -43,4 +43,5 @@ iris client
 # --- Ajouts demandés par KOLRAX le 2026-10-18 (rapports 16, 19, 20) ---
 burnt                       # le feu brûle vraiment tout (avec GeckoLib)
 do-a-barrel-roll client     # vol en élytre façon avion
+forgified-fabric-api==0.116.15+2.3.5+1.21.1 client   # épinglé : la 2.3.6 exige NeoForge 21.1.262 (modpack 1.0.11 ne se lançait pas)
 distanthorizons             # voir loin ; sur le serveur depuis le 18/10 19 h 35 UTC, SANS Chunky (les deux ensemble font planter le démarrage)

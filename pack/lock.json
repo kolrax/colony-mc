@@ -13,19 +13,6 @@
     "server": "required"
   },
   {
-    "slug": "chunky",
-    "title": "Chunky",
-    "version": "1.4.23",
-    "file": "Chunky-NeoForge-1.4.23.jar",
-    "url": "https://cdn.modrinth.com/data/fALzjamp/versions/LuFhm4eU/Chunky-NeoForge-1.4.23.jar",
-    "sha1": "ab0c74743a653020fe2dfc4986b43e893947f3e9",
-    "sha512": "2db769dd723f243a21e1881e7c9f825e9c193da6f2bed454b70cb6fa9e51c57f63fdcf017c0657bbd26f7bba30815413e27c74d3c7be0783390a96ee9baa4bf7",
-    "size": 340572,
-    "required_by": null,
-    "client": "unsupported",
-    "server": "required"
-  },
-  {
     "slug": "cloth-config",
     "title": "Cloth Config API",
     "version": "15.0.140+neoforge",
@@ -143,6 +130,19 @@
     "server": "required"
   },
   {
+    "slug": "distanthorizons",
+    "title": "Distant Horizons",
+    "version": "3.3.3-1.21.1",
+    "file": "DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/uCdwusMi/versions/9w34y8ai/DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
+    "sha1": "4357b4d19fab818780c94f0e43dad1cc931634b2",
+    "sha512": "d14b32d3fd143a06514d6ad388eee11e9d657c84e1a937aaf8d033b1137fb43ef8b05cff1011a994cc42f3106823c51234f8bc18d72bb05bc317a20ea83c50ed",
+    "size": 28289212,
+    "required_by": null,
+    "client": "required",
+    "server": "required"
+  },
+  {
     "slug": "do-a-barrel-roll",
     "title": "Do a Barrel Roll",
     "version": "3.7.3+1.21-neoforge",
@@ -171,13 +171,13 @@
   {
     "slug": "forgified-fabric-api",
     "title": "Forgified Fabric API",
-    "version": "0.116.15+2.3.6+1.21.1",
-    "file": "forgified-fabric-api-0.116.15+2.3.6+1.21.1.jar",
-    "url": "https://cdn.modrinth.com/data/Aqlf1Shp/versions/C4eskNuR/forgified-fabric-api-0.116.15%2B2.3.6%2B1.21.1.jar",
-    "sha1": "1fe1ca9f440cd30c86186e42505694b70ececc11",
-    "sha512": "470ae4e8569484e6942a2f7e09a37ae58a58e0ad44f49f0d483db88024db19d41bfac3c68221c38623829871ade9d89bc5aa31cf0e682e798b2f9029b808011d",
-    "size": 5612888,
-    "required_by": "do-a-barrel-roll",
+    "version": "0.116.15+2.3.5+1.21.1",
+    "file": "forgified-fabric-api-0.116.15+2.3.5+1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/Aqlf1Shp/versions/V9WdDUTx/forgified-fabric-api-0.116.15%2B2.3.5%2B1.21.1.jar",
+    "sha1": "1a2c41d2efbe1c60159b90a165557e7c06d03a5c",
+    "sha512": "2b44ecd839544e3668a02f8de86433d507417d068dcafeee7f698744fc2b12fd888a1bba509da57c8e2884d01dbaf344f49bbac0f22cdae599507356ed0cbe30",
+    "size": 5613159,
+    "required_by": null,
     "client": "required",
     "server": "unsupported"
   },

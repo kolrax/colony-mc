@@ -76,6 +76,9 @@ def main(pack_version):
     mods = resolve(entries)
     assert all(m["sha1"] and m["sha512"] for m in mods)
     (HERE / "lock.json").write_text(json.dumps(mods, indent=2, ensure_ascii=False), encoding="utf-8")
+    from verifier import verifier  # jars imbriqués compris : un pack qui ne se lancerait pas s'arrête ici
+    if err := verifier(mods):
+        raise SystemExit("Le pack ne se lancerait pas :\n" + "\n".join(err))
 
     index = {"formatVersion": 1, "game": "minecraft", "versionId": pack_version, "name": "La Colonie",
              "dependencies": {"minecraft": MC, "neoforge": NEOFORGE},

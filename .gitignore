@@ -21,3 +21,4 @@ __pycache__/
 # Copies de travail des agents et cache de la commande supabase
 .claude/worktrees/
 supabase/.temp/
+pack/cache/
