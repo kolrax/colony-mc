@@ -78,6 +78,8 @@ final class Itineraire {
     static int budget = BUDGET;
     /** -1 : pas de choix en cours ; 0 : le but ; 1 : la trace ; 2 : la sortie de sous terre ; 3 : les étapes autour. */
     private int phase = -1, curseur, essais, recherchesCeTick;
+    /** Le tick du monde de {@code recherchesCeTick}. */
+    private long tickJetons = Long.MIN_VALUE;
     private List<BlockPos> candidats;
     private final List<BlockPos> rates = new ArrayList<>();
     /** Après un choix où rien n'était atteignable, il ne recommence pas avant ce moment (temps du monde). */
@@ -113,7 +115,10 @@ final class Itineraire {
      * Les refus et les passe-droits sont comptés dans {@link Charge}.
      */
     boolean jeton(long maintenant) {
-        if (recherchesCeTick >= PAR_TICK) return false;
+        // Le compte de ses recherches est celui du tick en cours : rien d'autre n'a à le remettre à zéro (sinon, en marche
+        // sur un trajet fini, il restait plein et tout jeton était refusé pour toujours).
+        if (tickJetons != maintenant) { tickJetons = maintenant; recherchesCeTick = 0; }
+        if (recherchesCeTick >= PAR_TICK) { if (attendDepuis < 0) attendDepuis = maintenant; return false; }
         if (budget <= 0) {
             if (attendDepuis < 0) attendDepuis = maintenant;
             boolean force = passeDroit == maintenant
@@ -248,7 +253,6 @@ final class Itineraire {
         Level l = t.level();
         long maintenant = l.getGameTime();
         if (maintenant < prochainChoix) return;
-        recherchesCeTick = 0;
         BlockPos ici = t.blockPosition();
         Vec3 p = t.position();
         double dh = horizontale(p, but);
@@ -536,9 +540,14 @@ final class Itineraire {
         for (int i = 0; i < c.getNodeCount(); i++) {
             BlockPos n = c.getNodePos(i);
             for (BlockPos q : List.of(n, n.above())) {
+                if (!l.isLoaded(q)) continue; // pas de chunk chargé pendant le tick
                 BlockState st = l.getBlockState(q);
                 if (st.is(BlockTags.DOORS) || st.is(BlockTags.FENCE_GATES)) continue; // il les ouvre
-                if (!Monde.traversable(l, q)) return false;
+                if (Monde.traversable(l, q)) continue;
+                // Aux pieds, un bloc bas qu'il franchit (tapis, neige, dalle) : la marche du jeu y passe.
+                var forme = st.getCollisionShape(l, q);
+                if (q == n && st.getFluidState().isEmpty() && !st.is(net.minecraft.world.level.block.Blocks.FIRE) && forme.max(Direction.Axis.Y) <= 0.5) continue;
+                return false;
             }
         }
         return true;
@@ -552,7 +561,6 @@ final class Itineraire {
     private void prolonger(Travailleur t) {
         Level l = t.level();
         long maintenant = l.getGameTime();
-        recherchesCeTick = 0;
         BlockPos d = plan.get(plan.size() - 1).getEndNode().asBlockPos();
         Vec3 pd = Vec3.atBottomCenterOf(d);
         double dh = horizontale(pd, but);
