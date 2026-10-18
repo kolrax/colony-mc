@@ -79,7 +79,9 @@ public class TestsSons {
         Husk[] m = new Husk[1];
         h.onEachTick(() -> {
             if (m[0] == null && h.getTick() >= 5) { // un PNJ tout juste apparu ne voit rien au même tick
-                m[0] = EntityType.HUSK.spawn(h.getLevel(), t.blockPosition().east(2), MobSpawnType.MOB_SUMMONED);
+                // Au nord, à 2 blocs : à l'est, il apparaissait dans le bloc du poste (l'ouvrier est 2 blocs à l'ouest) et y
+                // mourait étouffé, sans coup, quand le guerrier montait sur le poste au lieu de le frapper (vu 1 fois sur 40).
+                m[0] = EntityType.HUSK.spawn(h.getLevel(), t.blockPosition().north(2), MobSpawnType.MOB_SUMMONED);
                 m[0].setNoAi(true);
                 m[0].setPersistenceRequired(); // loin de tout joueur, il disparaîtrait aussitôt
             }
