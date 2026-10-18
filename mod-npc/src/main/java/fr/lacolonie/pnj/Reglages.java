@@ -146,6 +146,13 @@ public class Reglages {
     public int trajet_immobile_ticks = 60;
     /** Trajets (plan A2) : l'endroit qui l'a bloqué reste évité pendant tant de ticks (600 = 30 s). */
     public int trajet_evitement_ticks = 600;
+    /**
+     * Le mineur sous terre (corrections A4 et E3) : quand son couloir est barré ou ses galeries finies, il ouvre jusqu'à tant
+     * de galeries de côté, à son niveau, vers un nouveau coin à miner, avant de remonter creuser un autre escalier ; et quand il
+     * n'a plus de torches, il en reprend tant au dépôt.
+     */
+    public int mineur_detours = 2;
+    public int mineur_torches_prises = 16;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
