@@ -142,6 +142,10 @@ public class Reglages {
     public String jeton_panneau = "";
     /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
     public boolean fantome = false;
+    /** Trajets (plan A2) : immobile depuis tant de ticks sans être arrivé (ni attendre son tour), il refait un trajet qui évite l'endroit (60 = 3 s). */
+    public int trajet_immobile_ticks = 60;
+    /** Trajets (plan A2) : l'endroit qui l'a bloqué reste évité pendant tant de ticks (600 = 30 s). */
+    public int trajet_evitement_ticks = 600;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();

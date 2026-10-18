@@ -534,6 +534,8 @@ public class Travailleur extends PathfinderMob {
         // Il nage comme un joueur : l'eau n'est pas un mur, il la traverse quand c'est plus court.
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, 2.0f);
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 0.0f);
+        // Une cabosse de cacao (ou une noix de coco) arrête le passage : Minecraft la croit franchissable (plan A2).
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.COCOA, -1.0f);
         setCustomNameVisible(true);
         // Un point visé juste au-dessus ou au-dessous de lui : Minecraft le ferait tourner sur lui-même (en toupie).
         moveControl = new net.minecraft.world.entity.ai.control.MoveControl(this) {
@@ -948,6 +950,7 @@ public class Travailleur extends PathfinderMob {
             @Override
             protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int max) {
                 super.createPathFinder(max); // pose l'évaluateur de la marche (portes comprises)
+                nodeEvaluator = new Itineraire.Evaluateur(); // le même, qui sait éviter un endroit où il est resté bloqué (plan A2)
                 return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
                     @Override
                     public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
