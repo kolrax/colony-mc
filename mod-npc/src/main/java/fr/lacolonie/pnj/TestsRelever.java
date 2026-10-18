@@ -101,11 +101,21 @@ public class TestsRelever {
         BlockPos lieu = base.south(6);
         Travailleur aide = TestsBlessures.ouvrier(h, "mineur", base, lieu.east(8), chef, new ItemStack(Items.IRON_PICKAXE));
         aide.inventaire.addItem(new ItemStack(Items.BREAD, 2));
-        Travailleur blesse = aTerre(h, base, lieu, chef);
-        var journal = Bureau.Entite.journal(Courrier.de(h.getLevel().getServer()).boite(chef));
-        h.assertTrue(!journal.isEmpty() && journal.getCompound(0).getString("ligne").startsWith(net.minecraft.ChatFormatting.RED.toString()),
-                "ligne rouge au journal : " + (journal.isEmpty() ? "rien" : journal.getCompound(0).getString("ligne")));
+        Travailleur blesse = TestsBlessures.ouvrier(h, "mineur", base, lieu, chef, new ItemStack(Items.IRON_PICKAXE));
+        blesse.forcerChunk();
+        long[] tombe = {-1};
+        h.onEachTick(() -> {
+            // Une seconde pour que le compagnon soit bien là (un ouvrier tout juste apparu n'est pas encore vu), puis le coup.
+            if (tombe[0] >= 0 || h.getTick() <= 20) return;
+            blesse.hurt(blesse.damageSources().generic(), 100);
+            tombe[0] = h.getTick();
+            h.assertTrue(blesse.aTerre && blesse.isAlive(), "à terre, pas mort");
+            var journal = Bureau.Entite.journal(Courrier.de(h.getLevel().getServer()).boite(chef));
+            h.assertTrue(!journal.isEmpty() && journal.getCompound(0).getString("ligne").startsWith(net.minecraft.ChatFormatting.RED.toString()),
+                    "ligne rouge au journal : " + (journal.isEmpty() ? "rien" : journal.getCompound(0).getString("ligne")));
+        });
         h.succeedWhen(() -> {
+            h.assertTrue(tombe[0] >= 0, "il est tombé");
             h.assertTrue(blesse.isAlive() && !blesse.aTerre, "relevé par son compagnon (aide : " + etat(aide, blesse) + ")");
             h.assertTrue(aide.compter(Actions.Filtre.de("minecraft:bread")) == 1, "un pain donné : " + aide.compter(Actions.Filtre.de("minecraft:bread")));
             h.assertFalse(Blessures.releveSeul(blesse), "pas relevé seul");
