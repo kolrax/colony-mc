@@ -51,4 +51,31 @@ class BarreCommandesTest {
             assertTrue(l.id().length() <= 64, "le paquet porte 64 caractères : " + l.id());
         }
     }
+
+    /** Qui, quoi : ce que chaque ordre demande en plus ; « dis à Jean que… » ne se choisit pas et quitte la barre. */
+    @Test
+    void lesOrdresQuiDemandentUnComplement() {
+        var R = Repertoire.PAR_ID;
+        assertEquals(BarreCommandes.Recherche.Besoin.QUI, BarreCommandes.Recherche.besoin(R.get("montrer_cible")));
+        assertEquals(BarreCommandes.Recherche.Besoin.QUOI, BarreCommandes.Recherche.besoin(R.get("prendre_objet")));
+        assertEquals(BarreCommandes.Recherche.Besoin.QUI_QUOI, BarreCommandes.Recherche.besoin(R.get("donner_cible")));
+        assertEquals(BarreCommandes.Recherche.Besoin.RIEN, BarreCommandes.Recherche.besoin(R.get("attaquer_la")), "attaquer : le monstre regardé");
+        assertEquals(BarreCommandes.Recherche.Besoin.RIEN, BarreCommandes.Recherche.besoin(R.get("prendre_torches")));
+        assertEquals(BarreCommandes.Recherche.Besoin.RETIRE, BarreCommandes.Recherche.besoin(R.get("message")));
+        assertTrue(BarreCommandes.Recherche.lignes().stream().noneMatch(l -> l.id().equals("message")), "retiré de la barre");
+        assertTrue(BarreCommandes.Recherche.combien(R.get("prendre_objet")) && !BarreCommandes.Recherche.combien(R.get("tenir_objet")));
+    }
+
+    @Test
+    void laPhraseCommeSiLeNomAvaitEteDit() {
+        var R = Repertoire.PAR_ID;
+        assertEquals("montre-moi Jean", BarreCommandes.Recherche.phrase(R.get("montrer_cible"), "Jean", ""));
+        assertEquals("donne à Jean minecraft:bread", BarreCommandes.Recherche.phrase(R.get("donner_cible"), "Jean", "minecraft:bread"));
+        assertEquals("montre-moi", BarreCommandes.Recherche.phrase(R.get("montrer_cible"), "", ""));
+        var c = BarreCommandes.Recherche.Complement.lire("Jean|minecraft:bread|16");
+        assertEquals(List.of("Jean", "minecraft:bread", 16), List.of(c.qui(), c.quoi(), c.combien()));
+        assertEquals(c, BarreCommandes.Recherche.Complement.lire(c.texte()));
+        assertEquals(0, BarreCommandes.Recherche.Complement.lire("").combien());
+        assertEquals(64, BarreCommandes.Recherche.Complement.lire("||9999").combien());
+    }
 }

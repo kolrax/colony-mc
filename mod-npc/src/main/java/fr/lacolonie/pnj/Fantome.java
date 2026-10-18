@@ -362,14 +362,10 @@ public final class Fantome {
                 .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("ici", "suivre", "attendre", "rentrer", "annuler", "licencier"), b))
                 .executes(c -> boutonOuvrier(c, new CompoundTag()))
                 .then(Commands.argument("donnees", CompoundTagArgument.compoundTag()).executes(c -> boutonOuvrier(c, CompoundTagArgument.getCompoundTag(c, "donnees")))))));
-        // La barre de commandes : BarreCommandes.executer, comme le paquet de la barre.
-        f.then(Commands.literal("commande").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("ordre", StringArgumentType.word()).executes(c -> {
-            Joueur j = moi(c);
-            Travailleur t = ouvrier(c, j);
-            approcher(j, t.position());
-            String r = BarreCommandes.executer(j, t, StringArgumentType.getString(c, "ordre"));
-            return ok(c, "Commande « " + StringArgumentType.getString(c, "ordre") + " » à " + t.prenom + " : « " + r + " ».");
-        }))));
+        // La barre de commandes : BarreCommandes.executer, comme le paquet de la barre (complément facultatif : « Jean|minecraft:bread|8 »).
+        f.then(Commands.literal("commande").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("ordre", StringArgumentType.word())
+                .executes(c -> commandeBarre(c, ""))
+                .then(Commands.argument("complement", StringArgumentType.greedyString()).executes(c -> commandeBarre(c, StringArgumentType.getString(c, "complement")))))));
         f.then(Commands.literal("paie").executes(c -> ranger(c, true, null)));
         f.then(Commands.literal("depose").executes(c -> ranger(c, false, null))
                 .then(Commands.argument("objet", ResourceLocationArgument.id()).executes(c -> ranger(c, false, objet(c)))));
@@ -532,6 +528,15 @@ public final class Fantome {
     }
 
     /** Un bouton de la fiche de l'ouvrier ({@link Missions#action}) ; « ici » : là où se tient le fantôme. */
+    static int commandeBarre(CommandContext<CommandSourceStack> c, String complement) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Travailleur t = ouvrier(c, j);
+        approcher(j, t.position());
+        String ordre = StringArgumentType.getString(c, "ordre");
+        String r = BarreCommandes.executer(j, t, ordre, complement);
+        return ok(c, "Commande « " + ordre + (complement.isEmpty() ? "" : " / " + complement) + " » à " + t.prenom + " : « " + r + " ».");
+    }
+
     static int boutonOuvrier(CommandContext<CommandSourceStack> c, CompoundTag d) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         Joueur j = moi(c);
         Travailleur t = ouvrier(c, j);

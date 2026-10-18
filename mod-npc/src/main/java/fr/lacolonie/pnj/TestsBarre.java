@@ -63,6 +63,97 @@ public class TestsBarre {
         h.succeed();
     }
 
+    /** Un autre ouvrier du même chef, à {@code dx} blocs. */
+    static Travailleur autre(GameTestHelper h, Travailleur t, String metier, String prenom, double dx) {
+        Travailleur w = ColoniePnj.TRAVAILLEUR.get().create(h.getLevel());
+        w.moveTo(t.getX() + dx, t.getY(), t.getZ() + 2, 0, 0);
+        w.tirerAuSort(metier, 1);
+        w.setNoAi(true);
+        w.chef = t.chef;
+        w.chefNom = t.chefNom;
+        w.prenom = prenom;
+        w.mode = Travailleur.Mode.TRAVAIL;
+        w.debut = w.fin = 0;
+        w.prochainePaie = System.currentTimeMillis() + 3_600_000L;
+        h.getLevel().addFreshEntity(w);
+        return w;
+    }
+
+    static final java.util.Set<String> QUESTIONS = java.util.Set.of("Qui ça, chef ?", "Quoi donc, chef ?", "À qui, chef ?");
+
+    /** « Montre-moi… » avec Jean choisi dans la deuxième liste : il montre Jean, sans demander qui (deux autres ouvriers à côté). */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void montrerDuDoigtLePrenomChoisi(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = mineur(h, chef);
+        Travailleur jean = autre(h, t, "fermier", "Jean", -2), paul = autre(h, t, "bucheron", "Paul", 2);
+        try {
+            String dit = BarreCommandes.executer(chef, t, "montrer_cible", "Jean||0");
+            h.assertFalse(QUESTIONS.contains(dit), "il ne demande plus qui : " + dit);
+            h.assertTrue(t.consigne != null && t.consigne.id.equals("montrer_cible") && jean.getUUID().equals(t.consigne.entite),
+                    "il montre Jean : " + vu(t) + ", " + dit);
+        } finally {
+            t.discard();
+            jean.discard();
+            paul.discard();
+        }
+        h.succeed();
+    }
+
+    /** « Donne-moi… » avec le pain choisi, et combien : il donne ce pain-là, sans demander quoi. */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void donnerLObjetChoisi(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = mineur(h, chef);
+        t.inventaire.addItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 12));
+        try {
+            net.minecraft.nbt.CompoundTag l = BarreCommandes.objets(t, Repertoire.PAR_ID.get("donner_chef"));
+            h.assertTrue(l.getList("objets", 10).stream().anyMatch(x -> ((net.minecraft.nbt.CompoundTag) x).getString("id").equals("minecraft:bread")
+                    && ((net.minecraft.nbt.CompoundTag) x).getInt("n") == 12), "son pain dans la liste : " + l);
+            String dit = BarreCommandes.executer(chef, t, "donner_chef", "|minecraft:bread|8");
+            h.assertFalse(QUESTIONS.contains(dit), "il ne demande plus quoi : " + dit);
+            h.assertTrue(t.consigne != null && t.consigne.id.equals("donner_chef") && t.consigne.texte.equals("minecraft:bread") && t.consigne.nombre == 8,
+                    "il donne 8 pains : " + vu(t) + ", " + (t.consigne == null ? "" : t.consigne.texte + " × " + t.consigne.nombre));
+        } finally {
+            t.discard();
+        }
+        h.succeed();
+    }
+
+    /**
+     * Aucun ordre de la barre ne répond par une question qu'on ne peut pas trancher (« Qui ça, chef ? ») : ni sans complément
+     * (il ne fait alors rien), ni avec celui de la deuxième liste. Chaque ordre est donné à un ouvrier de son métier.
+     */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void aucuneQuestionSansReponse(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = mineur(h, chef);
+        Travailleur jean = autre(h, t, "fermier", "Jean", -2), paul = autre(h, t, "bucheron", "Paul", 2);
+        java.util.Map<String, Travailleur> parMetier = new java.util.HashMap<>();
+        parMetier.put("mineur", t);
+        List<String> fautes = new java.util.ArrayList<>();
+        try {
+            for (BarreCommandes.Recherche.Ligne l : BarreCommandes.Recherche.lignes()) {
+                Repertoire.Entree e = Repertoire.PAR_ID.get(l.id());
+                String metier = e.metiers().isEmpty() ? "mineur" : e.metiers().iterator().next();
+                Travailleur w = parMetier.computeIfAbsent(metier, m -> autre(h, t, m, "Ouvrier", 0));
+                w.inventaire.addItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 4));
+                BarreCommandes.Recherche.Besoin b = BarreCommandes.Recherche.besoin(e);
+                String sans = BarreCommandes.executer(chef, w, e.id());
+                if (QUESTIONS.contains(sans)) fautes.add(e.id() + " sans : " + sans);
+                String avec = BarreCommandes.executer(chef, w, e.id(), new BarreCommandes.Recherche.Complement(b.qui() ? "Jean" : "", b.quoi() ? "minecraft:bread" : "", 1).texte());
+                if (QUESTIONS.contains(avec)) fautes.add(e.id() + " avec : " + avec);
+                Consignes.annuler(w);
+            }
+            h.assertTrue(fautes.isEmpty(), "des questions sans réponse : " + fautes);
+        } finally {
+            parMetier.values().forEach(Travailleur::discard);
+            jean.discard();
+            paul.discard();
+        }
+        h.succeed();
+    }
+
     /** Un joueur autorisé par le chef est obéi, sauf pour ce que seul le chef demande (donner ses affaires). */
     @GameTest(template = "vide", timeoutTicks = 100)
     public static void unAutoriseEstObeiSaufReserve(GameTestHelper h) {

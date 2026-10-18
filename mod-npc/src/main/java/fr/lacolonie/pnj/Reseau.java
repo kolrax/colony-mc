@@ -136,15 +136,29 @@ public final class Reseau {
             if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) t.parler(sp, p.texte());
         });
         r.playToServer(Barre.TYPE, Barre.CODEC, (p, ctx) -> {
-            if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) BarreCommandes.executer(sp, t, p.action());
+            if (ctx.player() instanceof ServerPlayer sp && sp.level().getEntity(p.id()) instanceof Travailleur t) BarreCommandes.recevoir(sp, t, p.action(), p.complement());
         });
+        r.playToClient(BarreObjets.TYPE, BarreObjets.CODEC, (p, ctx) -> BarreCommandes.Ecran.objets(p));
     }
 
-    /** Une ligne choisie dans la barre de commandes : l'action du répertoire, pour cet ouvrier (joueur vers serveur, {@link BarreCommandes}). */
-    public record Barre(int id, String action) implements CustomPacketPayload {
+    /**
+     * Une ligne choisie dans la barre de commandes : l'action du répertoire, pour cet ouvrier, et son complément choisi dans la
+     * deuxième liste (« qui|quoi|combien », vide s'il n'en faut pas ; « ? » : envoie-moi les objets à choisir) (joueur vers serveur, {@link BarreCommandes}).
+     */
+    public record Barre(int id, String action, String complement) implements CustomPacketPayload {
         static final Type<Barre> TYPE = typeDe("barre");
         static final StreamCodec<RegistryFriendlyByteBuf, Barre> CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, Barre::id, ByteBufCodecs.stringUtf8(64), Barre::action, Barre::new);
+                ByteBufCodecs.VAR_INT, Barre::id, ByteBufCodecs.stringUtf8(64), Barre::action, ByteBufCodecs.stringUtf8(256), Barre::complement, Barre::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Les objets à choisir dans la barre (son sac, ou le dépôt), pour cet ouvrier et cette action (serveur vers joueur, {@link BarreCommandes}). */
+    public record BarreObjets(int id, String action, CompoundTag liste) implements CustomPacketPayload {
+        static final Type<BarreObjets> TYPE = typeDe("barre_objets");
+        static final StreamCodec<RegistryFriendlyByteBuf, BarreObjets> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, BarreObjets::id, ByteBufCodecs.stringUtf8(64), BarreObjets::action, ByteBufCodecs.COMPOUND_TAG, BarreObjets::liste, BarreObjets::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() { return TYPE; }

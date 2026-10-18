@@ -24,11 +24,21 @@ import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -82,11 +92,59 @@ public final class BarreCommandes {
 
         private static List<Ligne> lignes;
 
-        /** Toutes les lignes du répertoire, préparées une fois. */
+        /** Toutes les lignes du répertoire, préparées une fois, sauf celles dont la précision ne se choisit pas dans une liste. */
         static List<Ligne> lignes() {
-            if (lignes == null) lignes = Repertoire.TOUTES.stream().map(Recherche::ligne).toList();
+            if (lignes == null) lignes = Repertoire.TOUTES.stream().filter(e -> besoin(e) != Besoin.RETIRE).map(Recherche::ligne).toList();
             return lignes;
         }
+
+        // --- La deuxième liste : qui, quoi, combien -----------------------------------------------------------
+
+        /** Ce qu'un ordre demande en plus, choisi dans une deuxième liste ; {@code RETIRE} : ça ne se choisit pas (ce qu'il faut dire), pas dans la barre. */
+        enum Besoin {
+            RIEN, QUI, QUOI, QUI_QUOI, RETIRE;
+
+            boolean qui() { return this == QUI || this == QUI_QUOI; }
+
+            boolean quoi() { return this == QUOI || this == QUI_QUOI; }
+        }
+
+        static final Set<String> AVEC_OBJET = Set.of("donner", "jeter", "tenir", "prendre");
+        /** Les quantités proposées (prendre au dépôt, donner). */
+        static final List<Integer> QUANTITES = List.of(1, 8, 16, 64);
+
+        static Besoin besoin(Repertoire.Entree e) {
+            if (e.comportement().equals("message")) return Besoin.RETIRE; // « dis à Jean que… » : ce qu'il faut dire ne se choisit pas
+            boolean qui = e.visePersonne() && !(e.comportement().equals("combat") && e.arg().equals("cible")); // « attaque » : le monstre regardé
+            boolean quoi = AVEC_OBJET.contains(e.comportement()) && e.arg().equals("objet");
+            return qui && quoi ? Besoin.QUI_QUOI : qui ? Besoin.QUI : quoi ? Besoin.QUOI : Besoin.RIEN;
+        }
+
+        /** On choisit aussi combien : pour prendre au dépôt et pour donner. */
+        static boolean combien(Repertoire.Entree e) { return besoin(e).quoi() && Set.of("prendre", "donner").contains(e.comportement()); }
+
+        /** Le complément choisi, tel que la barre l'envoie : « qui|quoi|combien » (« Jean|minecraft:bread|8 »), vide s'il n'en faut pas. */
+        record Complement(String qui, String quoi, int combien) {
+            static Complement lire(String s) {
+                String[] p = (s == null ? "" : s).split("\\|", -1);
+                int n = 0;
+                if (p.length > 2) try { n = Integer.parseInt(p[2].strip()); } catch (NumberFormatException ignore) {}
+                return new Complement(p[0].strip(), p.length > 1 ? p[1].strip() : "", Math.clamp(n, 0, 64));
+            }
+
+            String texte() { return qui + "|" + quoi + "|" + combien; }
+        }
+
+        /** La phrase de l'ordre, comme si le chef l'avait dite avec le nom et l'objet : « montre-moi Jean », « donne à Jean minecraft:bread ». */
+        static String phrase(Repertoire.Entree e, String qui, String quoi) {
+            String f = e.exemples().isEmpty() ? "" : e.exemples().get(0);
+            f = qui.isBlank() ? f.replace("@", "") : f.contains("@") ? f.replace("@", qui) : f + " " + qui;
+            if (!quoi.isBlank()) f += " " + quoi;
+            return f.replaceAll("\\s+", " ").strip();
+        }
+
+        /** Une ligne de la deuxième liste : la valeur envoyée ({@code id}), ce qu'on lit, et un détail en gris. */
+        static Ligne choix(String valeur, String libelle, String detail) { return new Ligne(valeur, libelle, detail, Set.of(), List.of(plat(libelle))); }
 
         /**
          * Le rang d'une ligne pour la saisie (déjà aplatie) : 0, le libellé commence par elle ; 1, un mot du libellé ;
@@ -134,10 +192,31 @@ public final class BarreCommandes {
      * L'action est jouée par {@link Consignes#ordonner}. Renvoie ce que l'ouvrier répond (vide : rien n'est fait, ou
      * rien à dire), aussi montré au joueur (« Raoul : Garde-à-vous, chef ! ») et en bulle.
      */
-    public static String executer(ServerPlayer p, Travailleur t, String idAction) {
+    public static String executer(ServerPlayer p, Travailleur t, String idAction) { return executer(p, t, idAction, ""); }
+
+    /** Le paquet de la barre : un ordre avec son complément, ou (« ? ») la demande des objets à choisir. */
+    static void recevoir(ServerPlayer p, Travailleur t, String idAction, String complement) {
+        if ("?".equals(complement)) envoyerObjets(p, t, idAction);
+        else executer(p, t, idAction, complement);
+    }
+
+    static boolean aPortee(ServerPlayer p, Travailleur t) {
+        return p != null && t != null && t.isAlive() && !t.aTerre && t.chef != null && t.mode != Travailleur.Mode.CHOMEUR
+                && p.level() == t.level() && p.distanceToSqr(t) <= (PROCHE + 4) * (PROCHE + 4);
+    }
+
+    /**
+     * Comme {@link #executer(ServerPlayer, Travailleur, String)}, avec le complément choisi dans la deuxième liste
+     * ({@link Recherche.Complement}) : le prénom et l'objet sont ajoutés à la phrase, comme s'ils avaient été dits. Un ordre
+     * qui en a besoin et ne l'a pas, ou un ordre retiré de la barre, ne fait rien : jamais de question sans réponse.
+     */
+    public static String executer(ServerPlayer p, Travailleur t, String idAction, String complement) {
         Repertoire.Entree e = idAction == null ? null : Repertoire.PAR_ID.get(idAction);
-        if (e == null || p == null || t == null || !t.isAlive() || t.aTerre || t.chef == null || t.mode == Travailleur.Mode.CHOMEUR
-                || p.level() != t.level() || p.distanceToSqr(t) > (PROCHE + 4) * (PROCHE + 4)) return "";
+        if (e == null || !aPortee(p, t)) return "";
+        Recherche.Besoin besoin = Recherche.besoin(e);
+        Recherche.Complement choisi = Recherche.Complement.lire(complement);
+        if (besoin == Recherche.Besoin.RETIRE || besoin.qui() && choisi.qui().isEmpty()
+                || besoin.quoi() && !Consignes.OBJET_NOMME.matcher(choisi.quoi()).matches()) return "";
         String dit;
         if (!p.getUUID().equals(t.chef)) {
             Courrier c = Courrier.de(p.getServer());
@@ -148,11 +227,52 @@ public final class BarreCommandes {
             if (dit != null) { repondre(p, t, dit); return dit; }
         }
         t.getLookControl().setLookAt(p);
-        String phrase = e.exemples().isEmpty() ? "" : e.exemples().get(0).replace("@", "").strip();
-        dit = Consignes.ordonner(t, new Ordres.Faire(e.id(), "", 0, 0, false), p, phrase, 0, 1);
+        String phrase = Recherche.phrase(e, besoin.qui() ? choisi.qui() : "", besoin.quoi() ? choisi.quoi() : "");
+        int n = Recherche.combien(e) ? choisi.combien() : 0;
+        dit = Consignes.ordonner(t, new Ordres.Faire(e.id(), "", n, 0, false), p, phrase, 0, 1);
+        // Celui qu'on a choisi est parti entre-temps : il le dit, sans reposer la question.
+        if (dit.equals("Qui ça, chef ?") || dit.equals("À qui, chef ?")) dit = "Je ne le vois plus par ici, chef.";
+        if (dit.equals("Quoi donc, chef ?")) dit = "Je ne vois pas de quoi tu parles, chef.";
         if (dit.isBlank()) dit = "Bien, chef.";
         repondre(p, t, dit);
         return dit;
+    }
+
+    /** Les objets à choisir pour cet ordre, envoyés à la barre du joueur (s'il a le mod). */
+    static void envoyerObjets(ServerPlayer p, Travailleur t, String idAction) {
+        Repertoire.Entree e = idAction == null ? null : Repertoire.PAR_ID.get(idAction);
+        if (e == null || !Recherche.besoin(e).quoi() || !aPortee(p, t) || p.connection == null || !p.connection.hasChannel(Reseau.BarreObjets.TYPE)) return;
+        PacketDistributor.sendToPlayer(p, new Reseau.BarreObjets(t.getId(), e.id(), objets(t, e)));
+    }
+
+    /** Ce qu'on peut choisir : ce qu'il y a au dépôt pour « prends au dépôt », ce qu'il a sur lui sinon. Une ligne par sorte d'objet, avec combien. */
+    static CompoundTag objets(Travailleur t, Repertoire.Entree e) {
+        boolean depot = e.comportement().equals("prendre");
+        List<ItemStack> tas = new ArrayList<>();
+        Bureau.Entite b = depot ? Bureau.entite(t) : null;
+        Container c = depot ? (b == null ? null : b.depot) : t.inventaire;
+        if (c != null) for (int i = 0; i < c.getContainerSize(); i++) tas.add(c.getItem(i));
+        if (!depot) { tas.add(t.getMainHandItem()); tas.add(t.getOffhandItem()); }
+        Map<String, Integer> nombres = new LinkedHashMap<>();
+        Map<String, String> noms = new LinkedHashMap<>();
+        for (ItemStack s : tas) {
+            if (s.isEmpty()) continue;
+            String id = BuiltInRegistries.ITEM.getKey(s.getItem()).toString();
+            nombres.merge(id, s.getCount(), Integer::sum);
+            noms.putIfAbsent(id, Consignes.nom(s));
+        }
+        ListTag l = new ListTag();
+        nombres.forEach((id, n) -> {
+            CompoundTag o = new CompoundTag();
+            o.putString("id", id);
+            o.putString("nom", noms.get(id));
+            o.putInt("n", n);
+            l.add(o);
+        });
+        CompoundTag r = new CompoundTag();
+        r.put("objets", l);
+        r.putBoolean("depot", depot);
+        return r;
     }
 
     private static void repondre(ServerPlayer p, Travailleur t, String dit) {
@@ -214,15 +334,26 @@ public final class BarreCommandes {
         }
     }
 
-    /** La barre : une saisie en bas de l'écran, les propositions au-dessus. */
+    /**
+     * La barre : une saisie en bas de l'écran, les propositions au-dessus. Un ordre qui demande qui ou quoi ouvre une
+     * deuxième liste (ses ouvriers et les gens proches ; ce qu'il a sur lui ou ce qu'il y a au dépôt ; puis combien).
+     */
     static final class Ecran extends Screen {
         static final int LARGEUR = 320, HAUTEUR_LIGNE = 12;
         static final String INVITE = "Tape le début d'un ordre…";
+        /** Les étapes : l'ordre, puis qui, quoi, combien. */
+        static final int ORDRE = 0, QUI = 1, QUOI = 2, COMBIEN = 3;
         final Travailleur cible;
         final String metier, prenom;
         EditBox saisie;
         List<Recherche.Ligne> vues = List.of();
         int choix;
+        int etape = ORDRE;
+        Repertoire.Entree ordre;
+        String libelle = "", qui = "", quoi = "";
+        /** Les lignes de la deuxième liste ; {@code attente} : les objets sont demandés au serveur. */
+        List<Recherche.Ligne> parmi = List.of();
+        boolean attente, depot;
 
         Ecran(Travailleur cible) {
             super(Component.literal("Barre de commandes"));
@@ -243,16 +374,84 @@ public final class BarreCommandes {
             saisie.setBordered(true);
             saisie.setValue(avant);
             // Le jeu ne montre l'invite (setHint) que si la saisie n'a pas la main ; elle l'a toujours ici : une suggestion, en gris après le curseur.
-            saisie.setResponder(s -> { saisie.setSuggestion(s.isEmpty() ? INVITE : null); majListe(); });
-            saisie.setSuggestion(avant.isEmpty() ? INVITE : null);
+            saisie.setResponder(s -> { saisie.setSuggestion(s.isEmpty() ? invite() : null); majListe(); });
+            saisie.setSuggestion(avant.isEmpty() ? invite() : null);
             addRenderableWidget(saisie);
             setInitialFocus(saisie);
             majListe();
         }
 
         void majListe() {
-            vues = Recherche.chercher(saisie.getValue(), metier);
+            vues = etape == ORDRE ? Recherche.chercher(saisie.getValue(), metier) : Recherche.chercher(saisie.getValue(), "", parmi);
             choix = vues.isEmpty() ? -1 : 0;
+        }
+
+        String invite() {
+            return switch (etape) {
+                case QUI -> "Tape le début d'un nom…";
+                case QUOI -> "Tape le début d'un objet…";
+                case COMBIEN -> "Choisis combien…";
+                default -> INVITE;
+            };
+        }
+
+        /** Passe à l'étape suivante, avec ses lignes ; la saisie repart de zéro. */
+        void etape(int e, List<Recherche.Ligne> lignes) {
+            etape = e;
+            parmi = lignes;
+            saisie.setValue("");
+            saisie.setSuggestion(invite());
+            majListe();
+        }
+
+        /** Ses ouvriers (ceux de son chef) et les gens proches, par prénom ; les plus proches d'abord. */
+        List<Recherche.Ligne> gens() {
+            Minecraft mc = Minecraft.getInstance();
+            List<Recherche.Ligne> r = new ArrayList<>();
+            if (mc.level == null) return r;
+            Set<String> vus = new HashSet<>();
+            String role = cible.role();
+            int k = role.lastIndexOf(" · ");
+            String chef = k < 0 ? null : role.substring(k);
+            List<Entity> gens = new ArrayList<>(mc.level.getEntitiesOfClass(Travailleur.class, cible.getBoundingBox().inflate(64),
+                    w -> w != cible && chef != null && Touche.embauche(w) && w.role().endsWith(chef)));
+            for (Player j : mc.level.players()) if (j != mc.player && j.distanceToSqr(cible) < 64 * 64) gens.add(j);
+            gens.sort(Comparator.comparingDouble(cible::distanceToSqr));
+            for (Entity g : gens) {
+                String nom = g instanceof Travailleur w ? Touche.prenom(w) : g.getName().getString();
+                if (!nom.isBlank() && vus.add(Recherche.plat(nom)))
+                    r.add(Recherche.choix(nom, nom, g instanceof Travailleur w ? Metier.nom(Touche.metier(w)).toLowerCase(Locale.ROOT) : "voisin"));
+            }
+            return r;
+        }
+
+        /** Les objets reçus du serveur (son sac, ou le dépôt) : la liste « quoi ». */
+        static void objets(Reseau.BarreObjets p) {
+            if (!(Minecraft.getInstance().screen instanceof Ecran e) || e.cible.getId() != p.id() || e.etape != QUOI || e.ordre == null
+                    || !e.ordre.id().equals(p.action())) return;
+            List<Recherche.Ligne> l = new ArrayList<>();
+            for (Tag x : p.liste().getList("objets", Tag.TAG_COMPOUND)) {
+                CompoundTag o = (CompoundTag) x;
+                String nom = o.getString("nom");
+                l.add(Recherche.choix(o.getString("id"), nom.isEmpty() ? o.getString("id") : Character.toUpperCase(nom.charAt(0)) + nom.substring(1), "× " + o.getInt("n")));
+            }
+            e.attente = false;
+            e.depot = p.liste().getBoolean("depot");
+            e.parmi = l;
+            e.majListe();
+        }
+
+        void demanderObjets() {
+            etape(QUOI, List.of());
+            depot = ordre.comportement().equals("prendre");
+            attente = true;
+            PacketDistributor.sendToServer(new Reseau.Barre(cible.getId(), ordre.id(), "?"));
+        }
+
+        void finir(int combien) {
+            String complement = Recherche.besoin(ordre) == Recherche.Besoin.RIEN ? "" : new Recherche.Complement(qui, quoi, combien).texte();
+            PacketDistributor.sendToServer(new Reseau.Barre(cible.getId(), ordre.id(), complement));
+            onClose();
         }
 
         /** La ligne sous la souris, ou -1. Les lignes montent depuis la saisie : la première est juste au-dessus. */
@@ -264,8 +463,48 @@ public final class BarreCommandes {
 
         void envoyer(int i) {
             if (i < 0 || i >= vues.size() || !cible.isAlive()) return;
-            PacketDistributor.sendToServer(new Reseau.Barre(cible.getId(), vues.get(i).id()));
-            onClose();
+            Recherche.Ligne l = vues.get(i);
+            switch (etape) {
+                case ORDRE -> {
+                    ordre = Repertoire.PAR_ID.get(l.id());
+                    if (ordre == null) return;
+                    libelle = l.libelle();
+                    Recherche.Besoin b = Recherche.besoin(ordre);
+                    if (b.qui()) etape(QUI, gens());
+                    else if (b.quoi()) demanderObjets();
+                    else finir(0);
+                }
+                case QUI -> {
+                    qui = l.id();
+                    if (Recherche.besoin(ordre).quoi()) demanderObjets();
+                    else finir(0);
+                }
+                case QUOI -> {
+                    quoi = l.id();
+                    if (Recherche.combien(ordre)) etape(COMBIEN, Recherche.QUANTITES.stream().map(n -> Recherche.choix(String.valueOf(n), String.valueOf(n), "")).toList());
+                    else finir(0);
+                }
+                default -> finir(Integer.parseInt(l.id()));
+            }
+        }
+
+        /** Le titre de la liste, selon l'étape. */
+        String titre() {
+            String o = "« " + libelle + " »";
+            return switch (etape) {
+                case QUI -> o + " : à qui ?";
+                case QUOI -> o + " : quoi ?" + (attente ? "" : depot ? " (au dépôt)" : " (sur lui)");
+                case COMBIEN -> o + " : combien ?";
+                default -> "Ordre à " + prenom + " (" + Metier.nom(metier).toLowerCase(Locale.ROOT) + ")";
+            };
+        }
+
+        /** Ce qu'on lit quand la liste est vide. */
+        String vide() {
+            if (etape == ORDRE) return "Aucun ordre ne commence ainsi.";
+            if (etape == QUOI && attente) return "Un instant…";
+            if (!parmi.isEmpty()) return "Rien ne commence ainsi.";
+            return etape == QUI ? "Personne par ici." : depot ? "Le dépôt est vide." : "Il n'a rien sur lui.";
         }
 
         @Override
@@ -294,8 +533,8 @@ public final class BarreCommandes {
             int x = gauche(), bas = basListe();
             int haut = bas - Math.max(1, vues.size()) * HAUTEUR_LIGNE - 14;
             g.fill(x, haut, x + LARGEUR, height - 2, 0xE8101010); // assez sombre : les cœurs de la barre de vie, dessous, ne se lisent plus à travers
-            g.drawString(font, "Ordre à " + prenom + " (" + Metier.nom(metier).toLowerCase(Locale.ROOT) + ")", x + 4, haut + 3, Client.OR);
-            if (vues.isEmpty()) g.drawString(font, "Aucun ordre ne commence ainsi.", x + 6, bas - HAUTEUR_LIGNE + 2, Client.GRIS);
+            g.drawString(font, font.plainSubstrByWidth(titre(), LARGEUR - 8), x + 4, haut + 3, Client.OR);
+            if (vues.isEmpty()) g.drawString(font, vide(), x + 6, bas - HAUTEUR_LIGNE + 2, Client.GRIS);
             for (int i = 0; i < vues.size(); i++) {
                 Recherche.Ligne l = vues.get(i);
                 int y = bas - (i + 1) * HAUTEUR_LIGNE;
@@ -307,7 +546,7 @@ public final class BarreCommandes {
                 g.drawString(font, d, x + w, y + 2, Client.GRIS);
             }
             super.render(g, mx, my, pt);
-            g.drawString(font, "↑ ↓ choisir · Entrée : donner l'ordre · Échap : fermer", x + 4, height - 12, Client.GRIS);
+            g.drawString(font, "↑ ↓ choisir · Entrée : valider · Échap : fermer", x + 4, height - 12, Client.GRIS);
         }
 
         @Override

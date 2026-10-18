@@ -185,7 +185,7 @@ final class Consignes {
             if (vu == null && !a.equals("garder_ici") && !a.equals("construire")) return "Où ça, chef ? Regarde l'endroit en me le disant.";
             lieu = vu;
         }
-        if (e.visePersonne()) {
+        if (e.visePersonne() && !(e.comportement().equals("combat") && a.equals("cible"))) { // « attaque » vise un monstre (plus bas), pas une personne
             Entity p = personne(t, chef, quoi);
             if (p == null) return "Qui ça, chef ?";
             entite = p.getUUID();
@@ -660,6 +660,8 @@ final class Consignes {
     }
 
     /** Le filtre de l'objet demandé : l'argument du répertoire (nourriture, arme…), sinon le mot dit (« ton pain »). Null : on ne sait pas quoi. */
+    static final java.util.regex.Pattern OBJET_NOMME = java.util.regex.Pattern.compile("(?<![\\w:#])[a-z0-9_.-]+:[a-z0-9_/.-]+");
+
     static String filtre(String arg, String texte, Travailleur t) {
         switch (arg) {
             case "nourriture" -> { return "nourriture"; }
@@ -677,6 +679,9 @@ final class Consignes {
             default -> {}
         }
         if (texte.contains(":") && !texte.contains(" ")) return texte.strip();
+        // Un objet désigné par son nom exact dans la phrase (« donne à Jean minecraft:bread », choisi dans la barre de commandes).
+        java.util.regex.Matcher id = OBJET_NOMME.matcher(texte);
+        if (id.find()) return id.group();
         String n = Ordres.normaliser(texte);
         String meilleur = null;
         int longueur = 0;
