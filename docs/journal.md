@@ -606,3 +606,14 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Mesures (`main` `1488a35`, puis version seule en `08829a8`) : **295/295 JUnit, 342/342 en jeu** (09 h 03) ; `build` revérifié vert après le passage en 1.0.6 (295/295).
 - **1.0.6 installée** : personne connecté (0/10). Jar 1 728 270 octets, sha1 `51b13582bc66…`, même taille dans `/mods-off` ; 1.0.5 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.5 -> 1.0.6) », « essai-v2 », « Done (1.892s) » à 09 h 05. Aucune erreur du mod (282 erreurs de tables de butin de `railways` et `create_enchantment_industry`, 1 mixin client de `create_sa`, sans rapport avec le mod). Avant le redémarrage : encore un « Can't keep up » (~34 min, mise en veille probable) et une reconnexion SDLink.
 - **Pas de modpack** (rien ne change côté client), pas d'annonce, pas de message privé. Rien essayé avec un vrai joueur.
+
+## 2026-10-18 07 h 00 - 09 h 15 UTC : session des restes (chasseur, guérisseur, accueil, bataille)
+- Plan : 1 case (le monde d'ouverture de lundi). Aucun essai V.. en `ko` ni `bloque`, aucune consigne ni demande.
+- **Chasseur hors colonie** (refonte l.45) : anneau de 48 à 112 blocs (plafond 128), bêtes de la colonie filtrées avant le plafond de 64 bêtes ; sans rien en vue, il va au bord de la colonie (4 directions) avant `SANS_GIBIER`. Relecture : 2 points importants (chef déconnecté, portée), corrigés. Fantôme `chasseur-dehors.txt` : 6 viandes en ~2 500 ticks, chassées à ~53 blocs du poste, aucun bloc construit cassé (chef présent ; le cas chef déconnecté n'est prouvé qu'en GameTest).
+- **Guérisseur** : `Statut.SANS_REMEDE` quand un ouvrier est à terre et que le dépôt n'a ni pain ni potion ; levé dès le remède trouvé ou plus personne à terre. Relu par le chef.
+- **Accueil 1.0** à la connexion à la place du message de la 0.8.0 (chat libre).
+- **Bataille 30 contre 30** : vraie cause trouvée (`Actions.Attaquer` ne lâchait pas un ouvrier à terre : 26 gardes sur 30 plantés autour d'un blessé). 36 à 47 gardes touchés au lieu de 2 à 13 ; seuil du banc remonté de 4 à 20 ; nouveau test `laisseLHommeATerre`. Pas relu par un relecteur (une ligne, appelants vérifiés par Graphify).
+- Tests : un passage rouge sur `bataille30contre30` (avant la correction), un sur `sortDeLaLave` chez un agent (instable connu) ; passages finaux 341/341 puis 342/342.
+- Livré : 1.0.5 (08 h 25) et 1.0.6 (09 h 05), serveur seul, personne connecté. Pas de modpack.
+- Reste : branche `origin/en-cours` non supprimable (403) ; `main` local d'une ancienne copie renommé `ancien-main-local` dans le conteneur (rien poussé).
+
