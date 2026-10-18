@@ -179,3 +179,12 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Lieu de mission : deux missions qui alternent (une avec un lieu lointain, une sans lieu) font rouvrir un puits à chaque bascule (vrai changement de lieu). Un puits gardé (nouveau lieu à moins de 24 blocs) peut être jusqu'à ~48 blocs du nouveau lieu, hors de la zone `Lieux.ici`. `Bucheron` : « trop loin » appelle `travailleIci(null)`, qui efface le lieu de toutes les missions. `licencier()` ne remet pas à zéro `ici`/`lieuImpose`.
 - Bûcheron : redonner la même mission pendant la pause `sans_bois` d'un jour ne la lève pas.
 - Le piège de la mémoire des cases du jeu (éleveur) peut toucher tout métier qui marche vers un bloc posé dans un coin pas encore actif : à traiter dans `Itineraire` si on le revoit.
+
+## Restes des relectures du 18/10 au soir (lot 17)
+- B2 : les ordres parlés « travaille de nuit », « de 8 h à 12 h », « N jours max » (`Travailleur` ~2064-2077) changent encore `debut`/`fin`/`joursExpedition` en mémoire seulement : les retirer (« les horaires se règlent sur chaque mission ») ou les sauver. Textes `dit_jours`, commentaire `Cerveau.java:21`.
+- D1 : `XaeroOuvriers` protégé par un `catch` dans `CarteClient` ; vérifier si `getThirdPartyWaypointManager().get(ORIGINE)` peut renvoyer null.
+- A2 : accroché 3 s au cadre d'une porte, il évite la case de la porte 30 s. Pistes de la branche `worktree-agent-abb09ea3878ed5921` (commits `fc923ba`, `32b5170`, pas verts) : rien tenu pour mur devant une créature, un tick sans marcher remet le compte à zéro.
+- A4 : une torche peut tomber (escalier quand k est multiple de 24 ; couloir nord, j=24) ; commentaire de `longueurDetour` faux (51, pas 24) ; plus de pierres « posées » autour de la lave bouchée.
+- E3 : l'ouvrier prend la meilleure armure du dépôt sans en laisser aux guerriers du poste (à trancher).
+- E2 : icône de peur absente pendant le repli ; la fiche dit « Je fuis un danger ! » au repos sans danger.
+- Tests capricieux vus sous charge (4 serveurs de test en file) : `TestsGuerrier.mannequin`, `TestsChef.sansOrdreSInterpose`, `TestsGuerrier.chasseDeNuit`.

@@ -120,8 +120,8 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [ ] Lundi 19/10 : monde d'ouverture neuf avec la dernière version (procédure « Si tu régénères le monde de test » de `CLAUDE.md`, le monde `colonie` et `essai-v2` restent sur le disque)
 
 ## 17. Corrections du 18/10 d'après les rapports en jeu de KOLRAX (voir `docs/corrections.md`)
-- [ ] Plan B : ~~compteur du mineur qui ne monte pas~~ (1.0.9) ; retrait d'« expéditions max » et des horaires généraux (seulement les horaires de chaque mission)
-- [ ] Plan B4 (ce soir) : barre de commandes, deuxième liste « qui / quoi » au lieu d'une question sans réponse ; plus aucun ordre qui ne fait que poser une question
-- [ ] Plan D : chaque joueur voit ses propres ouvriers sur la carte Xaero (seulement eux), sans toucher aux profils Xaero ; modpack obligatoire
-- [ ] Plan E : ouvriers moins fragiles sans être invincibles (se relever seul une fois, fuir à mi-vie et guérir, armure et torches du dépôt, dangers de la nature, alerte à terre avec repère Xaero, morts comptées au fantôme puis chiffres réglés)
-- [ ] Plan A : déplacements « GPS » (trajet calculé en entier, nouveau chemin après 3 s immobile, montagnes contournées ou gravies avec blocs ou seau, mineur qui contourne sous terre), vérifiés au joueur fantôme
+- [x] Plan B : ~~compteur du mineur qui ne monte pas~~ (1.0.9) ; retrait d'« expéditions max » et des horaires généraux (seulement les horaires de chaque mission)
+- [x] Plan B4 (ce soir, 1.0.11) : barre de commandes, deuxième liste « qui / quoi » au lieu d'une question sans réponse ; plus aucun ordre qui ne fait que poser une question
+- [x] Plan D (1.0.10, visible avec le modpack 1.0.11) : chaque joueur voit ses propres ouvriers sur la carte Xaero (seulement eux), sans toucher aux profils Xaero ; modpack obligatoire
+- [ ] Plan E : ouvriers moins fragiles sans être invincibles (FAIT en 1.0.11 : se relever seul, fuir et guérir, armure et torches, alerte au chef ; RESTE : repère rouge Xaero, dangers de la nature vérifiés 2 jours au fantôme, morts comptées puis chiffres réglés ; se relever seul une fois, fuir à mi-vie et guérir, armure et torches du dépôt, dangers de la nature, alerte à terre avec repère Xaero, morts comptées au fantôme puis chiffres réglés)
+- [ ] Plan A : déplacements « GPS » (FAIT en 1.0.11 : nouveau chemin après 3 s immobile, chemin direct moins recalculé, mineur qui contourne sous terre ; RESTE : trajet calculé en entier, montagnes, scénarios fantôme ; trajet calculé en entier, nouveau chemin après 3 s immobile, montagnes contournées ou gravies avec blocs ou seau, mineur qui contourne sous terre), vérifiés au joueur fantôme
