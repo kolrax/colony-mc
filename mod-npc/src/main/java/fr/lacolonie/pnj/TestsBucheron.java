@@ -299,6 +299,121 @@ public class TestsBucheron {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Enguerrand (serveur, 18/10) : à 2 000 blocs de son poste, il s'éloignait encore, sans ordre de son chef. Chaque coin
+     * fouillé en vain repoussait sa recherche de 320 blocs plus loin, sans borne, et il abattait arbre après arbre autour de
+     * lui. De lui-même, il ne va plus à plus de {@link Missions#LOIN} blocs du poste : ni vers un vieux coin ni vers une
+     * recherche partie trop loin, ni vers l'arbre d'à côté s'il en est déjà trop loin. Avant : il abattait cet arbre, puis
+     * partait à 2 000 blocs.
+     */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void resteAPorteeDuPoste(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 66000);
+        BlockPos ou = TestsJeu.sol(h, 600, 66000);
+        List<BlockPos> tronc = arbre(l, TestsJeu.sol(h, 606, 66000), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(ou), new ItemStack(Items.IRON_AXE));
+        t.mission("chene", "stock", 64);
+        t.memoire.putLong("coin_chene", base.offset(2000, 0, 0).asLong());   // un coin retenu au loin
+        t.memoire.putLong("depuis_chene", base.offset(2000, 0, 0).asLong()); // une recherche repoussée au loin
+        t.forcerChunk();
+        int[] vu = {0, 0}; // le plus loin qu'il ait visé (blocs du poste), et le nombre de ticks en marche
+        h.onEachTick(() -> {
+            if (!(t.action instanceof Actions.Aller a)) return;
+            double dx = a.cible.x - base.getX(), dz = a.cible.z - base.getZ();
+            vu[0] = Math.max(vu[0], (int) Math.sqrt(dx * dx + dz * dz));
+            vu[1]++;
+        });
+        h.runAtTickTime(h.getTick() + 700, () -> {
+            String e = TestsJeu.etat(t, base);
+            t.discard();
+            h.assertTrue(tronc.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre à 606 blocs du poste reste debout (" + e + ")");
+            h.assertTrue(vu[1] > 0, "il doit partir chercher du bois (" + e + ")");
+            h.assertTrue(vu[0] <= Missions.LOIN, "il ne doit pas viser plus loin que " + Missions.LOIN + " blocs du poste : " + vu[0] + " (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Relecture de la borne : la forêt la plus proche est à 450 blocs du poste (à portée) : il y va. Avant : une forêt à plus
+     * de 352 blocs était écartée, et il fouillait au hasard autour du poste. (La recherche de biome est posée d'avance : le
+     * monde plat n'a qu'une plaine.)
+     */
+    @GameTest(template = "vide", timeoutTicks = 500)
+    public static void foretAuBordDeLaPortee(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 0, 69000);
+        BlockPos foret = base.offset(450, 0, 0);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(base.east(2)), new ItemStack(Items.IRON_AXE));
+        t.mission("chene", "stock", 64);
+        Biomes.RECHERCHES.put(t.getUUID() + "/chene", java.util.concurrent.CompletableFuture.completedFuture(foret));
+        t.forcerChunk();
+        int[] pres = {Integer.MAX_VALUE}; // au plus près de la forêt qu'il ait visé
+        h.onEachTick(() -> {
+            if (t.action instanceof Actions.Aller a) {
+                double dx = a.cible.x - foret.getX(), dz = a.cible.z - foret.getZ();
+                pres[0] = Math.min(pres[0], (int) Math.sqrt(dx * dx + dz * dz));
+            }
+        });
+        h.runAtTickTime(h.getTick() + 400, () -> {
+            String e = TestsJeu.etat(t, base);
+            t.discard();
+            Biomes.oublier(t.getUUID() + "/chene");
+            h.assertTrue(pres[0] <= 60, "il doit partir vers la forêt à 450 blocs : au plus près " + pres[0] + " blocs (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Relecture : aucun bois de la jungle à portée du poste (le monde plat n'a qu'une plaine), et il a fini de fouiller autour
+     * du poste : il est bloqué, avec la raison, au lieu de recommencer à chercher « plus loin ». Avant : il repartait.
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void pasDeBoisAPortee(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 0, 72000);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(base.east(2)), new ItemStack(Items.IRON_AXE));
+        t.mission("jungle", "stock", 64);
+        net.minecraft.nbt.CompoundTag explo = new net.minecraft.nbt.CompoundTag(); // la fouille autour du poste : presque finie
+        explo.putLong("c", base.asLong());
+        explo.putDouble("a", 0);
+        explo.putDouble("r", Missions.LOIN); // le pas suivant dépasse la portée : la fouille est finie
+        t.memoire.put("explo_jungle", explo);
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(t.blocageActuel() != null && t.blocageActuel().startsWith("Pas de ce bois"), "il doit être bloqué, avec la raison (" + t.statutUnique() + ", " + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(TestsJeu.distance(t, base) < 30, "sans partir au loin (" + TestsJeu.etat(t, base) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Relecture : la forêt autour du poste est toute coupée (sa fouille finie) : la recherche suivante va vers un autre coin,
+     * pas vers la même forêt. Avant : le recul sortait de portée, la recherche repartait du poste et retrouvait la même.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900)
+    public static void autreForetApresUneVidee(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 0, 75000);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(base.east(2)), new ItemStack(Items.IRON_AXE));
+        t.mission("chene", "stock", 64);
+        t.forcerChunk();
+        long[] premiere = {Long.MIN_VALUE};
+        h.onEachTick(() -> {
+            net.minecraft.nbt.CompoundTag e = t.memoire.getCompound("explo_chene");
+            if (premiere[0] != Long.MIN_VALUE || !e.contains("c")) return;
+            premiere[0] = e.getLong("c"); // la première forêt : tout y est coupé, sa fouille s'achève au pas suivant
+            e.putDouble("r", 159);
+            t.memoire.put("explo_chene", e);
+        });
+        h.succeedWhen(() -> {
+            net.minecraft.nbt.CompoundTag e = t.memoire.getCompound("explo_chene");
+            h.assertTrue(premiere[0] != Long.MIN_VALUE && e.contains("c") && e.getLong("c") != premiere[0], "une nouvelle fouille (" + TestsJeu.etat(t, base) + ")");
+            BlockPos a = BlockPos.of(premiere[0]), b = BlockPos.of(e.getLong("c"));
+            long d2 = LieuxRegles.dist2(a.getX(), a.getZ(), b.getX(), b.getZ());
+            h.assertTrue(d2 > 160L * 160, "ailleurs que la forêt vidée : à " + (int) Math.sqrt(d2) + " blocs d'elle (" + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(Bucheron.aPortee(t, b, 0), "et à portée du poste (" + TestsJeu.etat(t, base) + ")");
+            t.discard();
+        });
+    }
+
     /** Relecture : sans poste et le sac plein, il ne défriche pas en laissant le bois par terre : il s'arrête et le dit. */
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void defricheSacPleinSansPoste(GameTestHelper h) {
