@@ -246,7 +246,7 @@ public class Travailleur extends PathfinderMob {
         String bloc = bureau == null ? Statut.SANS_POSTE : blocageActuel();
         Mission m = missionActive();
         Metier.Commande c = m == null ? null : Metier.catalogue(metier, m.id);
-        int fait = c == null || c.objet == null ? 0 : Metier.avancement(this, m);
+        int fait = c == null || c.objet == null ? 0 : Metier.avancementVu(this, m); // ce qu'il porte compte aussi
         boolean hors = m == null && !missions.isEmpty() && missions.stream().noneMatch(x -> x.enHoraires(heure()));
         return Statut.texte(new Statut.Etat(metier, aTerre, mode == Mode.GREVE, mode == Mode.ATTENDRE, mode == Mode.SUIVRE, bloc,
                 !missions.isEmpty() || fileFinie(), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));

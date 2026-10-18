@@ -265,6 +265,16 @@ public abstract class Metier {
         return b == null ? -1 : b.compter(c.objet);
     }
 
+    /**
+     * Le compteur au-dessus de sa tête : {@link #avancement}, plus ce qu'il porte déjà et livrera (sans la pile qu'il garde,
+     * comme {@link Actions.Deposer#aDeposer}). Sinon le fer qu'il vient de miner ne se voyait qu'au retour au dépôt.
+     */
+    static int avancementVu(Travailleur t, Travailleur.Mission m) {
+        int a = avancement(t, m);
+        Metier me = de(t.metier);
+        return a < 0 || me == null ? a : a + Actions.Deposer.aDeposer(t, me.garder, catalogue(t.metier, m.id).objet);
+    }
+
     /** Une mission est remplie : quantité livrée, ou stock plein. Garder, faire la ronde ou escorter ne le sont jamais. */
     static boolean remplie(Travailleur t, Travailleur.Mission m) {
         Commande c = catalogue(t.metier, m.id);
