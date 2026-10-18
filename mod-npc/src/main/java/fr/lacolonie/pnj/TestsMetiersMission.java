@@ -162,12 +162,19 @@ public class TestsMetiersMission {
      * lieu d'en ouvrir un nouveau à chaque sac. Avant : chaque passage à « rien à faire » lui faisait oublier puits et mine.
      */
     @GameTest(template = "vide", timeoutTicks = 600, batch = "metiers_mission")
-    public static void mineurGardeSonPuitsStockPlein(GameTestHelper h) {
+    public static void mineurGardeSonPuitsStockPlein(GameTestHelper h) { puitsGardeStockPlein(h, 777, false); }
+
+    /** Pareil avec un ancien « Travaille ici » à 70 blocs du lieu de la mission : au repos, il ne rouvre pas de puits. Avant : si. */
+    @GameTest(template = "vide", timeoutTicks = 600, batch = "metiers_mission")
+    public static void mineurGardeSonPuitsAvecUnAncienIci(GameTestHelper h) { puitsGardeStockPlein(h, 780, true); }
+
+    static void puitsGardeStockPlein(GameTestHelper h, int coin, boolean ancienIci) {
         ServerPlayer chef = h.makeMockServerPlayerInLevel();
-        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 777, new ItemStack(Items.IRON_PICKAXE));
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", coin, new ItemStack(Items.IRON_PICKAXE));
         BlockPos lieu = t.bureau.east(40);
         Runnable lacher = charger(h, lieu, Lieux.RAYON_ICI, 600);
         Bureau.Entite d = TestsBucheron.depot(t);
+        if (ancienIci) t.travailleIci(t.bureau.west(30));
         h.assertTrue(Missions.donner(chef, t, "fer", "stock", 64, "toujours", lieu).ok(), "mission acceptée");
         h.succeedWhen(() -> {
             h.assertTrue(t.memoire.contains("puits"), "pas encore de puits (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");

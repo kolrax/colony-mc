@@ -242,6 +242,7 @@ public class Travailleur extends PathfinderMob {
         BlockPos p = m != null && m.lieu != null ? m.lieu : ici;
         if (java.util.Objects.equals(p, lieuImpose)) return;
         lieuImpose = p;
+        if (m == null && !missions.isEmpty()) return; // au repos (stock plein, hors horaires) : sa mission reprendra au même lieu
         if (p == null) {
             if (m != null && dernierLieu != null) { dernierLieu = null; oublierLieu(); }
             return;

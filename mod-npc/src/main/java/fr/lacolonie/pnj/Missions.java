@@ -81,7 +81,7 @@ public final class Missions {
         if (t.missions.size() >= FILE_MAX && t.missions.stream().noneMatch(x -> x.id.equals(id) && x.horaires.equals(horaires)))
             return non("Sa file est pleine (" + FILE_MAX + " missions) : annules-en une d'abord.");
         if (lieu != null) {
-            if (lieu.distManhattan(t.bureau) > LOIN * 2 || Math.abs(lieu.getX() - t.bureau.getX()) > LOIN || Math.abs(lieu.getZ() - t.bureau.getZ()) > LOIN)
+            if (LieuxRegles.dist2(lieu.getX(), lieu.getZ(), t.bureau.getX(), t.bureau.getZ()) > (long) LOIN * LOIN) // à vol d'oiseau, comme Bucheron.aPortee
                 return non("Ce lieu est trop loin du poste : " + t.prenom + " n'en reviendrait pas.");
             if (lieu.getY() < t.level().getMinBuildHeight() || lieu.getY() >= t.level().getMaxBuildHeight() || t.level().isLoaded(lieu) && t.level().getFluidState(lieu).is(FluidTags.LAVA))
                 return non("Ce lieu est mortel : choisis-en un autre.");
