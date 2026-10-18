@@ -642,7 +642,7 @@ final class Eleveur extends Metier {
         final Passage passage;
         final BlockPos de, vers;
         int pas, marche;
-        boolean ouvert;
+        boolean ouvert, revu;
 
         Passer(Passage passage, BlockPos de, BlockPos vers) { super("portillon"); this.passage = passage; this.de = de; this.vers = vers; }
 
@@ -657,7 +657,18 @@ final class Eleveur extends Metier {
             switch (pas) {
                 case 0 -> {
                     if (horizontale(t, a) <= 1.2) { pas = 1; marche = 0; return Actions.Etat.EN_COURS; }
-                    if (coince() || ++marche > 20 * 60) return echec("portillon_inaccessible");
+                    if (coince() || ++marche > 20 * 60) {
+                        if (revu) return echec("portillon_inaccessible");
+                        // Une fois : le jeu se souvient mal des cases autour de lui (un bloc posé, son poste, qu'il croit
+                        // encore libre : son chemin passait au travers et il restait collé contre). Il les revoit, et repart
+                        // sur un chemin neuf.
+                        revu = true;
+                        marche = 0;
+                        revoir(t);
+                        nouveauBut();
+                        t.getNavigation().stop();
+                        return Actions.Etat.EN_COURS;
+                    }
                     marcher(t, a, 1.0);
                 }
                 case 1 -> {
@@ -706,6 +717,17 @@ final class Eleveur extends Metier {
             double ici = x ? t.getX() - cx : t.getZ() - cz, la = x ? b.x - cx : b.z - cz;
             return travers <= 0.15 || Math.signum(ici) == Math.signum(la) && Math.abs(ici) >= 0.5 + t.getBbWidth() / 2;
         }
+    }
+
+    /**
+     * Le jeu retient la nature des cases pour ses chemins (libre, mur…) et ne l'oublie pas toujours quand un bloc change (posé
+     * dans un coin du monde qui ne vivait pas encore) : il oublie ce qu'il croit des cases autour de lui (5 sur 5, 4 de haut),
+     * pour que le prochain chemin les revoie telles qu'elles sont.
+     */
+    static void revoir(Travailleur t) {
+        if (!(t.level() instanceof ServerLevel l)) return;
+        BlockPos ici = t.blockPosition();
+        for (BlockPos q : BlockPos.betweenClosed(ici.offset(-2, -1, -2), ici.offset(2, 2, 2))) l.getPathTypeCache().invalidate(q);
     }
 
     static double horizontale(Travailleur t, Vec3 p) { return Math.sqrt(Math.pow(t.getX() - p.x, 2) + Math.pow(t.getZ() - p.z, 2)); }
