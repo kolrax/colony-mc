@@ -484,10 +484,10 @@ final class Itineraire {
     private boolean immobile(Travailleur t, int age) {
         Vec3 p = t.position();
         var nav = t.getNavigation();
-        if (repere == null || horizontale(p, repere) >= 0.5 || attend(t.level().getGameTime()) || p.distanceToSqr(but) < 2.25
+        if (repere == null || horizontale(p, repere) >= 0.5 || t.onClimbable() || Math.abs(p.y - repere.y) >= 1.5 || attend(t.level().getGameTime()) || p.distanceToSqr(but) < 2.25
                 || nav.isDone() && auBout(t, direct)) { repere = p; repereAge = age; return false; }
         // Sans chemin en cours, il ne cherche pas à marcher (il choisit, il attend, il pose) : seulement quand il en suit un.
-        if (age - repereAge < Reglages.actuel.trajet_immobile_ticks || nav.isDone()) return false;
+        if (age - repereAge < Math.max(20, Reglages.actuel.trajet_immobile_ticks) || nav.isDone()) return false;
         repere = p;
         repereAge = age;
         if (!(nav.getNodeEvaluator() instanceof Evaluateur e)) return false;
