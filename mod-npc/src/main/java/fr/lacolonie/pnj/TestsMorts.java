@@ -457,6 +457,29 @@ public class TestsMorts {
     }
 
     /**
+     * Garde-fou de E4 : debout sur une dalle du bas, une source de lave enclose juste à côté, au même niveau. La lave
+     * n'entre jamais dans la case de la dalle : il ne fuit pas (sinon il fuyait, revenait et refuyait sans fin).
+     */
+    @GameTest(template = "grand", timeoutTicks = 300, skyAccess = true, batch = "morts")
+    public static void dalleAColeDUneLaveImmobile(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        h.setBlock(12, 2, 12, Blocks.STONE_SLAB);
+        for (BlockPos p : List.of(new BlockPos(10, 2, 12), new BlockPos(11, 2, 11), new BlockPos(11, 2, 13), new BlockPos(11, 3, 12)))
+            h.setBlock(p, Blocks.STONE);
+        h.setBlock(11, 2, 12, Blocks.LAVA);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Attendre(500));
+        Suivi s = suivre(h, t);
+        boolean[] fuite = {false};
+        h.onEachTick(() -> { if (t.action instanceof Actions.Echapper) fuite[0] = true; });
+        h.runAtTickTime(h.getTick() + 120, () -> {
+            h.assertFalse(fuite[0], "il ne doit pas fuir une lave qui ne peut pas l'atteindre (" + s.texte() + ")");
+            finir(h, "dalleAColeDUneLaveImmobile", t, s, 0.9, LAVE);
+        });
+    }
+
+    /**
      * Enseveli dans du gravier sur un plateau : au nord, un puits de 10 blocs ; au sud, le plateau. Il sort par le sud,
      * jamais en sautant dans le puits. Garde-fou : l'ancien code (premier côté libre, le nord) passait aussi, il ne sortait
      * pas assez loin pour tomber.

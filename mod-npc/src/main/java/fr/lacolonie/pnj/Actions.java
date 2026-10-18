@@ -461,9 +461,16 @@ public final class Actions {
         final java.util.Set<BlockPos> exclus = new HashSet<>();
 
         /** La lave qui coule vers lui ({@link Monde#laveQuiVient}) : son refuge est à plus de 3 blocs d'elle, hors de sa coulée. */
-        BlockPos laveQuiVient;
+        BlockPos laveQuiVient, depart;
 
         Echapper(boolean eau) { super("echapper"); this.eau = eau; }
+
+        /** Écarté de la lave sans avoir bougé (pas de chemin sûr) : il ne recommence pas avant 5 s. */
+        @Override
+        void fin(Travailleur t) {
+            super.fin(t);
+            if (laveQuiVient != null && depart != null && t.blockPosition().distSqr(depart) < 2) t.sansRefugeJusqua = t.tickCount + 100;
+        }
 
         /** Choisit où aller ; faux s'il n'y a rien à portée. */
         boolean choisir(Travailleur t) {
