@@ -34,6 +34,7 @@ cd mod-npc
 rm -rf run/world && ./gradlew runGameTestServer  # 196 tests en jeu (lot 4 : + 9 TestsMineur, + 10 TestsBucheron, + 13 TestsGuerrier, + 7 TestsOutils ; lot 6 : + 8 TestsFermier, + 6 TestsEleveur ; lot 5 : + 5 TestsGuerisseur ; lot 6 : + 6 TestsPecheur, + 6 TestsCuisinier ; détail 0.9.4 : 48 TestsJeu, 22 TestsMorts, 19 TestsIA, 19 TestsRepertoire, 15 TestsOrdres, 13 TestsDeblocage, 12 TestsMessages, 7 TestsCharge)
 ./gradlew entrainer --args="code"                # réentraîne l'adressage (adressage.json)
 ./gradlew runPhotos                              # banc photo des gestes (client, écran requis)
+LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runEcrans  # banc photo des écrans (fiche, mission, poste, barre) à 4 échelles ; captures dans run-photos/screenshots
 ```
 
 ## Pour telle tâche, ouvrir tels fichiers
@@ -240,6 +241,7 @@ Suspects pour la charge : `tous()` parcourt toutes les entités de tous les mond
 - **Insignes** (~45) : ce qu'on lit au-dessus de la tête d'un ouvrier, pur Java. `role(nomMetier, chef, embauche)` (« Mineur · KOLRAX_MC », le métier seul si le chef est inconnu, « Cherche du travail » sans emploi), `prenom(nom)`, `arevoir(maintenant, vueLe)` (cadence de la vue directe, `REVUE` 10 ticks), `PORTEE_NOM` 32, `PORTEE_DETAILS` 12, `etat(Corps)` : une seule icône, par priorité `ETATS` = blesse (à terre ou santé ≤ 6), peur (fuit ou échappe), greve, faim (≤ 8), attente (`besoin` en cours), paie (impayés), colere (moral < 30), sommeil (dort, épuisé ou fatigue ≥ 90) ; `icone(dossier, nom)`. Côté jeu : données synchronisées `Travailleur.ROLE` et `ETAT`, posées par `majTete()` (toutes les 20 ticks décalé par `getId()`, et dans `majNom()` ; `licencier` vide `besoin` et `impayes`, `auTravail` pose `chefNom`) ; le jeu n'envoie que ce qui change.
 - **Poses** (331) : angles de la tête, du corps, des bras et des jambes pour chaque geste ; `viser()` place une main sur un point. Pur Java.
 - **Photos** (98) : banc photo des gestes (`./gradlew runPhotos`, propriété `colonie.photos`). Jamais chez un joueur.
+- **BancEcrans** : banc photo des écrans (`./gradlew runEcrans`, `colonie.photos=ecrans`) : crée le monde `ecrans`, pose un poste, 3 ouvriers avec missions, dépôt et journal, puis capture chaque écran à 640x360, 427x240, 480x270 et 320x240 effectifs. Jamais chez un joueur.
 - **Reseau** (110) : les paquets `Fiche`, `Commande`, `Conversation`, `Parler`, `Parole`, `Poste`, `ActionBureau`. Canal `registrar("8")` (7 : donnée `TENUE` ; 8 : `ROLE` et `ETAT`) : le changer oblige à publier un modpack. Piège : vérifier `connection.hasChannel` avant d'envoyer (faux joueurs de test).
 
 ## Démarrage, réglages, admin

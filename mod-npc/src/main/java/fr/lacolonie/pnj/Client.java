@@ -518,10 +518,11 @@ public final class Client {
         final int id;
         final CompoundTag i;
         final List<CompoundTag> file = new ArrayList<>();
-        static final int LIGNES = 6;
+        /** Six missions de {@code LIGNE} pixels : avec le reste, la fiche tient en 232 de haut (l'écran le plus petit en 16/9 en a 240). */
+        static final int LIGNES = 6, LIGNE = 13;
 
         EcranOuvrier(int id, CompoundTag infos) {
-            super(Component.literal(infos.getString("nom")), 330, 250);
+            super(Component.literal(infos.getString("nom")), 330, 232);
             this.id = id;
             this.i = infos;
             for (Tag t : infos.getList("file", Tag.TAG_COMPOUND)) file.add((CompoundTag) t);
@@ -535,9 +536,9 @@ public final class Client {
                 d.putInt("index", k);
                 d.putInt("n", file.size());
                 addRenderableWidget(Button.builder(Component.literal("✖"), b -> envoyer(id, "annuler", d))
-                        .bounds(x0 + largeur - 24, y0 + 92 + k * 14, 14, 12).tooltip(Tooltip.create(Component.literal("Annuler cette mission"))).build());
+                        .bounds(x0 + largeur - 24, y0 + 92 + k * LIGNE, 14, 12).tooltip(Tooltip.create(Component.literal("Annuler cette mission"))).build());
             }
-            int w = 100, xa = x0 + 10, xb = x0 + 115, xc = x0 + 220, y1 = y0 + hauteur - 52, y2 = y0 + hauteur - 28;
+            int w = 100, xa = x0 + 10, xb = x0 + 115, xc = x0 + 220, y1 = y0 + hauteur - 50, y2 = y0 + hauteur - 26;
             bouton("Nouvelle mission", xa, y1, w, b -> minecraft.setScreen(new EcranNouvelleMission(this)));
             bouton("Travaille ici", xb, y1, w, b -> envoyer(id, "ici", new CompoundTag()));
             bouton("Suis-moi", xc, y1, w, b -> envoyer(id, "suivre", new CompoundTag()));
@@ -564,9 +565,9 @@ public final class Client {
             for (int k = 0; k < Math.min(LIGNES, file.size()); k++) {
                 CompoundTag m = file.get(k);
                 String t = (k + 1) + ". " + m.getString("texte");
-                texte(g, font.plainSubstrByWidth(t, w - 22), x + 4, y0 + 94 + k * 14, m.getBoolean("active") ? VERT : BLANC);
+                texte(g, font.plainSubstrByWidth(t, w - 22), x + 4, y0 + 94 + k * LIGNE, m.getBoolean("active") ? VERT : BLANC);
             }
-            if (file.size() > LIGNES) texte(g, "… et " + (file.size() - LIGNES) + " autre(s), au poste.", x + 4, y0 + 94 + LIGNES * 14, GRIS);
+            if (file.size() > LIGNES) texte(g, "… et " + (file.size() - LIGNES) + " autre(s), au poste.", x + 4, y0 + 94 + LIGNES * LIGNE, GRIS);
         }
     }
 
@@ -582,7 +583,7 @@ public final class Client {
         EditBox boite;
 
         EcranNouvelleMission(EcranOuvrier fiche) {
-            super(Component.literal("Nouvelle mission"), 330, 250);
+            super(Component.literal("Nouvelle mission"), 352, 228);
             this.fiche = fiche;
             for (Tag t : fiche.i.getList("commandes", Tag.TAG_COMPOUND)) commandes.add((CompoundTag) t);
         }
@@ -599,7 +600,7 @@ public final class Client {
             if (boite != null) quantite = boite.getValue();
             for (int k = 0; k < Math.min(18, commandes.size()); k++) {
                 int n = k;
-                Button b = bouton(commandes.get(k).getString("nom"), x0 + 10 + (k % 3) * 104, y0 + 24 + (k / 3) * 22, 100, x -> { choix = n; rebuildWidgets(); });
+                Button b = bouton(commandes.get(k).getString("nom"), x0 + 10 + (k % 3) * 112, y0 + 24 + (k / 3) * 21, 108, x -> { choix = n; rebuildWidgets(); });
                 b.active = k != choix;
             }
             int y = y0 + hauteur - 76;
@@ -611,11 +612,11 @@ public final class Client {
                 addRenderableWidget(boite);
                 bouton(NOMS_REPETITION[repetition] + " ▸", x0 + 130, y, 120, x -> { repetition = (repetition + 1) % 3; rebuildWidgets(); });
             } else boite = null;
-            bouton("Horaires : " + NOMS_HORAIRES[horaires] + " ▸", x0 + 10, y + 24, 150, x -> { horaires = (horaires + 1) % 3; rebuildWidgets(); });
-            bouton(ici ? "Lieu : ici ▸" : "Lieu : à son choix ▸", x0 + 166, y + 24, 150, x -> { ici = !ici; rebuildWidgets(); });
-            Button ok = bouton("Valider", x0 + 10, y + 48, 150, x -> valider());
+            bouton("Horaires : " + NOMS_HORAIRES[horaires] + " ▸", x0 + 10, y + 24, 163, x -> { horaires = (horaires + 1) % 3; rebuildWidgets(); });
+            bouton(ici ? "Lieu : ici ▸" : "Lieu : à son choix ▸", x0 + 179, y + 24, 163, x -> { ici = !ici; rebuildWidgets(); });
+            Button ok = bouton("Valider", x0 + 10, y + 48, 163, x -> valider());
             ok.active = c != null;
-            bouton("Retour", x0 + 166, y + 48, 150, x -> minecraft.setScreen(fiche));
+            bouton("Retour", x0 + 179, y + 48, 163, x -> minecraft.setScreen(fiche));
         }
 
         void valider() {
@@ -680,11 +681,12 @@ public final class Client {
         static final String[] ONGLETS = {"ouvriers", "missions", "depot", "caisse", "journal"};
         static final String[] NOMS_ONGLETS = {"Ouvriers", "Missions", "Dépôt", "Caisse", "Journal"};
         static final String[] CATEGORIES = {"", "outils", "minerais", "nourriture", "bois", "blocs", "divers"};
-        static final String[] NOMS_CATEGORIES = {"Tout", "Outils", "Minerais", "Nourriture", "Bois", "Blocs", "Divers"};
+        static final String[] NOMS_CATEGORIES = {"Tout", "Outils", "Minerais", "Vivres", "Bois", "Blocs", "Divers"};
         static String ongletMemo = "ouvriers", choisiMemo = "", categorieMemo = "", rechercheMemo = "", guerreMemo = "";
         /** Le défilement de la liste de l'onglet ouvert (lignes, ou rangées de la grille du dépôt). */
         static int defilement;
-        static final int LIGNES_OUVRIERS = 8, LIGNE_OUVRIER = 14, LIGNES_MISSIONS = 10, LIGNES_JOURNAL = 19, LIGNES_CAISSE = 8, CASE = 18, COLONNES = 22, RANGEES = 9;
+        /** Tout tient en 228 de haut, plus le titre au-dessus (11) : l'écran le plus petit en 16/9 (1280 x 720 à l'échelle 3) en a 240. */
+        static final int LIGNES_OUVRIERS = 6, LIGNE_OUVRIER = 14, LIGNES_MISSIONS = 9, LIGNES_JOURNAL = 16, LIGNES_CAISSE = 6, CASE = 18, COLONNES = 22, RANGEES = 8;
 
         final BlockPos pos;
         final CompoundTag f;
@@ -700,7 +702,7 @@ public final class Client {
         Button bDebut, bFin, bJours;
 
         EcranPoste(BlockPos pos, CompoundTag infos) {
-            super(Component.literal(infos.getString("titre")), 420, 252);
+            super(Component.literal(infos.getString("titre")), 420, 228);
             this.pos = pos;
             this.f = infos;
             for (Tag x : infos.getList("ouvriers", Tag.TAG_COMPOUND)) ouvriers.add((CompoundTag) x);
@@ -788,9 +790,13 @@ public final class Client {
             if (ongletMemo.equals("missions")) rebuildWidgets(); // ses boutons suivent les lignes
         }
 
+        /** Le haut des réglages de l'ouvrier choisi, sous la liste. */
+        int yReglages() { return y0 + 44 + LIGNES_OUVRIERS * LIGNE_OUVRIER + 10; }
+
         @Override
         protected void init() {
             super.init();
+            y0 = (height - hauteur + 11) / 2; // le titre, au-dessus du cadre, reste à l'écran
             if (!f.getBoolean("poste")) {
                 if (!f.contains("ailleurs")) bouton("Faire de ce bureau mon poste de travail", x0 + 10, y0 + 90, 260, b -> envoyer("devenir_poste", new CompoundTag()));
                 bouton("Caisse et dépôt", x0 + 10, y0 + hauteur - 28, 120, b -> envoyer("stock", new CompoundTag()));
@@ -818,7 +824,7 @@ public final class Client {
 
         void initOuvriers() {
             if (choisi == null) return;
-            int x = x0 + 8, y = y0 + 166;
+            int x = x0 + 8, y = yReglages();
             if (choisi.getBoolean("absent")) {
                 bouton("Retirer de la liste", x, y + 30, 140, b -> {
                     CompoundTag d = new CompoundTag();
@@ -870,15 +876,15 @@ public final class Client {
         void initCaisse() {
             bouton("Déposer des pièces", x0 + largeur - 138, y0 + 28, 130, b -> envoyer("stock", new CompoundTag()))
                     .setTooltip(Tooltip.create(Component.literal("Ouvre la caisse : mets-y les pièces de la paie.")));
-            cible = new EditBox(font, x0 + 10, y0 + 220, 120, 18, Component.literal("Pseudo"));
+            cible = new EditBox(font, x0 + 10, y0 + 192, 120, 18, Component.literal("Pseudo"));
             cible.setMaxLength(16);
             cible.setValue(guerreMemo);
             cible.setHint(Component.literal("Pseudo du chef…").withStyle(s -> s.withColor(0x777777)));
             cible.setResponder(v -> guerreMemo = v);
             addRenderableWidget(cible);
-            bouton("Déclarer la guerre", x0 + 136, y0 + 219, 116, b -> guerre("declarer_guerre"))
+            bouton("Déclarer la guerre", x0 + 136, y0 + 191, 116, b -> guerre("declarer_guerre"))
                     .setTooltip(Tooltip.create(Component.literal("Vos deux colonies le sauront. Tes gardes pourront alors frapper ses gens, sur ton ordre.")));
-            bouton("Faire la paix", x0 + 256, y0 + 219, 96, b -> guerre("paix"));
+            bouton("Faire la paix", x0 + 256, y0 + 191, 96, b -> guerre("paix"));
         }
 
         void guerre(String action) {
@@ -998,7 +1004,7 @@ public final class Client {
                 texte(g, couper(missionEnCours(o), x0 + largeur - 10 - xm), xm, y, GRIS);
             }
             if (choisi == null) return;
-            int x = x0 + 8, y = y0 + 166;
+            int x = x0 + 8, y = yReglages();
             g.fill(x0 + 6, y - 6, x0 + largeur - 6, y - 5, 0xFF8A6A2A);
             texte(g, choisi.getString("nom") + " — " + choisi.getString("metier") + " " + "★".repeat(choisi.getInt("niveau")), x, y, OR);
             if (choisi.getBoolean("absent")) {
@@ -1037,7 +1043,7 @@ public final class Client {
 
         void renderDepot(GuiGraphics g, int mx, int my) {
             List<Integer> v = visibles();
-            int gx = x0 + 9, gy = y0 + 74;
+            int gx = x0 + 9, gy = y0 + 72;
             for (int r = 0; r < RANGEES; r++)
                 for (int c = 0; c < COLONNES; c++) {
                     int x = gx + c * CASE, y = gy + r * CASE;
@@ -1068,33 +1074,34 @@ public final class Client {
             CompoundTag c = f.getCompound("caisse");
             int x = x0 + 10, y = y0 + 32;
             texte(g, "DANS LA CAISSE", x, y, OR);
-            texte(g, c.getString("solde"), x + 140, y, c.getBoolean("assez") ? VERT : ROUGE);
+            int avantBouton = largeur - 138 - 6 - 150; // jusqu'au bouton « Déposer des pièces »
+            texte(g, couper(c.getString("solde"), avantBouton), x + 140, y, c.getBoolean("assez") ? VERT : ROUGE);
             texte(g, "UNE PAIE DE TOUS", x, y + 13, OR);
-            texte(g, c.getString("salaires"), x + 140, y + 13, BLANC);
+            texte(g, couper(c.getString("salaires"), avantBouton), x + 140, y + 13, BLANC);
             texte(g, "PROCHAINE PAIE", x, y + 26, OR);
             texte(g, c.getString("prochaine"), x + 140, y + 26, BLANC);
             if (c.getInt("retards") > 0) texte(g, "Paies en retard : " + c.getInt("retards") + " (sans paie, ils se mettent en grève)", x, y + 39, ROUGE);
             else if (!c.getBoolean("assez")) texte(g, "La caisse ne suffit pas pour la prochaine paie.", x, y + 39, ORANGE);
             int yl = y + 56;
             texte(g, "OUVRIER", x, yl, OR);
-            texte(g, "SALAIRE", x + 140, yl, OR);
+            texte(g, "SALAIRE", x + 96, yl, OR);
             texte(g, "PAIE", x + 230, yl, OR);
             for (int r = 0; r < Math.min(LIGNES_CAISSE, ouvriers.size() - defilement); r++) {
                 CompoundTag o = ouvriers.get(defilement + r);
                 int y2 = yl + 12 + r * 11;
-                texte(g, couper(o.getString("nom"), 130), x, y2, o.getBoolean("absent") ? GRIS : BLANC);
+                texte(g, couper(o.getString("nom"), 90), x, y2, o.getBoolean("absent") ? GRIS : BLANC);
                 if (o.getBoolean("absent")) continue;
-                texte(g, couper(o.getString("salaire") + " " + (o.getString("periode").isEmpty() ? "" : o.getString("periode")), 86), x + 140, y2, BLANC);
+                texte(g, couper(o.getString("salaire") + " " + (o.getString("periode").isEmpty() ? "" : o.getString("periode")), 130), x + 96, y2, BLANC);
                 texte(g, couper(o.getString("paie"), largeur - 250), x + 230, y2, o.getInt("impayes") > 0 ? ROUGE : GRIS);
             }
             // La guerre : contre qui, et le champ pour la déclarer ou faire la paix.
-            g.fill(x0 + 6, y0 + 194, x0 + largeur - 6, y0 + 195, 0xFF8A6A2A);
-            texte(g, "GUERRE", x, y0 + 199, OR);
+            g.fill(x0 + 6, y0 + 172, x0 + largeur - 6, y0 + 173, 0xFF8A6A2A);
+            texte(g, "GUERRE", x, y0 + 177, OR);
             ListTag gs = f.getList("guerres", Tag.TAG_STRING);
             List<String> noms = new ArrayList<>();
             for (int i = 0; i < gs.size(); i++) noms.add(gs.getString(i));
             texte(g, couper(noms.isEmpty() ? "Tu es en paix avec tout le monde." : "En guerre contre : " + String.join(", ", noms), largeur - 70),
-                    x + 50, y0 + 199, noms.isEmpty() ? GRIS : ROUGE);
+                    x + 50, y0 + 177, noms.isEmpty() ? GRIS : ROUGE);
         }
 
         void renderJournal(GuiGraphics g, int mx, int my) {

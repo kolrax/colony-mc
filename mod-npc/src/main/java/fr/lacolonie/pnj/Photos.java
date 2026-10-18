@@ -26,7 +26,7 @@ import java.util.Set;
 public final class Photos {
     private Photos() {}
 
-    static final boolean ACTIF = System.getProperty("colonie.photos") != null;
+    static final boolean ACTIF = System.getProperty("colonie.photos") != null && !BancEcrans.ACTIF; // « ecrans » : le banc des écrans
     static final int PAR_RANG = 4;
     static int tick = -1, rangee = -2; // le premier lot est pris deux fois : la première, le monde n'est pas encore prêt
     static final List<Entity> POSES = new ArrayList<>();
