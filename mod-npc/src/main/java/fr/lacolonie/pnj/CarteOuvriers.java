@@ -30,11 +30,18 @@ public final class CarteOuvriers {
 
     /** La liste des ouvriers d'un chef, pour sa carte (serveur vers joueur). Vide : effacer ses repères. */
     public record Paquet(List<Reperes.Repere> liste) implements CustomPacketPayload {
-        static final StreamCodec<RegistryFriendlyByteBuf, Reperes.Repere> REPERE = StreamCodec.composite(
-                UUIDUtil.STREAM_CODEC, Reperes.Repere::id, ByteBufCodecs.stringUtf8(64), Reperes.Repere::prenom,
-                ByteBufCodecs.stringUtf8(128), Reperes.Repere::dim, ByteBufCodecs.VAR_INT, Reperes.Repere::x,
-                ByteBufCodecs.VAR_INT, Reperes.Repere::y, ByteBufCodecs.VAR_INT, Reperes.Repere::z, Reperes.Repere::new);
-        static final Type<Paquet> TYPE = Reseau.typeDe("reperes");
+        /** Sept champs : au-delà des six de {@code StreamCodec.composite}, écrits à la main (version 2 du registre). */
+        static final StreamCodec<RegistryFriendlyByteBuf, Reperes.Repere> REPERE = StreamCodec.of((b, r) -> {
+            UUIDUtil.STREAM_CODEC.encode(b, r.id());
+            b.writeUtf(r.prenom(), 64);
+            b.writeUtf(r.dim(), 128);
+            b.writeVarInt(r.x());
+            b.writeVarInt(r.y());
+            b.writeVarInt(r.z());
+            b.writeBoolean(r.aTerre());
+        }, b -> new Reperes.Repere(UUIDUtil.STREAM_CODEC.decode(b), b.readUtf(64), b.readUtf(128), b.readVarInt(),
+                b.readVarInt(), b.readVarInt(), b.readBoolean()));
+        static final Type<Paquet> TYPE = Reseau.typeDe("reperes2");
         static final StreamCodec<RegistryFriendlyByteBuf, Paquet> CODEC = StreamCodec.composite(
                 REPERE.apply(ByteBufCodecs.list(Reperes.MAX)), Paquet::liste, Paquet::new);
 
@@ -45,9 +52,12 @@ public final class CarteOuvriers {
     /**
      * Son propre registre, facultatif et à sa propre version : il ne change pas le canal du mod ({@code Reseau.registrar}),
      * et un ancien client (sans ce paquet) peut encore se connecter. Branché dans {@link ColoniePnj}, à côté de {@link Reseau}.
+     * Version 2 (plan E, point 5 : le repère dit s'il est à terre), sous un nouveau nom, « reperes2 » : NeoForge refuse la
+     * connexion si un même paquet, même facultatif, a deux versions différentes ; un nom nouveau est simplement ignoré par un
+     * client de la version 1 (et « reperes » par ce client-ci), qui se connecte encore, sans les repères.
      */
     static void enregistrer(RegisterPayloadHandlersEvent e) {
-        e.registrar("1").optional().playToClient(Paquet.TYPE, Paquet.CODEC, (p, ctx) -> CarteClient.recevoir(p.liste()));
+        e.registrar("2").optional().playToClient(Paquet.TYPE, Paquet.CODEC, (p, ctx) -> CarteClient.recevoir(p.liste()));
     }
 
     /** Ce qui a été envoyé à chaque joueur (un nouveau ServerPlayer à chaque connexion : tout repart à la reconnexion). */
@@ -71,7 +81,7 @@ public final class CarteOuvriers {
             if (t.chef == null || t.mortDefinitive) continue;
             var b = t.blockPosition();
             tous.add(new Reperes.Ouvrier(t.chef, new Reperes.Repere(t.getUUID(), court(t.prenom),
-                    t.level().dimension().location().toString(), b.getX(), b.getY(), b.getZ())));
+                    t.level().dimension().location().toString(), b.getX(), b.getY(), b.getZ(), t.aTerre)));
         }
         Map<java.util.UUID, List<Reperes.Repere>> parChef = Reperes.parChef(tous);
         for (ServerPlayer p : equipes) {

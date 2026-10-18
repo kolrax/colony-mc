@@ -11,7 +11,22 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Plan D : chaque chef ne voit sur sa carte que ses propres ouvriers, et rien ne part pour rien. */
 class ReperesTest {
     static Reperes.Repere repere(String prenom, int x) {
-        return new Reperes.Repere(UUID.nameUUIDFromBytes(prenom.getBytes()), prenom, "minecraft:overworld", x, 64, 0);
+        return repere(prenom, x, false);
+    }
+
+    static Reperes.Repere repere(String prenom, int x, boolean aTerre) {
+        return new Reperes.Repere(UUID.nameUUIDFromBytes(prenom.getBytes()), prenom, "minecraft:overworld", x, 64, 0, aTerre);
+    }
+
+    /** Plan E, point 5 : à terre, son repère change (rouge, « à terre ») et repart vers le chef ; relevé, il redevient normal. */
+    @Test
+    void aTerrePartVersLeChef() {
+        var debout = List.of(repere("Oriane", 1));
+        var tombee = List.of(repere("Oriane", 1, true));
+        assertTrue(Reperes.aEnvoyer(debout, tombee), "elle tombe sans bouger : le chef doit le savoir");
+        assertTrue(Reperes.aEnvoyer(tombee, debout), "relevée : son repère redevient normal");
+        assertEquals("Oriane (à terre)", Reperes.nom(tombee.get(0)));
+        assertEquals("Oriane", Reperes.nom(debout.get(0)));
     }
 
     @Test

@@ -802,6 +802,7 @@ public final class Fantome {
                 o.addProperty("prenom", x.prenom());
                 o.addProperty("dim", x.dim());
                 o.addProperty("pos", x.x() + ", " + x.y() + ", " + x.z());
+                if (x.aTerre()) o.addProperty("a_terre", true); // repère rouge (plan E, point 5)
                 cj.add(o);
             }
             r.add("carte", cj);

@@ -57,4 +57,34 @@ public class TestsCarte {
             h.assertTrue(Fantome.carte == null, "rien ne repart tant que rien n'a bougé");
         });
     }
+
+    /**
+     * Plan E, point 5 : un ouvrier à terre est signalé sur la carte de son chef (repère rouge, « à terre »), même sans avoir
+     * bougé ; relevé, son repère redevient normal. Coin 913. Échoue sur l'ancien code : le repère ne savait rien de sa chute.
+     */
+    @GameTest(template = "vide", timeoutTicks = 200)
+    public static void aTerreEnRougeSurLaCarte(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 913 * 400, 60000);
+        Fantome.Joueur moi = new Fantome.Joueur(h.getLevel());
+        Travailleur oriane = TestsBlessures.ouvrier(h, "mineur", base, base.east(2), moi.getUUID(), ItemStack.EMPTY);
+        oriane.prenom = "Oriane";
+        oriane.forcerChunk();
+        h.succeedWhen(() -> {
+            if (!ColoniePnj.tous(h.getLevel().getServer()).contains(oriane))
+                throw new net.minecraft.gametest.framework.GameTestAssertException("Oriane pas encore là");
+            CarteOuvriers.ENVOYE.remove(moi);
+            if (oriane.aTerre) oriane.relever(null); // un essai précédent de ce même test a pu la laisser à terre
+            CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
+            h.assertTrue(Fantome.carte != null && Fantome.carte.size() == 1 && !Fantome.carte.get(0).aTerre(), "debout : " + Fantome.carte);
+            Fantome.carte = null;
+            oriane.tomberATerre();
+            CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
+            h.assertTrue(Fantome.carte != null && Fantome.carte.get(0).aTerre(), "à terre, le chef le voit : " + Fantome.carte);
+            h.assertTrue(Reperes.nom(Fantome.carte.get(0)).equals("Oriane (à terre)"), "son nom : " + Reperes.nom(Fantome.carte.get(0)));
+            Fantome.carte = null;
+            oriane.relever(null);
+            CarteOuvriers.envoyer(h.getLevel().getServer(), List.of(moi));
+            h.assertTrue(Fantome.carte != null && !Fantome.carte.get(0).aTerre(), "relevée, repère normal : " + Fantome.carte);
+        });
+    }
 }
