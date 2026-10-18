@@ -23,7 +23,7 @@ import java.util.UUID;
  * joueur étranger ; la guerre déclarée, il le frappe ; sous 30 % de sa vie, il rompt et se replie vers le poste ; la troupe qui
  * attaque marche en rangs jusqu'au poste ennemi et en enfonce la porte (pas le bureau) ; la paix faite, il baisse son arme.
  * Le banc « 30 contre 30 » mesure la part du mod pendant une grande bataille. Voir {@link Guerre} et {@link Armee}.
- * Coins 320 à 326.
+ * Coins 320 à 327.
  */
 @GameTestHolder(ColoniePnj.MODID)
 @PrefixGameTestTemplate(false)
@@ -199,6 +199,31 @@ public class TestsGuerre {
             h.assertFalse(Courrier.de(h.getLevel().getServer()).enGuerre(s.chef().getUUID(), r.chef()), "plus de guerre");
             h.assertFalse(apres[0], "après la paix, plus d'attaque");
             h.assertTrue(r.o().getHealth() == r.o().getMaxHealth(), "plus un coup");
+            r.finir(s);
+        });
+    }
+
+    /**
+     * L'ouvrier ennemi qu'il frappe tombe à terre : il le laisse (on n'achève pas un homme à terre, et ses coups n'y font
+     * plus rien). Avant, il restait planté au-dessus de lui jusqu'à une minute, et toute la troupe avec lui (banc 30 contre 30).
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void laisseLHommeATerre(GameTestHelper h) {
+        TestsChef.Scene s = TestsChef.scene(h, 327);
+        Rival r = rival(h, s, 327, loin(h, 327), 4.5, 7.5);
+        mission(h, s, s.g(), Guerre.DEFENDRE);
+        Armee.declarer(s.chef(), r.chef().toString());
+        long[] tombe = {-1};
+        boolean[] acharne = {false};
+        h.onEachTick(() -> {
+            boolean attaque = s.g().action instanceof Actions.Attaquer a && a.cible == r.o();
+            if (attaque && tombe[0] < 0) { tombe[0] = h.getTick(); r.o().tomberATerre(); }
+            if (tombe[0] >= 0 && h.getTick() > tombe[0] + 20 && attaque) acharne[0] = true;
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(tombe[0] >= 0, "la guerre : il attaque d'abord");
+            h.assertTrue(h.getTick() > tombe[0] + 100, "on attend");
+            h.assertFalse(acharne[0], "il laisse l'homme à terre (" + (s.g().action == null ? "-" : s.g().action.nom) + ")");
             r.finir(s);
         });
     }

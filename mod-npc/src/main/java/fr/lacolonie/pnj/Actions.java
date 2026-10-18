@@ -814,7 +814,10 @@ public final class Actions {
                 if (cible.isAlive()) oublier(t); // parti trop loin
                 return Etat.OK;
             }
-            if (garde != null && (garde.isRemoved() || !garde.isAlive() || garde.level() != t.level() || garde.distanceToSqr(cible) > portee * portee)) return Etat.OK;
+            // Un ouvrier tombé à terre : on ne l'achève pas (Armee.ennemi), et nos coups n'y font plus rien (Travailleur.hurt).
+            // Il passe au suivant ; sans ça, toute une troupe restait plantée au-dessus de lui jusqu'à une minute.
+            if (cible instanceof Travailleur w && w.aTerre) return Etat.OK;
+            if (garde != null && (garde.isRemoved()|| !garde.isAlive() || garde.level() != t.level() || garde.distanceToSqr(cible) > portee * portee)) return Etat.OK;
             // Un homme qu'il chasse d'un lieu (le dépôt) : parti au-delà de la laisse, il le laisse, même à l'arc.
             if (poste != null && cible instanceof net.minecraft.world.entity.player.Player && cible.position().distanceToSqr(poste) > laisse * laisse) return Etat.OK;
             if (age > 20 * 60) return laisser(t, "trop_long");
