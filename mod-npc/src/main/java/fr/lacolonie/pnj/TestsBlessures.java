@@ -254,6 +254,7 @@ public class TestsBlessures {
             h.assertTrue(r.getAsJsonObject("morts_par_cause").has("lave"), "la lave : " + r);
             h.assertTrue(r.getAsJsonObject("morts_par_cause").has("à terre sans secours, après chute"), "à terre après une chute : " + r);
             h.assertTrue(r.getAsJsonObject("blessures_par_cause").has("chute"), "la chute : " + r);
+            h.assertTrue(r.getAsJsonObject("coups_par_cause").has("lave") && r.getAsJsonObject("coups_par_cause").has("chute"), "les coups : " + r);
             h.succeed();
         } finally {
             Fantome.joueur = avant;
