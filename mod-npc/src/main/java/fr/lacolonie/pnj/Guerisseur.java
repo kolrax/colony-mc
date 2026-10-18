@@ -23,7 +23,9 @@ import java.util.UUID;
  * Le guérisseur (lot 5, cahier 1.11 et 4.2). Il veille sur les ouvriers de son chef dans son espace de vie : celui qui tombe
  * à terre, il accourt le relever, avec un pain ou une potion de soin (le sien, sinon pris au dépôt), comme le ferait le chef ;
  * celui qui est gravement ou très gravement blessé, il va le panser (quelques secondes à genoux près de lui) : sa blessure
- * baisse d'un cran et il reprend un tiers de sa vie, une fois par blessure. Sinon, il attend au poste.
+ * baisse d'un cran et il reprend un tiers de sa vie, une fois par blessure. Sinon, il attend au poste. Un ouvrier à terre
+ * et ni pain ni potion, ni sur lui ni au dépôt : il est bloqué ({@link Statut#SANS_REMEDE}) jusqu'au remède trouvé, ou
+ * jusqu'à ce qu'il n'y ait plus personne à relever (personne à soigner n'est jamais un blocage : il attend).
  * <p>
  * Il apprend la chute d'un ouvrier au moment même ({@link #alerter}, appelé par {@link Blessures#accourir}) ; il ne passe en
  * revue les blessés qu'au plus toutes les {@link Soins#REVUE} secondes (au repos aussi, pour ceux qui sont à terre :
@@ -74,6 +76,7 @@ final class Guerisseur extends Metier {
         t.memoire.putLong("revue_blesses", maintenant + Soins.REVUE);
         // Celui qu'il n'a pas pu atteindre (un enclos fermé, un trou) : laissé une minute, sans chercher de chemin à chaque revue.
         Travailleur o = prochain(t, false, aTerre, t.memoire.getLong("soin_laisse_t") > maintenant ? Set.of(t.memoire.getInt("soin_laisse")) : Set.of());
+        if (o == null || !o.aTerre) t.debloquer(Statut.SANS_REMEDE); // personne à relever : il ne lui manque rien
         if (o == null) return false;
         Cerveau.lancer(t, new Soin(o));
         return true;
@@ -291,7 +294,7 @@ final class Guerisseur extends Metier {
             if (!aTerre && soigne(blesse)) return Actions.Etat.OK; // un autre l'a pansé entre-temps
             // Le remède, pour un ouvrier à terre : le sien, sinon celui du dépôt (le pain d'abord).
             if (aTerre && !pret) {
-                if (t.compter(REMEDE) > 0) pret = true;
+                if (t.compter(REMEDE) > 0) { pret = true; t.debloquer(Statut.SANS_REMEDE); }
                 else {
                     Bureau.Entite b = arriver(t);
                     if (b == null) return raison.isEmpty() ? Actions.Etat.EN_COURS : Actions.Etat.ECHEC;
@@ -302,10 +305,12 @@ final class Guerisseur extends Metier {
                     List<ItemStack> pris = b.prendre(PAIN, 1);
                     if (pris.isEmpty()) pris = b.prendre(POTION, 1);
                     if (pris.isEmpty()) {
+                        t.bloquer(Statut.SANS_REMEDE); // « ⚠ Rien pour relever les blessés… », jusqu'au prochain remède trouvé
                         Cerveau.dire(t, "sans_remede", 60, "Plus de pain ni de potion de soin au dépôt ! Il m'en faut pour relever " + blesse.prenom + ".");
                         return echec("rien_au_depot");
                     }
                     pris.forEach(t::ranger);
+                    t.debloquer(Statut.SANS_REMEDE);
                     pret = true;
                     nouveauBut(); // la marche jusqu'au dépôt ne compte pas dans celle jusqu'au blessé
                 }

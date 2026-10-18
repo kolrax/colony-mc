@@ -22,4 +22,10 @@ class StatutMetiersTest {
         assertEquals("⚠ Pas d'enclos", Statut.texte(e));
         assertEquals("Il manque de la pierre au dépôt", Statut.manque("de la pierre"));
     }
+
+    @Test
+    void guerisseurSansRemede() {
+        Statut.Etat e = new Statut.Etat("guerisseur", false, false, false, false, Statut.SANS_REMEDE, false, null, 0, 0, false);
+        assertEquals("⚠ Rien pour relever les blessés : mets du pain ou des potions de soin au dépôt", Statut.texte(e));
+    }
 }

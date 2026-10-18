@@ -179,4 +179,35 @@ public class TestsGuerisseur {
             b.discard();
         });
     }
+
+    /**
+     * Refonte (le statut unique) : Jean tombe à terre et le dépôt n'a ni pain ni potion. Isabeau est bloquée, avec la raison
+     * et la solution (« ⚠ Rien pour relever les blessés : mets du pain… »). Un pain posé au dépôt : elle le prend, le
+     * blocage tombe et elle relève Jean.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void bloqueSansRemedeAuDepot(GameTestHelper h) {
+        Travailleur[] e = colonie(h, 155, UUID.randomUUID(), new BlockPos(0, 0, 6));
+        Travailleur g = e[0], b = e[1];
+        TestsBucheron.depot(g).depot.setItem(0, ItemStack.EMPTY);
+        long[] tombe = {-1}, bloque = {-1};
+        h.onEachTick(() -> {
+            if (tombe[0] < 0 && h.getTick() > 20) {
+                b.hurt(b.damageSources().generic(), 100);
+                b.aTerreTicks = 10 * 60 * 20;
+                tombe[0] = h.getTick();
+            }
+            if (tombe[0] >= 0 && bloque[0] < 0 && b.aTerre && Statut.bloque(Statut.SANS_REMEDE).equals(g.statutUnique())) {
+                bloque[0] = h.getTick();
+                TestsBucheron.depot(g).depot.setItem(0, new ItemStack(Items.BREAD, 2));
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(bloque[0] >= 0, "sans remède au dépôt, elle est bloquée : " + g.statutUnique() + " (" + TestsJeu.etat(g, g.bureau) + ")");
+            h.assertFalse(b.aTerre, "le pain posé, elle relève Jean (" + TestsJeu.etat(g, g.bureau) + ")");
+            h.assertTrue(g.blocageActuel() == null, "plus bloquée : " + g.statutUnique());
+            g.discard();
+            b.discard();
+        });
+    }
 }

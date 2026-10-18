@@ -179,7 +179,8 @@ public final class Statut {
             BOUTIQUE_VIDE = "Étal vide : mets des marchandises au dépôt",
             RIEN_A_CUIRE = "Rien à cuire au dépôt : de la viande, du poisson ou du blé",
             SANS_FOUR = "Pas de four près du poste",
-            SANS_COMBUSTIBLE = "Ni charbon ni bois au dépôt pour le four";
+            SANS_COMBUSTIBLE = "Ni charbon ni bois au dépôt pour le four",
+            SANS_REMEDE = "Rien pour relever les blessés : mets du pain ou des potions de soin au dépôt";
 
     /** « Il manque de la pierre au dépôt » (le maçon). */
     public static String manque(String nom) { return "Il manque " + nom + " au dépôt"; }
