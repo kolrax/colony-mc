@@ -98,6 +98,8 @@ public final class Fantome {
     static BlockPos poste;
     static final List<JsonObject> casses = new ArrayList<>();
     static final Deque<JsonObject> messages = new ArrayDeque<>(), ecrans = new ArrayDeque<>();
+    /** Plan D : ce que sa carte (Xaero) montrerait, la dernière liste de ses ouvriers reçue (null : rien reçu). */
+    static volatile List<Reperes.Repere> carte;
 
     static boolean actif() { return !FMLEnvironment.production || Reglages.actuel.fantome; }
 
@@ -157,6 +159,8 @@ public final class Fantome {
                 o.addProperty("texte", m.content().getString());
                 o.addProperty("barre", m.overlay());
                 garder(messages, o, MAX_MESSAGES);
+            } else if (paquet instanceof ClientboundCustomPayloadPacket c && c.payload() instanceof CarteOuvriers.Paquet p) {
+                carte = p.liste(); // toutes les 2 s : gardée à part, pour ne pas chasser les écrans
             } else if (paquet instanceof ClientboundCustomPayloadPacket c && c.payload().type().id().getNamespace().equals(ColoniePnj.MODID)) {
                 JsonObject o = new JsonObject();
                 o.addProperty("tick", tick);
@@ -201,6 +205,7 @@ public final class Fantome {
         casses.clear();
         synchronized (messages) { messages.clear(); }
         synchronized (ecrans) { ecrans.clear(); }
+        carte = null;
         return j;
     }
 
@@ -783,6 +788,19 @@ public final class Fantome {
 
         synchronized (messages) { r.add("messages", tableau(messages)); }
         synchronized (ecrans) { r.add("ecrans", tableau(ecrans)); }
+        // Plan D : les repères de ses ouvriers sur sa carte (null : aucune liste reçue).
+        List<Reperes.Repere> vus = carte;
+        if (vus != null) {
+            JsonArray cj = new JsonArray();
+            for (Reperes.Repere x : vus) {
+                JsonObject o = new JsonObject();
+                o.addProperty("prenom", x.prenom());
+                o.addProperty("dim", x.dim());
+                o.addProperty("pos", x.x() + ", " + x.y() + ", " + x.z());
+                cj.add(o);
+            }
+            r.add("carte", cj);
+        }
 
         // Les blocs cassés par les ouvriers à moins de 64 blocs du poste (tous s'il n'y a pas de poste).
         JsonArray cs = new JsonArray();
