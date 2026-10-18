@@ -32,7 +32,7 @@ final class Bucheron extends Metier {
     }
 
     Bucheron() {
-        super("bucheron", "Bûcheron", "Trouve seul le bois demandé, même loin : il sait où pousse chaque bois, l'abat, ramasse le bois et les pousses, et replante.",
+        super("bucheron", "Bûcheron", "Trouve seul le bois demandé autour du poste (jusqu'à " + Missions.LOIN + " blocs) : il sait où pousse chaque bois, l'abat, ramasse le bois et les pousses, et replante.",
                 false, "nourriture", "#minecraft:axes", "#minecraft:saplings");
         commandes.add(new Bois("tout", "N'importe quel bois", "du bois", "#minecraft:logs"));
         commandes.add(new Bois("chene", "Chêne", "du chêne", "minecraft:oak_log"));
@@ -104,6 +104,8 @@ final class Bucheron extends Metier {
         BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null || aPortee(t, q, 0)));
         if (arbre != null && t.peutAller(arbre)) {
             Lieux.choisi(t, arbre);
+            t.debloquer(Statut.SANS_BOIS);
+            m.remove("sans_bois_" + c.id);
             if (souches.size() < 16) {
                 BlockPos coin = carre(l, arbre);
                 souches.add(souche(coin != null ? coin : arbre, pousse(l.getBlockState(arbre)), coin != null));
@@ -130,30 +132,77 @@ final class Bucheron extends Metier {
             else m.remove("coin_" + c.id);
         }
 
-        // 5. Là où il pousse : le biome le plus proche où pousse ce bois, qu'il explore ensuite en spirale.
-        String cle = t.getUUID() + "/" + c.id;
-        //    Jamais à plus de Missions.LOIN blocs du poste (aPortee) : la recherche repart du poste si elle était partie trop loin.
-        BlockPos depuis = m.contains("depuis_" + c.id) ? BlockPos.of(m.getLong("depuis_" + c.id)) : t.bureau;
-        if (!aPortee(t, depuis, 0)) { m.remove("depuis_" + c.id); depuis = t.bureau; }
-        int rayon = (int) Math.min(Missions.LOIN, t.porteeMax());
-        BlockPos foret = Biomes.chercher(l, cle, c.bois, depuis, rayon);
-        if (foret == null) { Cerveau.attendre(t, 2); return; } // il réfléchit (la recherche prend quelques secondes)
-        if (foret.equals(BlockPos.ZERO)) {                         // aucun biome connu dans le rayon : il fouille autour de chez lui
-            Cerveau.ecrire(t, "inconnu", 3600, "bois_inconnu", c.nom.toLowerCase());
-            foret = t.bureau;
-        } else if (!aPortee(t, foret, 160)) foret = t.bureau;      // la forêt la plus proche est trop loin du poste : il fouille autour de chez lui
-        BlockPos e = Cerveau.pointAExplorer(t, c.id, foret, foret.equals(t.bureau) ? rayon : 160);
-        if (e == null) {
-            // Il a fouillé ce coin sans rien trouver (ou tout a été coupé) : la prochaine recherche partira plus loin.
-            Biomes.oublier(cle);
-            double dx = foret.getX() - t.bureau.getX(), dz = foret.getZ() - t.bureau.getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-            if (foret.equals(t.bureau)) { dx = Math.cos(t.getRandom().nextDouble() * 6.28); dz = Math.sin(t.getRandom().nextDouble() * 6.28); n = 1; }
-            m.putLong("depuis_" + c.id, foret.offset((int) (dx / n * 320), 0, (int) (dz / n * 320)).asLong());
-            Cerveau.ecrire(t, "plus_d_arbre", 1800, "plus_d_arbre", c.nom.toLowerCase(), foret.getX() + " " + foret.getZ());
-            Cerveau.attendre(t, 5);
+        // 5. Là où il pousse, à portée du poste (aPortee) : le biome le plus proche où pousse ce bois, qu'il explore en spirale.
+        //    Un coin vidé est retenu, et la recherche repart d'un autre point autour du poste ; quand il ne reste rien à portée,
+        //    il le dit, bloqué, et réessaie le lendemain (ses pousses auront grandi).
+        if (Cerveau.temps(t) < m.getLong("sans_bois_" + c.id)) {
+            t.bloquer(Statut.SANS_BOIS);
+            if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 30);
             return;
         }
-        if (!aller(t, e, c)) Cerveau.oublierExploration(t, c.id);
+        String cle = t.getUUID() + "/" + c.id;
+        int essai = m.getInt("essai_" + c.id), rayon = (int) Math.min(Missions.LOIN, t.porteeMax());
+        BlockPos foret = Biomes.chercher(l, cle, c.bois, depart(t, essai), rayon);
+        if (foret == null) { Cerveau.attendre(t, 2); return; } // il réfléchit (la recherche prend quelques secondes)
+        boolean fouille = foret.equals(BlockPos.ZERO) && essai == 0; // aucun biome connu à portée : il fouille autour du poste
+        if (fouille) Cerveau.ecrire(t, "inconnu", 3600, "bois_inconnu", c.nom.toLowerCase(), Missions.LOIN);
+        else if (foret.equals(BlockPos.ZERO) || !aPortee(t, foret, 0) || vide(m, c.id, foret)) { autreDepart(t, c, cle, essai); return; }
+        BlockPos centre = fouille ? t.bureau : foret;
+        int tour = fouille ? rayon : 160;
+        BlockPos e = Cerveau.pointAExplorer(t, c.id, centre, tour);
+        for (int i = 0; e != null && !aPortee(t, e, 0) && i < 64; i++) e = Cerveau.pointAExplorer(t, c.id, centre, tour); // hors de portée : sauté
+        if (e != null && !aPortee(t, e, 0)) { Cerveau.attendre(t, 1); return; }
+        if (e == null) {
+            // Il a fouillé ce coin sans rien trouver (ou tout a été coupé) : il le retient, et cherche un autre coin à portée.
+            if (fouille) { sansBois(t, c, cle); return; }
+            long[] v = m.getLongArray("vides_" + c.id);
+            long[] n = java.util.Arrays.copyOfRange(v, Math.max(0, v.length + 1 - DEPARTS), v.length + 1);
+            n[n.length - 1] = foret.asLong();
+            m.putLongArray("vides_" + c.id, n);
+            Cerveau.ecrire(t, "plus_d_arbre", 1800, "plus_d_arbre", c.nom.toLowerCase(), foret.getX() + " " + foret.getZ());
+            autreDepart(t, c, cle, essai);
+            return;
+        }
+        if (!aller(t, e, c)) { Cerveau.oublierExploration(t, c.id); Cerveau.attendre(t, 5); }
+    }
+
+    /** Les points d'où repart la recherche de forêt, après le poste : 8 directions, à 240 puis à 400 blocs du poste. */
+    static final int DEPARTS = 16;
+
+    /** Le point d'où part la recherche n° {@code essai} : le poste (0), puis autour de lui ({@link #DEPARTS}). */
+    static BlockPos depart(Travailleur t, int essai) {
+        if (essai <= 0) return t.bureau;
+        double a = (essai - 1) % 8 * Math.PI / 4, r = essai <= 8 ? 240 : 400;
+        return t.bureau.offset((int) (Math.cos(a) * r), 0, (int) (Math.sin(a) * r));
+    }
+
+    /** Ce coin est à moins de 160 blocs d'une forêt qu'il a déjà vidée (sa fouille finie sans rien). */
+    static boolean vide(CompoundTag m, String id, BlockPos p) {
+        for (long v : m.getLongArray("vides_" + id)) {
+            BlockPos q = BlockPos.of(v);
+            if (LieuxRegles.dist2(q.getX(), q.getZ(), p.getX(), p.getZ()) <= 160 * 160) return true;
+        }
+        return false;
+    }
+
+    /** La recherche repart du point suivant autour du poste ; après le dernier, il n'y a plus rien à portée. */
+    static void autreDepart(Travailleur t, Bois c, String cle, int essai) {
+        Biomes.oublier(cle);
+        if (essai >= DEPARTS) { sansBois(t, c, cle); return; }
+        t.memoire.putInt("essai_" + c.id, essai + 1);
+        Cerveau.attendre(t, 1);
+    }
+
+    /** Plus rien de ce bois à portée du poste : il le dit, bloqué, jusqu'au lendemain ; il recommencera alors du poste. */
+    static void sansBois(Travailleur t, Bois c, String cle) {
+        Biomes.oublier(cle);
+        Cerveau.oublierExploration(t, c.id);
+        t.memoire.remove("essai_" + c.id);
+        t.memoire.remove("vides_" + c.id);
+        t.memoire.putLong("sans_bois_" + c.id, Cerveau.temps(t) + Cerveau.UN_JOUR);
+        t.bloquer(Statut.SANS_BOIS);
+        Cerveau.ecrire(t, "sans_bois", 1800, "sans_bois", c.nom.toLowerCase(), Missions.LOIN);
+        Cerveau.attendre(t, 5);
     }
 
     static final Actions.Filtre POUSSES = Actions.Filtre.de("#minecraft:saplings");
@@ -221,6 +270,7 @@ final class Bucheron extends Metier {
                 return true;
             }
             default -> {
+                if (!t.chezLui(t.blockPosition()) && aPortee(t, dest, 0)) { Cerveau.rentrer(t); return true; } // c'est lui qui est loin : il rentre d'abord
                 Cerveau.ecrire(t, "trop_loin", 1800, "bois_trop_loin", c.nom.toLowerCase(), (int) Math.sqrt(t.bureau.distSqr(dest)), t.joursExpedition);
                 return false;
             }
