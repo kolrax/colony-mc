@@ -25,7 +25,7 @@ Ce qu'on veut :
 ## Plan B : petites corrections (rapports 11 et 14, et le mineur disparu)
 1. **Le compteur du mineur ne monte pas** : « J'ai vu un mineur miner du fer, mais le compteur de fer au-dessus de sa tête n'est pas monté. » Trouver pourquoi et corriger. Penser par exemple au minerai brut ou au minerai des profondeurs.
 2. **Horaires et expéditions** : « Il y a toujours le système d'horaires et d'expéditions max, il ne fallait pas le retirer ? Maintenant, les horaires concernent une mission précise. » Retirer « expéditions max » et le réglage général des horaires (poste et fiche). Il ne reste que les horaires de chaque mission. L'écran change, donc il faut un modpack obligatoire.
-3. **Le mineur de Nielscutt a disparu** du monde `essai-v2` le 18/10 : il n'est plus dans les fichiers d'entités. Chercher s'il est mort, s'il a été licencié, ou si c'est un bug, par exemple un ouvrier perdu au déchargement d'un chunk. Corriger si c'est un bug.
+3. ~~Le mineur de Nielscutt a disparu~~ : **réglé, ce n'est pas un bug**. KOLRAX confirme le 18/10 qu'il est mort en jeu. Ne pas chercher. Les morts trop fréquentes seront traitées à part, si KOLRAX valide les propositions.
 
 ## Plan D : les ouvriers sur la carte Xaero (rapport 18)
 « Il faut qu'on voie la position de nos PNJ sur la minimap. » KOLRAX précise : **sur la carte Xaero, seulement eux : pas les monstres, pas les autres joueurs**.
