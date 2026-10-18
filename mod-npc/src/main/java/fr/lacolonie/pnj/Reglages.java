@@ -142,6 +142,13 @@ public class Reglages {
     public String jeton_panneau = "";
     /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
     public boolean fantome = false;
+    /**
+     * Le mineur sous terre (corrections A4 et E3) : quand son couloir est barré ou ses galeries finies, il ouvre jusqu'à tant
+     * de galeries de côté, à son niveau, vers un nouveau coin à miner, avant de remonter creuser un autre escalier ; et quand il
+     * n'a plus de torches, il en reprend tant au dépôt.
+     */
+    public int mineur_detours = 2;
+    public int mineur_torches_prises = 16;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
