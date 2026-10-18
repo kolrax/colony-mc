@@ -422,7 +422,8 @@ final class Transporteur extends Metier {
                 return echec("introuvable");
             }
             t.swing(InteractionHand.MAIN_HAND);
-            Sons.coffre(t, p == Trajets.DEPOT ? t.bureau : BlockPos.of(p)); // le dépôt n'a pas de position codée
+            // Le dépôt n'a pas de position propre (Trajets.DEPOT) : BlockPos.of(DEPOT) tombe aux confins du monde (crash du 18/10).
+            if (p != Trajets.DEPOT || t.bureau != null) Sons.coffre(t, p == Trajets.DEPOT ? t.bureau : BlockPos.of(p));
             if (Machines.deCreate(machineDe(t, p)) && t.getRandom().nextInt(8) == 0) parler(t, p, "machine_peur", null); // devant une machine de Create, parfois, un mot sur elle
             switch (etape) {
                 case 0 -> {

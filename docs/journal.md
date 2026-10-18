@@ -649,3 +649,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **1.0.9 installée** à 16 h 06, personne connecté. Jar 1 765 863 octets, sha1 `4353b8c53286…`, même taille dans `/mods-off` ; 1.0.8 rangé dans `/mods-off`, un seul jar. « colonie_pnj (version 1.0.8 -> 1.0.9) », « essai-v2 », « Done (4.338s) ». Aucune erreur du mod. Pas de modpack, pas d'annonce.
 - **Pas fini** : B2 (retirer « expéditions max » et les horaires généraux) sur la branche `v2-horaires-generaux`, D1 (ouvriers sur la carte Xaero) sur `v2-carte-xaero` : agents encore au travail à la fin, état exact dans le dernier commit de chaque branche. Aucun scénario du joueur fantôme cette session.
 - Session plus longue que 2 h 45 (16 h 10) : la passe complète des tests a attendu les autres.
+
+## 2026-10-18 17 h 13 UTC : correctif 1.0.9.1 installé (plantage du serveur)
+- **Incident** : à 16 h 53 UTC, le serveur s'est figé, et KOLRAX était déconnecté (« Timed out »). Cause : `Transporteur$Tour.tick` appelait `Sons.coffre(t, BlockPos.of(p))` avec `p == Trajets.DEPOT`. Le jeu a chargé et généré un chunk aux confins du monde, et la génération a crashé (`Aquifer`, index hors limites). Le serveur n'arrivait plus à s'arrêter : il a fallu le couper de force (power kill).
+- **Correctif** (session locale, PC de KOLRAX) : pour le dépôt, le son se joue au bureau ; `Sons.coffre` ne charge jamais un chunk (`isLoaded`). Test : `TestsTransporteur.coffreVersDepot` vérifie qu'aucun chunk n'est chargé aux confins du monde.
+- **Mesures** : build et JUnit verts, **362/362** tests en jeu verts. Le test n'a pas été lancé sur l'ancien code pour vérifier qu'il échoue (urgence).
+- **Livraison** : `colonie_pnj-1.0.9.1.jar` dans `/mods` (la 1.0.9 rangée dans `/mods-off`), « Done » à 17 h 12 UTC, 4 ouvriers présents. Pas de modpack (le client n'a pas changé).
+- **Pour les agents** : la prochaine version sera la 1.0.10 ou plus, et elle doit contenir ce correctif (fusionner `origin/main`).
