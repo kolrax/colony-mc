@@ -75,9 +75,11 @@ final class Monde {
     /**
      * De la lave qui peut couler jusque dans sa case (pieds en p) : à côté de lui, à sa hauteur, assez haute pour s'étendre
      * encore d'une case (une source, ou une coulée de plus de 2). Une coulée arrivée au bout ne bouge plus : pas d'alerte.
-     * Quatre lectures de blocs. Null s'il n'y en a pas.
+     * Quatre lectures de blocs. Null s'il n'y en a pas, ou si sa case ne peut pas la recevoir (debout sur une dalle du bas,
+     * un escalier, un chemin de terre, une terre labourée : la case est le sol même, la lave n'y entre jamais).
      */
     static BlockPos laveQuiVient(Level l, BlockPos p) {
+        if (!l.getBlockState(p).canBeReplaced(net.minecraft.world.level.material.Fluids.LAVA)) return null;
         for (Direction d : Direction.Plane.HORIZONTAL) {
             BlockPos q = p.relative(d);
             net.minecraft.world.level.material.FluidState f = l.getFluidState(q);

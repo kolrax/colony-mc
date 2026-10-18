@@ -1107,6 +1107,7 @@ public class Travailleur extends PathfinderMob {
         if (!grave && tickCount < sansRefugeJusqua) return;
         Actions.Echapper e = new Actions.Echapper(feu);
         e.laveQuiVient = lave;
+        e.depart = blockPosition();
         boolean refuge = e.choisir(this);
         if (!refuge) sansRefugeJusqua = tickCount + 20;
         if (!refuge && (feu || !grave)) return;
