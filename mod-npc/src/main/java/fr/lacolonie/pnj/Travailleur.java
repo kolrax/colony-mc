@@ -986,12 +986,19 @@ public class Travailleur extends PathfinderMob {
      * Toutes les secondes : son poste de travail (le poste de son chef, où qu'il soit), son inscription à l'effectif,
      * la lettre qu'il tient à la main, et celles qu'il ne peut plus porter à pied (il est sorti de l'espace de vie).
      */
+    /** Son poste : celui de son chef, s'il est dans ce monde. Aussi tout de suite à l'embauche et avant une mission (sans attendre la seconde). */
+    void majPoste(Courrier c) {
+        Courrier.Poste p = c.poste(chef);
+        if (p != null && p.monde() == level().dimension() && !p.pos().equals(bureau)) { bureau = p.pos(); lit = null; }
+    }
+
+    void majPoste() { if (chef != null && level() instanceof ServerLevel sl) majPoste(Courrier.de(sl.getServer())); }
+
     void tickCourrier() {
         if (chef == null || !(level() instanceof ServerLevel sl)) return;
         Courrier c = Courrier.de(sl.getServer());
         if (tickCount % 200 == 0) c.inscrire(this);
-        Courrier.Poste p = c.poste(chef);
-        if (p != null && p.monde() == level().dimension() && !p.pos().equals(bureau)) { bureau = p.pos(); lit = null; }
+        majPoste(c);
         // Le danger passé, il lit ; un monstre reste en vue (une ferme à monstres, le Nether) : au bout de 60 s sans coup ni combat, aussi.
         if (!lettresAuCalme.isEmpty() && lettreEnMain == null && (!enDanger() || !menace() && level().getGameTime() - auCalmeDepuis >= 1200))
             ouvrir(lettresAuCalme.remove(0));
@@ -2295,6 +2302,7 @@ public class Travailleur extends PathfinderMob {
         prochainePaie = System.currentTimeMillis() + periodePaie();
         majNom();
         if (level() instanceof ServerLevel sl) Courrier.de(sl.getServer()).inscrire(this);
+        majPoste(); // tout de suite : une mission donnée dans la seconde n'est pas refusée « n'a pas de poste »
 
         boolean poste = level() instanceof ServerLevel sl2 && Courrier.de(sl2.getServer()).poste(chef) != null;
         // Une débauche (salaire promis) : Etranger le dit à sa façon.

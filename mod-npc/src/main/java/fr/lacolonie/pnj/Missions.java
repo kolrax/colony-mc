@@ -70,6 +70,7 @@ public final class Missions {
         if (t.mode == Travailleur.Mode.CHOMEUR || t.chef == null) return non(t.prenom + " ne travaille pour personne.");
         if (!autorise(p, t)) return non(t.prenom + " ne prend ses missions que de " + (t.chefNom.isEmpty() ? "son chef" : t.chefNom) + " et de ceux qu'il autorise.");
         if (t.aTerre) return non(t.prenom + " est à terre : relève-le d'abord.");
+        t.majPoste(); // tout juste embauché, ou le poste vient d'être posé
         if (t.bureau == null) return non(t.prenom + " n'a pas de poste de travail.");
         Metier.Commande c = Metier.catalogue(t.metier, id);
         if (c == null) return non(t.prenom + " est " + Metier.nom(t.metier).toLowerCase() + " : il ne sait pas faire cela.");
@@ -132,6 +133,7 @@ public final class Missions {
                 t.dire("J'attends ici.");
             }
             case "rentrer" -> {
+                t.majPoste();
                 if (t.bureau == null) { Travailleur.signaler(p, t.prenom + " n'a pas de poste de travail."); break; }
                 if (t.mode == Travailleur.Mode.GREVE) { Travailleur.signaler(p, t.prenom + " est en grève : il reste au poste."); break; }
                 Consignes.annuler(t);

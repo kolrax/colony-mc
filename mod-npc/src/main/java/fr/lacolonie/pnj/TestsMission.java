@@ -46,6 +46,21 @@ public class TestsMission {
         });
     }
 
+    /** Tout juste embauché (son poste pas encore relu) : une mission donnée dans la même seconde est acceptée, pas « n'a pas de poste ». */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void missionJusteApresEmbauche(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "mineur", 795, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos poste = t.bureau;
+        Courrier.de(h.getLevel().getServer()).definirPoste(chef.getUUID(), h.getLevel(), poste);
+        t.bureau = null; // comme à l'embauche, avant son premier tour
+        Missions.Reponse r = Missions.donner(chef, t, "fer", "fois", 20, "toujours", null);
+        h.assertTrue(r.ok(), "mission acceptée (" + r.texte() + ")");
+        h.assertTrue(poste.equals(t.bureau), "il connaît son poste");
+        t.discard();
+        h.succeed();
+    }
+
     /** Sans pioche, et aucune au dépôt : « ⚠ Pas de pioche au dépôt ». */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void sansPiocheAuDepot(GameTestHelper h) {
