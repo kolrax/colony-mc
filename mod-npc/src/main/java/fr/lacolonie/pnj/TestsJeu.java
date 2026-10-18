@@ -370,15 +370,15 @@ public class TestsJeu {
         h.succeed();
     }
 
-    /** Le bois demandé pousse à 600 blocs et sa journée est courte : il décide seul de partir en expédition (sans lit). */
+    /** Le bois demandé pousse à 450 blocs et sa journée est courte : il décide seul de partir en expédition (sans lit). */
     @GameTest(template = "vide", timeoutTicks = 1200)
     public static void partEnExpeditionSansLit(GameTestHelper h) {
         BlockPos bureau = sol(h, 0, 15000);
         Travailleur t = employe(h, "bucheron", bureau, Vec3.atBottomCenterOf(bureau.east()), new ItemStack(Items.IRON_AXE));
         t.mission("bouleau", "stock", 64);
         t.debut = heure(h);
-        t.fin = (t.debut + 4) % 24; // 4 heures de travail : trop court pour un aller-retour de 1 200 blocs
-        t.memoire.putLong("coin_bouleau", bureau.offset(600, 0, 0).asLong()); // un coin de bouleaux qu'il connaît
+        t.fin = (t.debut + 4) % 24; // 4 heures de travail : trop court pour un aller-retour de 900 blocs
+        t.memoire.putLong("coin_bouleau", bureau.offset(450, 0, 0).asLong()); // un coin de bouleaux qu'il connaît (à portée : Bucheron.aPortee)
         t.forcerChunk();
         h.succeedWhen(() -> {
             h.assertTrue(t.expedition, "il doit partir en expédition (" + etat(t, bureau) + ")");
