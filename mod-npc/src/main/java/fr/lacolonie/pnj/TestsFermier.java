@@ -336,7 +336,7 @@ public class TestsFermier {
     /**
      * Fantôme : le champ fait sur un terrain en marches, le milieu au bord d'une marche ; avant, pas d'eau (« le milieu n'est
      * pas de niveau »), même avec un seau. Maintenant : l'eau du seau sur la case de niveau qui arrose le plus de cases, sans
-     * couler, et le seau vide lui reste.
+     * couler, et le seau vide lui reste ; le rang du bas, trop loin, a sa propre mare (restes de la refonte).
      */
     @GameTest(template = "vide", timeoutTicks = 3000)
     public static void mareSurUnTerrainEnMarches(GameTestHelper h) {
@@ -360,15 +360,16 @@ public class TestsFermier {
                 () -> {
                     List<BlockPos> eau = new ArrayList<>();
                     for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -2, -6), centre.offset(6, 1, 6))) if (!l.getFluidState(q).isEmpty()) eau.add(q.immutable());
-                    h.assertTrue(eau.size() == 1, "un seul bloc d'eau, qui ne coule pas : " + eau.stream().map(q -> q.subtract(centre).toShortString()).toList());
-                    BlockPos m = eau.get(0);
+                    List<String> ou = eau.stream().map(q -> q.subtract(centre).toShortString()).toList();
+                    // Une mare par niveau au plus (la seconde arrose le rang du bas, trop loin de la première), qui ne coule pas.
+                    h.assertTrue(eau.size() <= 2 && eau.stream().allMatch(q -> l.getFluidState(q).isSource()), "une mare par niveau, qui ne coule pas : " + ou);
                     int arrosees = 0;
                     for (int x = -4; x <= 4; x++)
                         for (int z = -4; z <= 4; z++) {
                             BlockPos q = centre.offset(x, z < 0 ? -1 : 0, z);
                             if (l.getBlockState(q).is(Blocks.FARMLAND) && Fermier.arrose(l, q)) arrosees++;
                         }
-                    h.assertTrue(arrosees >= 70, "la terre du champ arrosée : " + arrosees + " cases sur 80 (eau en " + m.subtract(centre).toShortString() + ")");
+                    h.assertTrue(arrosees == 81 - eau.size(), "toute la terre du champ arrosée : " + arrosees + " cases sur " + (81 - eau.size()) + " (eau en " + ou + ")");
                     h.assertTrue(g.compter(Actions.Filtre.de("minecraft:bucket")) == 1 && g.compter(Fermier.SEAU) == 0, "le seau vide lui reste");
                 },
                 () -> TestsRepertoire.fin(e));
@@ -405,6 +406,82 @@ public class TestsFermier {
                     h.assertTrue(eau == 0, "pas de mare dans le tampon des constructions : " + eau + " blocs d'eau");
                     h.assertTrue(g.compter(Fermier.SEAU) == 1, "le seau reste plein");
                 },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /** Le niveau du sol de la case z du champ en escalier : le bas au nord, le haut au sud. */
+    static int marche(int z) { return z <= -2 ? -1 : z >= 2 ? 1 : 0; }
+
+    /**
+     * Restes de la refonte : un champ de 9 sur 9 sur trois niveaux (escalier), sans seau. Avant : une seule mare, au milieu,
+     * et le rang du haut restait sec (l'eau n'arrose que son niveau et celui d'en dessous). Maintenant : une mare de plus
+     * au niveau des cases sèches ; toute la terre du champ est arrosée, et aucune eau ne coule.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3600)
+    public static void champEnEscalier(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 116);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(2, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        BlockPos centre = o.offset(9, -1, 0);
+        for (int x = -5; x <= 5; x++) {
+            for (int z = -5; z <= -2; z++) l.setBlockAndUpdate(centre.offset(x, 0, z), Blocks.AIR.defaultBlockState()); // la marche du bas, au nord
+            for (int z = 2; z <= 5; z++) l.setBlockAndUpdate(centre.offset(x, 1, z), Blocks.GRASS_BLOCK.defaultBlockState()); // la marche du haut, au sud
+        }
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 9 sur 9");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> {
+                    List<String> eau = new ArrayList<>(), coule = new ArrayList<>();
+                    for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -3, -6), centre.offset(6, 3, 6))) {
+                        if (l.getFluidState(q).isEmpty()) continue;
+                        eau.add(q.subtract(centre).toShortString());
+                        if (!l.getFluidState(q).isSource()) coule.add(q.subtract(centre).toShortString());
+                    }
+                    h.assertTrue(coule.isEmpty() && eau.size() <= 3, "des mares qui ne coulent pas, une par niveau au plus : " + eau + ", eau qui coule : " + coule);
+                    List<String> seches = new ArrayList<>();
+                    for (int x = -4; x <= 4; x++)
+                        for (int z = -4; z <= 4; z++) {
+                            BlockPos q = centre.offset(x, marche(z), z);
+                            if (!l.getFluidState(q).isEmpty()) continue;
+                            if (!l.getBlockState(q).is(Blocks.FARMLAND) || !Fermier.arrose(l, q)) seches.add(x + " " + marche(z) + " " + z);
+                        }
+                    h.assertTrue(seches.isEmpty(), "toute la terre du champ labourée et arrosée ; sèches : " + seches + " (mares en " + eau + ")");
+                    h.assertTrue(l.getBlockState(centre.offset(6, 0, 0)).is(Blocks.GRASS_BLOCK), "rien hors du champ");
+                },
+                () -> TestsRepertoire.fin(e));
+    }
+
+    /**
+     * Restes de la refonte : un champ collé au poste, sans autre construction autour. Tout le champ est dans le tampon du
+     * poste : c'est le seul endroit, il y creuse quand même la mare. Avant : pas d'eau du tout. Lot « lieux ».
+     */
+    @GameTest(template = "vide", timeoutTicks = 2400, batch = "lieux")
+    public static void mareDansLeTamponDuPoste(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur[] e = aupres(h, chef, 115);
+        Travailleur g = e[0];
+        ServerLevel l = h.getLevel();
+        BlockPos o = chef.blockPosition();
+        Bureau.Entite d = TestsBucheron.depot(g);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 30));
+        d.depot.setItem(1, new ItemStack(Items.IRON_HOE));
+        BlockPos centre = o.offset(6, -1, 0);
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, new Vec3(centre.getX() + 0.5, centre.getY() + 0.98, centre.getZ() + 0.5));
+                    g.parler(chef, "Plante un champ de blé ici, 5 sur 5");
+                },
+                () -> h.assertTrue(g.consigne == null, "le champ est fait (" + TestsRepertoire.c(g) + ", " + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> h.assertTrue(l.getFluidState(centre).isSource(), "la mare au milieu du champ, dans le tampon du poste : " + l.getBlockState(centre)),
                 () -> TestsRepertoire.fin(e));
     }
 

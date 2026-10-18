@@ -178,6 +178,24 @@ final class Lieux {
         return ici(t, p) || !zoneConstruite(l, p) || saMine(t, p) && !mineConstruite(t, p);
     }
 
+    /**
+     * Comme {@link #peutCasser}, mais le poste de son chef ne compte pas dans le tampon quand il y est la seule construction :
+     * la mare d'un champ collé au poste, quand il n'y a pas d'autre place ({@link Fermier.Champ#mares}). Le tampon est relu
+     * sans le bloc du poste (six boîtes autour de lui).
+     */
+    static boolean peutCasserPresDuPoste(Travailleur t, BlockPos p) {
+        if (peutCasser(t, p)) return true;
+        Level l = t.level();
+        BlockPos b = t.bureau;
+        if (b == null || construit(l, p) || Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
+        int x0 = (p.getX() & ~3) - TAMPON, y0 = (p.getY() & ~3) - TAMPON, z0 = (p.getZ() & ~3) - TAMPON;
+        int x1 = x0 + 3 + 2 * TAMPON, y1 = y0 + 3 + 2 * TAMPON, z1 = z0 + 3 + 2 * TAMPON, bx = b.getX(), by = b.getY(), bz = b.getZ();
+        if (bx < x0 || bx > x1 || by < y0 || by > y1 || bz < z0 || bz > z1) return false; // la construction n'est pas le poste
+        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1))
+                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1))
+                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1));
+    }
+
     /** Au plus tant de blocs posés retenus par mineur (les plus récents) : une mine entière, escaliers et galeries. */
     static final int POSES = 512;
 

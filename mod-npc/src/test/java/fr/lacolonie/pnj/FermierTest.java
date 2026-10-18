@@ -72,4 +72,48 @@ class FermierTest {
         RepertoireTest.demande("Laisse ce champ en friche", "fermier", "oublier_champ");
         assertEquals(java.util.Set.of("fermier", "cuisinier"), Repertoire.metiersConcernes("Fais du pain")); // le cuisinier aussi (lot 6)
     }
+
+    /** Un champ de 9 sur 9 autour de (0, 0), le niveau du sol de chaque rang donné par {@code niveau}. */
+    static List<Cultures.Point> champ(java.util.function.IntUnaryOperator niveau) {
+        List<Cultures.Point> r = new java.util.ArrayList<>();
+        for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) r.add(new Cultures.Point(x, niveau.applyAsInt(z), z));
+        return r;
+    }
+
+    /** L'eau des mares arrose toutes ces cases (sauf les mares elles-mêmes). */
+    static void toutArrose(List<Cultures.Point> cases, List<Cultures.Point> mares) {
+        for (Cultures.Point c : cases)
+            assertTrue(mares.contains(c) || mares.stream().anyMatch(m -> Cultures.arrose(m, c)), "case sèche : " + c + " (mares " + mares + ")");
+    }
+
+    @Test
+    void lesMaresDuChamp() {
+        // Plat : une mare, au milieu.
+        List<Cultures.Point> plat = champ(z -> 0);
+        assertEquals(List.of(new Cultures.Point(0, 0, 0)), Cultures.mares(plat, List.of(plat, List.of()), 0, 0));
+        // L'eau arrose son niveau et celui d'en dessous, pas celui d'au-dessus.
+        assertTrue(Cultures.arrose(new Cultures.Point(0, 5, 0), new Cultures.Point(4, 4, -4)));
+        assertFalse(Cultures.arrose(new Cultures.Point(0, 5, 0), new Cultures.Point(0, 6, 1)));
+        assertFalse(Cultures.arrose(new Cultures.Point(0, 5, 0), new Cultures.Point(5, 5, 0)));
+        // En escalier sur trois niveaux : une mare de plus, au niveau du haut ; tout est arrosé, une mare par niveau au plus.
+        List<Cultures.Point> escalier = champ(z -> z <= -2 ? -1 : z >= 2 ? 1 : 0);
+        List<Cultures.Point> m = Cultures.mares(escalier, List.of(escalier, List.of()), 0, 0);
+        assertEquals(2, m.size(), m.toString());
+        assertEquals(m.size(), m.stream().map(Cultures.Point::y).distinct().count());
+        toutArrose(escalier, m);
+        // Déjà arrosé : rien à creuser. Trop peu de cases sèches pour une mare : rien non plus.
+        assertTrue(Cultures.mares(List.of(), List.of(plat), 0, 0).isEmpty());
+        assertTrue(Cultures.mares(List.of(new Cultures.Point(4, 0, 4), new Cultures.Point(4, 0, 3)), List.of(plat), 0, 0).isEmpty());
+        // Seul le tampon du poste peut recevoir l'eau : il y creuse, faute d'autre place.
+        assertEquals(1, Cultures.mares(plat, List.of(List.of(), plat), 0, 0).size());
+        // Une place hors tampon d'abord, même si celle du tampon arroserait plus.
+        List<Cultures.Point> bord = plat.stream().filter(p -> p.x() == -4).toList();
+        assertEquals(-4, Cultures.mares(plat, List.of(bord, plat), 0, 0).get(0).x());
+        // Un champ de 18 de long : deux carrés de 9, une mare chacun, au même niveau, jamais côte à côte.
+        List<Cultures.Point> long_ = new java.util.ArrayList<>();
+        for (int x = -4; x <= 13; x++) for (int z = -4; z <= 4; z++) long_.add(new Cultures.Point(x, 0, z));
+        List<Cultures.Point> deux = Cultures.mares(long_, List.of(long_), 0, 0);
+        assertEquals(2, deux.size(), deux.toString());
+        toutArrose(long_, deux);
+    }
 }

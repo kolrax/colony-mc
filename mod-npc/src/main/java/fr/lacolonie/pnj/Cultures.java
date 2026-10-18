@@ -68,6 +68,57 @@ final class Cultures {
         return new Fouille.Plan(Math.min(Fouille.TERRAIN_MAX, p.longueur() + 2), Math.min(Fouille.TERRAIN_MAX, p.largeur() + 2), p.hauteur(), p.direction(), p.descend());
     }
 
+    // --- Les mares du champ ----------------------------------------------------------------------------------------
+
+    /** Une case du champ, sans le monde : x, y (le niveau du sol), z. */
+    record Point(int x, int y, int z) {}
+
+    /** Au plus une mare par niveau et par carré de tant de cases du champ (un champ de 9 sur 9 : une par niveau). */
+    static final int CARRE_MARE = 9;
+    /** Une mare prend une case : il ne la creuse que si elle arrose au moins tant de cases sèches. */
+    static final int MARE_UTILE = 3;
+
+    /** L'eau en e arrose la terre en c, comme dans le jeu : à 4 blocs à l'horizontale, au même niveau ou un bloc plus haut. */
+    static boolean arrose(Point e, Point c) {
+        return Math.abs(e.x() - c.x()) <= ARROSAGE && Math.abs(e.z() - c.z()) <= ARROSAGE && (e.y() == c.y() || e.y() == c.y() + 1);
+    }
+
+    /**
+     * Où creuser les mares d'un champ de milieu (cx, cz) pour arroser ses cases {@code seches}, même sur un terrain en
+     * marches : tant qu'il en reste, la place qui en arrose le plus (au moins {@link #MARE_UTILE}), la plus près du milieu à
+     * égalité. Les places, par préférence : celles de {@code places.get(0)} d'abord, les suivantes seulement pour les cases
+     * qu'aucune des premières n'arrose. Au plus une mare par niveau et par carré de {@link #CARRE_MARE}, jamais deux côte à côte.
+     */
+    static List<Point> mares(List<Point> seches, List<List<Point>> places, int cx, int cz) {
+        List<Point> r = new ArrayList<>(), reste = new ArrayList<>(seches);
+        java.util.Set<List<Integer>> carres = new java.util.HashSet<>();
+        for (List<Point> rang : places)
+            while (!reste.isEmpty()) {
+                Point mieux = null;
+                int note = MARE_UTILE - 1;
+                long loin = 0;
+                for (Point m : rang) {
+                    if (carres.contains(carre(m, cx, cz)) || r.stream().anyMatch(o -> Math.abs(o.x() - m.x()) <= 1 && Math.abs(o.z() - m.z()) <= 1)) continue;
+                    int n = 0;
+                    for (Point c : reste) if (!c.equals(m) && arrose(m, c)) n++;
+                    long dd = (long) (m.x() - cx) * (m.x() - cx) + (long) (m.z() - cz) * (m.z() - cz);
+                    if (n > note || n == note && mieux != null && dd < loin) { mieux = m; note = n; loin = dd; }
+                }
+                if (mieux == null) break;
+                Point m = mieux;
+                r.add(m);
+                carres.add(carre(m, cx, cz));
+                reste.removeIf(c -> c.equals(m) || arrose(m, c));
+            }
+        return r;
+    }
+
+    /** Le niveau et le carré de {@link #CARRE_MARE} cases (comptés depuis le milieu du champ) de la place m. */
+    static List<Integer> carre(Point m, int cx, int cz) {
+        int a = CARRE_MARE / 2;
+        return List.of(m.y(), Math.floorDiv(m.x() - cx + a, CARRE_MARE), Math.floorDiv(m.z() - cz + a, CARRE_MARE));
+    }
+
     /** Côté d'une zone du balayage des cultures mûres (une zone par seconde). */
     static final int ZONE = 16;
 

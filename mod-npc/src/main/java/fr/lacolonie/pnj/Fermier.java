@@ -41,7 +41,7 @@ import java.util.WeakHashMap;
  * Jamais : piétiner une terre labourée ({@link #pietiner}), casser une culture pas mûre, toucher aux cultures d'une structure
  * ou plus près du poste d'un autre chef que du sien ({@link #aLui}), labourer un bloc construit ou hors de son espace de vie,
  * laisser l'eau couler hors du champ. Rien ne tombe par terre, rien ne se crée : chaque graine semée sort de la récolte ou du
- * sac, le pain suit la recette du jeu. Seule l'eau du milieu d'un champ neuf, faute de seau, vient d'une mare qu'il creuse.
+ * sac, le pain suit la recette du jeu. Seule l'eau d'un champ neuf, faute de seau, vient des mares d'un bloc qu'il creuse.
  */
 final class Fermier extends Metier {
     static final Actions.Filtre HOUES = Actions.Filtre.de("#minecraft:hoes");
@@ -440,8 +440,8 @@ final class Fermier extends Metier {
 
     /**
      * Un champ autour de {@code centre} (le sol visé), selon le plan (mesures et direction). Il prend au dépôt le seau d'eau,
-     * les graines (autant que son sac en tient) et la houe qui lui manquent ; s'il le faut, que le milieu est de niveau et
-     * qu'il a un seau d'eau, il met l'eau au centre ; puis case par case : il arrache l'herbe, laboure, sème. {@code ordre} :
+     * les graines (autant que son sac en tient) et la houe qui lui manquent ; là où rien n'arrose la terre, il met l'eau
+     * ({@link #mares}) ; puis case par case : il arrache l'herbe, laboure, sème. {@code ordre} :
      * le chef vient de le demander (il parle, il retient le champ) ; sinon c'est l'entretien d'un champ marqué : il ressème
      * les cases vides, et le rang autour seulement là où l'eau arrose ou la terre est déjà labourée (le plan ne change pas).
      */
@@ -456,10 +456,10 @@ final class Fermier extends Metier {
         final List<BlockPos> cases = new ArrayList<>();
         /** Les sols à labourer sans graine (il en manquait) : la terre labourée et arrosée autour d'un plant le fait pousser plus vite. */
         final List<BlockPos> labours = new ArrayList<>();
+        /** Les mares à creuser, dans l'ordre (champ neuf). */
+        final List<BlockPos> mares = new ArrayList<>();
         Actions.Action sous;
-        BlockPos centreSol;
-        int etape, voulues, semees, prochain, marche, plants;
-        boolean eau;
+        int etape, voulues, semees, prochain, marche, plants, faites;
 
         Champ(BlockPos centre, Fouille.Plan plan, Cultures.Culture culture, boolean ordre) {
             super("champ");
@@ -506,18 +506,16 @@ final class Fermier extends Metier {
                         dire(t, "Il n'y a rien à labourer là, chef : la terre est déjà semée, bâtie, ou trop loin du poste.");
                         return ordre ? echec("rien_a_semer") : Actions.Etat.OK;
                     }
-                    // L'eau, si rien n'arrose déjà le champ : au milieu, sinon (terrain en marches) sur la case de niveau qui arrose le
-                    // plus de cases ({@link #mare}) ; de son seau, de celui du dépôt, sinon il creuse une mare. Jamais là où elle coulerait.
-                    eau = ordre && cases.stream().filter(q -> !arrose(l, q)).count() * 2 > cases.size();
-                    if (eau && (centreSol = mare(t, l)) == null) {
-                        eau = false;
+                    // L'eau, là où rien n'arrose la terre : une mare d'un bloc au niveau des cases sèches, même sur un terrain en
+                    // marches ({@link #mares}) ; de son seau, de celui du dépôt, sinon il la creuse. Jamais là où elle coulerait.
+                    if (ordre) mares.addAll(mares(t, l));
+                    if (ordre && mares.isEmpty() && cases.stream().filter(q -> !arrose(l, q)).count() * 2 > cases.size())
                         dire(t, "Il n'y a pas de place pour l'eau dans le champ, chef : elle s'en irait, ou c'est trop près d'une construction. Le champ poussera moins vite.");
-                    }
-                    if (eau && t.compter(SEAU) == 0 && b != null && b.compter(SEAU) > 0 && Monde.libres(t) > 1) { sous = new Actions.Prendre(SEAU, 1); return Actions.Etat.EN_COURS; }
+                    if (!mares.isEmpty() && t.compter(SEAU) == 0 && b != null && b.compter(SEAU) > 0 && Monde.libres(t) > 1) { sous = new Actions.Prendre(SEAU, 1); return Actions.Etat.EN_COURS; }
                 }
                 case 1 -> {
                     etape = 2;
-                    if (eau) cases.remove(centreSol);
+                    cases.removeAll(mares);
                     // Les graines qui manquent, autant que son sac en tient (une place gardée pour l'herbe arrachée) : rien par terre.
                     int manque = Math.min(cases.size() - t.compter(graine), (Monde.libres(t) - 1) * 64);
                     if (manque > 0 && b != null && b.compter(graine) > 0) { sous = new Actions.Prendre(graine, manque); return Actions.Etat.EN_COURS; }
@@ -547,8 +545,8 @@ final class Fermier extends Metier {
                     if (cases.size() > graines) espacer(l, graines);
                 }
                 case 4 -> {
+                    if (!mares.isEmpty()) return mettreEau(t, l);
                     etape = 5;
-                    if (eau) return mettreEau(t, l);
                 }
                 default -> {
                     List<BlockPos> file = cases.isEmpty() ? labours : cases; // les semis d'abord, puis la terre labourée sans graine
@@ -573,23 +571,24 @@ final class Fermier extends Metier {
         }
 
         /**
-         * Où mettre l'eau : la case d'herbe ou de terre qu'il peut creuser ({@link Lieux#peutCasser} : ni le potager d'un joueur,
-         * ni le tampon d'une construction), de niveau (l'eau n'y coulera pas, {@link #bassin}), qui arrose le plus de cases du champ (à 4
-         * blocs, au même niveau ou un plus bas), la plus près du milieu à égalité ; null s'il n'y en a pas. Une fois par champ neuf.
+         * Où creuser les mares : sur les cases d'herbe ou de terre de niveau (l'eau n'y coulera pas, {@link #bassin}) qu'il peut
+         * creuser ({@link Lieux#peutCasser} : ni le potager d'un joueur, ni le tampon d'une construction), pour arroser les cases
+         * sèches du champ (à 4 blocs, au même niveau ou un plus bas), une mare par niveau au plus ({@link Cultures#mares}). Le
+         * tampon du poste de son chef, seulement pour les cases qu'aucune autre place n'arrose (un champ collé au poste). Une
+         * fois par champ neuf.
          */
-        BlockPos mare(Travailleur t, ServerLevel l) {
-            BlockPos mieux = null;
-            int note = 0;
-            double loin = 0;
-            for (BlockPos m : cases) {
-                if (!labourable(l.getBlockState(m)) || !bassin(l, m) || !Lieux.peutCasser(t, m)) continue;
-                int n = 0;
-                for (BlockPos c : cases)
-                    if (Math.abs(c.getX() - m.getX()) <= Cultures.ARROSAGE && Math.abs(c.getZ() - m.getZ()) <= Cultures.ARROSAGE && (m.getY() == c.getY() || m.getY() == c.getY() + 1)) n++;
-                double dd = m.distSqr(centre);
-                if (n > note || n == note && dd < loin) { mieux = m; note = n; loin = dd; }
+        List<BlockPos> mares(Travailleur t, ServerLevel l) {
+            List<Cultures.Point> seches = new ArrayList<>(), libres = new ArrayList<>(), poste = new ArrayList<>();
+            Map<Long, Boolean> presDuPoste = new java.util.HashMap<>(); // relu par case de 4 x 4 x 4, comme le tampon
+            for (BlockPos q : cases) {
+                Cultures.Point p = new Cultures.Point(q.getX(), q.getY(), q.getZ());
+                if (!arrose(l, q)) seches.add(p);
+                if (!labourable(l.getBlockState(q)) || !bassin(l, q)) continue;
+                if (Lieux.peutCasser(t, q)) libres.add(p);
+                else if (presDuPoste.computeIfAbsent(BlockPos.asLong(q.getX() >> 2, q.getY() >> 2, q.getZ() >> 2), k -> Lieux.peutCasserPresDuPoste(t, q))) poste.add(p);
             }
-            return mieux;
+            if (seches.isEmpty()) return List.of();
+            return Cultures.mares(seches, List.of(libres, poste), centre.getX(), centre.getZ()).stream().map(p -> new BlockPos(p.x(), p.y(), p.z())).toList();
         }
 
         /**
@@ -630,7 +629,6 @@ final class Fermier extends Metier {
                 for (int y = centre.getY() + 3; y >= centre.getY() - 3; y--) // ses plants, à toute hauteur du champ (terrain en marches)
                     if (l.getBlockState(col.atY(y)).getBlock() instanceof CropBlock) { if (aLui(t, col.atY(y))) plants++; break; }
                 BlockPos q = sol(t, l, col, centre.getY());
-                if (k[0] == 0 && k[1] == 0) centreSol = q;
                 if (q != null && (ordre || Cultures.dans(plan, k[0], k[1]) || l.getBlockState(q).is(Blocks.FARMLAND) || arrose(l, q))) cases.add(q);
             }
         }
@@ -641,44 +639,47 @@ final class Fermier extends Metier {
         }
 
         /**
-         * L'eau au centre. Juste avant, il revérifie la case (de la terre ou de l'herbe, libre dessus, rien de bâti, et l'eau
-         * n'y coulera pas) et vide d'abord son seau (le seau vide lui reste) ; puis il creuse le sol du centre (la terre va au
-         * sac) et y met l'eau. Sinon, pas d'eau : il le dit, et le centre sera semé comme les autres cases.
+         * La prochaine mare. Juste avant, il revérifie la case (de la terre ou de l'herbe, libre dessus, rien de bâti, et l'eau
+         * n'y coulera pas) et vide d'abord son seau (le seau vide lui reste) ; puis il creuse le sol (la terre va au sac) et y
+         * met l'eau. Sinon, pas d'eau là : il le dit, et la case sera semée comme les autres.
          */
         Actions.Etat mettreEau(Travailleur t, ServerLevel l) {
-            BlockPos q = centreSol;
+            BlockPos q = mares.get(0);
             if (!Actions.aPortee(t, q)) {
-                if (coince() || ++marche > 20 * 30) return sansEau(t, "Je n'arrive pas au milieu du champ, chef : pas d'eau.");
-                etape = 4;
+                if (coince() || ++marche > 20 * 30) return sansEau(t, "Je n'arrive pas à l'endroit de la mare, chef : pas d'eau là.");
                 marcher(t, Vec3.atBottomCenterOf(q.above()), 1.0);
                 return Actions.Etat.EN_COURS;
             }
             marche = 0;
             BlockState sol = l.getBlockState(q);
-            if (!labourable(sol) || Monde.construit(l, q) || !bassin(l, q) || !Lieux.peutCasser(t, q))
-                return sansEau(t, "Le milieu du champ a changé, chef : l'eau s'en irait, je n'en mets pas.");
-            if (Monde.libres(t) < 2) return sansEau(t, "Mon sac est trop plein pour creuser le milieu, chef : pas d'eau.");
+            if (!labourable(sol) || Monde.construit(l, q) || !bassin(l, q) || !Lieux.peutCasserPresDuPoste(t, q))
+                return sansEau(t, "L'endroit de la mare a changé, chef : l'eau s'en irait, je n'en mets pas.");
+            if (Monde.libres(t) < 2) return sansEau(t, "Mon sac est trop plein pour creuser la mare, chef : pas d'eau là.");
             // Son seau d'eau s'il en a un (le seau vide lui reste) ; sinon il creuse une mare : l'eau monte du sol.
             boolean vide = false;
             if (SEAU.objet(t.getMainHandItem())) { t.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BUCKET)); vide = true; }
             else for (int i = 0; i < t.inventaire.getContainerSize() && !vide; i++)
                 if (SEAU.objet(t.inventaire.getItem(i))) { t.inventaire.setItem(i, new ItemStack(Items.BUCKET)); vide = true; }
             // Sans seau d'eau, il creuse une mare : sans eau, le blé met une semaine à mûrir (fantôme : 0 blé en 2 jours).
-            if (!vide) dire(t, "Je n'ai pas de seau d'eau, chef : je creuse une mare dans le champ.");
+            if (!vide) dire(t, faites == 0 ? "Je n'ai pas de seau d'eau, chef : je creuse une mare dans le champ."
+                    : "Je creuse une autre mare, chef : l'eau n'arrose pas tout le champ.");
             if (!l.getBlockState(q.above()).isAir()) Actions.recolter(t, q.above()); // l'herbe haute
             Actions.recolter(t, q);
             l.setBlockAndUpdate(q, Blocks.WATER.defaultBlockState());
             l.playSound(null, q, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1, 1);
             t.swing(InteractionHand.MAIN_HAND);
+            mares.remove(0);
+            faites++;
+            nouveauBut();
             return Actions.Etat.EN_COURS;
         }
 
-        /** Pas d'eau finalement : il le dit, et le centre redevient une case à semer. */
+        /** Pas d'eau finalement à cet endroit : il le dit, et la case redevient une case à semer. */
         Actions.Etat sansEau(Travailleur t, String texte) {
-            etape = 5;
             marche = 0;
             dire(t, texte);
-            cases.add(centreSol);
+            cases.add(mares.remove(0));
+            nouveauBut();
             return Actions.Etat.EN_COURS;
         }
 
