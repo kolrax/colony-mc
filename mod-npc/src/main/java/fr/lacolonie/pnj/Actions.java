@@ -460,13 +460,25 @@ public final class Actions {
         /** Les refuges essayés sans chemin sûr : il ne les reprend pas. */
         final java.util.Set<BlockPos> exclus = new HashSet<>();
 
+        /** La lave qui coule vers lui ({@link Monde#laveQuiVient}) : son refuge est à plus de 3 blocs d'elle, hors de sa coulée. */
+        BlockPos laveQuiVient;
+
         Echapper(boolean eau) { super("echapper"); this.eau = eau; }
 
         /** Choisit où aller ; faux s'il n'y a rien à portée. */
         boolean choisir(Travailleur t) {
             Level l = t.level();
             refuge = eau ? Monde.eauProche(l, t.blockPosition(), 5) : Monde.refuge(l, t.blockPosition(), exclus);
+            for (int essai = 0; essai < 24 && refuge != null && laveQuiVient != null && horizontal2(refuge, laveQuiVient) <= 9; essai++) {
+                exclus.add(refuge);
+                refuge = Monde.refuge(l, t.blockPosition(), exclus);
+            }
             return refuge != null;
+        }
+
+        static int horizontal2(BlockPos a, BlockPos b) {
+            int dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+            return dx * dx + dz * dz;
         }
 
         /**

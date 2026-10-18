@@ -73,6 +73,20 @@ final class Monde {
     }
 
     /**
+     * De la lave qui peut couler jusque dans sa case (pieds en p) : à côté de lui, à sa hauteur, assez haute pour s'étendre
+     * encore d'une case (une source, ou une coulée de plus de 2). Une coulée arrivée au bout ne bouge plus : pas d'alerte.
+     * Quatre lectures de blocs. Null s'il n'y en a pas.
+     */
+    static BlockPos laveQuiVient(Level l, BlockPos p) {
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos q = p.relative(d);
+            net.minecraft.world.level.material.FluidState f = l.getFluidState(q);
+            if (f.is(FluidTags.LAVA) && f.getAmount() > 2) return q;
+        }
+        return null;
+    }
+
+    /**
      * Une place sûre où fuir un danger (lave, feu, bloc où il étouffe) : comme {@link #placeSure}, mais d'abord à sa hauteur
      * ou à un bloc près sur tout le rayon (une rive à deux pas plutôt qu'un rebord à escalader), et jamais une des places
      * {@code exclues} (déjà essayées sans chemin sûr). Null s'il n'y en a pas.

@@ -438,6 +438,25 @@ public class TestsMorts {
     }
 
     /**
+     * Correction E4 (« pas de lave à côté de lui ») : une source de lave s'ouvre à 3 blocs de lui, sur son sol plat, et
+     * coule vers lui. Il s'écarte avant qu'elle n'entre dans sa case : ni brûlure, ni lave. L'ancien code attendait d'y
+     * être pour en sortir.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true, batch = "morts")
+    public static void secarteDeLaLaveQuiCoule(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 2, 12, ItemStack.EMPTY, new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Attendre(500));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 10, () -> h.setBlock(9, 2, 12, Blocks.LAVA));
+        h.runAtTickTime(h.getTick() + 300, () -> {
+            h.assertFalse(t.isInLava() || t.isOnFire(), "il ne doit être ni dans la lave ni en feu (" + s.texte() + ")");
+            finir(h, "secarteDeLaLaveQuiCoule", t, s, 0.9, LAVE);
+        });
+    }
+
+    /**
      * Enseveli dans du gravier sur un plateau : au nord, un puits de 10 blocs ; au sud, le plateau. Il sort par le sud,
      * jamais en sautant dans le puits. Garde-fou : l'ancien code (premier côté libre, le nord) passait aussi, il ne sortait
      * pas assez loin pour tomber.

@@ -1099,11 +1099,14 @@ public class Travailleur extends PathfinderMob {
         // Juste en feu au milieu d'un combat (frappé, se bat, fuit) : pas d'aller-retour entre la fuite et l'eau.
         boolean peril = enPeril(), feu = !peril && isOnFire() && !isInWaterRainOrBubble()
                 && !vientDEtreFrappe() && !enCombat(action) && !(action instanceof Consignes.Faire f && enCombat(f.sous));
-        if (!peril && !feu) return;
+        // De la lave coule vers lui (une coulée qui s'étend encore, à côté de lui) : il s'écarte avant qu'elle n'entre dans sa case.
+        BlockPos lave = peril || feu ? null : Monde.laveQuiVient(level(), blockPosition());
+        if (!peril && !feu && lave == null) return;
         boolean grave = isInLava() || isInWall() || level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE);
         // Pas de refuge à portée tout à l'heure : il ne refait pas la recherche avant une seconde (sauf danger grave).
         if (!grave && tickCount < sansRefugeJusqua) return;
         Actions.Echapper e = new Actions.Echapper(feu);
+        e.laveQuiVient = lave;
         boolean refuge = e.choisir(this);
         if (!refuge) sansRefugeJusqua = tickCount + 20;
         if (!refuge && (feu || !grave)) return;
