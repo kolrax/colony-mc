@@ -600,3 +600,9 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Mesures (`main` `b0d7b7a`, puis version seule en `0fafc41`) : **295/295 JUnit, 341/341 en jeu** (08 h 23) ; `build` revérifié vert après le passage en 1.0.5 (295/295).
 - **1.0.5 installée** : personne connecté (0/10). Jar 1 727 735 octets, sha1 `a8aacdf7dd18…`, même taille dans `/mods-off` ; 1.0.4 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.4 -> 1.0.5) », « essai-v2 », « Done (2.039s) » à 08 h 25. Aucune erreur du mod (282 erreurs de tables de butin de `railways` et `create_enchantment_industry`, sans rapport avec le mod).
 - **Pas de modpack** (rien ne change côté client), pas d'annonce, pas de message privé. Rien essayé avec un vrai joueur.
+
+## 2026-10-18 09 h 05 UTC : livraison 1.0.6 (gardes en bataille), serveur seul
+- **Ce qui change en jeu** : en bataille, un garde lâche un ennemi tombé à terre et passe au suivant. Avant, les gardes restaient plantés autour d'un seul blessé pendant une minute. Banc 30 contre 30 : **36 à 47 gardes touchés au lieu de 2 à 13**, bataille toujours fluide (1 à 2 ms par tick pour le mod).
+- Mesures (`main` `1488a35`, puis version seule en `08829a8`) : **295/295 JUnit, 342/342 en jeu** (09 h 03) ; `build` revérifié vert après le passage en 1.0.6 (295/295).
+- **1.0.6 installée** : personne connecté (0/10). Jar 1 728 270 octets, sha1 `51b13582bc66…`, même taille dans `/mods-off` ; 1.0.5 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.5 -> 1.0.6) », « essai-v2 », « Done (1.892s) » à 09 h 05. Aucune erreur du mod (282 erreurs de tables de butin de `railways` et `create_enchantment_industry`, 1 mixin client de `create_sa`, sans rapport avec le mod). Avant le redémarrage : encore un « Can't keep up » (~34 min, mise en veille probable) et une reconnexion SDLink.
+- **Pas de modpack** (rien ne change côté client), pas d'annonce, pas de message privé. Rien essayé avec un vrai joueur.
