@@ -459,7 +459,7 @@ final class Fermier extends Metier {
         /** Les mares à creuser, dans l'ordre (champ neuf). */
         final List<BlockPos> mares = new ArrayList<>();
         Actions.Action sous;
-        int etape, voulues, semees, prochain, marche, plants, faites;
+        int etape, voulues, semees, prochain, marche, plants, faites, seches;
 
         Champ(BlockPos centre, Fouille.Plan plan, Cultures.Culture culture, boolean ordre) {
             super("champ");
@@ -509,7 +509,7 @@ final class Fermier extends Metier {
                     // L'eau, là où rien n'arrose la terre : une mare d'un bloc au niveau des cases sèches, même sur un terrain en
                     // marches ({@link #mares}) ; de son seau, de celui du dépôt, sinon il la creuse. Jamais là où elle coulerait.
                     if (ordre) mares.addAll(mares(t, l));
-                    if (ordre && mares.isEmpty() && cases.stream().filter(q -> !arrose(l, q)).count() * 2 > cases.size())
+                    if (ordre && mares.isEmpty() && seches * 2 > cases.size())
                         dire(t, "Il n'y a pas de place pour l'eau dans le champ, chef : elle s'en irait, ou c'est trop près d'une construction. Le champ poussera moins vite.");
                     if (!mares.isEmpty() && t.compter(SEAU) == 0 && b != null && b.compter(SEAU) > 0 && Monde.libres(t) > 1) { sous = new Actions.Prendre(SEAU, 1); return Actions.Etat.EN_COURS; }
                 }
@@ -575,20 +575,20 @@ final class Fermier extends Metier {
          * creuser ({@link Lieux#peutCasser} : ni le potager d'un joueur, ni le tampon d'une construction), pour arroser les cases
          * sèches du champ (à 4 blocs, au même niveau ou un plus bas), une mare par niveau au plus ({@link Cultures#mares}). Le
          * tampon du poste de son chef, seulement pour les cases qu'aucune autre place n'arrose (un champ collé au poste). Une
-         * fois par champ neuf.
+         * fois par champ neuf ; {@link #seches} : les cases sèches comptées.
          */
         List<BlockPos> mares(Travailleur t, ServerLevel l) {
             List<Cultures.Point> seches = new ArrayList<>(), libres = new ArrayList<>(), poste = new ArrayList<>();
-            Map<Long, Boolean> presDuPoste = new java.util.HashMap<>(); // relu par case de 4 x 4 x 4, comme le tampon
             for (BlockPos q : cases) {
                 Cultures.Point p = new Cultures.Point(q.getX(), q.getY(), q.getZ());
                 if (!arrose(l, q)) seches.add(p);
-                if (!labourable(l.getBlockState(q)) || !bassin(l, q)) continue;
-                if (Lieux.peutCasser(t, q)) libres.add(p);
-                else if (presDuPoste.computeIfAbsent(BlockPos.asLong(q.getX() >> 2, q.getY() >> 2, q.getZ() >> 2), k -> Lieux.peutCasserPresDuPoste(t, q))) poste.add(p);
+                if (labourable(l.getBlockState(q)) && bassin(l, q)) (Lieux.peutCasser(t, q) ? libres : poste).add(p);
             }
+            this.seches = seches.size();
             if (seches.isEmpty()) return List.of();
-            return Cultures.mares(seches, List.of(libres, poste), centre.getX(), centre.getZ()).stream().map(p -> new BlockPos(p.x(), p.y(), p.z())).toList();
+            // Le tampon du poste ne se relit (coûteux) que pour les places retenues ; mettreEau le revérifie de même.
+            return Cultures.mares(seches, libres, poste, p -> Lieux.peutCasserPresDuPoste(t, new BlockPos(p.x(), p.y(), p.z())), cases.size(), centre.getX(), centre.getZ())
+                    .stream().map(p -> new BlockPos(p.x(), p.y(), p.z())).toList();
         }
 
         /**
