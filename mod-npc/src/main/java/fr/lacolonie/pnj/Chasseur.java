@@ -22,8 +22,10 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
- * Le chasseur (lot 6, cahier 4.2). Le jour, il part chasser le gibier sauvage autour du poste ({@link Chasse#ZONE} blocs) :
- * vaches, moutons, cochons, poules et lapins qui ne sont à personne. Il tire à l'arc (ou à l'arbalète) avec les flèches
+ * Le chasseur (lot 6, cahier 4.2). Le jour, il part chasser le gibier sauvage hors de la colonie (refonte : jusqu'à
+ * {@link Chasse#ZONE} blocs au-delà de son bord, {@link #portee}) : vaches, moutons, cochons, poules et lapins qui ne sont à
+ * personne. Désigné ailleurs (« Travaille ici », le lieu d'une mission), il chasse autour de ce lieu, colonie comprise. Le
+ * lieu de sa proie est dit et affiché ({@link Lieux#choisi}). Il tire à l'arc (ou à l'arbalète) avec les flèches
  * marquées du guerrier ({@link Guerrier#tirer} : elles ne blessent que la bête visée), sinon il frappe à l'épée ou à la
  * hache ; arc, flèches et lame sont pris au dépôt (cahier 3.12), et sans rien de tout ça il le dit par lettre et attend.
  * Le butin de la bête va droit dans son sac ({@link Eleveur#butin}) ; il ramasse ses flèches ; au bout de
@@ -33,7 +35,8 @@ import java.util.WeakHashMap;
  * une bête chez un voisin ({@link Fermier#aLui}), ni la dernière de son espèce aux alentours ({@link Chasse#GARDER}). Il
  * ne frappe ni joueur, ni ouvrier, ni villageois.
  * <p>
- * Pas de lag : le gibier n'est cherché qu'au moment de choisir une proie (une boîte autour du poste, 64 bêtes au plus) ; un
+ * Pas de lag : le gibier n'est cherché qu'au moment de choisir une proie (une boîte autour du poste, 64 bêtes au plus, celles
+ * de la colonie écartées dès la recherche) ; un
  * pré relevé sert une minute, et au plus {@link #RELEVES} relevés d'enclos par recherche.
  */
 final class Chasseur extends Metier {
@@ -44,7 +47,7 @@ final class Chasseur extends Metier {
     static final int PAUSE = 60, BREDOUILLE = 30;
 
     Chasseur() {
-        super("chasseur", "Chasseur", "Chasse le gibier sauvage autour du poste (vaches, moutons, cochons, poules, lapins), à l'arc ou à l'épée, et "
+        super("chasseur", "Chasseur", "Chasse le gibier sauvage hors de la colonie (vaches, moutons, cochons, poules, lapins), à l'arc ou à l'épée, et "
                 + "rapporte viande, cuir et plumes au dépôt. Il ne touche jamais aux bêtes des enclos, ni à celles qui ont un nom ou un maître, "
                 + "ni aux petits, et en laisse toujours assez pour que le gibier revienne.", false,
                 "minecraft:bow|minecraft:crossbow", "#minecraft:arrows", "#minecraft:swords|#minecraft:axes");
@@ -198,6 +201,9 @@ final class Chasseur extends Metier {
 
     static final Map<Travailleur, Pres> PRES = new WeakHashMap<>();
 
+    /** Jusqu'où il chasse depuis le poste, hors de la colonie : le rayon de la colonie, plus {@link Chasse#ZONE}. */
+    static int portee() { return Reglages.actuel.rayon_colonie + Chasse.ZONE; }
+
     static Chasse.Espece espece(Animal a) { return Chasse.parType(BuiltInRegistries.ENTITY_TYPE.getKey(a.getType()).toString()); }
 
     /**
@@ -210,16 +216,20 @@ final class Chasseur extends Metier {
         long maintenant = l.getGameTime();
         if (p.jusqua <= maintenant) { p.ouvertes.clear(); p.enclos.clear(); p.douteuses.clear(); p.jusqua = maintenant + REVUE; }
         List<Animal> betes = new ArrayList<>();
-        int r = Chasse.ZONE;
-        // Sa mission a un lieu (ou « Travaille ici ») : il chasse autour de ce lieu, sinon autour du poste.
+        // Sa mission a un lieu (ou « Travaille ici ») : il chasse autour de ce lieu, colonie comprise. Sinon, hors de la
+        // colonie seulement (refonte) : un anneau autour du poste, jusqu'à portee() blocs.
         BlockPos centre = t.lieuTravail() != null ? t.lieuTravail() : t.bureau;
+        boolean dehors = t.lieuTravail() == null && Lieux.regles(l);
+        int r = dehors ? portee() : Chasse.ZONE;
         double bx = centre.getX() + 0.5, bz = centre.getZ() + 0.5;
         // Les bêtes qu'un autre chasseur traque déjà : il les lui laisse (deux chasseurs ne courent pas la même).
         Set<Integer> traquees = new java.util.HashSet<>();
         for (Travailleur o : l.getEntitiesOfClass(Travailleur.class, new AABB(centre).inflate(r, 16, r), o -> o != t && o.action instanceof Battue))
             if (((Battue) o.action).sous instanceof Traque q) traquees.add(q.cible.getId());
+        // Les bêtes de la colonie sont écartées dès la recherche : elles ne prennent pas de place dans les BETES_MAX.
         l.getEntities(EntityTypeTest.forClass(Animal.class), new AABB(centre).inflate(r, 16, r),
-                a -> a.isAlive() && espece(a) != null && Math.pow(a.getX() - bx, 2) + Math.pow(a.getZ() - bz, 2) <= r * r, betes, BETES_MAX);
+                a -> a.isAlive() && espece(a) != null && Math.pow(a.getX() - bx, 2) + Math.pow(a.getZ() - bz, 2) <= (double) r * r
+                        && !(dehors && Lieux.dansColonie(t, a.blockPosition())), betes, BETES_MAX);
         betes.sort(Comparator.comparingDouble(a -> a.distanceToSqr(t)));
         long tard = maintenant;
         t.inaccessibles.values().removeIf(v -> v < tard);
@@ -304,6 +314,7 @@ final class Chasseur extends Metier {
                     // Seul, pour une commande de cuir ou de plumes : faute de la bête qui en donne, une autre (la viande sert toujours).
                     if (p.isEmpty() && !ordre && especes != null) p = gibier(t, null, 1);
                     if (p.isEmpty()) { etape = 2; return Actions.Etat.EN_COURS; }
+                    Lieux.choisi(t, p.get(0).blockPosition());
                     sous = new Traque(p.get(0));
                 }
                 case 2 -> {
@@ -367,7 +378,7 @@ final class Chasseur extends Metier {
             if (!fini) {
                 if (attaque == null) {
                     if (!Guerrier.peutTirer(t)) Eleveur.armer(t);
-                    attaque = new Actions.Attaquer(cible).portee(Chasse.ZONE + 16);
+                    attaque = new Actions.Attaquer(cible).portee(portee() + 16); // une proie au bout de sa zone, lui encore près du poste
                     Besoins.parler(t, "chasse_piste", null);
                 }
                 // Chaque seconde : la bête a changé de main (un nom, une laisse), ou elle est passée chez un voisin ; il la laisse.
