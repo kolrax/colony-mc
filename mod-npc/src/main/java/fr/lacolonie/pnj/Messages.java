@@ -387,7 +387,7 @@ final class Messages {
                 "Il y a {0} {1} : j'irai demain matin, la journée est trop avancée.",
                 "J'ai repéré {0} {1}, mais c'est trop loin pour aujourd'hui. J'y vais demain.");
         m("bois_trop_loin", "C'est trop loin",
-                "Le {0} ne pousse qu'à {1} blocs : trop loin, même en expédition de {2} jours. Allonge la durée des expéditions au poste.",
+                "Le {0} ne pousse qu'à {1} blocs : trop loin, même en expédition de {2} jours.",
                 "Pour le {0}, il faudrait aller à {1} blocs. Avec {2} jours d'expédition au plus, je n'aurai pas le temps de revenir.");
         m("pas_de_sol", "Je ne trouve pas où creuser",
                 "Je ne trouve aucun sol naturel où creuser sans abîmer de construction.",

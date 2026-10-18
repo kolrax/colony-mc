@@ -43,6 +43,15 @@ base {
 // Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+// Xaero, pour le seul banc de la carte (runCarte) : ni dans les tests, ni dans le jar. Il est copié dans run-carte/mods,
+// car un lancement de développement ne charge pas les mods de son chemin de classes supplémentaire.
+configurations { xaeroBanc }
+tasks.register('modsCarte', Sync) {
+    from configurations.xaeroBanc
+    into 'run-carte/mods'
+}
+tasks.matching { it.name == 'runCarte' }.configureEach { dependsOn 'modsCarte' }
+
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
@@ -78,6 +87,15 @@ neoForge {
             gameDirectory = project.file('run-photos')
             programArguments.addAll '--quickPlaySingleplayer', 'ecrans', '--width', '1280', '--height', '720'
             systemProperty 'colonie.photos', 'ecrans'
+        }
+
+        // Banc photo de la carte (plan D, développement) : Xaero's Minimap et World Map chargés pour ce banc seulement,
+        // trois ouvriers du joueur, un du voisin et un chercheur ; une capture de la mini-carte et une de la carte du monde.
+        carte {
+            client()
+            gameDirectory = project.file('run-carte')
+            programArguments.addAll '--quickPlaySingleplayer', 'carte', '--width', '1280', '--height', '720'
+            systemProperty 'colonie.carte', 'true'
         }
 
         server {
@@ -146,6 +164,12 @@ configurations {
 
 dependencies {
 
+    // Plan D : les ouvriers sur la carte. Xaero's Minimap et World Map, les versions du modpack (pack/lock.json),
+    // pour compiler seulement : jamais embarqués, et facultatifs en jeu (XaeroOuvriers n'est chargé que s'ils sont là).
+    compileOnly 'maven.modrinth:xaeros-minimap:irjR7dHk'   // neoforge-1.21.1-26.6.0
+    compileOnly 'maven.modrinth:xaeros-world-map:SnQ4SoDe' // neoforge-1.21.1-1.47.0
+    xaeroBanc 'maven.modrinth:xaeros-minimap:irjR7dHk'
+    xaeroBanc 'maven.modrinth:xaeros-world-map:SnQ4SoDe'
     testImplementation 'com.google.code.gson:gson:2.10.1' // celui de Minecraft 1.21.1, pour les tests sans le jeu
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

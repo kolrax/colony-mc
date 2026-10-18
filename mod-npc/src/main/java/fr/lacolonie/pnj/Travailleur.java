@@ -119,7 +119,12 @@ public class Travailleur extends PathfinderMob {
     public final List<BlockPos> trace = new ArrayList<>();
     /** Ce qu'il parcourt en une heure du jeu, compté large (il marche à 4 blocs par seconde sur le plat). */
     static final double BLOCS_PAR_HEURE = 120;
-    /** Heures de travail, en heures du jeu (0 à 24). */
+    /**
+     * Heures de travail générales, en heures du jeu (0 à 24). Corrections du 18/10 : plus réglables au poste ni enregistrées.
+     * Une mission « toujours » suit ces heures de jour (6 h - 18 h, comme avant) : sans quoi il travaillerait aussi la nuit,
+     * dehors, et perdrait de la vie aux nuits blanches ({@link Nuit}). Les autres horaires de mission décident seuls
+     * ({@link Cerveau#enService}).
+     */
     public int debut = 6, fin = 18;
     /** Salaire fixé par le chef ; -1 = ce qu'il demande. */
     public long salaire = -1;
@@ -2389,12 +2394,9 @@ public class Travailleur extends PathfinderMob {
         if (ici != null) t.put("LieuImpose", NbtUtils.writeBlockPos(ici));
         if (lieuImpose != null) t.put("LieuEnCours", NbtUtils.writeBlockPos(lieuImpose));
         if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
-        t.putInt("JoursExpedition", joursExpedition);
         t.putLong("SortieDepuis", sortieDepuis);
         t.putBoolean("Expedition", expedition);
         t.putLongArray("Trace", trace.stream().mapToLong(BlockPos::asLong).toArray());
-        t.putInt("Debut", debut);
-        t.putInt("Fin", fin);
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
         t.putString("Talents", Talents.texte(talents));
@@ -2452,13 +2454,11 @@ public class Travailleur extends PathfinderMob {
         lieuImpose = t.contains("LieuEnCours") ? NbtUtils.readBlockPos(t, "LieuEnCours").orElse(null) : ici; // sauvé avant : « Travaille ici »
         dernierLieu = lieuImpose;
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
-        joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;
         expedition = t.getBoolean("Expedition");
         trace.clear();
         for (long l : t.getLongArray("Trace")) trace.add(BlockPos.of(l));
-        debut = t.contains("Debut") ? t.getInt("Debut") : 6;
-        fin = t.contains("Fin") ? t.getInt("Fin") : 18;
+        // « Debut », « Fin » et « JoursExpedition » des anciennes sauvegardes : ignorés (corrections du 18/10, plus de réglage général).
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
         surcout = t.contains("Surcout") ? Math.clamp(t.getDouble("Surcout"), 1, Cout.FACTEUR_MAX) : 1; // avant le lot 11 : ×1
         talents = Talents.lire(t.getString("Talents")); // avant le lot 13 : aucun

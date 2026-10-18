@@ -99,6 +99,7 @@ public class ColoniePnj {
         bus.addListener((EntityAttributeCreationEvent e) -> e.put(TRAVAILLEUR.get(), Travailleur.attributs().build()));
         bus.addListener((RegisterTicketControllersEvent e) -> e.register(TICKETS));
         bus.addListener(Reseau::enregistrer);
+        bus.addListener(CarteOuvriers::enregistrer); // plan D : les ouvriers sur la carte (paquet facultatif)
         bus.addListener((RegisterCapabilitiesEvent e) ->
                 e.registerBlockEntity(Capabilities.ItemHandler.BLOCK, BUREAU_BE.get(), (be, cote) -> new InvWrapper(be.depot)));
         bus.addListener((BuildCreativeModeTabContentsEvent e) -> {

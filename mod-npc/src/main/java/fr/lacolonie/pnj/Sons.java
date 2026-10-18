@@ -64,6 +64,7 @@ final class Sons {
 
     /** Il ouvre un coffre (ou un tonneau) pour y prendre ou y laisser quelque chose. */
     static void coffre(Travailleur t, BlockPos p) {
+        if (!t.level().isLoaded(p)) return; // un son ne charge (ni ne génère) jamais un chunk
         boolean tonneau = t.level().getBlockState(p).getBlock() instanceof BarrelBlock;
         jouer(t, Cadence.Genre.COFFRE, p, tonneau ? SoundEvents.BARREL_OPEN : SoundEvents.CHEST_OPEN, 0.4f, 1);
     }

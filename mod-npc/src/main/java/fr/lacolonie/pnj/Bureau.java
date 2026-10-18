@@ -42,7 +42,7 @@ import java.util.UUID;
 /**
  * Le poste de travail : un seul par joueur, commun à tous ses ouvriers (0.5.0). Une caisse (les salaires), un dépôt
  * (agrandi par les coffres collés au bureau), et l'écran du chef à 5 onglets (1.0.0) : Ouvriers (état et mission de
- * chacun, horaires, paie), Missions (toutes les files, à réordonner ou annuler), Dépôt (grille par catégories),
+ * chacun, paie), Missions (toutes les files, à réordonner ou annuler), Dépôt (grille par catégories),
  * Caisse (la paie) et Journal (une ligne par événement, à la place des lettres).
  * <p>
  * Avant la 0.5.0, chaque PNJ avait son bureau. Le premier bureau qu'un joueur ouvre après la mise à jour lui propose
@@ -613,9 +613,6 @@ public final class Bureau {
             e.putInt("fatigue", t.fatigue);
             e.putLong("salaireDemande", t.salaireDemande());
             e.putLong("salaireVerse", t.salaireVerse());
-            e.putInt("debut", t.debut);
-            e.putInt("fin", t.fin);
-            e.putInt("joursExpedition", t.joursExpedition);
             e.putString("sortie", t.sortieTexte());
             double d = t.distanceAuBureau();
             e.putString("distance", t.bureau == null ? "" : d < 4 ? "au poste" : "à " + (int) d + " blocs");
@@ -643,9 +640,7 @@ public final class Bureau {
                 case "enregistrer" -> {
                     Travailleur t = ouvrier(p, d.getString("uuid"));
                     if (t == null) return;
-                    t.joursExpedition = Math.clamp(d.getInt("joursExpedition"), 1, 30);
-                    t.debut = Math.floorMod(d.getInt("debut"), 24);
-                    t.fin = Math.floorMod(d.getInt("fin"), 24);
+                    // Seule la paie : « debut », « fin » et « joursExpedition » d'un ancien écran sont ignorés (corrections du 18/10).
                     long s = d.getLong("salaire");
                     t.salaire = s < 0 || s == t.salaireDemande() ? -1 : Math.min(s, 1_000_000);
                 }
