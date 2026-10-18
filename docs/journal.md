@@ -630,3 +630,9 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Joueur fantôme `mare-vieux-champ.txt`** (nouvelles commandes `fantome champ_sec` et `fantome potager`, partie `terrains` du rapport) : en 1.0.7, en vraie partie, **aucune mare** en 2 jours (81 cases sèches) quand un potager touche le champ. Cause : la terre labourée et le blé d'un voisin comptaient dans le tampon de 8 blocs de toutes les places ; les GameTests de mare n'étaient pas dans le lot « lieux ». Corrigé (`ad10bde` : cultures hors tampon à l'entretien d'un champ retenu ; message au journal `sans_mare` quand aucune place) ; relecture : pendant un ordre, le potager d'un autre garde son tampon (`a614f80`). Fantôme après correction : mare au tick 549, 80/80 cases humides, potager intact. Test `mareMalgreLePotagerVoisin` vu rouge avant.
 - **Bataille** : un garde alerté ne prend comme autre cible qu'un ennemi chez nous et accessible (`Armee.aupres`), 2 tests vus rouges avant.
 - `main` = a614f80 : **298/298 JUnit, 350/350 en jeu** (un premier passage rouge sur `TestsGuerrier.chasseDeNuit`, « chunk actif false », sans lien ; vert au second). **Pas encore sur le serveur** (KOLRAX jouait, un deuxième redémarrage dans l'heure évité) : à livrer en 1.0.8, serveur seul.
+
+## 2026-10-18 13 h 17 UTC : livraison 1.0.8 (mare du fermier, garde qui reste chez nous), serveur seul
+- `main` `a614f80` + version : **298/298 JUnit, 350/350 en jeu** (13 h 08), `build` revérifié en 1.0.8.
+- KOLRAX connecté : 5 min de préavis (13 h 11, rappel à 1 min). Jar 1 754 405 octets, sha1 `447603a53b2d…`, même taille dans `/mods-off` ; 1.0.7 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.7 -> 1.0.8) », « essai-v2 », « Done (2.463s) » à 13 h 17. Aucune erreur du mod.
+- Pas de modpack (rien ne change côté client), pas d'annonce.
+- Vu au journal du serveur : bûcheron Enguerrand à ~1 500 blocs de son poste (11 h 55, « aller »), ramené par le secours à 12 h 48 : enquête lancée.
