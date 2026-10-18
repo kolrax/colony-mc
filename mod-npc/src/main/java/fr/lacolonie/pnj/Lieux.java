@@ -198,13 +198,14 @@ final class Lieux {
         if (!regles(l) || ici(t, p)) return true; // sa terre labourée, hors des règles (essais) ou dans la zone « Travaille ici »
         int x0 = (p.getX() & ~3) - TAMPON, y0 = (p.getY() & ~3) - TAMPON, z0 = (p.getZ() & ~3) - TAMPON;
         int x1 = x0 + 3 + 2 * TAMPON, y1 = y0 + 3 + 2 * TAMPON, z1 = z0 + 3 + 2 * TAMPON;
-        if (!chercher(l, x0, y0, z0, x1, y1, z1, siens, true)) return true; // rien d'autre que des champs dans le tampon
+        boolean entretien = siens != null; // pendant un ordre, le potager d'un autre garde son tampon
+        if (entretien && !chercher(l, x0, y0, z0, x1, y1, z1, siens, true)) return true; // rien d'autre que des champs dans le tampon
         if (b == null) return false;
         int bx = b.getX(), by = b.getY(), bz = b.getZ();
         if (bx < x0 || bx > x1 || by < y0 || by > y1 || bz < z0 || bz > z1) return false; // la construction n'est pas le poste
-        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1, siens, true)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1, siens, true))
-                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1, siens, true)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1, siens, true))
-                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1, siens, true)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1, siens, true));
+        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1, siens, entretien)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1, siens, entretien))
+                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1, siens, entretien)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1, siens, entretien))
+                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1, siens, entretien)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1, siens, entretien));
     }
 
     /**
