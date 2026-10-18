@@ -162,13 +162,11 @@ public class ColoniePnj {
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p)) return;
             var donnees = p.getPersistentData();
-            // Une fois par joueur : la nouveauté de la 0.8.0.
-            if (!donnees.getBoolean("colonie_pnj_repertoire")) {
-                donnees.putBoolean("colonie_pnj_repertoire", true);
-                p.sendSystemMessage(Component.literal("✦ Tes ouvriers savent maintenant faire " + Repertoire.TOUTES.size() + " actions en plus de leur travail : "
-                        + "« garde à vous », « repos », « assieds-toi », « danse », « fais le cochon », « mets-toi derrière moi », « donne-moi ton pain », "
-                        + "« raconte une blague », « où est le poste ? »… Le guerrier se bat sur ordre, le mineur creuse où tu regardes, le bûcheron abat l'arbre "
-                        + "que tu regardes. Demande-leur « que sais-tu faire ? ».")
+            // Une fois par joueur : l'accueil de la 1.0 (ouvriers à missions ; l'ancien message de la 0.8.0 parlait du chat libre, retiré).
+            if (!donnees.getBoolean("colonie_pnj_accueil_v1")) {
+                donnees.putBoolean("colonie_pnj_accueil_v1", true);
+                p.sendSystemMessage(Component.literal("✦ La Colonie : pose ton poste (le bloc Bureau), puis embauche les chercheurs d'emploi d'un clic droit. "
+                        + "Clic droit sur un ouvrier : sa fiche et ses missions. Touche B : la barre de commandes. Ton premier poste te donne le livret du chef.")
                         .withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC));
             }
         });
