@@ -179,6 +179,32 @@ public class TestsMission {
         });
     }
 
+    /**
+     * Fantôme « sacs-3-jours » : un mineur pris sous un éboulement attendait deux jours au fond, « ⚠ Aucun lieu sûr pour
+     * miner », son sac plein de charbon. Bloqué ainsi loin du poste, il rentre au poste (coincé, il y sera ramené : Coince).
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void mineurSansLieuRentreAuPoste(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "mineur", 738, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos loin = TestsJeu.sol(h, 738 * 400 - 14, 60000);
+        t.moveTo(loin.getX() + 0.5, loin.getY(), loin.getZ() + 0.5);
+        h.assertTrue(Missions.donner(chef, t, "charbon", "fois", 64, "toujours", null).ok(), "mission acceptée");
+        h.runAfterDelay(20, () -> { // son chantier ouvert (Mineur.travailler), puis trois puits ratés : plus d'essai avant 5 minutes
+            t.moveTo(loin.getX() + 0.5, loin.getY(), loin.getZ() + 0.5);
+            t.memoire.remove("puits");
+            t.memoire.putInt("rates", Mineur.RATES);
+            t.memoire.putLong("rates_t", Cerveau.temps(t) + 300);
+            t.finirAction("test");
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(h.getTick() > 40, "après les puits ratés");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 5 * 5, "il rentre au poste (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.statutUnique().equals(Statut.bloque(Statut.LIEU_MINE)), "statut : « " + t.statutUnique() + " »");
+            t.discard();
+        });
+    }
+
     /** Il change de mission (la première annulée) avec la récolte de l'ancienne dans son sac : il la dépose avant de s'y mettre. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void changeDeMissionDeposeLeSac(GameTestHelper h) {

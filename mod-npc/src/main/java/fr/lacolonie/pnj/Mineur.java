@@ -240,12 +240,20 @@ final class Mineur extends Metier {
         t.debloquer(Statut.LIEU_MINE);
     }
 
+    /**
+     * Sans lieu où miner, il attend au poste, pas au fond d'une galerie : pris sous un éboulement, il y restait des jours,
+     * le sac plein (fantôme « sacs-3-jours »). S'il ne peut pas rentrer, le temps coincé compte, et il y est ramené (Coince).
+     */
+    static void attendreAuPoste(Travailleur t) {
+        if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 6 * 6) Cerveau.rentrer(t); else Cerveau.attendre(t, 30);
+    }
+
     void nouveauPuits(Travailleur t) {
         CompoundTag m = t.memoire;
         if (m.getInt("rates") >= RATES) {
             if (m.getLong("rates_t") > Cerveau.temps(t)) {
                 t.bloquer(Statut.LIEU_MINE);
-                Cerveau.attendre(t, 30);
+                attendreAuPoste(t);
                 return;
             }
             m.putInt("rates", RATES - 1); // un nouvel essai ; raté, il est de nouveau bloqué 5 minutes
@@ -281,7 +289,7 @@ final class Mineur extends Metier {
             }
             Cerveau.ecrire(t, "pas_de_sol", 1800, "pas_de_sol");
             t.bloquer(Statut.LIEU_MINE);
-            if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 30);
+            attendreAuPoste(t);
             return;
         }
         m.putLong("puits", s.asLong());
