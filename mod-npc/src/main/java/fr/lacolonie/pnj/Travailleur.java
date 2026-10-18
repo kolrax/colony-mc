@@ -246,7 +246,7 @@ public class Travailleur extends PathfinderMob {
         String bloc = bureau == null ? Statut.SANS_POSTE : blocageActuel();
         Mission m = missionActive();
         Metier.Commande c = m == null ? null : Metier.catalogue(metier, m.id);
-        int fait = c == null || c.objet == null ? 0 : Metier.avancement(this, m);
+        int fait = c == null || c.objet == null ? 0 : Metier.avancementVu(this, m); // ce qu'il porte compte aussi
         boolean hors = m == null && !missions.isEmpty() && missions.stream().noneMatch(x -> x.enHoraires(heure()));
         return Statut.texte(new Statut.Etat(metier, aTerre, mode == Mode.GREVE, mode == Mode.ATTENDRE, mode == Mode.SUIVRE, bloc,
                 !missions.isEmpty() || fileFinie(), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
@@ -1423,6 +1423,9 @@ public class Travailleur extends PathfinderMob {
     @Override
     public void die(DamageSource src) {
         if (!level().isClientSide && !mortDefinitive && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            // Au journal du serveur, la cause de la chute (sinon perdue : seule la mort définitive, « was killed », y paraît).
+            ColoniePnj.LOG.info("{} ({}, chef {}) tombe à terre en {} : {}", prenom, metier, chef, blockPosition().toShortString(),
+                    src.getLocalizedDeathMessage(this).getString());
             tomberATerre();
             return;
         }
