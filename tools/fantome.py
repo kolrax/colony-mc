@@ -151,6 +151,11 @@ def resume(rapport):
     construits = r.get("construits_casses", {})
     print(("BLOCS CONSTRUITS CASSÉS : %s" % construits) if construits else "Aucun bloc construit cassé.")
     print(f"Blocs cassés dans un village : {r.get('casses_dans_un_village', 0)}")
+    s = r.get("survie") or {}
+    print(f"Mises à terre : {s.get('blessures', 0)} {s.get('blessures_par_cause', {})} ; relevés seuls : {s.get('releves_seuls', 0)} ;"
+          f" morts : {s.get('morts', 0)} {s.get('morts_par_cause', {})}")
+    for e in rapport.get("blessures", []) + rapport.get("morts", []):
+        print(f"    jour {e['jour']} {e['heure']} h : {e['ouvrier']} ({e['metier']}) {e['genre']}, {e['cause']}, en {e['pos']}")
     msgs = rapport.get("messages", [])
     print(f"Messages reçus : {len(msgs)}" + (" ; les derniers :" if msgs else ""))
     for m in msgs[-10:]:

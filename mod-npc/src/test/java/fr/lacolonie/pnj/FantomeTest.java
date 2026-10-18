@@ -37,4 +37,30 @@ class FantomeTest {
         assertEquals("culture", c("minecraft:pumpkin_stem"));
         assertEquals("naturel", c("minecraft:pumpkin"));
     }
+    @Test
+    void lesCausesSontLisibles() {
+        assertEquals("chute", Fantome.Survie.cause("fall", null));
+        assertEquals("lave", Fantome.Survie.cause("lava", null));
+        assertEquals("noyade", Fantome.Survie.cause("drown", null));
+        assertEquals("monstre zombie", Fantome.Survie.cause("mob_attack", "minecraft:zombie"));
+        assertEquals("monstre skeleton", Fantome.Survie.cause("arrow", "minecraft:skeleton"));
+        assertEquals("explosion (creeper)", Fantome.Survie.cause("explosion", "minecraft:creeper"));
+    }
+
+    /** Plan E6 : le rapport compte chaque mise à terre et chaque mort, avec sa cause, par jour et par ouvrier. */
+    @Test
+    void leRapportCompteUneMortAvecSaCause() {
+        var s = new Fantome.Survie();
+        s.noter("blessure", "Jean", "mineur", "lave", 1000, 0, 7, "1, 2, 3");
+        s.noter("blessure", "Paul", "bucheron", "monstre zombie", 30000, 1, 22, "4, 5, 6");
+        s.noter("mort", "Paul", "bucheron", "à terre sans secours, après monstre zombie", 33600, 1, 22, "4, 5, 6");
+        var r = s.resume();
+        assertEquals(2, r.get("blessures").getAsInt());
+        assertEquals(1, r.get("morts").getAsInt());
+        assertEquals(1, r.getAsJsonObject("morts_par_cause").get("à terre sans secours, après monstre zombie").getAsInt());
+        assertEquals(1, r.getAsJsonObject("blessures_par_cause").get("lave").getAsInt());
+        assertEquals(1, r.getAsJsonObject("par_jour").getAsJsonObject("1").get("morts").getAsInt());
+        assertEquals(1, r.getAsJsonObject("par_ouvrier").getAsJsonObject("Paul (bucheron)").get("morts").getAsInt());
+        assertEquals("bucheron", s.liste("mort").get(0).getAsJsonObject().get("metier").getAsString());
+    }
 }

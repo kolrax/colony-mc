@@ -203,6 +203,9 @@ public final class Fantome {
         listeDesJoueurs(l.getServer(), j, true); // et dans la liste des joueurs : son ouvrier le trouve pour lui écrire
         joueur = j;
         casses.clear();
+        survie.evenements.clear();
+        survie.coups.clear();
+        chutes.clear();
         synchronized (messages) { messages.clear(); }
         synchronized (ecrans) { ecrans.clear(); }
         carte = null;
@@ -306,6 +309,152 @@ public final class Fantome {
                     || n.endsWith("_terracotta") || n.endsWith("_sapling") || n.endsWith("_mushroom")) return "naturel";
             return "construit";
         }
+    }
+
+    // --- Les blessures et les morts des ouvriers (plan E6) ------------------------------------------------
+
+    /**
+     * Plan E6, pur Java : chaque mise à terre (« blessure »), chaque relèvement seul et chaque mort d'un ouvrier du fantôme,
+     * avec sa cause lisible, l'heure de jeu et le lieu ; puis les totaux du rapport (par cause, par jour, par ouvrier). Les
+     * coups reçus debout sont seulement additionnés par cause (nombre, points de vie perdus).
+     */
+    static final class Survie {
+        static final int MAX = 2000;
+        static final Gson JSON = new Gson();
+        final List<JsonObject> evenements = new ArrayList<>();
+        final Map<String, double[]> coups = new TreeMap<>();
+
+        /**
+         * La cause d'après le type de dégâts ({@code fall}, {@code lava}, {@code mob_attack}…) et l'auteur (l'id de son
+         * type d'entité, « minecraft:zombie », ou « joueur » ; null : aucun).
+         */
+        static String cause(String type, @Nullable String auteur) {
+            String a = auteur == null ? null : auteur.startsWith("minecraft:") ? auteur.substring(10) : auteur;
+            String base = switch (type) {
+                case "fall", "stalagmite" -> "chute";
+                case "lava" -> "lave";
+                case "in_fire", "on_fire", "hot_floor", "campfire" -> "feu";
+                case "drown" -> "noyade";
+                case "in_wall", "cramming" -> "étouffement";
+                case "starve" -> "faim";
+                case "out_of_world" -> "vide";
+                case "generic_kill" -> "à terre sans secours";
+                case "explosion", "player_explosion", "bad_respawn_point" -> "explosion";
+                case "freeze" -> "gel";
+                case "cactus", "sweet_berry_bush" -> "épines";
+                case "falling_block", "falling_anvil", "falling_stalactite" -> "bloc tombé";
+                case "mob_attack", "mob_attack_no_aggro", "arrow", "mob_projectile", "thrown", "sting", "trident", "fireball",
+                     "unattributed_fireball", "wither_skull", "sonic_boom", "player_attack" -> a == null ? "coup" : "joueur".equals(a) ? "joueur" : "monstre " + a;
+                default -> type;
+            };
+            return a == null || base.equals("joueur") || base.startsWith("monstre ") ? base : base + " (" + a + ")";
+        }
+
+        void noter(String genre, String ouvrier, String metier, String cause, long tick, long jour, int heure, String pos) {
+            if (evenements.size() >= MAX) return;
+            JsonObject o = new JsonObject();
+            o.addProperty("genre", genre);
+            o.addProperty("ouvrier", ouvrier);
+            o.addProperty("metier", metier);
+            o.addProperty("cause", cause);
+            o.addProperty("tick", tick);
+            o.addProperty("jour", jour);
+            o.addProperty("heure", heure);
+            o.addProperty("pos", pos);
+            evenements.add(o);
+        }
+
+        void coup(String cause, float perte) {
+            double[] c = coups.computeIfAbsent(cause, k -> new double[2]);
+            c[0]++;
+            c[1] += Math.max(0, perte);
+        }
+
+        JsonArray liste(String genre) {
+            JsonArray a = new JsonArray();
+            for (JsonObject o : evenements) if (o.get("genre").getAsString().equals(genre)) a.add(o);
+            return a;
+        }
+
+        JsonObject resume() {
+            Map<String, Integer> blessures = new TreeMap<>(), morts = new TreeMap<>();
+            Map<String, Map<String, Integer>> jours = new TreeMap<>(), ouvriers = new TreeMap<>();
+            int nb = 0, nm = 0, nr = 0;
+            for (JsonObject o : evenements) {
+                String genre = o.get("genre").getAsString(), cause = o.get("cause").getAsString();
+                String g = genre.equals("blessure") ? "blessures" : genre.equals("mort") ? "morts" : "releves_seuls";
+                if (genre.equals("blessure")) { nb++; blessures.merge(cause, 1, Integer::sum); }
+                else if (genre.equals("mort")) { nm++; morts.merge(cause, 1, Integer::sum); }
+                else nr++;
+                jours.computeIfAbsent(o.get("jour").getAsString(), k -> new TreeMap<>()).merge(g, 1, Integer::sum);
+                ouvriers.computeIfAbsent(o.get("ouvrier").getAsString() + " (" + o.get("metier").getAsString() + ")", k -> new TreeMap<>()).merge(g, 1, Integer::sum);
+            }
+            JsonObject r = new JsonObject();
+            r.addProperty("blessures", nb);
+            r.addProperty("morts", nm);
+            r.addProperty("releves_seuls", nr);
+            r.add("blessures_par_cause", JSON.toJsonTree(blessures));
+            r.add("morts_par_cause", JSON.toJsonTree(morts));
+            r.add("par_jour", JSON.toJsonTree(jours));
+            r.add("par_ouvrier", JSON.toJsonTree(ouvriers));
+            JsonObject c = new JsonObject();
+            for (var e : coups.entrySet()) {
+                JsonObject x = new JsonObject();
+                x.addProperty("nombre", (int) e.getValue()[0]);
+                x.addProperty("vie_perdue", Math.round(e.getValue()[1]));
+                c.add(e.getKey(), x);
+            }
+            r.add("coups_par_cause", c);
+            return r;
+        }
+    }
+
+    static final Survie survie = new Survie();
+    /** La cause de sa dernière mise à terre, par ouvrier : la mort au bout du temps à terre la rappelle. */
+    static final Map<UUID, String> chutes = new java.util.HashMap<>();
+
+    /** Un ouvrier du fantôme (rien sinon : une comparaison par coup, pour 50 ouvriers et plus). */
+    static boolean suivi(Travailleur t) {
+        Joueur j = joueur;
+        return j != null && !t.level().isClientSide && j.getUUID().equals(t.chef);
+    }
+
+    static String cause(Travailleur t, net.minecraft.world.damagesource.DamageSource src) {
+        String type = src.typeHolder().unwrapKey().map(k -> k.location().getPath()).orElse("autre");
+        Entity e = src.getEntity();
+        String auteur = e == null ? null : e instanceof net.minecraft.world.entity.player.Player ? "joueur" : BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+        return Survie.cause(type, auteur);
+    }
+
+    static void noter(Travailleur t, String genre, String cause) {
+        long jt = t.level().getDayTime();
+        survie.noter(genre, t.prenom, t.metier, cause, t.level().getGameTime(), jt / 24000, (int) ((jt + 6000) % 24000 / 1000), t.blockPosition().toShortString());
+    }
+
+    /** Il tombe à terre ({@link Travailleur#die} sans mort définitive). */
+    static void aTerre(Travailleur t, net.minecraft.world.damagesource.DamageSource src) {
+        if (!suivi(t)) return;
+        String c = cause(t, src);
+        chutes.put(t.getUUID(), c);
+        noter(t, "blessure", c);
+    }
+
+    /** Il se relève seul au bout de son temps à terre ({@link Blessures#seRelever}). */
+    static void releveSeul(Travailleur t) {
+        if (suivi(t)) noter(t, "releve_seul", chutes.getOrDefault(t.getUUID(), "?"));
+    }
+
+    /** Sa mort définitive : au bout du temps à terre, la cause rappelle ce qui l'y avait mis. */
+    static void mort(Travailleur t, net.minecraft.world.damagesource.DamageSource src) {
+        if (!suivi(t)) return;
+        String c = cause(t, src), chute = chutes.remove(t.getUUID());
+        if (c.equals("à terre sans secours") && chute != null) c += ", après " + chute;
+        noter(t, "mort", c);
+    }
+
+    /** Un coup reçu (debout ou à terre) : seulement additionné par cause. */
+    static void coup(Travailleur t, net.minecraft.world.damagesource.DamageSource src, float perte) {
+        if (suivi(t) && perte > 0) survie.coup(cause(t, src), perte);
     }
 
     // --- La commande -------------------------------------------------------------------------------------
@@ -419,6 +568,13 @@ public final class Fantome {
         List<Travailleur> tous = ColoniePnj.tous(c.getSource().getServer());
         List<Travailleur> miens = tous.stream().filter(t -> j.getUUID().equals(t.chef)).toList();
         Comparator<Travailleur> pres = Comparator.comparingDouble(t -> t.distanceToSqr(j));
+        // « mineur2 » : le 2e mineur embauché (plusieurs ouvriers du même métier, chacun sa mission).
+        var rang = java.util.regex.Pattern.compile("([a-z_]+)(\\d+)").matcher(n);
+        if (rang.matches()) {
+            List<Travailleur> m = miens.stream().filter(x -> x.metier.equals(rang.group(1))).sorted(Comparator.comparingInt(Entity::getId)).toList();
+            int k = Integer.parseInt(rang.group(2));
+            if (k >= 1 && k <= m.size()) return m.get(k - 1);
+        }
         Travailleur t = miens.stream().filter(x -> x.prenom.equalsIgnoreCase(n)).findFirst()
                 .or(() -> miens.stream().filter(x -> x.metier.equalsIgnoreCase(n)).min(pres))
                 .or(() -> n.equals("plus_proche") ? tous.stream().filter(x -> x.level() == j.level()).min(pres) : java.util.Optional.empty())
@@ -826,6 +982,10 @@ public final class Fantome {
         }
         r.add("casses", cs);
         if (!terrains.isEmpty()) r.add("terrains", terrains(j));
+        // Plan E6 : chaque mise à terre et chaque mort, avec sa cause et l'heure de jeu.
+        r.add("blessures", survie.liste("blessure"));
+        r.add("releves_seuls", survie.liste("releve_seul"));
+        r.add("morts", survie.liste("mort"));
 
         JsonObject resume = new JsonObject();
         resume.addProperty("ouvriers", ouvriers.size());
@@ -835,6 +995,7 @@ public final class Fantome {
         resume.add("blocs_casses_par_metier", GSON.toJsonTree(production));
         resume.addProperty("objets_au_depot", b == null ? 0 : total(b.depot));
         resume.addProperty("messages", r.getAsJsonArray("messages").size());
+        resume.add("survie", survie.resume());
         r.add("resume", resume);
         return r;
     }
