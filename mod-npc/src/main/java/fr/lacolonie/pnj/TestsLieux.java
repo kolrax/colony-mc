@@ -112,6 +112,68 @@ public class TestsLieux {
     }
 
     /**
+     * Le chasseur ne chasse que hors de la colonie : trois cochons sauvages à 6 blocs du poste (dans la colonie, plus près de
+     * lui) ne sont ni choisis ni tirés ; trois autres à 26 blocs (dehors) sont son gibier, et il en tire un (il en laisse
+     * deux). Avant : il cherchait dans 64 blocs autour du poste, colonie comprise, et tirait d'abord les plus proches.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200, batch = "lieux")
+    public static void chasseurHorsColonieSeulement(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        if (!l.isDay()) l.setDayTime(1000);
+        BlockPos base = TestsJeu.sol(h, 0, 145000);
+        for (int dx = -1; dx <= 3; dx++) for (int dz = -1; dz <= 1; dz++) l.getChunk((base.getX() >> 4) + dx, (base.getZ() >> 4) + dz);
+        java.util.List<net.minecraft.world.entity.animal.Pig> dedans = new java.util.ArrayList<>(), dehors = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            dedans.add(TestsEleveur.bete(l, net.minecraft.world.entity.EntityType.PIG, base.offset(6, 0, 2 * i - 2), false, null));
+            dehors.add(TestsEleveur.bete(l, net.minecraft.world.entity.EntityType.PIG, base.offset(26, 0, 2 * i - 2), false, null));
+        }
+        for (var c : dedans) c.setNoAi(true); // immobiles : ils restent dans la colonie, et les autres dehors
+        for (var c : dehors) c.setNoAi(true);
+        Travailleur t = TestsJeu.employe(h, "chasseur", base, Vec3.atBottomCenterOf(base.east(12)), new ItemStack(Items.BOW));
+        t.inventaire.addItem(new ItemStack(Items.ARROW, 16));
+        t.forcerChunk();
+        h.runAtTickTime(h.getTick() + 10, () -> {
+            var g = Chasseur.gibier(t, null, 6);
+            h.assertTrue(g.stream().noneMatch(dedans::contains), "aucun cochon de la colonie n'est du gibier : " + g.size() + " proies, dont "
+                    + g.stream().filter(dedans::contains).count() + " de la colonie");
+            h.assertTrue(g.size() == 1 && dehors.contains(g.get(0)), "un cochon du dehors est son gibier (il en laisse deux) : " + g.size());
+        });
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau);
+            h.assertTrue(dedans.stream().allMatch(c -> c.isAlive() && c.getHealth() == c.getMaxHealth()), "les cochons de la colonie sont intacts (" + e + ")");
+            h.assertTrue(TestsChasseur.vivants(dehors) == 2, "il tire un cochon du dehors : " + TestsChasseur.vivants(dehors) + " vivants (" + e + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Rien à portée du poste : le chasseur va voir au bord de la colonie, une direction après l'autre (est, sud, ouest, nord),
+     * et trouve au nord trois cochons à 74 blocs du poste (à plus de 64 blocs de lui tant qu'il est au poste). Sans joueur,
+     * seuls les chunks autour de lui sont chargés : du poste, il ne verrait jamais ce gibier (ici, il ne garde que les bêtes à
+     * 64 blocs de lui au plus). Avant : bredouille au poste.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3600, batch = "lieux")
+    public static void chasseurVaVoirAuBord(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        if (!l.isDay()) l.setDayTime(1000);
+        BlockPos base = TestsJeu.sol(h, 0, 148000), loin = base.north(74);
+        // Le coin du gibier reste chargé (comme si un autre joueur passait par là) : sur le serveur de test, le temps file plus
+        // vite que le disque, et des bêtes rechargées à son arrivée n'y seraient pas encore.
+        l.setChunkForced(loin.getX() >> 4, loin.getZ() >> 4, true);
+        for (int i = 0; i < 3; i++) TestsEleveur.bete(l, net.minecraft.world.entity.EntityType.PIG, loin.offset(2 * i - 2, 0, 0), false, null).setNoAi(true);
+        Travailleur t = TestsJeu.employe(h, "chasseur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.BOW));
+        t.inventaire.addItem(new ItemStack(Items.ARROW, 16));
+        t.forcerChunk();
+        Bureau.Entite d = TestsBucheron.depot(t);
+        h.succeedWhen(() -> {
+            int viande = t.compter(Actions.Filtre.de("minecraft:porkchop")) + TestsBucheron.compte(d, Items.PORKCHOP);
+            h.assertTrue(viande >= 1, "il trouve le gibier au bord, au nord, et en tire un : " + viande + " viande (" + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+            l.setChunkForced(loin.getX() >> 4, loin.getZ() >> 4, false);
+        });
+    }
+
+    /**
      * Un filon de charbon dans le sol, juste au pied d'une maison en planches : le mineur n'ouvre pas de trou là (tampon de
      * 8 blocs autour d'une construction). Avant : il extrayait tout filon qu'il voyait.
      */

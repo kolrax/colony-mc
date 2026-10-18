@@ -11,7 +11,7 @@ import java.util.Set;
  * Ce que sait le chasseur, sans le monde (pur Java, testé seul) : le gibier qu'il a le droit de tirer, l'espèce dite par le
  * chef. {@link Chasseur} y apporte le monde.
  * <p>
- * Le gibier : les bêtes sauvages (vache, mouton, cochon, poule, lapin) autour du poste. Jamais une bête d'enclos (elle est à
+ * Le gibier : les bêtes sauvages (vache, mouton, cochon, poule, lapin) hors de la colonie. Jamais une bête d'enclos (elle est à
  * l'éleveur), ni une bête à quelqu'un (nom, laisse, selle, maître), ni chez un voisin, ni un petit ; et il en laisse toujours
  * {@link #GARDER} adultes de chaque espèce aux alentours, pour que le gibier revienne.
  */
@@ -36,7 +36,7 @@ final class Chasse {
     static final int GARDER = 2;
     /** Au plus tant de bêtes par tour, puis retour au dépôt et repos. */
     static final int PAR_TOUR = 3;
-    /** Sa zone de chasse, autour du poste (plus large que l'espace de vie). */
+    /** Sa zone de chasse : au-delà du bord de la colonie (ou autour du lieu que le chef lui a désigné). */
     static final int ZONE = 64;
 
     static Espece parId(String id) {
