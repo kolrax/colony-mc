@@ -1,5 +1,18 @@
 [
   {
+    "slug": "burnt",
+    "title": "Burnt + Additions",
+    "version": "1.10.5.2",
+    "file": "burnt-1.10.5.2-neoforge-1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/tsc9D2wh/versions/F4H29p4c/burnt-1.10.5.2-neoforge-1.21.1.jar",
+    "sha1": "b8986599c48513e9113d2cbc33683354dfa8803f",
+    "sha512": "a881ba0d892b149a017954a7ff5f7705f11ecc9163159e61bb48026e4d563814f7e3703251b5afa64bb27aa1daa1ed7380ce2bd2983baef157e414e5ac8ea9b6",
+    "size": 22400849,
+    "required_by": null,
+    "client": "required",
+    "server": "required"
+  },
+  {
     "slug": "chunky",
     "title": "Chunky",
     "version": "1.4.23",
@@ -21,8 +34,8 @@
     "sha1": "c3e5733ba4503b102589a026000fd5ce0212f6f2",
     "sha512": "aaf9b010955b8cd294e5a92f069985b18729fd5e2cf22d351f1dff9680f15488688803ec41e77e941cbde130ceb535014ca4c868047d80ab69c2d508e216654d",
     "size": 1163890,
-    "required_by": "cristel-lib",
-    "client": "unsupported",
+    "required_by": "burnt",
+    "client": "required",
     "server": "required"
   },
   {
@@ -130,6 +143,32 @@
     "server": "required"
   },
   {
+    "slug": "distanthorizons",
+    "title": "Distant Horizons",
+    "version": "3.3.3-1.21.1",
+    "file": "DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
+    "url": "https://cdn.modrinth.com/data/uCdwusMi/versions/9w34y8ai/DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
+    "sha1": "4357b4d19fab818780c94f0e43dad1cc931634b2",
+    "sha512": "d14b32d3fd143a06514d6ad388eee11e9d657c84e1a937aaf8d033b1137fb43ef8b05cff1011a994cc42f3106823c51234f8bc18d72bb05bc317a20ea83c50ed",
+    "size": 28289212,
+    "required_by": null,
+    "client": "required",
+    "server": "required"
+  },
+  {
+    "slug": "do-a-barrel-roll",
+    "title": "Do a Barrel Roll",
+    "version": "3.7.3+1.21-neoforge",
+    "file": "do_a_barrel_roll-neoforge-3.7.3+1.21.jar",
+    "url": "https://cdn.modrinth.com/data/6FtRfnLg/versions/Zj604q5O/do_a_barrel_roll-neoforge-3.7.3%2B1.21.jar",
+    "sha1": "6a3cc7dc17fb701087a9705b06d75d9bb5f09065",
+    "sha512": "dc4a76eacc44b17c444368fdf012c5b06cd9f88463f562cc1d275e2b4e8e15b5f141373fc65de9b56167355d7a406b1dbee691b6cf20a4026b61faadb1d93c17",
+    "size": 465787,
+    "required_by": null,
+    "client": "required",
+    "server": "unsupported"
+  },
+  {
     "slug": "ferrite-core",
     "title": "FerriteCore",
     "version": "7.0.3-neoforge",
@@ -139,6 +178,32 @@
     "sha512": "19af89a2075bb10a63884fa853ebf84b02c79dc3242430ecdad056fd764fdcde367a7303276b329df01b0736e2ef264c5d80c7dc92c6aebd244f556a230bb417",
     "size": 121559,
     "required_by": null,
+    "client": "required",
+    "server": "required"
+  },
+  {
+    "slug": "forgified-fabric-api",
+    "title": "Forgified Fabric API",
+    "version": "0.116.15+2.3.6+1.21.1",
+    "file": "forgified-fabric-api-0.116.15+2.3.6+1.21.1.jar",
+    "url": "https://cdn.modrinth.com/data/Aqlf1Shp/versions/C4eskNuR/forgified-fabric-api-0.116.15%2B2.3.6%2B1.21.1.jar",
+    "sha1": "1fe1ca9f440cd30c86186e42505694b70ececc11",
+    "sha512": "470ae4e8569484e6942a2f7e09a37ae58a58e0ad44f49f0d483db88024db19d41bfac3c68221c38623829871ade9d89bc5aa31cf0e682e798b2f9029b808011d",
+    "size": 5612888,
+    "required_by": "do-a-barrel-roll",
+    "client": "required",
+    "server": "unsupported"
+  },
+  {
+    "slug": "geckolib",
+    "title": "Geckolib",
+    "version": "4.9.3",
+    "file": "geckolib-neoforge-1.21.1-4.9.3.jar",
+    "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/Grwn5rUB/geckolib-neoforge-1.21.1-4.9.3.jar",
+    "sha1": "5cfe835472a5c5457ae9ac192d9d7b317454d5ac",
+    "sha512": "8dfa5f8c57224a5e34e5098367ea9819ca6dc9c11357cd3062c16da3455c8bd1a483098af7383debc4b9ce8e4d7ab3fdc799b415644eb829da83eb72a7335dfd",
+    "size": 634531,
+    "required_by": "burnt",
     "client": "required",
     "server": "required"
   },
@@ -203,7 +268,7 @@
     "sha1": "fe7eb612a0fa0c41ce94d914162d298755bb25a3",
     "sha512": "0ba80383039270dec739f669fe936d091b87027c350972c88085729333e73e723e0c722d734c0592c08ffd6c5a21c16099f2e54cf7cfbcbd3061f5e3cbd62cb4",
     "size": 979783,
-    "required_by": "terralith",
+    "required_by": null,
     "client": "unsupported",
     "server": "required"
   },
