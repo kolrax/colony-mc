@@ -253,9 +253,10 @@ final class Cerveau {
             if (produisait && Actions.Deposer.utile(t, m.garder)) { lancer(t, new Actions.Deposer(m.garder)); return; }
         }
 
-        // S'il a dans son sac de quoi finir une quantité, il rentre la livrer, de loin comme dans la colonie (seul le dépôt compte).
-        if (c != null && c.objet != null && mission.quantite() && mission.livre + t.compter(c.objet) >= mission.nombre
-                && !"depot_plein".equals(t.resultat) && Actions.Deposer.utile(t, m.garder)) {
+        // S'il a dans son sac de quoi finir une quantité, il rentre la livrer, de loin comme dans la colonie (seul le dépôt compte ;
+        // seulement ce qu'il déposera : pas la pile qu'il garde, le pavé du mineur ou sa nourriture).
+        int livrable = c != null && c.objet != null && mission.quantite() ? Actions.Deposer.aDeposer(t, m.garder, c.objet) : 0;
+        if (livrable > 0 && mission.livre + livrable >= mission.nombre && !"depot_plein".equals(t.resultat)) {
             lancer(t, new Actions.Deposer(m.garder));
             return;
         }
@@ -267,7 +268,7 @@ final class Cerveau {
         }
         // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse. Sa dernière mission faite
         // (file vide, Travailleur.nettoyerMissions), il ne repart pas produire de lui-même : il attend au poste une autre mission.
-        boolean fileFinie = t.missions.isEmpty() && mem.getBoolean("file_finie");
+        boolean fileFinie = t.fileFinie();
         if (mission == null && (!t.missions.isEmpty() || fileFinie) && !m.enCours(t)) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
                 mem.putBoolean("livre", true);

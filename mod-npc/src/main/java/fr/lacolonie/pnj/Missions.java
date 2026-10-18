@@ -53,6 +53,7 @@ public final class Missions {
             m.lieu = lieu == null ? null : lieu.immutable();
             t.missions.removeIf(x -> x.id.equals(id) && x.horaires.equals(horaires)); // la même mission, redonnée : elle est remplacée
             t.missions.add(m);
+            t.missionAjoutee();
             Consignes.annuler(t); // un « garde à vous » ou une tâche du répertoire s'arrête
             t.ordreChef = t.level().getGameTime();
             reprendre(t);

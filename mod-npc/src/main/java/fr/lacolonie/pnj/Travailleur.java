@@ -189,7 +189,7 @@ public class Travailleur extends PathfinderMob {
     /** Une seule mission, qui remplace les autres (tests, et ancienne façon de faire). */
     public void mission(String id, String mode, int nombre) {
         missions.clear();
-        if (id != null && !id.isEmpty()) missions.add(new Mission(id, mode, nombre));
+        if (id != null && !id.isEmpty()) { missions.add(new Mission(id, mode, nombre)); missionAjoutee(); }
     }
 
     /** La mission sur laquelle il travaille : la première qui n'est pas remplie et qui est dans ses horaires, ou null. */
@@ -249,7 +249,7 @@ public class Travailleur extends PathfinderMob {
         int fait = c == null || c.objet == null ? 0 : Metier.avancement(this, m);
         boolean hors = m == null && !missions.isEmpty() && missions.stream().noneMatch(x -> x.enHoraires(heure()));
         return Statut.texte(new Statut.Etat(metier, aTerre, mode == Mode.GREVE, mode == Mode.ATTENDRE, mode == Mode.SUIVRE, bloc,
-                !missions.isEmpty() || memoire.getBoolean("file_finie"), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
+                !missions.isEmpty() || fileFinie(), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
     }
 
     /** Retire les quantités livrées et les missions qui n'existent plus dans son métier ; prévient son chef. */
@@ -269,9 +269,19 @@ public class Travailleur extends PathfinderMob {
                         suivante == null ? "" : Metier.nomMission(metier, suivante));
             }
         }
-        // Sa dernière mission faite : il attend au poste une autre mission, « En attente », sans produire de lui-même (Cerveau).
-        if (faite && missions.isEmpty()) memoire.putBoolean("file_finie", true);
+        // Sa dernière mission de récolte faite : il attend au poste une autre mission, « En attente », sans repartir produire
+        // de lui-même (Cerveau). Les autres métiers (cuisinier, transporteur, garde…) reprennent leur service de base.
+        if (faite && missions.isEmpty() && RECOLTE.contains(metier)) memoire.putBoolean("file_finie", true);
     }
+
+    /** Les métiers de récolte, qui partent loin : leur dernière mission faite, ils attendent au poste ({@link #fileFinie}). */
+    static final java.util.Set<String> RECOLTE = java.util.Set.of("bucheron", "mineur", "chasseur", "pecheur", "fermier", "eleveur");
+
+    /** Sa dernière mission de récolte est faite, et on ne lui en a pas donné d'autre depuis. */
+    boolean fileFinie() { return missions.isEmpty() && memoire.getBoolean("file_finie") && RECOLTE.contains(metier); }
+
+    /** Une mission ajoutée : la file n'est plus « faite » (annulée ensuite, il reprend son travail de base). */
+    void missionAjoutee() { memoire.remove("file_finie"); }
     // --- Ordres longs (cahier 8.3) -------------------------------------------------------------------
 
     /** Ses règles (« s'il pleut, rentre », « quand tu as fini, va aider Raoul »…), 8 au plus, sauvegardées. */
@@ -737,7 +747,7 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
-                    : missions.isEmpty() && memoire.getBoolean("file_finie") ? "Mission remplie"
+                    : fileFinie() ? "Mission remplie"
                     : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") && !metier.equals("macon") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail"; // vert à l'écran : « de nuit » est dit dans son portrait (fiche)
         };
@@ -1931,6 +1941,7 @@ public class Travailleur extends PathfinderMob {
                 Mission nm = new Mission(m.id(), m.mode(), m.nombre());
                 nm.quotidienne = l.quotidien && nm.quantite();
                 missions.add(nm);
+                missionAjoutee();
             }
             auTravail = true;
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
@@ -2194,6 +2205,8 @@ public class Travailleur extends PathfinderMob {
         memoire.remove("achat"); // « qu'as-tu acheté ? » : la réponse est pour ce chef-là
         memoire.remove("garde_depot");
         memoire.remove("boutique"); // sa boutique et ses prix : ceux de ce chef-là (Boutiquier)
+        memoire.remove("file_finie"); // ses missions : celles de ce chef-là (Cerveau)
+        memoire.remove("mission_vue");
 
         lettresADeposer.clear();
         lettresALire.clear();

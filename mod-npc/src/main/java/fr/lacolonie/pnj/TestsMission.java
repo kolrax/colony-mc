@@ -226,4 +226,62 @@ public class TestsMission {
             t.discard();
         });
     }
+
+    /** Un cuisinier dont la mission est faite reprend son service de base : seuls les métiers de récolte attendent au poste. */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void cuisinierContinueApresMission(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "cuisinier", 739, ItemStack.EMPTY);
+        h.assertTrue(Missions.donner(chef, t, "pain", "fois", 2, "toujours", null).ok(), "mission acceptée");
+        t.missions.get(0).livre = 2;
+        t.nettoyerMissions();
+        h.assertTrue(t.missions.isEmpty(), "mission faite et retirée");
+        h.assertFalse(t.memoire.getBoolean("file_finie"), "le cuisinier n'attend pas une autre mission");
+        h.assertTrue(t.statutUnique().equals(Statut.enCours("cuisinier", null, 0, 0)), "son service de base : « " + t.statutUnique() + " »");
+        t.discard();
+        h.succeed();
+    }
+
+    /** Sa file faite, une mission donnée puis annulée, ou un renvoi : il reprend son travail de base (le bûcheron coupe). */
+    @GameTest(template = "vide", timeoutTicks = 100)
+    public static void fileFinieOublieeEnsuite(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "bucheron", 740, new ItemStack(Items.IRON_AXE));
+        h.assertTrue(Missions.donner(chef, t, "tout", "fois", 1, "toujours", null).ok(), "mission acceptée");
+        t.missions.get(0).livre = 1;
+        t.nettoyerMissions();
+        h.assertTrue(t.statutUnique().equals(Statut.ATTENTE), "sa file faite, il attend : « " + t.statutUnique() + " »");
+        h.assertTrue(Missions.donner(chef, t, "tout", "fois", 5, "toujours", null).ok(), "nouvelle mission");
+        CompoundTag premiere = new CompoundTag();
+        premiere.putInt("index", 0);
+        premiere.putInt("n", 1);
+        Missions.action(chef, t, "annuler", premiere);
+        h.assertTrue(t.missions.isEmpty() && !t.memoire.getBoolean("file_finie"), "annulée : la file n'est plus « faite »");
+        h.assertTrue(t.statutUnique().equals(Statut.enCours("bucheron", null, 0, 0)), "il coupe de nouveau : « " + t.statutUnique() + " »");
+        t.memoire.putBoolean("file_finie", true);
+        t.memoire.putString("mission_vue", "tout/quantite/5");
+        Missions.action(chef, t, "licencier", new CompoundTag());
+        h.assertFalse(t.memoire.contains("file_finie") || t.memoire.contains("mission_vue"), "renvoyé : rien de ses missions d'avant (" + t.memoire + ")");
+        t.discard();
+        h.succeed();
+    }
+
+    /** « Pierre, 64 » : la pile de pavé qu'il garde ne compte pas pour rentrer livrer ; il ne remonte pas pour un seul bloc. */
+    @GameTest(template = "vide", timeoutTicks = 300)
+    public static void pileGardeeNeFaitPasRentrer(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "mineur", 741, new ItemStack(Items.IRON_PICKAXE));
+        BlockPos loin = TestsJeu.sol(h, 741 * 400 - 14, 60000);
+        t.moveTo(loin.getX() + 0.5, loin.getY(), loin.getZ() + 0.5);
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 64));
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 1)); // une pile gardée, plus un bloc
+        h.assertTrue(Missions.donner(chef, t, "pierre", "fois", 64, "toujours", null).ok(), "mission acceptée");
+        Actions.Filtre pave = Actions.Filtre.de("#c:cobblestones");
+        h.runAtTickTime(240, () -> {
+            Bureau.Entite b = Bureau.entite(t);
+            h.assertTrue(b != null && b.compter(pave) == 0, "rien déposé pour un bloc (" + (b == null ? "?" : b.compter(pave)) + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
 }
