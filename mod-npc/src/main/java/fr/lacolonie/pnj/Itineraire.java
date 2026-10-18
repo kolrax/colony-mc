@@ -766,16 +766,19 @@ final class Itineraire {
      * La case de son sac d'où prendre un bloc à poser, -1 s'il n'en a pas. Ce que sa mission demande n'y passe pas : de cet
      * objet, il garde au moins le nombre demandé.
      */
-    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false); }
+    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false, true); }
 
     /** Pareil ; {@code sansBois} : pas de planches (pour boucher la lave, elles brûleraient). */
-    static int caseDeChantier(Travailleur t, boolean sansBois) {
+    static int caseDeChantier(Travailleur t, boolean sansBois) { return caseDeChantier(t, sansBois, false); }
+
+    /** {@code reprenable} : seulement des blocs qu'il saura reprendre une fois posés (pas de pierre sans pioche : elle serait perdue). */
+    static int caseDeChantier(Travailleur t, boolean sansBois, boolean reprenable) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int garder = f == null ? 0 : t.missionActive().nombre, compte = 0, caseMission = -1;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s) || sansBois && s.is(ItemTags.PLANKS)) continue;
+            if (!blocDeChantier(s) || sansBois && s.is(ItemTags.PLANKS) || reprenable && !reprenable(t, s)) continue;
             if (f == null || !f.objet(s)) return i;
             compte += s.getCount();
             caseMission = i;
@@ -783,14 +786,19 @@ final class Itineraire {
         return compte > garder ? caseMission : -1;
     }
 
-    /** Combien de blocs il peut poser (sans toucher à ce que sa mission demande). */
+    /** Ce bloc, une fois posé, il saura le reprendre (le récolter avec ce qu'il a). */
+    static boolean reprenable(Travailleur t, ItemStack s) {
+        return s.getItem() instanceof net.minecraft.world.item.BlockItem b && recolte(t, b.getBlock().defaultBlockState());
+    }
+
+    /** Combien de blocs il peut poser pour monter ou franchir un trou (qu'il saura reprendre, sans toucher à ce que sa mission demande). */
     static int blocsDeChantier(Travailleur t) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int libres = 0, mission = 0;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s)) continue;
+            if (!blocDeChantier(s) || !reprenable(t, s)) continue;
             if (f != null && f.objet(s)) mission += s.getCount(); else libres += s.getCount();
         }
         return libres + (f == null ? 0 : Math.max(0, mission - t.missionActive().nombre));

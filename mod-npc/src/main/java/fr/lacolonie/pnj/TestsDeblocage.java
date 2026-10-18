@@ -107,19 +107,41 @@ public class TestsDeblocage {
     }
 
     /**
+     * Pareil, mais de la pierre taillée en poche, toujours sans pioche : posée, elle ne se reprendrait pas. Il ne monte pas
+     * dessus (il creuse comme avant) : pas de pilier laissé, pas une pierre perdue.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true)
+    public static void neMontePasSurDesBlocsPerdus(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++)
+            if (x != 12 || z != 12 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.COBBLESTONE, 16), new BlockPos(12, 7, 4));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.runAtTickTime(390, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", pierres " + t.compter(Actions.Filtre.de("minecraft:cobblestone"));
+            for (int y = 4; y <= 6; y++)
+                h.assertFalse(h.getBlockState(new BlockPos(12, y, 12)).is(Blocks.COBBLESTONE), "il ne doit pas poser de pierre qu'il ne reprendrait pas (" + e + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:cobblestone")) == 16, "il ne doit perdre aucune pierre (" + e + ")");
+            t.discard();
+            h.succeed();
+        });
+    }
+
+    /**
      * Sur un îlot de pierre de 3 x 3, entouré d'une douve vide d'un bloc de large et de 10 de profondeur (trop haut pour
-     * sauter), de la pierre en poche, son bureau de l'autre côté : il pose un bloc de pont et passe.
+     * sauter), de la pierre en poche et une pioche, son bureau de l'autre côté : il pose un bloc de pont et passe.
      */
     @GameTest(template = "grand", timeoutTicks = 1200, skyAccess = true)
     public static void passeEnPosantUnPont(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++)
             if (Math.max(Math.abs(x - 12), Math.abs(z - 12)) != 2) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, Blocks.STONE);
         Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 11, 12, new ItemStack(Items.COBBLESTONE, 16), new BlockPos(12, 11, 3));
+        t.inventaire.addItem(new ItemStack(Items.IRON_PICKAXE)); // sans pioche, il ne poserait pas une pierre qu'il ne reprendrait pas
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
         h.succeedWhen(() -> {
             String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", pierres " + t.compter(Actions.Filtre.de("minecraft:cobblestone"));
             h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit avoir passé la douve et rejoint son bureau (" + e + ")");
-            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:cobblestone")) < 16, "il doit avoir posé un bloc (" + e + ")");
+            // Il a une pioche : passé de l'autre côté, il reprend le bloc du pont (plan A3 : rien de perdu).
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:cobblestone")) == 16, "il doit avoir repris le bloc du pont (" + e + ")");
             t.discard();
         });
     }
