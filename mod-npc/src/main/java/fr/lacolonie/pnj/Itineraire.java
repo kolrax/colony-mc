@@ -335,6 +335,9 @@ final class Itineraire {
         // Rien d'atteignable (au fond d'un trou, au pied d'une paroi) : il creuse un escalier pour en sortir.
         // S'il ne peut pas creuser non plus (construction, liquide), après plusieurs essais, il se dit coincé.
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
+        // Plan A3 : la paroi devant lui ne se récolte pas avec ce qu'il a (de la pierre sans pioche) : la creuser serait long
+        // et ne rendrait rien. Il monte d'abord sur des blocs de son sac (qu'il reprend ensuite), puis creuse s'il le faut.
+        if (evasionPermise(t) && sansOutilPourLaParoi(t) && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -711,6 +714,12 @@ final class Itineraire {
         if (aCreuser == null) reprise = false;
     }
 
+    /** La paroi devant lui, vers le but, n'est pas vide et il n'a rien pour la récolter (de la pierre, sans pioche). */
+    private boolean sansOutilPourLaParoi(Travailleur t) {
+        BlockPos q = t.blockPosition().relative(Direction.getNearest(but.x - t.getX(), 0, but.z - t.getZ())).above();
+        return !Monde.traversable(t.level(), q) && !recolte(t, t.level().getBlockState(q));
+    }
+
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
     private void monter(Travailleur t) {
         BlockPos vers = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
@@ -757,16 +766,19 @@ final class Itineraire {
      * La case de son sac d'où prendre un bloc à poser, -1 s'il n'en a pas. Ce que sa mission demande n'y passe pas : de cet
      * objet, il garde au moins le nombre demandé.
      */
-    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false); }
+    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false, true); }
 
     /** Pareil ; {@code sansBois} : pas de planches (pour boucher la lave, elles brûleraient). */
-    static int caseDeChantier(Travailleur t, boolean sansBois) {
+    static int caseDeChantier(Travailleur t, boolean sansBois) { return caseDeChantier(t, sansBois, false); }
+
+    /** {@code reprenable} : seulement des blocs qu'il saura reprendre une fois posés (pas de pierre sans pioche : elle serait perdue). */
+    static int caseDeChantier(Travailleur t, boolean sansBois, boolean reprenable) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int garder = f == null ? 0 : t.missionActive().nombre, compte = 0, caseMission = -1;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s) || sansBois && s.is(ItemTags.PLANKS)) continue;
+            if (!blocDeChantier(s) || sansBois && s.is(ItemTags.PLANKS) || reprenable && !reprenable(t, s)) continue;
             if (f == null || !f.objet(s)) return i;
             compte += s.getCount();
             caseMission = i;
@@ -774,14 +786,19 @@ final class Itineraire {
         return compte > garder ? caseMission : -1;
     }
 
-    /** Combien de blocs il peut poser (sans toucher à ce que sa mission demande). */
+    /** Ce bloc, une fois posé, il saura le reprendre (le récolter avec ce qu'il a). */
+    static boolean reprenable(Travailleur t, ItemStack s) {
+        return s.getItem() instanceof net.minecraft.world.item.BlockItem b && recolte(t, b.getBlock().defaultBlockState());
+    }
+
+    /** Combien de blocs il peut poser pour monter ou franchir un trou (qu'il saura reprendre, sans toucher à ce que sa mission demande). */
     static int blocsDeChantier(Travailleur t) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int libres = 0, mission = 0;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s)) continue;
+            if (!blocDeChantier(s) || !reprenable(t, s)) continue;
             if (f != null && f.objet(s)) mission += s.getCount(); else libres += s.getCount();
         }
         return libres + (f == null ? 0 : Math.max(0, mission - t.missionActive().nombre));
