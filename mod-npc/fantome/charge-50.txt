@@ -1,0 +1,22 @@
+# Banc de charge en vraie partie (case 12 du lot 16) : 50 ouvriers du banc (/pnj banc : mineurs avec la mission
+# « fer », bûcherons, guerriers en ronde) au travail sur un monde généré, au bord d'une forêt, en temps réel (pas de
+# tick sprint). « pnj charge » donne le temps moyen et le pire temps de tick du serveur sur les 100 derniers ticks, et
+# la part du mod. Mesure à vide d'abord, puis quatre mesures à 30 s d'écart.
+time set 1000
+fantome apparait foret
+attendre 20
+pnj charge
+# Une clairière pour la grille du banc (50 places à 3 blocs d'écart, 3 blocs au sud du fantôme) : sans elle, les
+# arbres prennent la moitié des places (24 ouvriers sur 50 au premier essai). Le sol reste tel quel.
+execute as Fantome at @s run fill ~-14 ~ ~-5 ~14 ~10 ~24 air
+execute as Fantome at @s run pnj banc 50
+execute as Fantome at @s run pnj banc 50 tous ~ ~ ~3
+attendre 30
+pnj charge
+attendre 30
+pnj charge
+attendre 30
+pnj charge
+attendre 30
+pnj charge
+pnj banc fin
