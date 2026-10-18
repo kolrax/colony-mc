@@ -1,0 +1,23 @@
+# Le chasseur seul (refonte : il chasse hors de la colonie). Poste au bord d'un village, arc et flèches au dépôt, une
+# mission de viande. Attendu : de la viande au dépôt en une journée, prise hors de la colonie (48 blocs du poste) ; aucune
+# bête d'enclos tuée ; des statuts lisibles. Le fantôme reste près du poste (chef présent).
+# La monnaie du monde d'essai (écrite par tools/fantome.py) : cuivre 1, or 8, émeraude 64.
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 16
+fantome embauche chasseur 2
+# Un ouvrier tout juste embauché ne connaît son poste qu'à sa seconde suivante (voir trois-ouvriers.txt).
+attendre 20
+ticks 40
+fantome donne minecraft:bow 1
+fantome donne minecraft:arrow 32
+fantome donne minecraft:bread 16
+fantome depose
+fantome paie
+fantome mission chasseur viande fois 6
+fantome rapport chasseur-dehors-debut
+attendre 5
+ticks 6000
+fantome rapport chasseur-dehors-midi
+jours 1
