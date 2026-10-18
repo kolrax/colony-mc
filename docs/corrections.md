@@ -34,5 +34,15 @@ Ce qu'on veut :
 - Si c'est impossible sans changer la configuration de Xaero, l'écrire dans `docs/demandes-admin.md` et prévenir KOLRAX (`demandes/` du panneau).
 - Le client change, donc il faut un modpack obligatoire.
 
+## Plan E : des ouvriers qui ne meurent plus tout le temps, sans être invincibles (validé par KOLRAX le 18/10)
+Constat : Oriane, la mineuse de Nielscutt, s'est blessée seule dans sa mine. Personne n'a pu la relever pendant 5 minutes, et elle est morte. Aujourd'hui, un ouvrier seul ne peut pas être sauvé. Il a 20 points de vie (plus 2 par étoile), pas d'armure, et meurt après 3, 5 ou 8 minutes à terre sans aide.
+1. **Se relever seul, une fois** : à la fin du temps à terre, il ne meurt plus. Il se relève avec peu de vie et une blessure grave (il est ralenti), abandonne sa mission, rentre au poste et se repose jusqu'à guérir, avec une ligne au Journal. **Il meurt** s'il retombe à terre pendant qu'il est encore blessé (dans les 20 minutes), s'il est achevé par un joueur (la guerre ne change pas), ou dans le vide ou un bain de lave.
+2. **Fuir avant d'être à terre** : sous la moitié de sa vie, il arrête le travail, s'éloigne du danger et mange ce qu'il a. Hors combat et nourri, il regagne sa vie petit à petit, comme un joueur.
+3. **S'équiper** : il prend au dépôt la meilleure armure qu'il y trouve, comme pour ses outils. Le mineur éclaire sa galerie avec les torches du dépôt, pour qu'il apparaisse moins de monstres.
+4. **Dangers de la nature** : vérifier puis renforcer les réflexes (pas de chute de plus de 3 blocs, pas de lave à côté de lui, pas de noyade), avec un scénario du joueur fantôme de 2 jours dans une mine.
+5. **Prévenir quand il est à terre** : un message au chef avec la position, une ligne rouge au Journal, un repère rouge sur la carte Xaero (avec le plan D). Les ouvriers proches apportent à manger, pas seulement le guérisseur.
+6. **Compter, puis régler** : un scénario du fantôme de 2 jours avec 10 ouvriers note chaque blessure et chaque mort, avec leur cause (le journal du serveur dit déjà pourquoi un ouvrier tombe). Ensuite, régler la vie de base (20 ou 30 ?), la durée à terre et la vitesse de guérison. Objectif : **au plus une mort pour 10 ouvriers par semaine de jeu**, si le joueur s'en occupe un minimum. Tous les chiffres vont dans le fichier de réglages.
+Ce qui empêche l'invincibilité : un deuxième K.O. pendant la blessure est mortel ; un joueur peut l'achever ; le vide et la lave tuent ; une mort coûte toujours (la tombe, la réputation, une nouvelle embauche).
+
 ## Ordre
-Plans B et D d'abord (courts, et ils se livrent avec le même modpack), puis le plan A. Une livraison par plan fini et vert.
+Plans B et D d'abord (courts, et ils se livrent avec le même modpack), puis le plan E, puis le plan A. Une livraison par plan fini et vert.

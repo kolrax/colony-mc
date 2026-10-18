@@ -122,4 +122,5 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 ## 17. Corrections du 18/10 d'après les rapports en jeu de KOLRAX (voir `docs/corrections.md`)
 - [ ] Plan B : compteur du mineur qui ne monte pas ; retrait d'« expéditions max » et des horaires généraux (seulement les horaires de chaque mission)
 - [ ] Plan D : chaque joueur voit ses propres ouvriers sur la carte Xaero (seulement eux), sans toucher aux profils Xaero ; modpack obligatoire
+- [ ] Plan E : ouvriers moins fragiles sans être invincibles (se relever seul une fois, fuir à mi-vie et guérir, armure et torches du dépôt, dangers de la nature, alerte à terre avec repère Xaero, morts comptées au fantôme puis chiffres réglés)
 - [ ] Plan A : déplacements « GPS » (trajet calculé en entier, nouveau chemin après 3 s immobile, montagnes contournées ou gravies avec blocs ou seau, mineur qui contourne sous terre), vérifiés au joueur fantôme
