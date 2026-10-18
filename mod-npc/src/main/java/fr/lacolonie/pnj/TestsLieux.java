@@ -147,6 +147,33 @@ public class TestsLieux {
     }
 
     /**
+     * Rien à portée du poste : le chasseur va voir au bord de la colonie, une direction après l'autre (est, sud, ouest, nord),
+     * et trouve au nord trois cochons à 74 blocs du poste (à plus de 64 blocs de lui tant qu'il est au poste). Sans joueur,
+     * seuls les chunks autour de lui sont chargés : du poste, il ne verrait jamais ce gibier (ici, il ne garde que les bêtes à
+     * 64 blocs de lui au plus). Avant : bredouille au poste.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3600, batch = "lieux")
+    public static void chasseurVaVoirAuBord(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        if (!l.isDay()) l.setDayTime(1000);
+        BlockPos base = TestsJeu.sol(h, 0, 148000), loin = base.north(74);
+        // Le coin du gibier reste chargé (comme si un autre joueur passait par là) : sur le serveur de test, le temps file plus
+        // vite que le disque, et des bêtes rechargées à son arrivée n'y seraient pas encore.
+        l.setChunkForced(loin.getX() >> 4, loin.getZ() >> 4, true);
+        for (int i = 0; i < 3; i++) TestsEleveur.bete(l, net.minecraft.world.entity.EntityType.PIG, loin.offset(2 * i - 2, 0, 0), false, null).setNoAi(true);
+        Travailleur t = TestsJeu.employe(h, "chasseur", base, Vec3.atBottomCenterOf(base.west(2)), new ItemStack(Items.BOW));
+        t.inventaire.addItem(new ItemStack(Items.ARROW, 16));
+        t.forcerChunk();
+        Bureau.Entite d = TestsBucheron.depot(t);
+        h.succeedWhen(() -> {
+            int viande = t.compter(Actions.Filtre.de("minecraft:porkchop")) + TestsBucheron.compte(d, Items.PORKCHOP);
+            h.assertTrue(viande >= 1, "il trouve le gibier au bord, au nord, et en tire un : " + viande + " viande (" + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+            l.setChunkForced(loin.getX() >> 4, loin.getZ() >> 4, false);
+        });
+    }
+
+    /**
      * Un filon de charbon dans le sol, juste au pied d'une maison en planches : le mineur n'ouvre pas de trou là (tampon de
      * 8 blocs autour d'une construction). Avant : il extrayait tout filon qu'il voyait.
      */

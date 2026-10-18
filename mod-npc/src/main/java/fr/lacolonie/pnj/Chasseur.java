@@ -201,8 +201,33 @@ final class Chasseur extends Metier {
 
     static final Map<Travailleur, Pres> PRES = new WeakHashMap<>();
 
-    /** Jusqu'où il chasse depuis le poste, hors de la colonie : le rayon de la colonie, plus {@link Chasse#ZONE}. */
-    static int portee() { return Reglages.actuel.rayon_colonie + Chasse.ZONE; }
+    /** Jusqu'où il chasse depuis le poste, hors de la colonie : le rayon de la colonie, plus {@link Chasse#ZONE} (128 au plus). */
+    static int portee() { return Math.min(Reglages.actuel.rayon_colonie + Chasse.ZONE, 128); }
+
+    /** Il chasse hors de la colonie : pas de lieu désigné, et les règles de lieu valent ({@link Lieux#regles}). */
+    static boolean dehors(Travailleur t) { return t.lieuTravail() == null && Lieux.regles(t.level()); }
+
+    /** Les directions où il cherche le gibier, juste au-delà du bord de la colonie (est, sud, ouest, nord). */
+    static final int BORDS = 4;
+
+    /** Le point juste au-delà du bord de la colonie dans la direction {@code cap} : 16 blocs plus loin que le bord. */
+    static BlockPos bord(Travailleur t, int cap) {
+        int r = Reglages.actuel.rayon_colonie + 16, c = Math.floorMod(cap, BORDS);
+        return t.bureau.offset(c == 0 ? r : c == 2 ? -r : 0, 0, c == 1 ? r : c == 3 ? -r : 0);
+    }
+
+    /** La direction suivante, retenue : la battue d'après repart de là. */
+    static void tourner(Travailleur t) { t.memoire.putInt("chasse_cap", Math.floorMod(t.memoire.getInt("chasse_cap") + 1, BORDS)); }
+
+    /**
+     * Rien à portée : il va voir au bord de la colonie, dans la direction retenue ; s'il y est déjà, dans la suivante. Sans
+     * joueur, seuls les chunks autour de lui sont chargés : du poste, il ne voit pas le gibier du dehors.
+     */
+    static Actions.Action auBord(Travailleur t) {
+        BlockPos b = bord(t, t.memoire.getInt("chasse_cap"));
+        if (LieuxRegles.dist2(b.getX(), b.getZ(), t.getBlockX(), t.getBlockZ()) < 12 * 12) { tourner(t); b = bord(t, t.memoire.getInt("chasse_cap")); }
+        return new Actions.Aller(Vec3.atBottomCenterOf(b), 6, true);
+    }
 
     static Chasse.Espece espece(Animal a) { return Chasse.parType(BuiltInRegistries.ENTITY_TYPE.getKey(a.getType()).toString()); }
 
@@ -217,9 +242,9 @@ final class Chasseur extends Metier {
         if (p.jusqua <= maintenant) { p.ouvertes.clear(); p.enclos.clear(); p.douteuses.clear(); p.jusqua = maintenant + REVUE; }
         List<Animal> betes = new ArrayList<>();
         // Sa mission a un lieu (ou « Travaille ici ») : il chasse autour de ce lieu, colonie comprise. Sinon, hors de la
-        // colonie seulement (refonte) : un anneau autour du poste, jusqu'à portee() blocs.
+        // colonie seulement (refonte) : un anneau autour du poste, jusqu'à portee() blocs, et à ZONE blocs de lui au plus.
         BlockPos centre = t.lieuTravail() != null ? t.lieuTravail() : t.bureau;
-        boolean dehors = t.lieuTravail() == null && Lieux.regles(l);
+        boolean dehors = dehors(t);
         int r = dehors ? portee() : Chasse.ZONE;
         double bx = centre.getX() + 0.5, bz = centre.getZ() + 0.5;
         // Les bêtes qu'un autre chasseur traque déjà : il les lui laisse (deux chasseurs ne courent pas la même).
@@ -229,7 +254,7 @@ final class Chasseur extends Metier {
         // Les bêtes de la colonie sont écartées dès la recherche : elles ne prennent pas de place dans les BETES_MAX.
         l.getEntities(EntityTypeTest.forClass(Animal.class), new AABB(centre).inflate(r, 16, r),
                 a -> a.isAlive() && espece(a) != null && Math.pow(a.getX() - bx, 2) + Math.pow(a.getZ() - bz, 2) <= (double) r * r
-                        && !(dehors && Lieux.dansColonie(t, a.blockPosition())), betes, BETES_MAX);
+                        && !(dehors && (a.distanceToSqr(t) > Chasse.ZONE * Chasse.ZONE || Lieux.dansColonie(t, a.blockPosition()))), betes, BETES_MAX);
         betes.sort(Comparator.comparingDouble(a -> a.distanceToSqr(t)));
         long tard = maintenant;
         t.inaccessibles.values().removeIf(v -> v < tard);
@@ -265,8 +290,10 @@ final class Chasseur extends Metier {
         final int voulu;
         final boolean ordre;
         Actions.Action sous;
-        int etape, tues, ratees;
-        boolean sansArme, garde, lasse;
+        int etape, tues, ratees, bords, guet;
+        /** Le temps qu'il guette en arrivant au bord de la colonie (en ticks). */
+        static final int GUET = 100;
+        boolean sansArme, garde, lasse, horsColonie;
         /** Au plus tant de traques ratées, et tant de temps (en ticks) par tour. */
         static final int RATEES = 3, DUREE = 20 * 180;
         final Map<String, Integer> par = new LinkedHashMap<>();
@@ -292,6 +319,9 @@ final class Chasseur extends Metier {
                 sous.age++;
                 if (r == Actions.Etat.EN_COURS) return r;
                 sous.fin(t);
+                if (sous instanceof Actions.Aller && r == Actions.Etat.ECHEC) tourner(t); // le bord par là est hors d'atteinte
+                // Arrivé au bord, il guette un peu : les bêtes des chunks qui viennent de se charger arrivent après.
+                if (sous instanceof Actions.Aller && r == Actions.Etat.OK) guet = age + GUET;
                 if (sous instanceof Traque q) {
                     if (q.tue) { tues++; par.merge(q.espece.id(), 1, Integer::sum); }
                     else ratees++;
@@ -309,10 +339,14 @@ final class Chasseur extends Metier {
                     if (tues >= voulu || Monde.libres(t) < 3 || !t.level().isDay() && !ordre) { etape = 2; return Actions.Etat.EN_COURS; }
                     // Trop de bêtes manquées, ou trop longtemps : il rentre (il reprendra au tour suivant).
                     if (ratees >= RATEES || age > DUREE) { lasse = true; etape = 2; return Actions.Etat.EN_COURS; }
+                    if (age < guet) { t.getNavigation().stop(); return Actions.Etat.EN_COURS; }
                     List<Animal> p = gibier(t, especes, 1);
                     garde = PRES.get(t).garde;
                     // Seul, pour une commande de cuir ou de plumes : faute de la bête qui en donne, une autre (la viande sert toujours).
                     if (p.isEmpty() && !ordre && especes != null) p = gibier(t, null, 1);
+                    // Hors de la colonie, rien près de lui : il va voir au bord, une direction après l'autre, avant de rentrer bredouille.
+                    horsColonie = dehors(t);
+                    if (p.isEmpty() && horsColonie && bords < BORDS) { bords++; sous = auBord(t); return Actions.Etat.EN_COURS; }
                     if (p.isEmpty()) { etape = 2; return Actions.Etat.EN_COURS; }
                     Lieux.choisi(t, p.get(0).blockPosition());
                     sous = new Traque(p.get(0));
@@ -342,6 +376,8 @@ final class Chasseur extends Metier {
                 String quoi = especes != null && especes.size() == 1 ? Chasse.parId(especes.iterator().next()).noms() : "gibier";
                 if (lasse) return "Le gibier m'a filé entre les doigts, chef. Je retenterai ma chance.";
                 if (garde) return "Il ne reste que quelques " + (quoi.equals("gibier") ? "bêtes" : quoi) + " par ici, chef : je les laisse, pour que le gibier revienne.";
+                if (horsColonie) return "Je ne trouve pas de " + quoi + " à prendre, chef. Je chasse hors de la colonie, pas les bêtes près des maisons ; "
+                        + "et je ne touche ni aux bêtes des enclos, ni à celles qui ont un maître, ni aux petits.";
                 return "Je ne trouve pas de " + quoi + " à prendre par ici, chef. Je ne touche ni aux bêtes des enclos, ni à celles qui ont un maître, ni aux petits.";
             }
             List<String> l = new ArrayList<>();
@@ -382,7 +418,9 @@ final class Chasseur extends Metier {
                     Besoins.parler(t, "chasse_piste", null);
                 }
                 // Chaque seconde : la bête a changé de main (un nom, une laisse), ou elle est passée chez un voisin ; il la laisse.
-                if (age % 20 == 0 && cible.isAlive() && (Eleveur.intouchable(cible) || cible.isBaby() || !Fermier.aLui(t, cible.blockPosition()))) {
+                // Hors de la colonie : la bête y est entrée, il la laisse aussi.
+                if (age % 20 == 0 && cible.isAlive() && (Eleveur.intouchable(cible) || cible.isBaby() || !Fermier.aLui(t, cible.blockPosition())
+                        || dehors(t) && Lieux.dansColonie(t, cible.blockPosition()))) {
                     attaque.fin(t);
                     laisser(t, "intouchable");
                     return Actions.Etat.EN_COURS;
