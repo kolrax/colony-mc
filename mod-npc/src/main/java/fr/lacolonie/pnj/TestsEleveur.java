@@ -50,8 +50,19 @@ public class TestsEleveur {
     public static void apres(ServerLevel l) { Reglages.actuel.betes_par_enclos = plafond; }
 
     /** Un éleveur seul, au travail, dans son coin du monde plat ; le sol du poste dans base[0]. */
-    static Travailleur seul(GameTestHelper h, int coin, BlockPos[] base) {
+    static Travailleur seul(GameTestHelper h, int coin, BlockPos[] base) { return seul(h, coin, base, false); }
+
+    /**
+     * {@code perime} : le jeu a vu la place du poste libre juste avant qu'on l'y pose, et ne l'a pas oublié (il retient la
+     * nature des cases pour ses chemins, et ne l'oublie pas pour un bloc posé dans un coin du monde qui ne vit pas encore).
+     */
+    static Travailleur seul(GameTestHelper h, int coin, BlockPos[] base, boolean perime) {
         base[0] = TestsJeu.sol(h, coin * 400, 60000);
+        if (perime) {
+            ServerLevel l = h.getLevel();
+            for (BlockPos q : List.of(base[0], base[0].above())) l.getPathTypeCache().getOrCompute(l, q); // la place, vue libre
+            l.setBlock(base[0], ColoniePnj.BUREAU.get().defaultBlockState(), 0); // posé sans prévenir : la place reste « libre » pour les chemins
+        }
         Travailleur t = TestsJeu.employe(h, "eleveur", base[0], Vec3.atBottomCenterOf(base[0].west(2)), ItemStack.EMPTY);
         t.forcerChunk();
         return t;
@@ -197,9 +208,18 @@ public class TestsEleveur {
     @GameTest(template = "vide", timeoutTicks = 2400, batch = "eleveur_plafond")
     public static void abatLExcedent(GameTestHelper h) { excedent(h, 142); }
 
-    static void excedent(GameTestHelper h, int coin) {
+    /**
+     * Le même, mais le jeu croit encore libre la place où le poste a été posé ({@link #seul}) : son chemin passait à travers le
+     * poste, et il restait collé contre (« portillon_inaccessible » en boucle, vu quand plusieurs copies du test tournaient).
+     */
+    @GameTest(template = "vide", timeoutTicks = 2400, batch = "eleveur_plafond")
+    public static void abatLExcedentMalgreUnCheminPerime(GameTestHelper h) { excedent(h, 146, true); }
+
+    static void excedent(GameTestHelper h, int coin) { excedent(h, coin, false); }
+
+    static void excedent(GameTestHelper h, int coin, boolean perime) {
         BlockPos[] b = new BlockPos[1];
-        Travailleur t = seul(h, coin, b);
+        Travailleur t = seul(h, coin, b, perime);
         ServerLevel l = h.getLevel();
         BlockPos centre = b[0].offset(8, 0, 0);
         BlockPos porte = enclos(l, centre);
