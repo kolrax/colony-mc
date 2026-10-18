@@ -617,3 +617,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Livré : 1.0.5 (08 h 25) et 1.0.6 (09 h 05), serveur seul, personne connecté. Pas de modpack.
 - Reste : branche `origin/en-cours` non supprimable (403) ; `main` local d'une ancienne copie renommé `ancien-main-local` dans le conteneur (rien poussé).
 
+
+## 18/10/2026, 10 h 00 - 12 h UTC : 1.0.7 (écrans vus par un vrai client, batailles, mares, textes)
+- Plan : 1 case (le monde d'ouverture de lundi). Aucun essai V.. en `ko` ni `bloque`, aucune consigne ni demande.
+- **Écrans vus pour la première fois avec un vrai client** : banc `runEcrans` (`BancEcrans.java`, dev seulement, `colonie.photos=ecrans`) sous Xvfb en rendu logiciel (`LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runEcrans`), 14 écrans × 4 tailles = 56 captures relues une par une. À l'échelle par défaut en 1280x720 (427x240), le poste (252 de haut), la fiche et la nouvelle mission (250) débordaient : ramenés à 228/232, listes plus courtes qui défilent ; boutons de mission élargis (352) ; « Nourriture » → « Vivres » (libellé seul) ; caisse : colonne salaire élargie ; barre : invite en suggestion grise, « … » sur les détails coupés, fond plus sombre. Relu : rien de grave. Reste : écran 4:3 à l'échelle 4 (320 de large) déborde sur les côtés.
+- **Bataille** : chaque garde prend l'ennemi au plus petit « distance + 6 blocs par camarade qui le frappe déjà » (`Guerre.cible`, `Armee.ennemi/aupres`) ; test `chacunSonHomme` (1 homme visé avant, ≥ 4 après) ; banc 30 contre 30 : 48 à 52 gardes touchés, ~1 ms par tick. Relu : rien de grave.
+- **Fermier** : un vieux champ retenu et sec reçoit sa mare à l'entretien (une recherche par champ et par jour, `mare_t`) ; sur la terre labourée vide d'abord, sous un plant (graine rendue) seulement dans un champ tout semé ; jamais pendant un ordre sur le potager d'un autre (bloquant de la relecture, corrigé). 4 tests nouveaux, vus rouges avant.
+- **Textes** : pièces au pluriel (`Monnaie.nombre`), « 64 chaque jour, en journée. », ~300 formules du répertoire avec trait d'union (« assieds-toi »), « En retard de paie » à la caisse. Tests vus rouges avant.
+- Tests : passe finale du chef **298/298 JUnit, 347/347 en jeu**. Instables vus une fois chez les agents : `tondunmouton`, `TestsChef.sansOrdreSInterpose`, `laisseLaBeteNommeeEtLePetit`.
+- Pas de scénario du fantôme cette session (écrans vus au banc client ; bataille et mares en GameTest).
