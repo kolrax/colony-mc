@@ -1,11 +1,16 @@
 package fr.lacolonie.pnj;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Comparator;
@@ -87,12 +92,57 @@ final class Blessures {
      * du chef (un ordre de guerre) passe avant : le cerveau la joue plus tôt. Vrai s'il s'en occupe.
      */
     static boolean auRepos(Travailleur t, Metier m) {
-        if (!gravite(t).auRepos() || !(m.combattant || "mineur".equals(t.metier)) || t.bureau == null) return false;
+        if (!gravite(t).auRepos() || !(m.combattant || "mineur".equals(t.metier) || releveSeul(t)) || t.bureau == null) return false;
         if (m instanceof Guerrier && Guerrier.soigner(t)) return true;
         if (t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 5 * 5) { Cerveau.rentrer(t); return true; }
         Besoins.parler(t, "blessure_grave", null);
         Cerveau.attendre(t, 10);
         return true;
+    }
+
+    /** La mémoire (NBT « Etat ») du moment où il s'est relevé seul, en temps de jeu (insensible à « /time set »). */
+    static final String RELEVE_SEUL = "releve_seul_t";
+
+    /** Il s'est relevé seul il y a moins de {@link Reglages#releve_seul_minutes} minutes de jeu : encore « blessé après un relèvement ». */
+    static boolean releveSeul(Travailleur t) {
+        if (!t.memoire.contains(RELEVE_SEUL)) return false;
+        long d = t.level().getGameTime() - t.memoire.getLong(RELEVE_SEUL);
+        return d >= 0 && d < Reglages.actuel.releve_seul_minutes * 60L * 20;
+    }
+
+    /**
+     * Plan E : la fin de son temps à terre, sans aide. La première fois, il se relève seul avec peu de vie et une blessure
+     * très grave (ralenti, il laisse son ouvrage, rentre au poste et s'y repose jusqu'à guérir : {@link #auRepos}), et le
+     * journal le dit. Faux (il meurt) s'il s'était déjà relevé seul il y a peu, ou s'il gît dans la lave.
+     */
+    static boolean seRelever(Travailleur t) {
+        if (releveSeul(t) || t.isInLava()) return false;
+        t.relever(null);
+        t.setHealth(Math.min(t.getMaxHealth(), Reglages.actuel.releve_seul_vie));
+        t.memoire.putLong(RELEVE_SEUL, t.level().getGameTime());
+        noter(t, Gravite.TRES_GRAVE);
+        Consignes.annuler(t); // il laisse l'ouvrage en cours, même un ordre du chef
+        if (t.bureau != null) Cerveau.rentrer(t);
+        ColoniePnj.LOG.info("{} ({}, chef {}) se relève seul en {}", t.prenom, t.metier, t.chef, t.blockPosition().toShortString());
+        Courrier.ecrireTexte(t, "Relevé seul", "Personne n'est venu : je me suis relevé seul en " + position(t)
+                + ", bien mal en point. Je rentre au poste me reposer. Si je retombe avant d'être guéri, je n'y survivrai pas.", true);
+        return true;
+    }
+
+    static String position(Travailleur t) { return t.getBlockX() + " " + t.getBlockY() + " " + t.getBlockZ(); }
+
+    /** Il vient de tomber à terre : son chef, s'il est là, le lit aussi dans la discussion, en rouge, avec le lieu exact. */
+    static void prevenirChef(Travailleur t) {
+        ServerPlayer c = t.chefJoueur();
+        if (c == null) return;
+        c.sendSystemMessage(Component.literal("⚠ " + t.prenom + " est à terre en " + position(t)
+                + " ! Porte-lui vite à manger ou une potion de soin.").withStyle(ChatFormatting.RED));
+    }
+
+    /** La case de son sac qui peut relever un blessé (à manger, une potion de soin), ou -1. */
+    static int remede(Travailleur t) {
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (Travailleur.soigne(t.inventaire.getItem(i))) return i;
+        return -1;
     }
 
     /** Très gravement blessé : un guerrier ne cherche plus la bagarre (il recule s'il est frappé). */
@@ -109,7 +159,7 @@ final class Blessures {
         List<Travailleur> proches = blesse.level().getEntitiesOfClass(Travailleur.class, blesse.getBoundingBox().inflate(RAYON, 8, RAYON),
                         o -> o != blesse && blesse.chef.equals(o.chef) && o.isAlive() && !o.aTerre
                                 && o.distanceToSqr(blesse) <= RAYON * RAYON && peutAccourir(o))
-                .stream().sorted(Comparator.comparingDouble(o -> o.distanceToSqr(blesse))).limit(ACCOURENT).collect(java.util.stream.Collectors.toList());
+                .stream().sorted(Comparator.comparing((Travailleur o) -> remede(o) < 0).thenComparingDouble(o -> o.distanceToSqr(blesse))).limit(ACCOURENT).collect(java.util.stream.Collectors.toList());
         Travailleur conjoint = null;
         for (int i = 0; i < proches.size(); i++) {
             Accourir a = new Accourir(blesse, i);
@@ -130,12 +180,14 @@ final class Blessures {
 
     /**
      * Il se tient à 2 ou 3 blocs du blessé, le regarde, lui dit un mot ; il repart quand le blessé se relève ou meurt (au
-     * plus 9 minutes). Un coup, un ordre ou un danger l'interrompent comme toute action.
+     * plus 9 minutes). Un coup, un ordre ou un danger l'interrompent comme toute action. S'il a à manger ou une potion de
+     * soin dans son sac (plan E), il la lui donne et le relève, comme le ferait le chef.
      */
     static final class Accourir extends Actions.Action {
         final Travailleur blesse;
         final int rang;
         boolean arrive;
+        int aupres;
         /** L'être aimé du blessé : il se tient tout près, et le dit (« couple_inquiet »). */
         boolean inquiet;
 
@@ -164,6 +216,17 @@ final class Blessures {
                 else if (Cerveau.parfois(t, "blesse_vu", 60)) Besoins.dire(t, "blesse_vu", blesse.prenom);
             }
             t.getLookControl().setLookAt(blesse);
+            int i = remede(t);
+            if (i >= 0 && ++aupres >= Soins.RELEVER) {
+                ItemStack r = t.inventaire.getItem(i).split(1);
+                t.inventaire.setChanged();
+                if (r.is(Items.POTION)) t.ranger(new ItemStack(Items.GLASS_BOTTLE));
+                t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                Sons.soin(t);
+                blesse.relever(null);
+                t.dire("Tiens, " + blesse.prenom + ", prends ça et relève-toi.");
+                return Actions.Etat.OK;
+            }
             return Actions.Etat.EN_COURS;
         }
     }

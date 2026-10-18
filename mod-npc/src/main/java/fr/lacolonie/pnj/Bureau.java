@@ -531,7 +531,8 @@ public final class Bureau {
             for (int i = 0; i < Math.min(Courrier.MAX_LIGNES, ls.size()); i++) {
                 Courrier.Lettre l = ls.get(i);
                 CompoundTag x = new CompoundTag();
-                x.putString("ligne", Boite.ligne(l));
+                // Un ouvrier à terre (plan E) : la ligne en rouge (un code de couleur dans le texte : rien ne change côté client).
+                x.putString("ligne", ("a_terre".equals(l.type) ? net.minecraft.ChatFormatting.RED.toString() : "") + Boite.ligne(l));
                 x.putString("texte", l.texte);
                 x.putString("date", l.date);
                 x.putBoolean("importante", l.importante);
