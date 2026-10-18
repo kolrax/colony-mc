@@ -688,3 +688,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Livraison** : `list` 0 joueur ; jar 1 841 400 octets, sha1 `8fedcb3aef22…`, même taille dans `/mods-off` ; 1.0.11 rangée dans `/mods-off` ; un seul `colonie_pnj-*.jar` dans `/mods` ; Distant Horizons laissé dans `/mods`, Chunky dans `/mods-off` (pas touchés). Redémarrage noté dans `docs/demandes-admin.md`. « colonie_pnj (version 1.0.11 -> 1.0.12) », « Done (3.108s) » à 20 h 30 UTC, panneau des PNJ ouvert, aucune erreur. **Pas de modpack** (rien ne change côté client), pas d'annonce.
 - **À noter** : avant 20 h 02, le serveur s'est arrêté ~16 min sans joueur (« 20037 ticks behind ») puis a repris seul ; transmis à l'Admin. Aucun scénario du joueur fantôme cette session. La branche `en-cours` n'a pas pu être supprimée (refus du serveur Git), elle ne contient rien qui ne soit sur `main`.
 - **Reste** : A1 trajet « GPS » en entier, A3 (seau, fantôme montagne), E4 (fantôme mine 2 jours), E5 repère rouge Xaero (modpack le 19/10 après 7 h UTC), E6 morts comptées puis réglages.
+
+## 2026-10-18 22 h 36 UTC : 1.0.13 livrée, serveur seul (A1 trajet GPS, E6 morts comptées)
+- Code de `main` `b26b206` : **306/306 JUnit, 391/391 en jeu** (passe du chef). `mod_version=1.0.13`. Jar reconstruit depuis `main` : 1 857 486 octets, sha1 `27cd5d51719b…`, même taille dans `/mods-off` après l'envoi.
+- `list` à 22 h 29 : **1 joueur connecté (KOLRAX_MC)** → préavis en jeu (tellraw) à 22 h 30, rappel à 22 h 33, redémarrage à 22 h 35 (5 minutes pleines). Redémarrage noté dans `docs/demandes-admin.md`.
+- Envoi sûr : 1.0.12 rangée dans `/mods-off`, 1.0.13 dans `/mods` ; **un seul** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt et GeckoLib laissés dans `/mods`, Chunky dans `/mods-off` (pas touchés).
+- « colonie_pnj (version 1.0.12 -> 1.0.13) », **« Done (4.112s) » à 22 h 36 UTC**, panneau des PNJ ouvert. Aucune erreur ni avertissement du mod (seulement les erreurs habituelles de tables de butin de Railways et Create Enchantment Industry). 0 joueur juste après le redémarrage.
+- **Pas de modpack**, pas d'annonce, pas de message à KOLRAX (le chef s'en charge).
