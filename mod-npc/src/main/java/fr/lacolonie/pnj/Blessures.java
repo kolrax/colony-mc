@@ -124,6 +124,7 @@ final class Blessures {
         Consignes.annuler(t); // il laisse l'ouvrage en cours, même un ordre du chef
         if (t.bureau != null) Cerveau.rentrer(t);
         ColoniePnj.LOG.info("{} ({}, chef {}) se relève seul en {}", t.prenom, t.metier, t.chef, t.blockPosition().toShortString());
+        Fantome.releveSeul(t);
         Courrier.ecrireTexte(t, "Relevé seul", "Personne n'est venu : je me suis relevé seul en " + position(t)
                 + ", bien mal en point. Je rentre au poste me reposer. Si je retombe avant d'être guéri, je n'y survivrai pas.", true);
         return true;

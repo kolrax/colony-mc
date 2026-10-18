@@ -644,7 +644,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Sa vie selon son niveau et ses talents (sans le soigner) : à l'arrivée, au chargement. */
     void appliquerVie() {
-        double vie = 20 + 2 * (niveau - 1) + Talents.vie(talents);
+        double vie = Reglages.actuel.vie_base + Reglages.actuel.vie_par_etoile * (niveau - 1) + Talents.vie(talents);
         var max = getAttribute(Attributes.MAX_HEALTH);
         if (max != null && max.getBaseValue() != vie) {
             max.setBaseValue(vie);
@@ -1293,7 +1293,7 @@ public class Travailleur extends PathfinderMob {
             faim = Math.max(0, faim - 1);
 
         }
-        if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus)) { // les nuits d'affilée ralentissent la guérison
+        if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus) * Reglages.actuel.soin_lent_secondes / 10) { // les nuits d'affilée ralentissent la guérison
             soinCompteur = 0;
             if (faim >= 15 && getHealth() < getMaxHealth()) heal(1);
             else if (faim == 0 && getHealth() > 1) hurt(damageSources().starve(), 1);
@@ -1447,7 +1447,7 @@ public class Travailleur extends PathfinderMob {
     void relever(Player p) {
         aTerre = false;
         setPose(Pose.STANDING);
-        setHealth(6);
+        setHealth(Math.min(getMaxHealth(), Reglages.actuel.releve_vie));
         majNom();
         Besoins.dire(this, "releve", null);
     }
@@ -1486,8 +1486,9 @@ public class Travailleur extends PathfinderMob {
         // La gravité du coup (vie vraiment perdue, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
         boolean debout = !aTerre && !level().isClientSide;
         if (debout) { vieAvantCoup = getHealth(); sourceCoup = Blessures.source(src); }
-        float avant = vieAvantCoup;
+        float avant = vieAvantCoup, vie = getHealth();
         boolean touche = super.hurt(src, amount);
+        if (touche) Fantome.coup(this, src, vie - getHealth()); // plan E6 : le rapport du joueur fantôme
         if (touche && debout && !aTerre) Blessures.blesser(this, Gravite.du(avant - getHealth(), getMaxHealth(), sourceCoup));
         vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
@@ -1508,8 +1509,10 @@ public class Travailleur extends PathfinderMob {
             ColoniePnj.LOG.info("{} ({}, chef {}) tombe à terre en {} : {}", prenom, metier, chef, blockPosition().toShortString(),
                     src.getLocalizedDeathMessage(this).getString());
             tomberATerre();
+            Fantome.aTerre(this, src); // plan E6 : le rapport du joueur fantôme
             return;
         }
+        if (!dead && !isRemoved()) Fantome.mort(this, src);
         super.die(src);
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));
