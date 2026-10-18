@@ -179,6 +179,7 @@ public final class Statut {
             SANS_EAU_ICI = "Pas d'eau à pêcher ici : choisis un autre lieu",
             SANS_ARME = "Pas d'arc ni de lame au dépôt",
             SANS_GIBIER = "Pas de gibier par ici : envoie-le ailleurs",
+            SANS_BOIS = "Pas de ce bois à moins de 512 blocs du poste : choisis-en un autre, ou dis-lui « Travaille ici »",
             SANS_TRAJET = "Rien à porter : montre-lui un coffre et sa destination",
             SANS_CHANTIER = "Pas de chantier : donne-lui un schéma et un lieu",
             BOUTIQUE_VIDE = "Étal vide : mets des marchandises au dépôt",

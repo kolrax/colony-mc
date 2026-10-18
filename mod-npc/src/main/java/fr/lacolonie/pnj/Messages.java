@@ -375,11 +375,14 @@ final class Messages {
                 "Je n'ai pas de mission. Écris-moi ce que tu veux, par exemple « Ramène 10 fers ».",
                 "Je suis prêt, mais je ne sais pas quoi faire : écris-moi une mission.");
         m("bois_inconnu", "Je fouille les environs",
-                "Je ne connais aucun endroit proche où pousse ce bois ({0}) : je fouille les environs.",
-                "Je n'ai jamais vu de {0} par ici. Je cherche autour, de plus en plus loin.");
+                "Je ne connais aucun endroit à moins de {1} blocs du poste où pousse ce bois ({0}) : je fouille les environs.",
+                "Je n'ai jamais vu de {0} par ici. Je fouille autour du poste, jusqu'à {1} blocs.");
         m("plus_d_arbre", "Plus d'arbres ici",
-                "Plus d'arbre de ce bois ({0}) vers {1} : je vais chercher plus loin.",
-                "J'ai abattu tout le {0} des environs de {1}. Je pars chercher ailleurs.");
+                "Plus d'arbre de ce bois ({0}) vers {1} : je cherche un autre coin, pas trop loin du poste.",
+                "J'ai abattu tout le {0} des environs de {1}. Je cherche ailleurs, autour du poste.");
+        m("sans_bois", "Plus de ce bois près d'ici",
+                "Il n'y a plus de {0} à moins de {1} blocs du poste : c'est trop loin pour moi. Donne-moi un autre bois, ou dis-moi « Travaille ici » là où il pousse. Je regarderai encore demain.",
+                "Plus un seul pied de {0} à {1} blocs à la ronde. Je n'irai pas plus loin : choisis-moi un autre bois, ou mène-moi là où il pousse.");
         m("bois_demain", "J'irai demain",
                 "Il y a {0} {1} : j'irai demain matin, la journée est trop avancée.",
                 "J'ai repéré {0} {1}, mais c'est trop loin pour aujourd'hui. J'y vais demain.");
