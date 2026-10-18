@@ -20,7 +20,12 @@ Format :
 ## 2026-10-18 : ajouter les mods Burnt, Do a Barrel Roll et Distant Horizons (avec sa partie serveur)
 - Demande : KOLRAX a demandé en jeu (rapports n°16, 19 et 20 du 18/10) d'ajouter « Burnt », « Do a Barrel Roll », et Distant Horizons avec sa partie serveur « pour que même sur le serveur on voie loin ». À toi de vérifier la compatibilité (NeoForge 21.1.255, Iris/Sodium épinglés), le poids pour le serveur et les PC, et l'accord avec les règles (thème, modpack léger souhaité par Mr_EcliipsE).
 - Pourquoi : demandé par KOLRAX le 18/10 ; les autres mods reviennent à l'Admin.
-- Statut : prêt, en attente de l'accord de KOLRAX pour l'installation sur le serveur (branche `admin-mods`, verrou du modpack retiré pour ne pas bloquer l'équipe du mod)
+- Statut : accepté par KOLRAX le 18/10 (18 h UTC). **À livrer avec le prochain modpack de l'équipe du mod** (pas de modpack ni de redémarrage à part, pour ne pas gêner la livraison de ce soir).
+- **Procédure pour le livreur** (l'Admin a tout préparé) :
+  1. `pack/mods.txt` sur `main` contient déjà les 3 mods (et JEI, Lithostitched épinglés à leur version du serveur) : `build.py` les met dans le modpack tout seul.
+  2. Les 3 jars serveur attendent dans `/mods-off` : `burnt-1.10.5.2-neoforge-1.21.1.jar`, `geckolib-neoforge-1.21.1-4.9.3.jar`, `DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar`. Au moment de poser le nouveau `colonie_pnj`, les passer aussi dans `/mods` (`panel.py mv`), **même redémarrage**. Burnt est obligatoire des deux côtés : serveur et modpack doivent partir ensemble.
+  3. Si le serveur ne démarre pas à cause de l'un d'eux : le remettre dans `/mods-off`, redémarrer, et le noter ici ; l'Admin s'en occupe.
+  4. Notes du modpack à ajouter : « nouveaux mods : Burnt (le feu brûle vraiment, attention au bois), Do a Barrel Roll (élytre), Distant Horizons (voir loin, à régler si le PC rame) ».
 - Réponse : les trois existent pour NeoForge 1.21.1, aucune incompatibilité déclarée avec Sodium 0.6.13 ni Iris 1.8.12 ; 34 mods au total après ajout (on reste loin des 50 à 80 de Mr_EcliipsE).
   - **Burnt** (22 Mo, + GeckoLib) : sur le serveur et chez les joueurs. Va avec le thème (villages qui brûlent en guerre RP). **Attention** : sans protection de terrain, une torche ou un éclair peut brûler une base en bois entière, et les chantiers des ouvriers aussi. L'équipe du mod devrait vérifier que les PNJ fuient le feu.
   - **Do a Barrel Roll** (+ Forgified Fabric API, 6 Mo) : chez les joueurs seulement, rien sur le serveur. Ne change que la façon de piloter l'élytre.
