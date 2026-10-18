@@ -116,5 +116,5 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [x] Après la livraison 1.0.0 : `docs/reprise.md` et `docs/carte-du-code.md` à jour ; livret d'aide donné avec le premier poste (à vérifier)
 - [x] Livraison 1.0.1 (serveur seul) : mineur qui ne se bloque plus avec ses torches, « Travaille ici » qui le débloque, objets des joueurs respectés près de la mine, fermier « Plus de graines au dépôt » (livrée le 17/10 à 22 h 50 UTC)
 - [x] Livraison 1.0.2 (serveur seul) : fermier qui creuse une petite mare sans seau et espace ses graines (fantôme : 15 blés en 2 jours au lieu de 1) (livrée le 17/10 à 23 h 54 UTC)
-- [ ] Bûcheron qui garde ses bûches dans son sac loin du poste et mineur qui ne vide pas son sac : vérifier au joueur fantôme (3 jours), corriger si vrai
+- [x] Bûcheron qui garde ses bûches dans son sac loin du poste et mineur qui ne vide pas son sac : vérifier au joueur fantôme (3 jours), corriger si vrai
 - [ ] Lundi 19/10 : monde d'ouverture neuf avec la dernière version (procédure « Si tu régénères le monde de test » de `CLAUDE.md`, le monde `colonie` et `essai-v2` restent sur le disque)
