@@ -380,6 +380,14 @@ public final class Fantome {
         f.then(Commands.literal("rapport").executes(c -> rapport(c, "rapport"))
                 .then(Commands.argument("nom", StringArgumentType.word()).executes(c -> rapport(c, StringArgumentType.getString(c, "nom")))));
         f.then(Commands.literal("disparait").executes(c -> { retirer(c.getSource().getServer()); return ok(c, "Le fantôme est parti."); }));
+        // Préparer un terrain (développement) : un vieux champ de blé sec, déjà retenu par un fermier ; un potager du fantôme
+        // (houe puis graines, case par case, comme un joueur). Le rapport décrit ensuite ces terrains (« terrains »).
+        f.then(Commands.literal("champ_sec").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("pos", BlockPosArgument.blockPos())
+                .then(Commands.argument("cote", IntegerArgumentType.integer(3, 15)).executes(c -> champSec(c, IntegerArgumentType.getInteger(c, "cote")))))));
+        f.then(Commands.literal("potager").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                .then(Commands.argument("longueur", IntegerArgumentType.integer(1, 16)).then(Commands.argument("largeur", IntegerArgumentType.integer(1, 16))
+                        .then(Commands.argument("objet", ResourceLocationArgument.id()).executes(c -> potager(c, IntegerArgumentType.getInteger(c, "longueur"),
+                                IntegerArgumentType.getInteger(c, "largeur"))))))));
         e.getDispatcher().register(f);
     }
 
@@ -573,6 +581,140 @@ public final class Fantome {
         return ok(c, t.prenom + " (" + metier + ") " + (pris ? "est embauché." : "n'est pas embauché (voir les messages du fantôme)."));
     }
 
+    // --- Les terrains préparés (développement) -----------------------------------------------------------
+
+    /** Les terrains préparés par champ_sec et potager : {nom, type, min, max} (coins du sol), décrits dans le rapport. */
+    static final List<JsonObject> terrains = new ArrayList<>();
+
+    static void terrain(String nom, String type, BlockPos min, BlockPos max) {
+        JsonObject o = new JsonObject();
+        o.addProperty("nom", nom);
+        o.addProperty("type", type);
+        o.addProperty("min", min.toShortString());
+        o.addProperty("max", max.toShortString());
+        terrains.add(o);
+    }
+
+    /**
+     * Un vieux champ de blé, comme laissé par une version d'avant ou une mare bouchée : un carré de {@code cote} cases de
+     * terre labourée sèche (moisture 0), semée de blé d'âges mêlés, au sol de {@code pos}, sur un terrain aplani (5 cases
+     * d'herbe autour, de la terre dessous, l'air dessus : aucune eau à moins de 5 blocs), et retenu par le fermier comme
+     * s'il l'avait semé lui-même (la même fiche que {@code Fermier.Champ.retenir}).
+     */
+    static int champSec(CommandContext<CommandSourceStack> c, int cote) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Travailleur t = ouvrier(c, j);
+        if (!t.metier.equals("fermier")) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal(t.prenom + " n'est pas fermier")).create();
+        ServerLevel l = j.serverLevel();
+        BlockPos centre = pos(c, j, "pos");
+        int h = cote / 2, m = h + 5;
+        for (int x = -m; x <= m; x++)
+            for (int z = -m; z <= m; z++) {
+                l.getChunk((centre.getX() + x) >> 4, (centre.getZ() + z) >> 4);
+                for (int y = -3; y <= -1; y++) {
+                    BlockPos q = centre.offset(x, y, z);
+                    if (!l.getFluidState(q).isEmpty() || !l.getBlockState(q).isCollisionShapeFullBlock(l, q)) l.setBlock(q, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 2);
+                }
+                for (int y = 1; y <= 8; y++) l.setBlock(centre.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                boolean champ = Math.abs(x) <= h && Math.abs(z) <= h;
+                l.setBlock(centre.offset(x, 0, z), champ ? net.minecraft.world.level.block.Blocks.FARMLAND.defaultBlockState()
+                        : net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+            }
+        // Les plants après le terrain, sans relire leurs voisins : la lumière n'est pas encore recalculée, le jeu les
+        // croirait dans le noir et les retirerait (35 plants sur 81 au premier essai).
+        for (int x = -h; x <= h; x++)
+            for (int z = -h; z <= h; z++)
+                l.setBlock(centre.offset(x, 1, z), net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.CropBlock.AGE, Math.floorMod(x * 3 + z, 5)), 2 | 16);
+        net.minecraft.nbt.ListTag champs = t.memoire.getList("champs", Tag.TAG_COMPOUND);
+        CompoundTag fiche = new CompoundTag();
+        fiche.putLong("c", centre.asLong());
+        fiche.putString("p", new Fouille.Plan(cote, cote, 1, "north", false).texte());
+        fiche.putString("g", "ble");
+        champs.add(fiche);
+        t.memoire.put("champs", champs);
+        terrain("champ_sec", "champ", centre.offset(-h, 0, -h), centre.offset(h, 0, h));
+        String s = Monde.structure(l, centre);
+        return ok(c, "Vieux champ sec de " + cote + " sur " + cote + " en " + centre.toShortString() + ", retenu par " + t.prenom
+                + (s != null ? " (dans une structure : " + s + ")" : "") + ".");
+    }
+
+    /** Un potager du fantôme : chaque case labourée à la houe (celle de son sac), puis semée de l'objet, comme un joueur. */
+    static int potager(CommandContext<CommandSourceStack> c, int longueur, int largeur) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Item graine = objet(c);
+        BlockPos p0 = pos(c, j, "pos");
+        Item houe = net.minecraft.world.item.Items.IRON_HOE;
+        for (int i = 0; i < j.getInventory().getContainerSize(); i++)
+            if (j.getInventory().getItem(i).getItem() instanceof net.minecraft.world.item.HoeItem) { houe = j.getInventory().getItem(i).getItem(); break; }
+        int labourees = 0, semees = 0;
+        for (int x = 0; x < longueur; x++)
+            for (int z = 0; z < largeur; z++) {
+                BlockPos q = p0.offset(x, 0, z);
+                poser(j, q, houe);
+                if (j.level().getBlockState(q).is(net.minecraft.world.level.block.Blocks.FARMLAND)) labourees++;
+                poser(j, q, graine);
+                if (j.level().getBlockState(q.above()).getBlock() instanceof net.minecraft.world.level.block.CropBlock) semees++;
+            }
+        terrain("potager", "potager", p0, p0.offset(longueur - 1, 0, largeur - 1));
+        return ok(c, "Potager du fantôme en " + p0.toShortString() + " : " + labourees + " cases labourées, " + semees + " semées.");
+    }
+
+    /** Ce qu'un joueur verrait de chaque terrain préparé : la terre (labourée, humide, sèche), les plants, l'eau, la casse. */
+    static JsonArray terrains(Joueur j) {
+        ServerLevel l = j.serverLevel();
+        List<Travailleur> fermiers = ColoniePnj.pnjDe(j.server, j.getUUID()).stream().filter(t -> t.metier.equals("fermier")).toList();
+        JsonArray a = new JsonArray();
+        for (JsonObject o : terrains) {
+            BlockPos min = parse(o.get("min").getAsString()), max = parse(o.get("max").getAsString());
+            int cases = 0, labourees = 0, humides = 0, seches = 0, plants = 0, murs = 0, aEux = 0;
+            List<String> autres = new ArrayList<>(), eau = new ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(min, max)) {
+                cases++;
+                BlockState s = l.getBlockState(q);
+                if (s.is(net.minecraft.world.level.block.Blocks.FARMLAND)) {
+                    labourees++;
+                    if (s.getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) == net.minecraft.world.level.block.FarmBlock.MAX_MOISTURE) humides++;
+                    else seches++;
+                } else autres.add(q.toShortString() + " " + BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath() + (l.getFluidState(q).isEmpty() ? "" : " (eau)"));
+                if (l.getBlockState(q.above()).getBlock() instanceof net.minecraft.world.level.block.CropBlock k) {
+                    plants++;
+                    if (k.isMaxAge(l.getBlockState(q.above()))) murs++;
+                    BlockPos plant = q.above();
+                    if (fermiers.stream().anyMatch(t -> Fermier.aLui(t, plant))) aEux++;
+                }
+            }
+            // L'eau à 4 blocs du terrain (ce qui arrose), au niveau du sol ou juste dessus et dessous.
+            for (BlockPos q : BlockPos.betweenClosed(min.offset(-4, -1, -4), max.offset(4, 1, 4)))
+                if (!l.getFluidState(q).isEmpty()) eau.add(q.toShortString() + (l.getFluidState(q).isSource() ? " source" : " coule"));
+            int casses = 0;
+            List<String> detail = new ArrayList<>();
+            for (JsonObject x : Fantome.casses) {
+                BlockPos q = parse(x.get("pos").getAsString());
+                if (q.getX() < min.getX() || q.getX() > max.getX() || q.getZ() < min.getZ() || q.getZ() > max.getZ() || Math.abs(q.getY() - min.getY()) > 2) continue;
+                casses++;
+                if (detail.size() < 40) detail.add(x.get("pos").getAsString() + " " + x.get("bloc").getAsString() + " par " + x.get("ouvrier").getAsString());
+            }
+            JsonObject r = o.deepCopy();
+            r.addProperty("cases", cases);
+            r.addProperty("terre_labouree", labourees);
+            r.addProperty("humides", humides);
+            r.addProperty("seches", seches);
+            r.addProperty("plants", plants);
+            r.addProperty("plants_murs", murs);
+            // Les plants que ses fermiers tiennent pour les leurs (Fermier.aLui : hors structure, son poste le plus près).
+            r.addProperty("plants_a_ses_fermiers", aEux);
+            String st = Monde.structure(l, BlockPos.containing((min.getX() + max.getX()) / 2.0, min.getY(), (min.getZ() + max.getZ()) / 2.0));
+            r.addProperty("structure", st == null ? "" : st);
+            r.add("autres_sols", GSON.toJsonTree(autres.size() > 40 ? autres.subList(0, 40) : autres));
+            r.add("eau_a_4_blocs", GSON.toJsonTree(eau.size() > 40 ? eau.subList(0, 40) : eau));
+            r.addProperty("blocs_casses_par_les_ouvriers", casses);
+            r.add("casses", GSON.toJsonTree(detail));
+            a.add(r);
+        }
+        return a;
+    }
+
     // --- Le rapport --------------------------------------------------------------------------------------
 
     static int rapport(CommandContext<CommandSourceStack> c, String nom) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -660,6 +802,7 @@ public final class Fantome {
             production.merge(o.get("metier").getAsString(), 1, Integer::sum);
         }
         r.add("casses", cs);
+        if (!terrains.isEmpty()) r.add("terrains", terrains(j));
 
         JsonObject resume = new JsonObject();
         resume.addProperty("ouvriers", ouvriers.size());

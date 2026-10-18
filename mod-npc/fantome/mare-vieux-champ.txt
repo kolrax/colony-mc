@@ -1,0 +1,35 @@
+# Le fermier et un vieux champ sec (1.0.7) : un champ de blé de 9 sur 9 qu'il a retenu avant (labouré, semé, la terre
+# sèche, aucune eau à moins de 5 blocs), et, collé à son bord est, le potager du fantôme (2 sur 3, labouré à la houe et
+# semé à la main). Attendu : à l'entretien, il creuse une petite mare dans son champ (sans seau), l'eau ne coule pas, la
+# terre du champ devient humide ; le potager du fantôme n'est jamais creusé (ni sa terre ni ses plants cassés).
+# Le rapport dit, pour chaque terrain (« terrains ») : terre labourée, humide, sèche, plants, l'eau à 4 blocs, la casse.
+# La monnaie du monde d'essai (écrite par tools/fantome.py) : cuivre 1, or 8, émeraude 64.
+# Le ciel sec : la pluie humidifie aussi la terre labourée (2e essai : 78 cases humides sur 81 sans aucune eau).
+time set 1000
+gamerule doWeatherCycle false
+weather clear 1000000
+# Loin d'un village : un champ dans un village n'est pas au fermier (Fermier.aLui), il n'y touche pas (2e essai).
+fantome apparait
+fantome poste
+fantome donne minecraft:gold_ingot 16
+fantome embauche fermier 2
+attendre 20
+ticks 40
+# Le vieux champ : centre à 16 blocs à l'ouest du fantôme, au niveau du sol ; il va de 20 à 12 blocs à l'ouest.
+fantome champ_sec fermier ~-16 ~-1 ~0 9
+# Le potager du fantôme, collé au bord est du champ : 11 et 10 blocs à l'ouest, 3 cases de large.
+fantome donne minecraft:stone_hoe 1
+fantome donne minecraft:wheat_seeds 6
+fantome potager ~-11 ~-1 ~-1 2 3 minecraft:wheat_seeds
+# Ce qu'il faut au fermier (sans seau d'eau) : une houe, des graines, du pain au dépôt.
+fantome donne minecraft:iron_hoe 1
+fantome donne minecraft:wheat_seeds 32
+fantome donne minecraft:bread 16
+fantome depose
+fantome paie
+fantome mission fermier ble stock 32
+fantome rapport mare-vieux-champ-debut
+attendre 5
+jours 1
+fantome rapport mare-vieux-champ-jour1
+jours 1
