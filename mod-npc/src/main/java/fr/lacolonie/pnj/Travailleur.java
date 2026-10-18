@@ -1105,7 +1105,6 @@ public class Travailleur extends PathfinderMob {
         Courrier.ecrire(this, "nouvelles", compris.isEmpty() ? "" : compris + " ", Messages.ou(this), activite(), Messages.etat(this));
     }
 
-    static final boolean DEBUG_SAC = true;
     void finirAction(String r) {
         // Arrivé où il allait : un vrai progrès. Échoué à y aller : le temps « coincé » compte, même à l'arrêt (Coince).
         if (("bloque".equals(r) || "inaccessible".equals(r) || "bureau_inaccessible".equals(r)) && !(action instanceof Actions.Casser k && k.chantier))
@@ -1117,8 +1116,6 @@ public class Travailleur extends PathfinderMob {
                 || action instanceof Actions.Attaquer || action != null && action.travail)) { coince.travail(); Apprentissage.travail(this); }
         if (action instanceof Actions.Attaquer || action instanceof Actions.Fuir || action instanceof Actions.Echapper) finDanger = level().getGameTime();
         if (action != null) action.fin(this);
-        if (DEBUG_SAC && action != null && !"ok".equals(r)) System.out.println("DEBUGSAC " + level().getGameTime() + " " + prenom + "/" + metier + " " + action.nom + " -> " + r + " @" + blockPosition().toShortString() + " libres " + Monde.libres(this));
-        if (DEBUG_SAC && action instanceof Actions.Deposer) System.out.println("DEBUGSAC " + level().getGameTime() + " " + prenom + "/" + metier + " DEPOSER -> " + r);
         action = null;
         resultat = r;
     }
