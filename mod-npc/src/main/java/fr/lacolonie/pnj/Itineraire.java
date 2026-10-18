@@ -337,7 +337,7 @@ final class Itineraire {
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
         // Plan A3 : la paroi devant lui ne se récolte pas avec ce qu'il a (de la pierre sans pioche) : la creuser serait long
         // et ne rendrait rien. Il monte d'abord sur des blocs de son sac (qu'il reprend ensuite), puis creuse s'il le faut.
-        if (evasionPermise(t) && sansOutilPourLaParoi(t) && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
+        if (evasionPermise(t) && sansOutilPourLaParoi(t) && caseDeChantier(t, false, true) >= 0 && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -764,9 +764,10 @@ final class Itineraire {
 
     /**
      * La case de son sac d'où prendre un bloc à poser, -1 s'il n'en a pas. Ce que sa mission demande n'y passe pas : de cet
-     * objet, il garde au moins le nombre demandé.
+     * objet, il garde au moins le nombre demandé. D'abord un bloc qu'il saura reprendre ; un autre seulement s'il n'en a pas
+     * (en dernier recours : la montée du plan A3, qui passe avant le creusage, n'en part pas sans bloc reprenable).
      */
-    static int caseDeChantier(Travailleur t) { return caseDeChantier(t, false, true); }
+    static int caseDeChantier(Travailleur t) { int i = caseDeChantier(t, false, true); return i >= 0 ? i : caseDeChantier(t, false, false); }
 
     /** Pareil ; {@code sansBois} : pas de planches (pour boucher la lave, elles brûleraient). */
     static int caseDeChantier(Travailleur t, boolean sansBois) { return caseDeChantier(t, sansBois, false); }
@@ -791,14 +792,14 @@ final class Itineraire {
         return s.getItem() instanceof net.minecraft.world.item.BlockItem b && recolte(t, b.getBlock().defaultBlockState());
     }
 
-    /** Combien de blocs il peut poser pour monter ou franchir un trou (qu'il saura reprendre, sans toucher à ce que sa mission demande). */
+    /** Combien de blocs il peut poser pour monter ou franchir un trou (sans toucher à ce que sa mission demande). */
     static int blocsDeChantier(Travailleur t) {
         Metier.Commande c = Metier.commande(t);
         Actions.Filtre f = c == null ? null : c.objet;
         int libres = 0, mission = 0;
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
-            if (!blocDeChantier(s) || !reprenable(t, s)) continue;
+            if (!blocDeChantier(s)) continue;
             if (f != null && f.objet(s)) mission += s.getCount(); else libres += s.getCount();
         }
         return libres + (f == null ? 0 : Math.max(0, mission - t.missionActive().nombre));
