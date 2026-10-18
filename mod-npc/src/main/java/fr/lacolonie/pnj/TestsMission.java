@@ -151,4 +151,53 @@ public class TestsMission {
         t.discard();
         h.succeed();
     }
+
+    /**
+     * Sa récolte au dépôt, pas dans son sac (lot 16, fantôme « sacs-3-jours ») : un bûcheron près de son poste, qui a dans son
+     * sac de quoi finir « 4 bûches, une fois », rentre les livrer (même dans la colonie) ; sa dernière mission faite, il ne
+     * repart pas couper de lui-même : il attend au poste, « En attente ».
+     */
+    @GameTest(template = "vide", timeoutTicks = 600)
+    public static void missionFinieRecolteAuDepot(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "bucheron", 736, new ItemStack(Items.IRON_AXE));
+        t.inventaire.addItem(new ItemStack(Items.OAK_LOG, 10));
+        h.assertTrue(Missions.donner(chef, t, "tout", "fois", 4, "toujours", null).ok(), "mission acceptée");
+        Actions.Filtre bois = Actions.Filtre.de("#minecraft:logs");
+        long[] au = {0};
+        h.onEachTick(() -> {
+            if (au[0] == 0 && Bureau.entite(t) != null && Bureau.entite(t).compter(bois) >= 10) au[0] = h.getTick();
+        });
+        h.succeedWhen(() -> {
+            Bureau.Entite b = Bureau.entite(t);
+            h.assertTrue(b != null && b.compter(bois) == 10, "ses 10 bûches au dépôt (" + (b == null ? "?" : b.compter(bois)) + ", sac " + t.compter(bois) + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.missions.isEmpty(), "mission faite et retirée de la file");
+            h.assertTrue(au[0] > 0 && h.getTick() > au[0] + 200, "encore 10 s après");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 8 * 8, "il reste au poste (" + TestsJeu.etat(t, t.bureau) + ")");
+            h.assertTrue(t.statutUnique().equals(Statut.ATTENTE), "statut : « " + t.statutUnique() + " »");
+            t.discard();
+        });
+    }
+
+    /** Il change de mission (la première annulée) avec la récolte de l'ancienne dans son sac : il la dépose avant de s'y mettre. */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void changeDeMissionDeposeLeSac(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = ouvrier(h, chef, "mineur", 737, new ItemStack(Items.IRON_PICKAXE));
+        h.assertTrue(Missions.donner(chef, t, "charbon", "fois", 64, "toujours", null).ok(), "première mission");
+        Actions.Filtre charbon = Actions.Filtre.de("minecraft:coal");
+        h.runAfterDelay(40, () -> {
+            t.inventaire.addItem(new ItemStack(Items.COAL, 12));
+            CompoundTag premiere = new CompoundTag();
+            premiere.putInt("index", 0);
+            premiere.putInt("n", 1);
+            Missions.action(chef, t, "annuler", premiere);
+            h.assertTrue(Missions.donner(chef, t, "fer", "fois", 10, "toujours", null).ok(), "nouvelle mission");
+        });
+        h.succeedWhen(() -> {
+            Bureau.Entite b = Bureau.entite(t);
+            h.assertTrue(b != null && b.compter(charbon) == 12, "le charbon de l'ancienne mission au dépôt (" + (b == null ? "?" : b.compter(charbon)) + ", sac " + t.compter(charbon) + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            t.discard();
+        });
+    }
 }

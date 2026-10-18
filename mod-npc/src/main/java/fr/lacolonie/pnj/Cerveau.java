@@ -245,8 +245,17 @@ final class Cerveau {
         Travailleur.Mission mission = t.missionActive();
         Metier.Commande c = mission == null ? null : Metier.catalogue(t.metier, mission.id);
 
-        // Loin de chez lui, s'il a dans son sac de quoi finir une quantité, il rentre la livrer.
-        if (c != null && c.objet != null && dehors && mission.quantite() && mission.livre + t.compter(c.objet) >= mission.nombre) {
+        // Il change de mission (l'ancienne faite, annulée, ou hors de ses horaires) : la récolte de l'ancienne va d'abord au dépôt.
+        String vue = c != null && c.objet != null ? mission.id + "/" + mission.mode + "/" + mission.nombre : "";
+        if (!vue.equals(mem.getString("mission_vue"))) {
+            boolean produisait = !mem.getString("mission_vue").isEmpty();
+            mem.putString("mission_vue", vue);
+            if (produisait && Actions.Deposer.utile(t, m.garder)) { lancer(t, new Actions.Deposer(m.garder)); return; }
+        }
+
+        // S'il a dans son sac de quoi finir une quantité, il rentre la livrer, de loin comme dans la colonie (seul le dépôt compte).
+        if (c != null && c.objet != null && mission.quantite() && mission.livre + t.compter(c.objet) >= mission.nombre
+                && !"depot_plein".equals(t.resultat) && Actions.Deposer.utile(t, m.garder)) {
             lancer(t, new Actions.Deposer(m.garder));
             return;
         }
@@ -256,17 +265,19 @@ final class Cerveau {
             if (dehors || t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) rentrer(t); else attendre(t, 10);
             return;
         }
-        // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse.
-        if (mission == null && !t.missions.isEmpty() && !m.enCours(t)) {
+        // Toutes ses missions sont remplies (des stocks pleins) : il attend que le stock baisse. Sa dernière mission faite
+        // (file vide, Travailleur.nettoyerMissions), il ne repart pas produire de lui-même : il attend au poste une autre mission.
+        boolean fileFinie = t.missions.isEmpty() && mem.getBoolean("file_finie");
+        if (mission == null && (!t.missions.isEmpty() || fileFinie) && !m.enCours(t)) {
             if (Monde.libres(t) < 24 && !mem.getBoolean("livre")) {
                 mem.putBoolean("livre", true);
                 lancer(t, new Actions.Deposer(m.garder));
                 return;
             }
-            Travailleur.Mission premiere = t.missions.get(0);
-            Metier.Commande cp = Metier.catalogue(t.metier, premiere.id);
+            Travailleur.Mission premiere = fileFinie ? null : t.missions.get(0);
+            Metier.Commande cp = premiere == null ? null : Metier.catalogue(t.metier, premiere.id);
             if (cp != null) ecrire(t, "stock_plein", 3600, "stock_plein", cp.nom.toLowerCase(), Math.max(0, Metier.avancement(t, premiere)), premiere.nombre);
-            if (dehors) rentrer(t); else attendre(t, 20);
+            if (dehors || fileFinie && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) rentrer(t); else attendre(t, 20);
             return;
         }
         mem.remove("livre");

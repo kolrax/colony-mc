@@ -249,24 +249,28 @@ public class Travailleur extends PathfinderMob {
         int fait = c == null || c.objet == null ? 0 : Metier.avancement(this, m);
         boolean hors = m == null && !missions.isEmpty() && missions.stream().noneMatch(x -> x.enHoraires(heure()));
         return Statut.texte(new Statut.Etat(metier, aTerre, mode == Mode.GREVE, mode == Mode.ATTENDRE, mode == Mode.SUIVRE, bloc,
-                !missions.isEmpty(), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
+                !missions.isEmpty() || memoire.getBoolean("file_finie"), c == null ? null : c.nom, fait, c == null || c.objet == null ? 0 : m.nombre, hors));
     }
 
     /** Retire les quantités livrées et les missions qui n'existent plus dans son métier ; prévient son chef. */
     void nettoyerMissions() {
+        boolean faite = false;
         for (var it = missions.iterator(); it.hasNext(); ) {
             Mission m = it.next();
             Metier.Commande c = Metier.catalogue(metier, m.id);
             if (c == null) { it.remove(); continue; }
-            if (m.uneFois && !m.quantite() && c.objet != null && Metier.remplie(this, m)) { it.remove(); continue; } // un stock « une fois » : fait
+            if (m.uneFois && !m.quantite() && c.objet != null && Metier.remplie(this, m)) { it.remove(); faite = true; continue; } // un stock « une fois » : fait
             if (m.quantite() && !m.quotidienne && m.livre >= m.nombre) {
                 it.remove();
+                faite = true;
                 memoire.putLong("fini_le", level().getGameTime()); // « travail fini » (Remarques)
                 Mission suivante = missionActive();
                 Courrier.ecrire(this, suivante != null ? "mission_finie_suite" : "mission_finie", m.nombre + " " + c.nom.toLowerCase(),
                         suivante == null ? "" : Metier.nomMission(metier, suivante));
             }
         }
+        // Sa dernière mission faite : il attend au poste une autre mission, « En attente », sans produire de lui-même (Cerveau).
+        if (faite && missions.isEmpty()) memoire.putBoolean("file_finie", true);
     }
     // --- Ordres longs (cahier 8.3) -------------------------------------------------------------------
 
@@ -733,6 +737,7 @@ public class Travailleur extends PathfinderMob {
                     : action instanceof Blessures.Accourir ? "Auprès d'un blessé"
                     : action instanceof Guerisseur.Soin ? "Soigne un blessé"
                     : action instanceof Actions.Attendre && Blessures.gravite(this).auRepos() ? "Blessé, au repos"
+                    : missions.isEmpty() && memoire.getBoolean("file_finie") ? "Mission remplie"
                     : missions.isEmpty() && !metier.equals("bucheron") && !metier.equals("guerrier") && !metier.equals("guerisseur") && !metier.equals("cuisinier") && !metier.equals("transporteur") && !metier.equals("macon") ? "Sans mission"
                     : !missions.isEmpty() && missionActive() == null ? "Mission remplie" : "Au travail"; // vert à l'écran : « de nuit » est dit dans son portrait (fiche)
         };

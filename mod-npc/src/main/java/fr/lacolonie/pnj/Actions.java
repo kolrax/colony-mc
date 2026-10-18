@@ -939,6 +939,20 @@ public final class Actions {
 
         Deposer(List<Filtre> garder) { super("deposer"); this.garder = garder; }
 
+        /** Il a dans son sac de quoi déposer : autre chose qu'une pile de chaque objet à garder et ses pièces (comme {@link #tick}). */
+        static boolean utile(Travailleur t, List<Filtre> garder) {
+            boolean[] garde = new boolean[garder.size()];
+            for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
+                ItemStack s = t.inventaire.getItem(i);
+                if (s.isEmpty()) continue;
+                int k = -1;
+                for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
+                if (k >= 0) garde[k] = true;
+                else if (Reglages.piece(s) < 0) return true;
+            }
+            return false;
+        }
+
         /** Range tout au dépôt, sauf une pile de chaque objet à garder (une pioche, des torches, à manger…). */
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);

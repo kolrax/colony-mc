@@ -144,6 +144,8 @@ def resume(rapport):
             print(f"    sac : {sac}")
     poste = rapport.get("poste", {})
     print(f"Poste : {poste.get('pos', 'aucun')} ; dépôt : {poste.get('depot', {})} ; caisse : {poste.get('caisse', {})}")
+    if poste.get("reserve"):
+        print(f"Réserve du dépôt (au-delà des 27 cases) : {poste['reserve']}")
     print(f"Blocs cassés (64 blocs autour du poste) : {r.get('casses_par_nature', {})}")
     print(f"Blocs cassés par métier : {r.get('blocs_casses_par_metier', {})}")
     construits = r.get("construits_casses", {})

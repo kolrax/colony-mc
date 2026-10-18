@@ -606,6 +606,10 @@ public final class Fantome {
             p.add("ecran", json(b.fiche(j))); // ce que l'écran du poste affiche
             p.add("caisse", contenu(b.caisse));
             p.add("depot", contenu(b.depot));
+            // La réserve : ce qui ne tient plus dans les 27 cases du dépôt (compté dans les missions, pas dans « depot »).
+            Map<String, Integer> reserve = new TreeMap<>();
+            for (ItemStack s : b.reserveVue()) reserve.merge(BuiltInRegistries.ITEM.getKey(s.getItem()).toString(), s.getCount(), Integer::sum);
+            p.add("reserve", GSON.toJsonTree(reserve));
         }
         r.add("poste", p);
 

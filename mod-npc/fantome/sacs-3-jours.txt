@@ -1,0 +1,37 @@
+# Les sacs des ouvriers (lot 16) : même scénario que trois-ouvriers.txt, mais trois jours de jeu et un rapport à la
+# fin de chaque jour. Attendu : la récolte au dépôt, pas dans le sac loin du poste ; un ouvrier qui a fini sa mission
+# (ou change de mission, ou a le sac plein) rentre déposer et ne garde que ses outils, sa nourriture et ses pièces.
+# La monnaie du monde d'essai (écrite par tools/fantome.py) : cuivre 1, or 8, émeraude 64.
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche mineur 2
+fantome embauche bucheron 2
+fantome embauche fermier 2
+# Un ouvrier tout juste embauché ne connaît son poste qu'à sa seconde suivante (Travailleur.tickCourrier), et seulement
+# une fois les chunks autour générés (du temps réel, pas des ticks) : sans cette pause, la mission est refusée
+# (« n'a pas de poste de travail »).
+attendre 20
+ticks 40
+# Leurs outils, des graines et du pain au dépôt (par l'écran du dépôt), le reste de l'or à la caisse.
+fantome donne minecraft:iron_pickaxe 2
+fantome donne minecraft:iron_axe 2
+fantome donne minecraft:iron_hoe 1
+fantome donne minecraft:wheat_seeds 16
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+# Les missions, confirmées comme à l'écran (Missions.donner) : id du catalogue du métier, répétition (fois, jour,
+# stock), nombre, horaires. Chacun choisit seul son lieu de travail.
+fantome mission mineur charbon fois 64
+fantome mission bucheron tout fois 32
+fantome mission fermier ble stock 32
+fantome clic mineur
+fantome rapport sacs-3-jours-debut
+attendre 5
+jours 1
+fantome rapport sacs-3-jours-j1
+jours 1
+fantome rapport sacs-3-jours-j2
+jours 1
