@@ -591,3 +591,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **1.0.4 installée** : personne connecté (0/10). Jar 1 723 329 octets, sha1 `f2a18bf7cffd…`, même taille dans `/mods-off` ; 1.0.3 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.3 -> 1.0.4) », « essai-v2 », « Done (2.111s) » à 06 h 17. Aucune erreur du mod. Toujours des « Can't keep up » de 1 à 2 h (mise en veille de l'hébergeur, probablement) et des reconnexions SDLink.
 - **Pas de modpack** (rien ne change côté client), pas d'annonce. Rien essayé avec un vrai joueur.
 - Incident de méthode : `tools/fantome.py` prend lui-même `/tmp/gametest.lock` ; le lancer derrière `flock` le bloque jusqu'à son délai (25 min perdues). Le lancer sans `flock`.
+
+## 2026-10-18 08 h 25 UTC : livraison 1.0.5 (chasseur hors colonie, alerte du guérisseur, accueil 1.0), serveur seul
+- **Ce qui change en jeu** :
+  - le chasseur chasse hors de la colonie (plus les bêtes près des maisons) ; s'il ne voit rien, il va voir au bord de la colonie dans les 4 directions avant de se dire sans gibier. Joueur fantôme : 6 viandes en ~2 500 ticks, prises à ~53 blocs du poste, rien de construit cassé ;
+  - le guérisseur affiche « ⚠ Rien pour relever les blessés : mets du pain ou des potions de soin au dépôt » quand un ouvrier est à terre et que le dépôt est vide ;
+  - le message d'accueil de la 0.8 (chat libre, retiré) est remplacé par un accueil 1.0 (poste, embauche, clic droit, touche B, livret), une fois par joueur.
+- Mesures (`main` `b0d7b7a`, puis version seule en `0fafc41`) : **295/295 JUnit, 341/341 en jeu** (08 h 23) ; `build` revérifié vert après le passage en 1.0.5 (295/295).
+- **1.0.5 installée** : personne connecté (0/10). Jar 1 727 735 octets, sha1 `a8aacdf7dd18…`, même taille dans `/mods-off` ; 1.0.4 rangé dans `/mods-off`, un seul jar du mod. « colonie_pnj (version 1.0.4 -> 1.0.5) », « essai-v2 », « Done (2.039s) » à 08 h 25. Aucune erreur du mod (282 erreurs de tables de butin de `railways` et `create_enchantment_industry`, sans rapport avec le mod).
+- **Pas de modpack** (rien ne change côté client), pas d'annonce, pas de message privé. Rien essayé avec un vrai joueur.
