@@ -16,7 +16,7 @@ import discord as d
 FUNCTION = HERE.parent / "supabase/functions/modpack/index.ts"
 EMBARQUES = HERE / "embarques"            # nos mods maison (pas sur Modrinth) : le jar à livrer avec la prochaine version
 ARCHIVE = EMBARQUES / "archive"           # les jars déjà publiés, nommés <sha1>-<fichier>
-GARDER_VERSIONS = 2                       # mods embarqués gardés pour les 2 dernières versions (les plus anciennes ne peuvent de toute façon plus rejoindre le serveur)
+GARDER_VERSIONS = 1                       # mods embarqués gardés pour la dernière version seulement (deux jars dépassent la limite de 5 Mo de Supabase, 18/10)
 SELF = "https://wegefcdewecwjvmhaaxb.supabase.co/functions/v1/modpack"
 LAUNCHERS = [("modrinth", "Modrinth App", "🟢"), ("curseforge", "CurseForge", "🟠"), ("zip", "Sans launcher", "📁")]
 MOIS = "janvier février mars avril mai juin juillet août septembre octobre novembre décembre".split()
