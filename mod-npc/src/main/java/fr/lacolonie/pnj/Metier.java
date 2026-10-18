@@ -149,6 +149,23 @@ public abstract class Metier {
     }
 
     /**
+     * S'équiper (plan E3) : passé près du dépôt de son poste (4 blocs), au plus une fois par minute, il y prend la meilleure
+     * armure qu'il trouve, case par case, comme ses outils ; la sienne retourne au dépôt ({@link Guerrier#armure}). Le guerrier
+     * a sa propre revue ({@link Guerrier#revue}). Appelé chaque seconde : rien à lire tant que la minuterie n'est pas échue.
+     */
+    static void armureAuDepot(Travailleur t) {
+        if (!Reglages.actuel.armure_depot || t.bureau == null || "guerrier".equals(t.metier) || t.memoire.getBoolean("demission")) return;
+        long maintenant = Cerveau.temps(t);
+        if (t.memoire.getLong("revue_armure") > maintenant || t.distanceToSqr(net.minecraft.world.phys.Vec3.atBottomCenterOf(t.bureau)) > 4 * 4) return;
+        Bureau.Entite b = Bureau.entite(t);
+        if (b == null) return;
+        t.memoire.putLong("revue_armure", maintenant + 60);
+        if (!Guerrier.armure(t, b, true)) return;
+        t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        Cerveau.dire(t, "armure_depot", 300, "Il y a de quoi se protéger au dépôt : je m'en couvre.");
+    }
+
+    /**
      * Au poste, il prend au dépôt le meilleur outil {@code bon} (au-dessus de {@code seuil}) et le met en main ; le sien de la
      * même sorte (le meilleur qu'il avait) retourne au dépôt s'il vaut moins que le nouveau, sinon il le garde au sac. Rien ne
      * se perd, rien ne se crée, rien ne tombe par terre. Échec (poste inaccessible, outil déjà pris) : plus d'essai avant 5 min.

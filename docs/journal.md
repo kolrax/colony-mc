@@ -656,3 +656,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Mesures** : build et JUnit verts, **362/362** tests en jeu verts. Le test n'a pas été lancé sur l'ancien code pour vérifier qu'il échoue (urgence).
 - **Livraison** : `colonie_pnj-1.0.9.1.jar` dans `/mods` (la 1.0.9 rangée dans `/mods-off`), « Done » à 17 h 12 UTC, 4 ouvriers présents. Pas de modpack (le client n'a pas changé).
 - **Pour les agents** : la prochaine version sera la 1.0.10 ou plus, et elle doit contenir ce correctif (fusionner `origin/main`).
+
+## 2026-10-18 18 h 21 UTC : 1.0.10 livrée, serveur seul (B2 horaires des missions, D1 ouvriers sur la carte Xaero, avec le correctif 1.0.9.1)
+- Code de `main` `1319219` identique à `e7bfc92` testé : **302/302 JUnit, 365/365 en jeu** (18 h 18 UTC). `mod_version=1.0.10`.
+- `list` : 0 joueur connecté, donc pas de préavis. Chunky pré-générait la carte (91 %) ; il a repris seul après le redémarrage.
+- Jar 1 791 325 octets, sha1 `3cedd71f621b…` vérifié avant l'envoi, même taille dans `/mods-off` ; 1.0.9.1 rangé dans `/mods-off`, un seul jar du mod dans `/mods`. « colonie_pnj (version 1.0.9.1 -> 1.0.10) », panneau des PNJ ouvert, « Done (2.511s) » à 18 h 21 UTC. Aucune erreur ni avertissement du mod au journal.
+- À noter : le jar local de `mod-npc/build/libs` a été réécrit par une autre construction à 18 h 21, après l'envoi. Le jar installé a la taille exacte du jar reconstruit depuis `main`. Son sha1 n'a pas pu être relu sur le serveur (téléchargement coupé par le proxy du cloud).
+- Pas de modpack (canal réseau 9 inchangé, le paquet de la carte est facultatif : les clients 1.0.7 restent compatibles), pas d'annonce. Burnt, Do a Barrel Roll et Distant Horizons restent dans `/mods-off` pour le modpack final.

@@ -13,8 +13,10 @@ import net.minecraft.world.phys.Vec3;
  *   a pas, il en cherche plus loin) et creuse un escalier en colimaçon jusqu'à la profondeur du minerai ;</li>
  * <li>là, il mine en galeries parallèles espacées de 3 blocs, comme un joueur.</li>
  * </ol>
- * Il pose une torche tous les 8 blocs s'il en a, comble les trous du sol avec de la pierre, abandonne une galerie
- * devant la lave ou l'eau s'il n'a pas de quoi la boucher ; pour un filon, il bouche d'abord la lave qui le touche (ou
+ * Il pose une torche tous les 8 blocs s'il en a, contre une paroi de côté (et en reprend au dépôt quand il n'en a plus),
+ * comble les trous du sol avec de la pierre, bouche la lave ou l'eau autour de sa case, et abandonne une galerie seulement
+ * s'il n'a pas de quoi la boucher. Couloir barré ou galeries finies : il ne remonte pas, il ouvre une galerie de côté à son
+ * niveau vers un nouveau coin ({@link #detour}), et ne creuse un autre escalier qu'en dernier recours. Pour un filon, il bouche d'abord la lave qui le touche (ou
  * l'eau au-dessus) et ne le casse jamais en se tenant dessous s'il porte du gravier ou du sable ({@link Actions.Casser}) ;
  * et il prend au dépôt la pioche qu'il lui faut (fer pour le diamant), ou vient la demander s'il n'y en a pas. Pour remonter, il
  * reprend son escalier.
@@ -28,6 +30,7 @@ final class Mineur extends Metier {
     static final int[][] DIRS = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
     /** La terre de son escalier : ce qu'il pose d'abord pour boucher un trou. */
     static final Actions.Filtre TERRE = Actions.Filtre.de("minecraft:dirt|minecraft:coarse_dirt");
+    static final Actions.Filtre TORCHE = Actions.Filtre.de("minecraft:torch");
 
     /** Une commande de minerai : les blocs à miner, la hauteur (Y) des galeries et la pioche nécessaire. */
     static final class Minerai extends Commande {
@@ -140,8 +143,9 @@ final class Mineur extends Metier {
                 BlockPos q = p.offset(d[0], h, d[1]);
                 String quoi = Monde.liquide(l, q);
                 if (quoi == null) continue;
-                boolean touche = d[0] == 0 && d[1] == 0 || h >= 0 && h < haut;
-                boolean bouchable = touche && ("lave".equals(quoi) || "eau".equals(quoi) && !l.canSeeSky(q.above()) && !Monde.construitAutour(l, q));
+                // Toute la lave autour, et l'eau sous terre loin des constructions : même sans toucher la case, elle coulerait dans
+                // la galerie par une paroi creuse (une grotte) ; avant, il abandonnait la galerie, puis le puits, et remontait (A4).
+                boolean bouchable = "lave".equals(quoi) || "eau".equals(quoi) && !l.canSeeSky(q.above()) && !Monde.construitAutour(l, q);
                 if (!bouchable || echecSur(t, q) || t.memoire.getInt("bouchons") >= BOUCHONS || Itineraire.caseDeChantier(t, true) < 0) {
                     t.memoire.remove("bouchons");
                     return Case.LIQUIDE;
@@ -187,17 +191,100 @@ final class Mineur extends Metier {
         return Case.PRETE;
     }
 
-    /** Avance d'une case prête, en posant une torche de temps en temps. */
-    static void avancer(Travailleur t, BlockPos p, int compteur) {
-        CompoundTag m = t.memoire;
-        if (compteur % TORCHES == 0 && t.level().getMaxLocalRawBrightness(p.above()) < 8) {
-            if (t.compter(Actions.Filtre.de("minecraft:torch")) > 0) {
-                m.putInt("torche", m.getInt("torche") + 1);
-                if (m.getInt("torche") % 2 == 1) { Lieux.pose(t, p.above()); Cerveau.lancer(t, new Actions.Poser(p.above(), Actions.Filtre.de("minecraft:torch"))); return; }
-            } else Cerveau.ecrire(t, "torches", 1800, "torches");
-        }
-        m.putInt("torche", 0);
+    /** Avance d'une case prête (dans la direction dx, dz), en posant une torche de temps en temps. */
+    static void avancer(Travailleur t, BlockPos p, int compteur, int dx, int dz) {
+        if (compteur % TORCHES == 0) eclairer(t, p, dx, dz);
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(p), 0.7));
+    }
+
+    /**
+     * S'il fait sombre, une torche de son sac à hauteur de tête, contre une paroi de côté (E3). Avant, elle se collait au
+     * bloc qu'il regardait, celui qu'il cassait juste après : elle tombait, et sa galerie restait noire.
+     */
+    static void eclairer(Travailleur t, BlockPos p, int dx, int dz) {
+        Level l = t.level();
+        BlockPos q = p.above();
+        if (l.getMaxLocalRawBrightness(q) >= 8 || !l.getBlockState(q).isAir()) return;
+        if (t.compter(TORCHE) == 0) { Cerveau.ecrire(t, "torches", 1800, "torches"); return; }
+        net.minecraft.core.Direction avant = net.minecraft.core.Direction.fromDelta(dx, 0, dz);
+        if (avant == null) return;
+        for (net.minecraft.core.Direction cote : new net.minecraft.core.Direction[]{avant.getClockWise(), avant.getCounterClockWise()}) {
+            var torche = net.minecraft.world.level.block.Blocks.WALL_TORCH.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, cote.getOpposite());
+            if (!torche.canSurvive(l, q) || Actions.sortir(t, TORCHE).isEmpty()) continue;
+            l.setBlockAndUpdate(q, torche);
+            Lieux.pose(t, q);
+            t.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            return;
+        }
+    }
+
+    /**
+     * Plus de torche : il en reprend au dépôt, s'il y en a (regardé au plus toutes les 2 minutes, et seulement si le poste
+     * est chargé). Vrai s'il y va.
+     */
+    static boolean torchesAuDepot(Travailleur t) {
+        CompoundTag m = t.memoire;
+        long maintenant = Cerveau.temps(t);
+        if (m.getLong("torches_vu") > maintenant) return false;
+        m.putLong("torches_vu", maintenant + 120);
+        if (t.compter(TORCHE) > 0) return false;
+        Bureau.Entite b = Bureau.entite(t);
+        if (b == null || b.compter(TORCHE) == 0) return false;
+        Cerveau.lancer(t, new Actions.Prendre(TORCHE, Math.max(1, Reglages.actuel.mineur_torches_prises)));
+        return true;
+    }
+
+    /** Les galeries de côté, dans l'ordre : vers l'ouest (ses galeries vont vers l'est), puis le nord, puis le sud. */
+    static final int[][] DETOURS = {{-1, 0}, {0, -1}, {0, 1}};
+
+    /** Leur longueur : juste au-delà des galeries déjà creusées (24 vers l'est ; 24 au nord comme au sud). */
+    static int longueurDetour(int i) { return i == 0 ? GALERIE + 3 : 2 * 3 * GALERIES + 3; }
+
+    /**
+     * A4 : couloir barré des deux côtés, ou galeries finies. Au lieu de remonter creuser un autre escalier, il ouvre une
+     * galerie de côté, à son niveau, depuis son fond, et y recommence ses galeries ; barrée, il essaie la direction suivante.
+     * Faux s'il n'y a plus de détour possible (il remontera, en dernier recours).
+     */
+    static boolean detour(Travailleur t, BlockPos f) {
+        CompoundTag m = t.memoire;
+        if (!m.contains("detour")) {
+            if (m.getInt("detours") >= Reglages.actuel.mineur_detours) return false;
+            m.putInt("detour", 0);
+            m.putInt("detour_pas", 0);
+            Cerveau.dire(t, "detour", 120, "Plus rien à creuser ici : j'ouvre une galerie de côté, sans remonter.");
+        }
+        int i = m.getInt("detour");
+        if (i >= DETOURS.length) { m.remove("detour"); m.putInt("detours", Reglages.actuel.mineur_detours); return false; }
+        int[] d = DETOURS[i];
+        int s = m.getInt("detour_pas") + 1;
+        if (s > longueurDetour(i)) {
+            // Arrivé : un nouveau fond, à son niveau ; il y recommence couloir et galeries.
+            m.putLong("fond", f.offset(d[0] * longueurDetour(i), 0, d[1] * longueurDetour(i)).asLong());
+            m.putInt("detours", m.getInt("detours") + 1);
+            m.remove("detour");
+            m.remove("detour_pas");
+            m.putInt("cote", 1);
+            m.putInt("branche", 1);
+            m.putInt("couloir", 0);
+            m.putInt("pas", 0);
+            Cerveau.attendre(t, 1);
+            return true;
+        }
+        BlockPos p = f.offset(d[0] * s, 0, d[1] * s);
+        Case r = creuserCase(t, p, 2);
+        if (r == Case.ACTION) return true;
+        if (r != Case.PRETE) {
+            // Barrée aussi : la direction suivante, depuis son fond.
+            m.putInt("detour", i + 1);
+            m.putInt("detour_pas", 0);
+            m.remove("cible");
+            Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(f), 1));
+            return true;
+        }
+        m.putInt("detour_pas", s);
+        avancer(t, p, s, d[0], d[1]);
+        return true;
     }
 
     /** Position de la marche k de l'escalier en colimaçon (k = 0 : son départ), qui part dans la direction {@code sens}. */
@@ -306,6 +393,8 @@ final class Mineur extends Metier {
         m.putInt("branche", 1);
         m.putInt("couloir", 0);
         m.putInt("pas", 0);
+        m.remove("detour");
+        m.remove("detours");
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(s), 2));
     }
 
@@ -339,6 +428,7 @@ final class Mineur extends Metier {
             else Cerveau.lancer(t, new Actions.Demander("pioche", c.outil, 1));
             return;
         }
+        if (torchesAuDepot(t)) return;
 
         // 1. Les filons qu'il voit autour de lui : le minerai demandé d'abord, puis tout autre minerai récoltable.
         for (Object[] f : new Object[][]{{c.blocs, 3}, {Actions.Filtre.de("#c:ores"), 2}}) {
@@ -387,13 +477,15 @@ final class Mineur extends Metier {
                 m.putInt("marche", k);
                 m.putInt("tours", 0);
                 if (k >= PALIER) { m.remove("rates"); t.debloquer(Statut.LIEU_MINE); } // il descend : ce puits marche
-                avancer(t, p, k);
+                int[] d = DIRS[((k - 1) / PALIER + sens) % 4];
+                avancer(t, p, k, d[0], d[1]);
                 return;
             }
         }
 
         // 4. Les galeries : un couloir le long d'un axe, une galerie tous les 3 blocs, de chaque côté.
         BlockPos f = BlockPos.of(m.getLong("fond"));
+        if (m.contains("detour") && detour(t, f)) return;
         int cote = m.getInt("cote"), branche = m.getInt("branche");
         if (branche > GALERIES) {
             if (cote == 1) {
@@ -404,6 +496,7 @@ final class Mineur extends Metier {
                 Cerveau.attendre(t, 1);
                 return;
             }
+            if (detour(t, f)) return; // A4 : une galerie de côté à son niveau, plutôt que remonter
             t.dire(Messages.corps(t, "puits_fini")); // plus de lettre : elle revenait à chaque puits, sans rien demander au chef
             m.remove("puits");
             Cerveau.attendre(t, 2);
@@ -418,7 +511,7 @@ final class Mineur extends Metier {
             if (r == Case.ACTION) return;
             if (r != Case.PRETE) { m.putInt("branche", GALERIES + 1); Cerveau.attendre(t, 1); return; }
             m.putInt("couloir", j);
-            avancer(t, p, j);
+            avancer(t, p, j, 0, cote);
             return;
         }
         // 4b. La galerie elle-même, vers l'est.
@@ -441,6 +534,6 @@ final class Mineur extends Metier {
             return;
         }
         m.putInt("pas", s);
-        avancer(t, p, s);
+        avancer(t, p, s, 1, 0);
     }
 }

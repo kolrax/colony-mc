@@ -539,6 +539,8 @@ public class Travailleur extends PathfinderMob {
         // Il nage comme un joueur : l'eau n'est pas un mur, il la traverse quand c'est plus court.
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, 2.0f);
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 0.0f);
+        // Une cabosse de cacao (ou une noix de coco) arrête le passage : Minecraft la croit franchissable (plan A2).
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.COCOA, -1.0f);
         setCustomNameVisible(true);
         // Un point visé juste au-dessus ou au-dessous de lui : Minecraft le ferait tourner sur lui-même (en toupie).
         moveControl = new net.minecraft.world.entity.ai.control.MoveControl(this) {
@@ -953,6 +955,7 @@ public class Travailleur extends PathfinderMob {
             @Override
             protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int max) {
                 super.createPathFinder(max); // pose l'évaluateur de la marche (portes comprises)
+                nodeEvaluator = new Itineraire.Evaluateur(); // le même, qui sait éviter un endroit où il est resté bloqué (plan A2)
                 return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
                     @Override
                     public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
@@ -989,6 +992,8 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 20 == 0) { tickCourrier(); surveillerCoince(); if (isRemoved()) return; } // ramené dans une autre dimension
         if ((tickCount + getId()) % 20 == 7 && mode != Mode.CHOMEUR) tickRegles();
         if ((tickCount + getId()) % 5 == 0 && mode != Mode.CHOMEUR) survivre();
+        Fuite.tick(this); // plan E2 : trop blessé, il se replie ; hors combat et nourri, il guérit comme un joueur
+        if ((tickCount + getId()) % 20 == 11 && mode != Mode.CHOMEUR) Metier.armureAuDepot(this); // plan E3 : l'armure du dépôt
         h = mesure.mesurer(Charge.Partie.CORPS, h);
         if (lettreEnMain != null && vientDEtreFrappe()) { garder(lettreEnMain, true); lettreEnMain = null; } // frappé : il la lira plus tard
         if (lettreEnMain != null) {

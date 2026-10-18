@@ -1,0 +1,24 @@
+# Le mineur sous terre (corrections A4, E3, E4) : deux mineurs au diamant, tout au fond, là où la lave et les grottes
+# abondent. Attendu : devant la lave, l'eau ou une grotte, ils bouchent ou contournent à leur niveau (galerie de côté) au
+# lieu de remonter ; leurs galeries sont éclairées (torches prises au dépôt) ; aucun ne brûle, ne se noie ni ne tombe.
+# Deux jours de jeu, un rapport à la fin de chaque jour.
+time set 1000
+fantome apparait village
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche mineur 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_pickaxe 2
+fantome donne minecraft:torch 64
+fantome donne minecraft:cobblestone 64
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+fantome mission mineur diamant fois 16
+fantome rapport mine-lave-debut
+attendre 5
+jours 1
+fantome rapport mine-lave-j1
+jours 1
+fantome rapport mine-lave-j2
