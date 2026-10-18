@@ -556,3 +556,16 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Redémarrage à 23 h 53 : « colonie_pnj (version 1.0.1 -> 1.0.2) », « Preparing level "essai-v2" », « Done (2.151s) » à 23 h 54 min 08 s, panneau des PNJ ouvert (port habituel). Aucune erreur ni avertissement du mod (les 282 erreurs de tables de butin et le mixin client de create_sa sont ceux d'avant). Aucun monde touché.
 - **Pas de modpack** : rien ne change côté client ; le modpack 1.0.0 reste valable. Pas d'annonce publique.
 - Rien essayé avec un vrai joueur sur le serveur.
+
+## 2026-10-18 00 h 15 UTC : session de nuit (17/10 22 h – 18/10 00 h 15 UTC)
+- **1.0.1 et 1.0.2 livrées sur le serveur** (voir les deux entrées ci-dessus), une relecture chacune (0 bloquant ; 3 + 1 importants corrigés avant fusion).
+- **Tests capricieux** (case 12, `v2-tests-stables`, fusionnée, pas encore livrée : rien de visible pour un joueur sauf la fuite devant un creeper et la sortie de lave) :
+  - `creeperAlerteLeGuerrier` : vrai défaut, l'ouvrier fuyait parfois à 2 pas ; maintenant au moins 12 blocs (6 tirages, réessai toutes les 3 s au plus). Ancien code 1 échec sur 20 ; après 67/67 groupés et 18/18 séparés.
+  - `sortDeLaLave` : il se hisse sur un bord bas (< 1,2 bloc). 2 échecs sur 101 avant, 88/88 après ; cause probable, pas de test qui échoue d'abord.
+  - `figeToiPuisAuTravail` : correction dans le test seulement (mesure 10 ticks après l'ordre, collègues immobiles), 37/37 ; cause non prouvée.
+  - `enRang` jamais reproduit (68/68), non corrigé ; `abatLExcedent` échoue seulement quand plusieurs copies tournent ensemble, non corrigé ; `fourbeEnvoieUnCollegue` n'existe plus.
+  - Outil : `COLONIE_TESTS=a,b COLONIE_FOIS=N ./gradlew runGameTestServer` répète des tests choisis.
+- **Charge à 50 ouvriers** (scénario `mod-npc/fantome/charge-50.txt`, monde généré, temps réel, 49 ouvriers actifs) : 11,3 à 13,9 ms par tick en moyenne, pire 31 ms ; part du mod 3,8 à 5,8 ms. Ce qui coûte : les chemins ratés (4 à 6,5 ms chacun). GameTest `banc100` : un pic à 110 ms non expliqué.
+- Mesures `main` : 292/292 JUnit, 329/329 en jeu (code identique à la branche testée).
+- Plan : case 12 cochée ; ajoutées : vérifier bûcheron et mineur qui gardent leur sac, monde d'ouverture de lundi. `suivi.py reste` = 2.
+- Incident : la branche `en-cours` n'a pas pu être supprimée (GitHub 403) ; elle pointe sur un état déjà dans `main`.
