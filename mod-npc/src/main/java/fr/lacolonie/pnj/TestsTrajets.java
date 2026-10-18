@@ -157,6 +157,41 @@ public class TestsTrajets {
         });
     }
 
+    /**
+     * Un trajet de 150 blocs calculé d'avance (5 étapes), puis, une fois parti, un pilier de 2 blocs posé sur la ligne droite
+     * dans chacune des 3 étapes suivantes : à chacune, il refait l'étape seule. Il ne doit jamais se figer (avant : au
+     * troisième, plus aucune recherche ne lui était permise, et il restait planté jusqu'à se dire coincé).
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200, skyAccess = true)
+    public static void troisCoupuresSansSeFiger(GameTestHelper h) {
+        Travailleur t = longTrajet(h, 153000, false, 1200, 150);
+        Vec3 depart = t.position(), but = Vec3.atBottomCenterOf(TestsJeu.sol(h, 150, 153000));
+        boolean[] pose = {false};
+        int[] arret = {0}, depuis = {0};
+        Vec3[] repere = {depart};
+        h.onEachTick(() -> {
+            Vec3 p = t.position();
+            if (!pose[0] && Itineraire.horizontale(p, depart) > 12) {
+                pose[0] = true;
+                for (int x : new int[]{45, 73, 101}) {
+                    BlockPos q = TestsJeu.sol(h, x, 153000);
+                    h.getLevel().setBlockAndUpdate(q, Blocks.STONE_BRICKS.defaultBlockState());
+                    h.getLevel().setBlockAndUpdate(q.above(), Blocks.STONE_BRICKS.defaultBlockState());
+                }
+            }
+            if (!pose[0] || Itineraire.horizontale(p, repere[0]) >= 0.5) { repere[0] = p; depuis[0] = 0; }
+            else arret[0] = Math.max(arret[0], ++depuis[0]);
+        });
+        h.succeedWhen(() -> {
+            String e = "à " + (int) Itineraire.horizontale(t.position(), but) + " blocs du but, " + t.recherchesEtape + " recherches d'étape, plus long arrêt "
+                    + arret[0] + " ticks, " + t.diag + ", action " + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat;
+            h.assertTrue(pose[0] && t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
+            t.discard();
+            liberer(h);
+            h.assertTrue(arret[0] < 20, "il ne doit pas rester planté sur place (" + e + ")");
+        });
+    }
+
     static final java.util.Map<GameTestHelper, BlockPos> PORTES = new java.util.HashMap<>();
     static final java.util.Map<GameTestHelper, java.util.List<net.minecraft.world.level.ChunkPos>> FORCES = new java.util.HashMap<>();
 
@@ -165,9 +200,11 @@ public class TestsTrajets {
      * (chunks forcés, libérés à la fin, réussite ou échec) ; {@code porte} : un mur de 3 blocs de haut à mi-chemin, de 49 blocs
      * de large, percé d'une porte en bois sur la ligne droite.
      */
-    static Travailleur longTrajet(GameTestHelper h, int dz, boolean porte, int duree) {
+    static Travailleur longTrajet(GameTestHelper h, int dz, boolean porte, int duree) { return longTrajet(h, dz, porte, duree, 100); }
+
+    static Travailleur longTrajet(GameTestHelper h, int dz, boolean porte, int duree, int longueur) {
         ServerLevel l = h.getLevel();
-        BlockPos depart = TestsJeu.sol(h, 0, dz), arrivee = TestsJeu.sol(h, 100, dz);
+        BlockPos depart = TestsJeu.sol(h, 0, dz), arrivee = TestsJeu.sol(h, longueur, dz);
         java.util.List<net.minecraft.world.level.ChunkPos> forces = new java.util.ArrayList<>();
         for (int x = depart.getX() - 32; x <= arrivee.getX() + 32; x += 16)
             for (int z = -32; z <= 32; z += 16) {

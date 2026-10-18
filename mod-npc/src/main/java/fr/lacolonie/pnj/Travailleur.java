@@ -934,6 +934,9 @@ public class Travailleur extends PathfinderMob {
     float porteeChemin;
     /** Son chercheur de chemin (plan A1 : {@code Itineraire.depuis} cherche aussi depuis la fin d'une étape pas encore atteinte). */
     net.minecraft.world.level.pathfinder.PathFinder chercheur;
+    /** Le dernier chemin calculé par sa navigation, et la précision demandée (reprise quand le jeu le refait). */
+    private Path cheminCree;
+    private int precisionCree = 1;
     /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
@@ -983,8 +986,9 @@ public class Travailleur extends PathfinderMob {
                 if (level.isClientSide || p == null || p.isDone() || p.getTarget() == null) { super.recomputePath(); return; }
                 if (level.getGameTime() - timeLastRecompute > 20L) {
                     BlockPos cible = p.getTarget();
+                    int precision = p == cheminCree ? precisionCree : 1; // celle de la recherche d'origine (1 : une étape)
                     path = null;
-                    path = createPath(cible, 1);
+                    path = createPath(cible, precision);
                     timeLastRecompute = level.getGameTime();
                     hasDelayedRecomputation = false;
                 } else hasDelayedRecomputation = true;
@@ -995,7 +999,12 @@ public class Travailleur extends PathfinderMob {
                 if (level.isClientSide) return super.createPath(cibles, decalage, auDessus, precision, portee);
                 if (porteeChemin > 0) portee = Math.min(portee, porteeChemin); // une recherche courte (étapes) : région et exploration réduites
                 long debut = System.nanoTime();
-                try { return super.createPath(cibles, decalage, auDessus, precision, portee); }
+                try {
+                    Path c = super.createPath(cibles, decalage, auDessus, precision, portee);
+                    cheminCree = c;
+                    precisionCree = precision;
+                    return c;
+                }
                 finally { Charge.ICI.mesurer(Charge.Partie.CHEMINS, debut); }
             }
         };
