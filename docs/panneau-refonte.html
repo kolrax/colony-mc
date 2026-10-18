@@ -146,6 +146,14 @@ textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-rad
 textarea:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:var(--brass)}
 .btn{align-self:flex-start;background:var(--ink);color:var(--sheet);border:1px solid var(--ink);border-radius:4px;padding:9px 16px;font-weight:500;cursor:pointer}
 .btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.vq{margin:0;font-size:15px}
+.verdicts{gap:8px}
+.vbtn{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:9px 14px;font-weight:500;cursor:pointer}
+.vbtn:hover{border-color:var(--muted)}
+.vbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.vbtn.ok[aria-pressed="true"]{background:var(--copper-wash);border-color:var(--copper);color:var(--copper)}
+.vbtn.ko[aria-pressed="true"]{background:var(--bad-wash);border-color:var(--bad);color:var(--bad)}
+.vbtn.bloque[aria-pressed="true"]{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
 .btn[disabled]{opacity:.5;cursor:default}
 .msg{font-size:14px;margin:0}
 .msg.err{color:var(--bad)}
@@ -418,18 +426,21 @@ function renderSessions() {
       : `<p class="empty">Aucune session pour l'instant. La première démarre à ${(() => { const n = prochaine(); return n ? heure(n) : "l'heure prévue"; })()}.</p>`}</div>`;
 }
 
-const ST_ESSAI = { a_faire: ["", "à faire"], ok: ["ok", "réussi"], ko: ["bad", "à corriger"], bloque: ["warn", "bloqué"], corrige: ["brass", "corrigé, à revérifier"] };
+const ST_ESSAI = { a_faire: ["", "pas encore testé"], ok: ["ok", "✓ ça marche"], ko: ["bad", "✗ ne marche pas"], bloque: ["warn", "⏸ pas pu tester"], corrige: ["brass", "corrigé, à retester"] };
+const VERDICTS = [["ok", "✓ Ça marche"], ["ko", "✗ Ça ne marche pas"], ["bloque", "⏸ Je n'ai pas pu tester"]];
+let dernierVerdict = null;
 function renderEssais() {
   const act = document.activeElement;
   if (act && act.closest && act.closest("[data-essai]")) { essaiDiffere = true; return; }
   essaiDiffere = false;
   const n = (s) => T.filter((x) => x.statut === s).length;
-  const filtres = [["a_faire", "À faire"], ["corrige", "À revérifier"], ["ko", "À corriger"], ["bloque", "Bloqués"], ["ok", "Réussis"], ["tous", "Tous"]];
+  const filtres = [["a_faire", "À tester"], ["corrige", "À retester"], ["ko", "Ne marchent pas"], ["bloque", "Pas pu tester"], ["ok", "Marchent"], ["tous", "Tous"]];
   const liste = filtreEssai === "tous" ? T : T.filter((x) => x.statut === filtreEssai);
   const groupes = [...new Set(liste.map((x) => x.groupe || "Divers"))];
   const fait = n("ok") + n("ko") + n("bloque");
-  $("#t-essais").innerHTML = `<div class="card"><h2>Tests en jeu<small>${n("ok")} réussis · ${n("ko")} à corriger · ${n("a_faire") + n("corrige")} à faire</small></h2>
-    <p class="muted" style="margin:0 0 10px">Fais chaque test sur le serveur, puis touche <strong>Réussi</strong>, <strong>À corriger</strong> ou <strong>Bloqué</strong>. Si ça ne va pas, écris ce que tu as vu : les agents corrigent à partir de ta remarque, puis le test revient en « à revérifier ».</p>
+  $("#t-essais").innerHTML = `<div class="card"><h2>Tests en jeu<small>${fait} testés sur ${T.length} · ${n("ok")} marchent · ${n("ko")} ne marchent pas</small></h2>
+    <p class="muted" style="margin:0 0 10px">Chaque test commence en « pas encore testé ». Fais-le en jeu, puis donne ton verdict en touchant <strong>une</strong> des trois réponses. Si ça ne marche pas, écris d'abord ce que tu as vu : l'équipe corrige à partir de ta remarque, puis le test revient dans « À retester ». Un test noté quitte la liste « À tester » ; tu le retrouves dans « Tous ».</p>
+    ${dernierVerdict ? `<p class="reply" role="status">Enregistré : <strong>${esc(dernierVerdict.num)}</strong> → ${esc(ST_ESSAI[dernierVerdict.v][1])}. <button class="chip" data-annuler-essai="${esc(dernierVerdict.id)}">Annuler</button></p>` : ""}
     <div class="bar"><span style="width:${(100 * fait / Math.max(1, T.length)).toFixed(1)}%"></span></div>
     <div class="filters" role="group" aria-label="Filtrer les tests" style="margin-top:12px">${filtres.map(([k, l]) => `<button class="chip" data-filtre-essai="${k}" aria-pressed="${k === filtreEssai}">${l}${k === "tous" ? "" : " · " + n(k)}</button>`).join("")}</div></div>
     ${!T.length ? `<div class="card"><p class="empty">La feuille de tests de la version 2 arrive avec la livraison : un test par chose à essayer en jeu.</p></div>` : !liste.length ? `<div class="card"><p class="empty">Aucun test dans cette catégorie.</p></div>` :
@@ -439,8 +450,11 @@ function renderEssais() {
         ${x.preparation ? `<div class="body"><p><strong>Préparer :</strong> ${inline(esc(x.preparation))}</p></div>` : ""}
         <div class="body"><p><strong>Faire :</strong></p>${md(x.etapes)}<p><strong>Attendu :</strong> ${inline(esc(x.attendu))}</p></div>
         ${x.note ? `<div class="reply"><strong>Réponse de l'équipe :</strong> ${esc(x.note)}</div>` : ""}
-        <div class="ans"><textarea id="rem-${esc(x.id)}" data-remarque="${esc(x.id)}" placeholder="Ce que tu as vu (obligatoire si « À corriger » ou « Bloqué »)" aria-label="Remarque">${esc(x.remarque || "")}</textarea>
-        <div class="opts"><button class="btn" data-verdict="ok">Réussi</button><button class="btn ghost" data-verdict="ko">À corriger</button><button class="btn ghost" data-verdict="bloque">Bloqué</button></div><p class="msg" role="status"></p></div>
+        <div class="ans"><p class="vq"><strong>Ton verdict${x.statut === "a_faire" || x.statut === "corrige" ? " ?" : " :"}</strong></p>
+        <div class="opts verdicts" role="group" aria-label="Ton verdict">${VERDICTS.map(([k, l]) => `<button class="vbtn ${k}" data-verdict="${k}" aria-pressed="${x.statut === k}">${l}</button>`).join("")}</div>
+        <label class="vq" for="rem-${esc(x.id)}">Ce que tu as vu <span class="muted">(obligatoire si ça ne marche pas ou si tu n'as pas pu tester)</span></label>
+        <textarea id="rem-${esc(x.id)}" data-remarque="${esc(x.id)}" placeholder="Ex. : le bûcheron a coupé l'arbre devant ma maison." >${esc(x.remarque || "")}</textarea>
+        ${x.statut !== "a_faire" ? `<button class="chip" data-annuler-essai="${esc(x.id)}" style="align-self:flex-start">Remettre en « pas encore testé »</button>` : ""}<p class="msg" role="status"></p></div>
       </article>`; }).join("")}</div></div>`).join("")}`;
 }
 function renderAll() { renderTabs(); renderEssais(); renderAccueil(); renderPlan(); renderJournal(); renderDemandes(); renderConsignes(); renderSessions(); }
@@ -457,6 +471,12 @@ document.addEventListener("click", (e) => {
   const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
   const f = e.target.closest("[data-filtre]"); if (f) { filtre = f.dataset.filtre; renderJournal(); return; }
   const fe = e.target.closest("[data-filtre-essai]"); if (fe) { filtreEssai = fe.dataset.filtreEssai; renderEssais(); return; }
+  const ae = e.target.closest("[data-annuler-essai]");
+  if (ae && db) {
+    const id = ae.dataset.annulerEssai, retour = dernierVerdict && dernierVerdict.id === id ? dernierVerdict.avant : "a_faire";
+    db.doc("essais/" + id).update({ statut: retour, maj: new Date().toISOString() }).then(() => { dernierVerdict = null; if (document.activeElement) document.activeElement.blur(); renderEssais(); }).catch(() => {});
+    return;
+  }
   const v = e.target.closest("[data-verdict]");
   if (v) {
     const card = v.closest("[data-essai]"), id = card.dataset.essai, msg = card.querySelector(".msg");
@@ -464,8 +484,9 @@ document.addEventListener("click", (e) => {
     if (verdict !== "ok" && !rem) { msg.className = "msg err"; msg.textContent = "Écris ce que tu as vu : les agents en ont besoin pour corriger."; return; }
     if (!db) { msg.className = "msg err"; msg.textContent = "Pas de connexion à la base : ouvre ce panneau depuis claude.ai."; return; }
     msg.className = "msg"; msg.textContent = "Envoi…";
+    const x = T.find((y) => y.id === id), avant = x ? x.statut : "a_faire";
     db.doc("essais/" + id).update({ statut: verdict, remarque: rem, maj: new Date().toISOString() })
-      .then(() => { if (document.activeElement) document.activeElement.blur(); })
+      .then(() => { dernierVerdict = { id, num: (x && x.num) || id, v: verdict, avant }; if (document.activeElement) document.activeElement.blur(); renderEssais(); })
       .catch((err) => { msg.className = "msg err"; msg.textContent = "Non enregistré (" + ((err && err.code) || "erreur") + "). Réessaie."; });
     return;
   }
