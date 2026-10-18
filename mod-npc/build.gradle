@@ -72,6 +72,14 @@ neoForge {
             systemProperty 'colonie.photos', 'true'
         }
 
+        // Banc photo des écrans (développement) : poste, ouvriers, dépôt, journal ; une capture par écran et par échelle, puis il quitte.
+        ecrans {
+            client()
+            gameDirectory = project.file('run-photos')
+            programArguments.addAll '--quickPlaySingleplayer', 'ecrans', '--width', '1280', '--height', '720'
+            systemProperty 'colonie.photos', 'ecrans'
+        }
+
         server {
             server()
             programArgument '--nogui'
