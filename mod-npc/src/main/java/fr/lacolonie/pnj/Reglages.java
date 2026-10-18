@@ -142,6 +142,20 @@ public class Reglages {
     public String jeton_panneau = "";
     /** Le joueur fantôme (/fantome, refonte partie 7) : toujours actif en développement ; sur un vrai serveur, seulement si vrai. */
     public boolean fantome = false;
+    /** Fuir avant d'être à terre (plan E2) : sous cette part de sa vie, un ouvrier (pas le guerrier) lâche le travail, s'éloigne du danger et mange (0 : jamais). */
+    public double fuite_vie = 0.5;
+    /** Il reprend le travail revenu à cette part de sa vie. */
+    public double fuite_reprise = 0.8;
+    /** À cette distance (en blocs) du monstre qui l'a frappé, il se sent à l'abri. */
+    public int fuite_distance = 10;
+    /** Au plus tant de secondes à l'abri (sans rien à manger, il guérit mal) ; ensuite, pas de nouvelle fuite avant fuite_pause_secondes, sauf s'il est frappé. */
+    public int fuite_secondes_max = 120;
+    public int fuite_pause_secondes = 180;
+    /** Guérison comme un joueur : hors combat (pas frappé depuis 10 s) et nourri (faim d'au moins regen_faim), un point de vie toutes ces secondes (0 : seulement la guérison lente). */
+    public int regen_secondes = 4;
+    public int regen_faim = 15;
+    /** S'équiper (plan E3) : passé au dépôt, chaque ouvrier prend la meilleure armure qu'il y trouve, case par case. */
+    public boolean armure_depot = true;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
