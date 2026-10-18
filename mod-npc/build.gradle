@@ -43,8 +43,14 @@ base {
 // Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-// Xaero, pour le seul banc de la carte (runCarte) : ni dans les tests, ni dans le jar.
+// Xaero, pour le seul banc de la carte (runCarte) : ni dans les tests, ni dans le jar. Il est copié dans run-carte/mods,
+// car un lancement de développement ne charge pas les mods de son chemin de classes supplémentaire.
 configurations { xaeroBanc }
+tasks.register('modsCarte', Sync) {
+    from configurations.xaeroBanc
+    into 'run-carte/mods'
+}
+tasks.matching { it.name == 'runCarte' }.configureEach { dependsOn 'modsCarte' }
 
 neoForge {
     // Specify the version of NeoForge to use.
@@ -90,7 +96,6 @@ neoForge {
             gameDirectory = project.file('run-carte')
             programArguments.addAll '--quickPlaySingleplayer', 'carte', '--width', '1280', '--height', '720'
             systemProperty 'colonie.carte', 'true'
-            additionalRuntimeClasspathConfiguration.extendsFrom configurations.xaeroBanc
         }
 
         server {
