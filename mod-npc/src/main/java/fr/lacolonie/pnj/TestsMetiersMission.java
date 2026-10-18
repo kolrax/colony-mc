@@ -1,6 +1,7 @@
 package fr.lacolonie.pnj;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.BeforeBatch;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -97,5 +98,46 @@ public class TestsMetiersMission {
             h.assertFalse(Fermier.parcelles(t).isEmpty(), "le champ est retenu");
             t.discard();
         });
+    }
+
+    /**
+     * Corrections du 18/10 (plan B, point 2) : plus d'horaires généraux ni d'« expédition max ». À 7 h, des heures générales
+     * de 20 h à 6 h (venues de l'ancien écran du poste, ou d'une ancienne sauvegarde) ne le mettent plus au repos : seule une
+     * mission « toujours » compte, et il est à l'ouvrage. La paie s'enregistre toujours. Une mission « la nuit » le met hors horaires.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "metiers_mission")
+    public static void horairesGenerauxSansEffet(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "mineur", 775, new ItemStack(Items.IRON_PICKAXE));
+        chef.moveTo(t.bureau.getX() + 0.5, t.bureau.getY(), t.bureau.getZ() + 2.5);
+        h.assertTrue(Missions.donner(chef, t, "fer", "fois", 20, "toujours", null).ok(), "mission acceptée");
+        h.assertTrue(h.getLevel().getBlockEntity(t.bureau) instanceof Bureau.Entite, "le poste");
+        Bureau.Entite b = (Bureau.Entite) h.getLevel().getBlockEntity(t.bureau);
+        // L'ancien écran du poste envoyait les heures et les jours d'expédition avec la paie.
+        CompoundTag d = new CompoundTag();
+        d.putString("uuid", t.getUUID().toString());
+        d.putInt("debut", 20);
+        d.putInt("fin", 6);
+        d.putInt("joursExpedition", 1);
+        d.putLong("salaire", 7);
+        b.action(chef, "enregistrer", d);
+        h.assertTrue(t.salaire == 7, "la paie s'enregistre (" + t.salaire + ")");
+        h.assertTrue(t.joursExpedition == 3, "pas d'expédition max réglable (" + t.joursExpedition + " jours)");
+        h.assertTrue(Cerveau.enService(t), "à 7 h, sa mission « toujours » le met à l'ouvrage (heures " + t.debut + "-" + t.fin + ")");
+        // Une ancienne sauvegarde, avec ses heures et ses jours d'expédition : chargée sans erreur, sans effet.
+        CompoundTag nbt = new CompoundTag();
+        t.addAdditionalSaveData(nbt);
+        nbt.putInt("Debut", 20);
+        nbt.putInt("Fin", 6);
+        nbt.putInt("JoursExpedition", 1);
+        t.readAdditionalSaveData(nbt);
+        h.assertTrue(t.missions.size() == 1, "sa mission est rechargée");
+        h.assertTrue(t.joursExpedition == 3, "expédition : la durée par défaut (" + t.joursExpedition + " jours)");
+        h.assertTrue(Cerveau.enService(t) && !Cerveau.horsHoraires(t), "rechargé, toujours à l'ouvrage (heures " + t.debut + "-" + t.fin + ")");
+        // Les horaires de la mission, eux, décident : « la nuit », à 7 h, il est hors horaires.
+        t.missions.get(0).horaires = "nuit";
+        h.assertTrue(!Cerveau.enService(t) && Cerveau.horsHoraires(t), "mission de nuit, à 7 h : hors horaires");
+        t.discard();
+        h.succeed();
     }
 }

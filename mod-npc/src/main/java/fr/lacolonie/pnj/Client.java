@@ -696,10 +696,9 @@ public final class Client {
         final List<Long> nombres = new ArrayList<>();
         final List<String> categories = new ArrayList<>(), noms = new ArrayList<>();
         CompoundTag choisi;
-        // Réglages de l'ouvrier choisi
-        int debut, fin, jours;
+        // Réglage de l'ouvrier choisi : sa paie (corrections du 18/10 : plus d'horaires généraux ni d'expédition max,
+        // seuls les horaires de chaque mission comptent).
         EditBox salaire, recherche, cible;
-        Button bDebut, bFin, bJours;
 
         EcranPoste(BlockPos pos, CompoundTag infos) {
             super(Component.literal(infos.getString("titre")), 420, 228);
@@ -719,11 +718,6 @@ public final class Client {
                 categories.add(d.getString("cat"));
             }
             choisi = ouvriers.stream().filter(o -> o.getString("uuid").equals(choisiMemo)).findFirst().orElse(ouvriers.isEmpty() ? null : ouvriers.get(0));
-            if (choisi != null) {
-                debut = choisi.getInt("debut");
-                fin = choisi.getInt("fin");
-                jours = Math.max(1, choisi.getInt("joursExpedition"));
-            }
         }
 
         void envoyer(String action, CompoundTag d) { PacketDistributor.sendToServer(new Reseau.ActionBureau(pos, action, d)); }
@@ -834,41 +828,18 @@ public final class Client {
                 });
                 return;
             }
-            // Horaires
-            bouton("-", x, y + 40, 14, b -> { debut = Math.floorMod(debut - 1, 24); majBoutons(); });
-            bDebut = bouton("", x + 15, y + 40, 34, b -> {});
-            bouton("+", x + 50, y + 40, 14, b -> { debut = (debut + 1) % 24; majBoutons(); });
-            bouton("-", x + 82, y + 40, 14, b -> { fin = Math.floorMod(fin - 1, 24); majBoutons(); });
-            bFin = bouton("", x + 97, y + 40, 34, b -> {});
-            bouton("+", x + 132, y + 40, 14, b -> { fin = (fin + 1) % 24; majBoutons(); });
-            // Expéditions
-            bouton("-", x + 160, y + 40, 14, b -> { jours = Math.max(1, jours - 1); majBoutons(); });
-            bJours = bouton("", x + 175, y + 40, 46, b -> {});
-            bJours.setTooltip(Tooltip.create(Component.literal("Plus loin qu'une journée de marche, il part en expédition : il campe, et rentre au plus tard au bout de ce nombre de jours.")));
-            bouton("+", x + 222, y + 40, 14, b -> { jours = Math.min(30, jours + 1); majBoutons(); });
             // Paie
-            salaire = new EditBox(font, x + 250, y + 42, 56, 16, Component.literal("Paie"));
+            salaire = new EditBox(font, x, y + 42, 56, 16, Component.literal("Paie"));
             salaire.setMaxLength(9);
             salaire.setFilter(v -> v.matches("[0-9]*"));
             salaire.setValue(String.valueOf(choisi.getLong("salaireVerse")));
             addRenderableWidget(salaire);
-            bouton("Enregistrer", x + 312, y + 40, 92, b -> {
+            bouton("Enregistrer", x + 62, y + 40, 92, b -> {
                 CompoundTag d = new CompoundTag();
                 d.putString("uuid", choisi.getString("uuid"));
-                d.putInt("debut", debut);
-                d.putInt("fin", fin);
-                d.putInt("joursExpedition", jours);
                 try { d.putLong("salaire", Long.parseLong(salaire.getValue().trim())); } catch (NumberFormatException e) { d.putLong("salaire", choisi.getLong("salaireVerse")); }
                 envoyer("enregistrer", d);
             });
-            majBoutons();
-        }
-
-        void majBoutons() {
-            if (bDebut == null) return;
-            bDebut.setMessage(Component.literal(debut + " h"));
-            bFin.setMessage(Component.literal(fin + " h"));
-            bJours.setMessage(Component.literal(jours + (jours > 1 ? " jours" : " jour")));
         }
 
         // --- Onglet Caisse : la paie, et l'encadré « Guerre »
@@ -950,9 +921,6 @@ public final class Client {
                     CompoundTag o = ouvriers.get(defilement + r);
                     choisiMemo = o.getString("uuid");
                     choisi = o;
-                    debut = o.getInt("debut");
-                    fin = o.getInt("fin");
-                    jours = Math.max(1, o.getInt("joursExpedition"));
                     rebuildWidgets();
                     return true;
                 }
@@ -1016,10 +984,8 @@ public final class Client {
             texte(g, "Vie " + choisi.getInt("vie") + "/" + choisi.getInt("vieMax") + "   Faim " + choisi.getInt("faim") + "/20"
                     + (choisi.getInt("impayes") > 0 ? "   Paies en retard : " + choisi.getInt("impayes") : "")
                     + (choisi.getString("besoin").isEmpty() ? "" : "   Il demande : " + choisi.getString("besoin")), x, y + 21, GRIS);
-            texte(g, "HORAIRES", x, y + 31, OR);
-            texte(g, "à", x + 70, y + 46, GRIS);
-            texte(g, "EXPÉDITION MAX", x + 160, y + 31, OR);
-            texte(g, "PAIE (bronzes)", x + 250, y + 31, OR);
+            texte(g, "PAIE (bronzes)", x, y + 31, OR);
+            texte(g, couper("Les horaires se choisissent pour chaque mission, sur sa fiche.", largeur - 176), x + 162, y + 46, GRIS);
             texte(g, couper(choisi.getString("paie") + " · il demande " + choisi.getLong("salaireDemande"), largeur - 16), x, y + 64, GRIS);
         }
 
