@@ -179,21 +179,26 @@ final class Lieux {
     }
 
     /**
-     * Comme {@link #peutCasser}, mais le poste de son chef ne compte pas dans le tampon quand il y est la seule construction :
-     * la mare d'un champ collé au poste, quand il n'y a pas d'autre place ({@link Fermier.Champ#mares}). Le tampon est relu
-     * sans le bloc du poste (six boîtes autour de lui).
+     * Comme {@link #peutCasser}, pour la mare d'un champ du fermier ({@link Fermier.Champ#mares}) : la terre labourée et les
+     * cultures de son champ ({@code siens} : leurs positions, {@link #sien}) ne comptent pas comme construction, ni en p ni
+     * dans le tampon ; et le poste de son chef ne compte pas dans le tampon quand il y est la seule construction (un champ
+     * collé au poste, quand il n'y a pas d'autre place). Le tampon est relu sans le bloc du poste (six boîtes autour de lui).
      */
-    static boolean peutCasserPresDuPoste(Travailleur t, BlockPos p) {
+    static boolean peutCasserPresDuPoste(Travailleur t, BlockPos p, LongSet siens) {
         if (peutCasser(t, p)) return true;
         Level l = t.level();
         BlockPos b = t.bureau;
-        if (b == null || construit(l, p) || Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
+        if (construit(l, p) && !sien(l.getBlockState(p), siens, p.getX(), p.getY(), p.getZ()) || Monde.structure(l, p) != null || Mineur.baseVoisine(t, p) != null) return false;
+        if (!regles(l) || ici(t, p)) return true; // sa terre labourée, hors des règles (essais) ou dans la zone « Travaille ici »
         int x0 = (p.getX() & ~3) - TAMPON, y0 = (p.getY() & ~3) - TAMPON, z0 = (p.getZ() & ~3) - TAMPON;
-        int x1 = x0 + 3 + 2 * TAMPON, y1 = y0 + 3 + 2 * TAMPON, z1 = z0 + 3 + 2 * TAMPON, bx = b.getX(), by = b.getY(), bz = b.getZ();
+        int x1 = x0 + 3 + 2 * TAMPON, y1 = y0 + 3 + 2 * TAMPON, z1 = z0 + 3 + 2 * TAMPON;
+        if (siens != null && !chercher(l, x0, y0, z0, x1, y1, z1, siens)) return true; // rien d'autre que son champ dans le tampon
+        if (b == null) return false;
+        int bx = b.getX(), by = b.getY(), bz = b.getZ();
         if (bx < x0 || bx > x1 || by < y0 || by > y1 || bz < z0 || bz > z1) return false; // la construction n'est pas le poste
-        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1))
-                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1))
-                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1));
+        return (bx == x0 || !chercher(l, x0, y0, z0, bx - 1, y1, z1, siens)) && (bx == x1 || !chercher(l, bx + 1, y0, z0, x1, y1, z1, siens))
+                && (by == y0 || !chercher(l, bx, y0, z0, bx, by - 1, z1, siens)) && (by == y1 || !chercher(l, bx, by + 1, z0, bx, y1, z1, siens))
+                && (bz == z0 || !chercher(l, bx, by, z0, bx, by, bz - 1, siens)) && (bz == z1 || !chercher(l, bx, by, bz + 1, bx, by, z1, siens));
     }
 
     /** Au plus tant de blocs posés retenus par mineur (les plus récents) : une mine entière, escaliers et galeries. */
@@ -211,10 +216,13 @@ final class Lieux {
         t.memoire.putLongArray("poses_mine", n);
     }
 
-    /** Ce bloc en (x, y, z) est une torche ou du pavé que ce mineur a posé lui-même. */
+    /**
+     * Ce bloc en (x, y, z) est une torche ou du pavé que ce mineur a posé lui-même, ou la terre labourée ou une culture du
+     * champ de ce fermier ({@link #peutCasserPresDuPoste}).
+     */
     static boolean sien(BlockState st, LongSet siens, int x, int y, int z) {
-        return (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(net.neoforged.neoforge.common.Tags.Blocks.COBBLESTONES))
-                && siens.contains(BlockPos.asLong(x, y, z));
+        return siens != null && (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(net.neoforged.neoforge.common.Tags.Blocks.COBBLESTONES)
+                || st.is(Blocks.FARMLAND) || st.getBlock() instanceof net.minecraft.world.level.block.CropBlock) && siens.contains(BlockPos.asLong(x, y, z));
     }
 
     /** Le résultat de {@link #mineConstruite}, par mineur et par case de 4 x 4 x 4 : comme {@link #ZONES}. */

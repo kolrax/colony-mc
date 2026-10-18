@@ -485,6 +485,50 @@ public class TestsFermier {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Restes de la refonte : un vieux champ de 9 sur 9, déjà labouré et retenu, sans eau, et le fermier en mission dessus.
+     * Avant : la mare ne se creusait qu'à la création d'un champ, la terre restait sèche. Maintenant, à l'entretien, il
+     * creuse une mare dans le champ (sans seau), qui ne coule pas, et toute la terre labourée du champ devient humide.
+     */
+    @GameTest(template = "vide", timeoutTicks = 3000)
+    public static void mareDansUnVieuxChampSec(GameTestHelper h) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        Travailleur t = TestsMission.ouvrier(h, chef, "fermier", 114, ItemStack.EMPTY);
+        ServerLevel l = h.getLevel();
+        BlockPos centre = t.bureau.offset(10, -1, 0);
+        for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) l.setBlockAndUpdate(centre.offset(x, 0, z), Blocks.FARMLAND.defaultBlockState());
+        marquer(t, centre, 9, 9, "ble");
+        Fermier.TOURS.get(t).champsVus = 0; // l'entretien du champ dès son premier tour
+        Bureau.Entite d = TestsBucheron.depot(t);
+        d.depot.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 64));
+        d.depot.setItem(1, new ItemStack(Items.WHEAT_SEEDS, 30));
+        d.depot.setItem(2, new ItemStack(Items.IRON_HOE));
+        h.assertTrue(Missions.donner(chef, t, "ble", "stock", 64, "toujours", centre.above()).ok(), "mission acceptée");
+        h.succeedWhen(() -> {
+            List<String> eau = new ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(centre.offset(-6, -2, -6), centre.offset(6, 1, 6))) {
+                if (l.getFluidState(q).isEmpty()) continue;
+                h.assertTrue(l.getFluidState(q).isSource() && q.getY() == centre.getY() && Math.abs(q.getX() - centre.getX()) <= 4 && Math.abs(q.getZ() - centre.getZ()) <= 4,
+                        "l'eau ne coule pas et reste dans le champ : " + q.subtract(centre).toShortString());
+                eau.add(q.subtract(centre).toShortString());
+            }
+            h.assertTrue(!eau.isEmpty(), "une mare dans le vieux champ sec (" + t.statutTete() + ", " + TestsJeu.etat(t, t.bureau) + ")");
+            int humides = 0;
+            List<String> seches = new ArrayList<>();
+            for (int x = -4; x <= 4; x++)
+                for (int z = -4; z <= 4; z++) {
+                    BlockPos q = centre.offset(x, 0, z);
+                    if (!l.getBlockState(q).is(Blocks.FARMLAND)) continue;
+                    // Le jeu humidifie la terre au hasard de ses ticks : on lui en donne un tout de suite.
+                    if (l.getBlockState(q).getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) < 7) l.getBlockState(q).randomTick(l, q, l.random);
+                    if (l.getBlockState(q).getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) == 7) humides++;
+                    else seches.add(x + " " + z);
+                }
+            h.assertTrue(seches.isEmpty() && humides >= 40, "la terre du champ humide (moisture 7) : " + humides + " cases, sèches : " + seches + " (mare en " + eau + ")");
+            t.discard();
+        });
+    }
+
     /** Relecture : « Oublie ce champ », en le regardant : il le retire de ses champs, sans rien arracher. */
     @GameTest(template = "vide", timeoutTicks = 400)
     public static void oublieLeChamp(GameTestHelper h) {
