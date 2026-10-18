@@ -127,6 +127,34 @@ public class TestsDeblocage {
     }
 
     /**
+     * Plan A3 (montagne) : au fond d'un puits de pierre naturelle de 6 blocs, sans pioche ni bloc à poser, un seau d'eau en
+     * poche, son bureau en haut. Avant, il creusait la pierre à mains nues. Maintenant il monte à la nage par une colonne
+     * d'eau, sort en haut et reprend l'eau : son seau est plein à la fin, et il ne reste pas une goutte dans le puits.
+     */
+    @GameTest(template = "grand", timeoutTicks = 800, skyAccess = true)
+    public static void monteParUneColonneDEau(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 9; y++)
+            if (x != 12 || z != 12 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.WATER_BUCKET), new BlockPos(12, 10, 4));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> {
+            int pierres = 0, eau = 0;
+            for (int x = 9; x <= 15; x++) for (int z = 9; z <= 15; z++) for (int y = 4; y <= 11; y++) {
+                BlockPos q = new BlockPos(x, y, z);
+                if (h.getBlockState(q).is(Blocks.STONE)) pierres++;
+                if (!h.getBlockState(q).getFluidState().isEmpty()) eau++;
+            }
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", seaux d'eau " + t.compter(Actions.Filtre.de("minecraft:water_bucket"))
+                    + ", " + pierres + " pierres, " + eau + " cases d'eau";
+            h.assertTrue(pierres == 7 * 7 * 6 - 6, "il ne doit pas creuser la pierre à mains nues (" + e + ")");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + e + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:water_bucket")) == 1, "il doit avoir repris l'eau dans son seau (" + e + ")");
+            h.assertTrue(eau == 0, "il ne doit pas laisser d'eau (" + e + ")");
+            t.discard();
+        });
+    }
+
+    /**
      * Sur un îlot de pierre de 3 x 3, entouré d'une douve vide d'un bloc de large et de 10 de profondeur (trop haut pour
      * sauter), de la pierre en poche et une pioche, son bureau de l'autre côté : il pose un bloc de pont et passe.
      */
