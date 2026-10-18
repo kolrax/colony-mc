@@ -228,6 +228,41 @@ public class TestsGuerre {
         });
     }
 
+    /**
+     * Six gardes contre six ouvriers ennemis, en file devant eux : chacun prend un homme proche de lui que ses camarades ne
+     * frappent pas déjà (Guerre.cible). Avant, ils allaient tous sur le plus proche : une mêlée en grappe, un seul homme visé.
+     */
+    @GameTest(template = "vide", timeoutTicks = 400)
+    public static void chacunSonHomme(GameTestHelper h) {
+        TestsChef.Scene s = TestsChef.scene(h, 328);
+        Rival r = rival(h, s, 328, loin(h, 328), 5.5, 4.5);
+        List<Travailleur> ennemis = new ArrayList<>(List.of(r.o()));
+        for (int i = 1; i < 6; i++) {
+            Travailleur o = Travailleur.auTravail(h.getLevel(), "mineur", r.poste(), new Vec3(s.b().getX() + 5.5 + i * 1.5, s.b().getY(), s.b().getZ() + 4.5), r.chef(), ItemStack.EMPTY);
+            o.chefNom = r.nom();
+            o.mode = Travailleur.Mode.ATTENDRE;
+            ennemis.add(o);
+        }
+        List<Travailleur> gardes = new ArrayList<>(List.of(s.g()));
+        for (int i = 1; i < 6; i++) gardes.add(s.ouvrier("guerrier", i < 3 ? 1.5 : 0.5, i < 3 ? 1.5 + 2 * i : 0.5 + i, new ItemStack(Items.IRON_SWORD)));
+        for (Travailleur g : gardes) { Guerrier.armer(g); mission(h, s, g, Guerre.DEFENDRE); }
+        Armee.declarer(s.chef(), r.chef().toString());
+        int[] plus = {0};
+        h.onEachTick(() -> {
+            java.util.Set<Travailleur> vises = new java.util.HashSet<>();
+            for (Travailleur g : gardes) if (g.action instanceof Actions.Attaquer a && a.cible instanceof Travailleur w && ennemis.contains(w)) vises.add(w);
+            plus[0] = Math.max(plus[0], vises.size());
+            for (Travailleur o : ennemis) o.setHealth(o.getMaxHealth()); // ils tiennent bon : seule la répartition compte
+        });
+        h.runAtTickTime(h.getTick() + 240, () -> {
+            String vu = plus[0] + " hommes visés en même temps au plus";
+            TestsGuerrier.fin(ennemis.subList(1, ennemis.size()).toArray(Travailleur[]::new));
+            r.finir(s, gardes.subList(1, gardes.size()).toArray(Travailleur[]::new));
+            h.assertTrue(plus[0] >= 4, "chacun son homme : " + vu);
+            h.succeed();
+        });
+    }
+
     /** En plein combat, sous 30 % de sa vie : il rompt et recule jusqu'au poste. */
     @GameTest(template = "vide", timeoutTicks = 600)
     public static void repliSous30(GameTestHelper h) {
