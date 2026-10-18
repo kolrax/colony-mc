@@ -48,12 +48,15 @@ final class Reperes {
         return !avant.equals(maintenant);
     }
 
-    /** Au plus autant de lettres dans le repère (un prénom très long ferait un drapeau trop large). */
-    static final int LETTRES = 10;
+    /**
+     * Au plus autant de lettres dans le drapeau du repère : celui de la carte du monde de Xaero n'en tient que deux (vu au
+     * banc : « Jean » y devient « Jear »). Le prénom entier est le nom du repère (survol de la carte, liste, étiquette).
+     */
+    static final int LETTRES = 2;
 
-    /** Le texte du repère sur la carte : le prénom de l'ouvrier (coupé s'il est très long), « Ouvrier » s'il n'en a pas. */
+    /** Le texte du drapeau : le début du prénom de l'ouvrier, « Ou » s'il n'en a pas. */
     static String symbole(String prenom) {
-        if (prenom == null || prenom.isBlank()) return "Ouvrier";
+        if (prenom == null || prenom.isBlank()) return "Ou";
         String p = prenom.strip();
         return p.length() <= LETTRES ? p : p.substring(0, LETTRES);
     }
