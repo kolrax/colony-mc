@@ -54,6 +54,7 @@ public final class Missions {
             t.missions.removeIf(x -> x.id.equals(id) && x.horaires.equals(horaires)); // la même mission, redonnée : elle est remplacée
             t.missions.add(m);
             t.missionAjoutee();
+            t.majLieu(); // son lieu « ici » vaut tout de suite (mineur, bûcheron, règles de lieu)
             Consignes.annuler(t); // un « garde à vous » ou une tâche du répertoire s'arrête
             t.ordreChef = t.level().getGameTime();
             reprendre(t);
@@ -80,7 +81,7 @@ public final class Missions {
         if (t.missions.size() >= FILE_MAX && t.missions.stream().noneMatch(x -> x.id.equals(id) && x.horaires.equals(horaires)))
             return non("Sa file est pleine (" + FILE_MAX + " missions) : annules-en une d'abord.");
         if (lieu != null) {
-            if (lieu.distManhattan(t.bureau) > LOIN * 2 || Math.abs(lieu.getX() - t.bureau.getX()) > LOIN || Math.abs(lieu.getZ() - t.bureau.getZ()) > LOIN)
+            if (LieuxRegles.dist2(lieu.getX(), lieu.getZ(), t.bureau.getX(), t.bureau.getZ()) > (long) LOIN * LOIN) // à vol d'oiseau, comme Bucheron.aPortee
                 return non("Ce lieu est trop loin du poste : " + t.prenom + " n'en reviendrait pas.");
             if (lieu.getY() < t.level().getMinBuildHeight() || lieu.getY() >= t.level().getMaxBuildHeight() || t.level().isLoaded(lieu) && t.level().getFluidState(lieu).is(FluidTags.LAVA))
                 return non("Ce lieu est mortel : choisis-en un autre.");
@@ -148,6 +149,7 @@ public final class Missions {
                 if (d.getInt("n") != t.missions.size()) Travailleur.signaler(p, "Sa file a changé : rouvre sa fiche.");
                 else if (k >= 0 && k < t.missions.size()) {
                     Travailleur.Mission m = t.missions.remove(k);
+                    t.majLieu();
                     if (t.action != null) t.finirAction("ordre");
                     Travailleur.signaler(p, "Mission annulée : " + Metier.nomMission(t.metier, m) + ".");
                 }

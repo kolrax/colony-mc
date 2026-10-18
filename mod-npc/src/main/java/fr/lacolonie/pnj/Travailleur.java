@@ -205,7 +205,13 @@ public class Travailleur extends PathfinderMob {
     /** Ce qui le bloque, avec la solution (« Pas de pioche au dépôt ») ; null : rien. Posé par les métiers, oublié après une minute sans rappel. */
     public String blocage;
     long blocageJusqua;
-    /** « Travaille ici » : le lieu imposé par le chef (null : il choisit lui-même). */
+    /** « Travaille ici » : le lieu donné par le chef avec ce bouton (null : aucun). Sauvegardé. */
+    BlockPos ici;
+    /**
+     * Où il doit travailler maintenant : le lieu de sa mission en cours, sinon « Travaille ici » ; null : il choisit lui-même.
+     * Tenu à jour par {@link #majLieu} (file changée, « Travaille ici », chaque décision du Cerveau, et toutes les 5 s) : les règles de lieu le
+     * lisent à chaque bloc ({@link Lieux#ici}), sans recompter le dépôt.
+     */
     public BlockPos lieuImpose;
 
     /** Un métier signale ce qui l'empêche de travailler ; à redire au moins chaque minute, sinon c'est oublié. */
@@ -220,9 +226,39 @@ public class Travailleur extends PathfinderMob {
     public void debloquer(String raison) { if (raison.equals(blocage)) blocage = null; }
 
     /** Où travailler : le lieu de sa mission en cours, sinon « Travaille ici », sinon null (il choisit lui-même). */
-    public BlockPos lieuTravail() {
-        Mission m = missionActive();
-        return m != null && m.lieu != null ? m.lieu : lieuImpose;
+    public BlockPos lieuTravail() { return lieuImpose; }
+
+    /** Le dernier lieu en vigueur non nul : un stock plein ou la fin de ses horaires ne lui fait pas oublier son puits. */
+    private BlockPos dernierLieu;
+
+    void majLieu() { majLieu(missionActive()); }
+
+    /**
+     * Recalcule {@link #lieuImpose} avec sa mission en cours {@code m} (déjà calculée par le Cerveau). Plus de mission en
+     * cours (stock plein, hors horaires) : il ne perd rien. Une mission en cours sans lieu, après un lieu : il choisit de
+     * nouveau le sien. Un lieu loin du précédent et de sa mine : il rouvre son puits là-bas (comme « Travaille ici »).
+     */
+    void majLieu(Mission m) {
+        BlockPos p = m != null && m.lieu != null ? m.lieu : ici;
+        if (java.util.Objects.equals(p, lieuImpose)) return;
+        lieuImpose = p;
+        if (m == null && !missions.isEmpty()) return; // au repos (stock plein, hors horaires) : sa mission reprendra au même lieu
+        if (p == null) {
+            if (m != null && dernierLieu != null) { dernierLieu = null; oublierLieu(); }
+            return;
+        }
+        if (!pres(dernierLieu, p) && !pres(memoire.contains("mine") ? BlockPos.of(memoire.getLong("mine")) : null, p)) oublierLieu();
+        dernierLieu = p;
+    }
+
+    private static boolean pres(BlockPos a, BlockPos p) {
+        return a != null && LieuxRegles.dist2(a.getX(), a.getZ(), p.getX(), p.getZ()) <= (long) Lieux.RAYON_ICI * Lieux.RAYON_ICI;
+    }
+
+    private void oublierLieu() {
+        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu (Lieux)
+        memoire.remove("lieu");
+        Mineur.oublierMine(this); // bloqué « Aucun lieu sûr pour miner » : il réessaie tout de suite au nouveau lieu
     }
 
     /** Ce qui le bloque encore (null si rien, ou si plus personne ne l'a redit depuis une minute). */
@@ -231,13 +267,18 @@ public class Travailleur extends PathfinderMob {
         return blocage;
     }
 
-    /** « Travaille ici » : sa mission en cours (et les suivantes qui n'ont pas de lieu) prend cette position. */
+    /**
+     * « Travaille ici » : sa mission en cours, celles qui n'ont pas de lieu et celles qui avaient le « Travaille ici »
+     * d'avant prennent cette position (null : toutes la perdent).
+     */
     public void travailleIci(BlockPos p) {
-        lieuImpose = p == null ? null : p.immutable();
-        for (Mission m : missions) if (m.lieu == null || p == null) m.lieu = lieuImpose;
-        memoire.remove("puits"); // le mineur rouvre son puits au nouveau lieu (Lieux)
-        memoire.remove("lieu");
-        Mineur.oublierMine(this); // bloqué « Aucun lieu sûr pour miner » : il réessaie tout de suite au nouveau lieu
+        BlockPos avant = ici;
+        ici = p == null ? null : p.immutable();
+        Mission active = missionActive();
+        for (Mission m : missions) if (m.lieu == null || p == null || m == active || m.lieu.equals(avant)) m.lieu = ici;
+        majLieu(active);
+        oublierLieu(); // le même lieu redit : il oublie quand même ses puits ratés
+        dernierLieu = lieuImpose;
     }
 
     /** Le statut unique : au-dessus de sa tête, dans sa fiche et au poste ({@link Statut#texte}). */
@@ -936,7 +977,7 @@ public class Travailleur extends PathfinderMob {
         long h = System.nanoTime();
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
         if ((tickCount + getId()) % 20 == 3) majTete();
-        if ((tickCount + getId()) % 100 == 3) majStatut();
+        if ((tickCount + getId()) % 100 == 3) { majLieu(); majStatut(); }
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
         tickCorps();
         Sons.sommeil(this);
@@ -1954,6 +1995,7 @@ public class Travailleur extends PathfinderMob {
                 missionAjoutee();
             }
             auTravail = true;
+            majLieu(); // une mission sans lieu : l'ancien lieu ne vaut plus, tout de suite
             r.add(Messages.corps(this, "dit_missions", String.join(", puis ", missions.stream().map(m -> Metier.nomMission(metier, m)).toList())));
         }
         // La guerre entre colonies (Guerre, Armee) : déclaration, paix, levée, retraite ; « rentre » ramène aussi l'armée.
@@ -2341,7 +2383,8 @@ public class Travailleur extends PathfinderMob {
         t.putString("ChefNom", chefNom);
         t.putString("Mode", mode.name());
         if (bureau != null) t.put("Bureau", NbtUtils.writeBlockPos(bureau));
-        if (lieuImpose != null) t.put("LieuImpose", NbtUtils.writeBlockPos(lieuImpose));
+        if (ici != null) t.put("LieuImpose", NbtUtils.writeBlockPos(ici));
+        if (lieuImpose != null) t.put("LieuEnCours", NbtUtils.writeBlockPos(lieuImpose));
         if (lit != null) t.put("Lit", NbtUtils.writeBlockPos(lit));
         t.putInt("JoursExpedition", joursExpedition);
         t.putLong("SortieDepuis", sortieDepuis);
@@ -2402,7 +2445,9 @@ public class Travailleur extends PathfinderMob {
         chefNom = t.getString("ChefNom");
         try { mode = Mode.valueOf(t.getString("Mode")); } catch (IllegalArgumentException e) { mode = Mode.CHOMEUR; }
         bureau = NbtUtils.readBlockPos(t, "Bureau").orElse(null);
-        lieuImpose = NbtUtils.readBlockPos(t, "LieuImpose").orElse(null);
+        ici = NbtUtils.readBlockPos(t, "LieuImpose").orElse(null);
+        lieuImpose = t.contains("LieuEnCours") ? NbtUtils.readBlockPos(t, "LieuEnCours").orElse(null) : ici; // sauvé avant : « Travaille ici »
+        dernierLieu = lieuImpose;
         lit = NbtUtils.readBlockPos(t, "Lit").orElse(null);
         joursExpedition = t.contains("JoursExpedition") ? Math.clamp(t.getInt("JoursExpedition"), 1, 30) : 3;
         sortieDepuis = t.contains("SortieDepuis") ? t.getLong("SortieDepuis") : -1;

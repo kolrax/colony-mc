@@ -87,7 +87,7 @@ textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-rad
 <script>
 const ETAPES = ["a_faire", "en_cours", "pret", "livre", "regle"];
 const ST = { a_faire: ["", "signalé"], en_cours: ["run", "en cours"], pret: ["acc", "prêt, pas encore installé"], livre: ["warn", "sur le serveur, à essayer"], regle: ["ok", "réglé (confirmé par toi)"], toujours: ["bad", "toujours là"], admin: ["", "chez l'Admin"] };
-const PLANS = { A: "Plan A · Déplacements « GPS »", B: "Plan B · Petites corrections", D: "Plan D · Les ouvriers sur la carte Xaero", Admin: "Transmis à la session Admin" };
+const PLANS = { B: "Plan B · Petites corrections", D: "Plan D · Les ouvriers sur la carte Xaero", E: "Plan E · Des ouvriers moins fragiles", A: "Plan A · Déplacements « GPS »", Admin: "Transmis à la session Admin" };
 const AGENTS = { "chef-de-chantier": "Chef de chantier", developpeur: "Développeur", testeur: "Testeur", relecteur: "Relecteur", auteur: "Auteur", artiste: "Artiste", livreur: "Livreur" };
 let C = [], E = null, db = null;
 const $ = (s) => document.querySelector(s);

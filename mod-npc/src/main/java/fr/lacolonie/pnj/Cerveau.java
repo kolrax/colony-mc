@@ -243,6 +243,7 @@ final class Cerveau {
         // Ses missions : la première qui n'est pas remplie.
         t.nettoyerMissions();
         Travailleur.Mission mission = t.missionActive();
+        t.majLieu(mission); // sa file a pu changer (remise à zéro du jour, mission livrée) : le lieu suit avant qu'il ne parte
         Metier.Commande c = mission == null ? null : Metier.catalogue(t.metier, mission.id);
 
         // Il change de mission (l'ancienne faite, annulée, ou hors de ses horaires) : la récolte de l'ancienne va d'abord au dépôt.
