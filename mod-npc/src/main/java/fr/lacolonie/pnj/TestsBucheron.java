@@ -299,6 +299,41 @@ public class TestsBucheron {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Enguerrand (serveur, 18/10) : à 2 000 blocs de son poste, il s'éloignait encore, sans ordre de son chef. Chaque coin
+     * fouillé en vain repoussait sa recherche de 320 blocs plus loin, sans borne, et il abattait arbre après arbre autour de
+     * lui. De lui-même, il ne va plus à plus de {@link Missions#LOIN} blocs du poste : ni vers un vieux coin ni vers une
+     * recherche partie trop loin, ni vers l'arbre d'à côté s'il en est déjà trop loin. Avant : il abattait cet arbre, puis
+     * partait à 2 000 blocs.
+     */
+    @GameTest(template = "vide", timeoutTicks = 800)
+    public static void resteAPorteeDuPoste(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 66000);
+        BlockPos ou = TestsJeu.sol(h, 600, 66000);
+        List<BlockPos> tronc = arbre(l, TestsJeu.sol(h, 606, 66000), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(ou), new ItemStack(Items.IRON_AXE));
+        t.mission("chene", "stock", 64);
+        t.memoire.putLong("coin_chene", base.offset(2000, 0, 0).asLong());   // un coin retenu au loin
+        t.memoire.putLong("depuis_chene", base.offset(2000, 0, 0).asLong()); // une recherche repoussée au loin
+        t.forcerChunk();
+        int[] vu = {0, 0}; // le plus loin qu'il ait visé (blocs du poste), et le nombre de ticks en marche
+        h.onEachTick(() -> {
+            if (!(t.action instanceof Actions.Aller a)) return;
+            double dx = a.cible.x - base.getX(), dz = a.cible.z - base.getZ();
+            vu[0] = Math.max(vu[0], (int) Math.sqrt(dx * dx + dz * dz));
+            vu[1]++;
+        });
+        h.runAtTickTime(h.getTick() + 700, () -> {
+            String e = TestsJeu.etat(t, base);
+            t.discard();
+            h.assertTrue(tronc.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre à 606 blocs du poste reste debout (" + e + ")");
+            h.assertTrue(vu[1] > 0, "il doit partir chercher du bois (" + e + ")");
+            h.assertTrue(vu[0] <= Missions.LOIN, "il ne doit pas viser plus loin que " + Missions.LOIN + " blocs du poste : " + vu[0] + " (" + e + ")");
+            h.succeed();
+        });
+    }
+
     /** Relecture : sans poste et le sac plein, il ne défriche pas en laissant le bois par terre : il s'arrête et le dit. */
     @GameTest(template = "vide", timeoutTicks = 800)
     public static void defricheSacPleinSansPoste(GameTestHelper h) {

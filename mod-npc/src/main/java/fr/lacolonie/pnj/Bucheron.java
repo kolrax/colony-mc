@@ -101,7 +101,7 @@ final class Bucheron extends Metier {
             if (!aller(t, t.lieuImpose, c)) t.travailleIci(null);
             return;
         }
-        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q));
+        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null || aPortee(t, q, 0)));
         if (arbre != null && t.peutAller(arbre)) {
             Lieux.choisi(t, arbre);
             if (souches.size() < 16) {
@@ -125,21 +125,24 @@ final class Bucheron extends Metier {
         // 4. Un coin où il a déjà trouvé ce bois.
         if (m.contains("coin_" + c.id)) {
             BlockPos k = BlockPos.of(m.getLong("coin_" + c.id));
-            if (k.distSqr(t.blockPosition()) <= 20 * 20) m.remove("coin_" + c.id); // il y est, et il n'y a plus rien
+            if (k.distSqr(t.blockPosition()) <= 20 * 20 || !aPortee(t, k, 0)) m.remove("coin_" + c.id); // il y est et il n'y a plus rien, ou trop loin du poste
             else if (aller(t, k, c)) return;
             else m.remove("coin_" + c.id);
         }
 
         // 5. Là où il pousse : le biome le plus proche où pousse ce bois, qu'il explore ensuite en spirale.
         String cle = t.getUUID() + "/" + c.id;
+        //    Jamais à plus de Missions.LOIN blocs du poste (aPortee) : la recherche repart du poste si elle était partie trop loin.
         BlockPos depuis = m.contains("depuis_" + c.id) ? BlockPos.of(m.getLong("depuis_" + c.id)) : t.bureau;
-        BlockPos foret = Biomes.chercher(l, cle, c.bois, depuis, (int) Math.min(6400, t.porteeMax()));
+        if (!aPortee(t, depuis, 0)) { m.remove("depuis_" + c.id); depuis = t.bureau; }
+        int rayon = (int) Math.min(Missions.LOIN, t.porteeMax());
+        BlockPos foret = Biomes.chercher(l, cle, c.bois, depuis, rayon);
         if (foret == null) { Cerveau.attendre(t, 2); return; } // il réfléchit (la recherche prend quelques secondes)
         if (foret.equals(BlockPos.ZERO)) {                         // aucun biome connu dans le rayon : il fouille autour de chez lui
             Cerveau.ecrire(t, "inconnu", 3600, "bois_inconnu", c.nom.toLowerCase());
             foret = t.bureau;
-        }
-        BlockPos e = Cerveau.pointAExplorer(t, c.id, foret, foret.equals(t.bureau) ? t.porteeMax() : 160);
+        } else if (!aPortee(t, foret, 160)) foret = t.bureau;      // la forêt la plus proche est trop loin du poste : il fouille autour de chez lui
+        BlockPos e = Cerveau.pointAExplorer(t, c.id, foret, foret.equals(t.bureau) ? rayon : 160);
         if (e == null) {
             // Il a fouillé ce coin sans rien trouver (ou tout a été coupé) : la prochaine recherche partira plus loin.
             Biomes.oublier(cle);
@@ -197,6 +200,15 @@ final class Bucheron extends Metier {
     static String pousseDe(String essence) {
         Metier.Commande c = Metier.catalogue("bucheron", essence);
         return c instanceof Bois b ? pousse(b.bois.toString()) : POUSSES.toString();
+    }
+
+    /**
+     * De lui-même, il ne va jamais à plus de {@link Missions#LOIN} blocs de son poste (moins {@code marge}, à l'horizontale) :
+     * son chef non plus ne peut pas lui imposer un lieu plus loin. Avant, chaque coin fouillé en vain repoussait la recherche
+     * de 320 blocs, sans fin, et il abattait arbre après arbre en s'éloignant (Enguerrand, 18/10 : à 2 000 blocs du poste).
+     */
+    static boolean aPortee(Travailleur t, BlockPos p, int marge) {
+        return LieuxRegles.dansColonie(t.bureau.getX(), t.bureau.getZ(), Missions.LOIN - marge, p.getX(), p.getZ());
     }
 
     /** Part vers ce point (en sortie ou en expédition). Faux si c'est trop loin : il le dit à son chef. */
