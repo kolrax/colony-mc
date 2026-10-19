@@ -196,6 +196,52 @@ public class TestsMorts {
     }
 
     /**
+     * Plan A3 (joueur fantôme, montagne : 5 à 11 chutes de 3,3 à 5,7 blocs par partie, en allant vers le sommet, à la
+     * course) : une pente en terrasses vers son bureau, à 59 blocs (il court) ; une bosse d'un bloc au bord d'un à-pic de
+     * 3 blocs, puis un à-pic de 3 blocs sur une corniche d'un bloc, une marche plus haut que la terrasse suivante. Sur son
+     * élan, il passait par-dessus la bosse ou la corniche et tombait plus bas que prévu. Jamais de dégât de chute.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1800, batch = "morts")
+    public static void terrassesEnCourant(GameTestHelper h) {
+        int[] haut = new int[60]; // la hauteur de la pierre au-dessus du sol, colonne par colonne le long de x
+        for (int x = 0; x < haut.length; x++)
+            haut[x] = x <= 9 ? 14 : x == 10 ? 15 : x <= 15 ? 12 : x == 16 ? 9 : x <= 21 ? 8 : x == 22 ? 9 : x <= 27 ? 6 : x == 28 ? 3 : x <= 33 ? 2 : x == 34 ? 3 : 0;
+        descente(h, "terrassesEnCourant", haut, 161000);
+    }
+
+    /** Pareil, plus serré : quatre bosses au bord d'à-pics de 3 blocs, à 5 blocs l'une de l'autre, à la course. */
+    @GameTest(template = "vide", timeoutTicks = 1800, batch = "morts")
+    public static void bossesEnCourant(GameTestHelper h) {
+        int[] haut = new int[60];
+        for (int x = 0; x < haut.length; x++) {
+            int m = x - 7; // une marche de 2 blocs vers le bas tous les 5 blocs, la bosse (un bloc de plus) au bord
+            haut[x] = x <= 6 ? 12 : x > 30 ? 0 : x > 26 ? 2 : 12 - 2 * (m / 5 + 1) + (m % 5 == 4 ? 1 : 0);
+        }
+        descente(h, "bossesEnCourant", haut, 162000);
+    }
+
+    /**
+     * Une bande de pierre (13 de large) de hauteur {@code haut[x]} sur le monde plat, loin des autres tests ; un ouvrier ★
+     * sans outil en haut, son bureau au pied, 59 blocs plus loin. Il doit y arriver sans aucun dégât de chute.
+     */
+    static void descente(GameTestHelper h, String nom, int[] haut, int dz) {
+        ServerLevel l = h.getLevel();
+        BlockPos o = TestsJeu.sol(h, 0, dz);
+        for (int x = 0; x < haut.length; x++)
+            for (int z = -6; z <= 6; z++) for (int k = 0; k < haut[x]; k++) l.setBlockAndUpdate(o.offset(x, k, z), Blocks.STONE.defaultBlockState());
+        BlockPos bureau = o.offset(haut.length - 1, 0, 0);
+        Travailleur t = TestsJeu.employe(h, "mineur", bureau, Vec3.atBottomCenterOf(o.offset(1, haut[1], 0)), ItemStack.EMPTY);
+        debutant(t);
+        t.forcerChunk();
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bureau), 2));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 1700, () -> {
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 16, "il doit être descendu jusqu'au bureau (" + s.texte() + ")");
+            finir(h, nom, t, s, 0.9, "fall");
+        });
+    }
+
+    /**
      * Enfermé dans un enclos de planches de 7 blocs de haut, de la pierre en poche, son bureau dehors : il monte sur un
      * pilier, sort par le haut du mur… et ne doit pas se jeter de 8 blocs de haut pour redescendre.
      */
