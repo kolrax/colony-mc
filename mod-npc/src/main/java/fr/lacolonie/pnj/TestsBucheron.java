@@ -442,4 +442,85 @@ public class TestsBucheron {
                 },
                 () -> TestsRepertoire.fin(e));
     }
+
+    // --- F2 (KOLRAX, 1.0.22) : sur le lieu de sa mission, il va droit à l'arbre ---------------------------------------
+
+    /** Un cerisier généré comme dans le monde (tronc penché, branches, grande couronne rose), pied en p ; ses bûches. */
+    static List<BlockPos> cerisier(ServerLevel l, BlockPos p, long graine) {
+        var f = l.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.CONFIGURED_FEATURE)
+                .getHolderOrThrow(net.minecraft.data.worldgen.features.TreeFeatures.CHERRY).value();
+        f.place(l, l.getChunkSource().getGenerator(), net.minecraft.util.RandomSource.create(graine), p);
+        List<BlockPos> bois = new ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-12, 0, -12), p.offset(12, 20, 12)))
+            if (l.getBlockState(q).is(Blocks.CHERRY_LOG)) bois.add(q.immutable());
+        return bois;
+    }
+
+    /**
+     * Orianne (1.0.22) : sur le lieu de sa mission, à quelques blocs des cerisiers, elle errait. Un cerisier du monde à 6 blocs :
+     * il l'abat dans la minute, sans viser plus loin que l'arbre.
+     */
+    static void cerisierProche(GameTestHelper h, int dz, long graine, String bois) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, dz);
+        BlockPos lieu = TestsJeu.sol(h, 60, dz);
+        BlockPos pied = TestsJeu.sol(h, 66, dz);
+        List<BlockPos> tronc = cerisier(l, pied, graine);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(lieu), new ItemStack(Items.IRON_AXE));
+        t.mission(bois, "stock", 64);
+        t.travailleIci(lieu);
+        t.forcerChunk();
+        int[] loin = {0};
+        java.util.LinkedHashSet<String> vu = new java.util.LinkedHashSet<>();
+        h.onEachTick(() -> {
+            if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat);
+            if (t.action instanceof Actions.Aller a) {
+                double dx = a.cible.x - pied.getX(), dz2 = a.cible.z - pied.getZ();
+                loin[0] = Math.max(loin[0], (int) Math.sqrt(dx * dx + dz2 * dz2));
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(!tronc.isEmpty(), "le cerisier doit pousser");
+            long restent = tronc.stream().filter(q -> l.getBlockState(q).is(Blocks.CHERRY_LOG)).count();
+            h.assertTrue(restent == 0, "le cerisier doit être abattu : " + restent + "/" + tronc.size() + " bûches restent (trouvé "
+                    + Actions.chercherArbre(l, t.blockPosition(), 24) + ", suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(loin[0] <= 12, "sans errer : il a visé à " + loin[0] + " blocs de l'arbre");
+            t.discard();
+        });
+    }
+
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void cerisierProche1(GameTestHelper h) { cerisierProche(h, 160000, 1, "cerisier"); }
+
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void cerisierProche2(GameTestHelper h) { cerisierProche(h, 162000, 7, "tout"); }
+
+    @GameTest(template = "vide", timeoutTicks = 1200)
+    public static void cerisierProche3(GameTestHelper h) { cerisierProche(h, 164000, 42, "cerisier"); }
+
+    /**
+     * L'arbre le plus proche est sur un rocher (un pilier de 8 blocs) : il ne peut pas l'atteindre. Il va à l'autre, à 12 blocs,
+     * au lieu de tourner au pied du rocher.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900)
+    public static void arbreInaccessibleUnAutre(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 166000);
+        BlockPos lieu = TestsJeu.sol(h, 60, 166000);
+        BlockPos rocher = lieu.east(3);
+        for (int y = 0; y < 8; y++) l.setBlockAndUpdate(rocher.above(y), y == 7 ? Blocks.DIRT.defaultBlockState() : Blocks.STONE.defaultBlockState());
+        List<BlockPos> haut = arbre(l, rocher.above(8), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        List<BlockPos> bas = arbre(l, lieu.west(12), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(lieu), new ItemStack(Items.IRON_AXE));
+        t.mission("chene", "stock", 64);
+        t.travailleIci(lieu);
+        t.forcerChunk();
+        java.util.LinkedHashSet<String> vu = new java.util.LinkedHashSet<>();
+        h.onEachTick(() -> { if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat + "@" + (h.getTick() / 100)); });
+        h.succeedWhen(() -> {
+            h.assertTrue(bas.stream().noneMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre atteignable doit être abattu vite (suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(haut.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre du rocher reste");
+            t.discard();
+        });
+    }
 }
