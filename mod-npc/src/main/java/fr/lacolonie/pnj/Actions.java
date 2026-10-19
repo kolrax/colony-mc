@@ -112,6 +112,8 @@ public final class Actions {
          * en posant des blocs. Au bout de {@link #SANS_AVANCER_MAX}, il se dit coincé : jamais une action figée pour des jours.
          */
         private int sansAvancer;
+        /** Sa distance au but au dernier rapprochement de 2 blocs compté par {@link #sansAvancer}. */
+        private double repereAvance = Double.MAX_VALUE;
         static final int SANS_AVANCER_MAX = 5 * 60 * 20;
         private double meilleure = Double.MAX_VALUE;
         /** Sa cible bouge (le chef, une créature) : ne pas l'atteindre n'est pas être coincé (Coince). */
@@ -137,6 +139,7 @@ public final class Actions {
             meilleure = Double.MAX_VALUE;
             sansProgres = 0;
             sansAvancer = 0;
+            repereAvance = Double.MAX_VALUE;
             immobile = 0;
         }
 
@@ -175,11 +178,11 @@ public final class Actions {
             // poser qui avance l'éloigne de plus de 8 blocs bien avant 5 minutes : le compte repart alors de zéro.
             if (!mobile) t.coince.marche = true;
             double d = p.distanceTo(cible);
-            boolean rapproche = d < meilleure - 2;
-            if (rapproche || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
+            if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
-            // Creuser ou poser sans jamais se rapprocher (le même bloc, sans fin) : au bout de 5 minutes, ce n'est plus avancer.
-            sansAvancer = rapproche ? 0 : sansAvancer + 1;
+            // Creuser ou poser sans jamais se rapprocher de 2 blocs (le même bloc, sans fin) : au bout de 5 minutes, ce n'est plus avancer.
+            if (d < repereAvance - 2) { repereAvance = d; sansAvancer = 0; }
+            else sansAvancer++;
             // Il attend son tour pour chercher une étape, ou le délai après un choix raté : ce temps-là ne compte pas.
             if (age % 40 == 0) {
                 if (!route.attend(t.level().getGameTime()))
