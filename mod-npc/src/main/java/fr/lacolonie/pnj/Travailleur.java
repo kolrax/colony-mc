@@ -1268,7 +1268,7 @@ public class Travailleur extends PathfinderMob {
             coince.progres(getX(), getY(), getZ());
             return;
         }
-        if (coince.relever(getX(), getY(), getZ(), 20, level().getGameTime(), action == null || action instanceof Actions.Attendre)) ramenerAuPoste();
+        if (coince.relever(getX(), getY(), getZ(), 20, level().getGameTime(), action == null || action instanceof Actions.Attendre || action instanceof Actions.Demander)) ramenerAuPoste();
     }
 
     /**

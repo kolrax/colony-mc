@@ -964,4 +964,28 @@ public class TestsDeblocage {
             chef.discard();
         });
     }
+
+    /**
+     * Graine 42 (1.0.21 et 1.0.22) : au fond du creux, son chef tout près de lui, il vient d'échouer à rejoindre son poste
+     * (sa pioche est au dépôt) et la redemande à son chef. Avant, cette attente ne comptait pas « coincé » (au mieux une
+     * minute après l'échec) : il restait au fond deux jours. Maintenant, toute l'attente compte : il est ramené au poste.
+     */
+    @GameTest(template = "grand", timeoutTicks = 900, skyAccess = true, batch = "deblocage2")
+    public static void demandeAuChefAuFondDuCreuxEstRamene(GameTestHelper h) {
+        fosse(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, ItemStack.EMPTY, new BlockPos(12, 10, 18));
+        var chef = chefAuBord(h, t);
+        Vec3 fond = h.absoluteVec(new Vec3(13.5, 4, 13.5));
+        chef.teleportTo(h.getLevel(), fond.x, fond.y, fond.z, 0, 0);
+        t.coince.progres(t.getX(), t.getY(), t.getZ());
+        t.coince.echec(h.getLevel().getGameTime(), true); // il n'a pas pu rejoindre son poste
+        Cerveau.lancer(t, new Actions.Demander("pioche", Actions.Filtre.de("minecraft:iron_pickaxe"), 1));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", coincé " + t.coince.ticks;
+            h.assertTrue(t.getY() >= h.absolutePos(new BlockPos(0, 10, 0)).getY() && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 9,
+                    "il doit avoir été ramené près du bureau (" + e + ")");
+            t.discard();
+            chef.discard();
+        });
+    }
 }

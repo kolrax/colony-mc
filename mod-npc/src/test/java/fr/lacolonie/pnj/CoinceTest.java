@@ -60,6 +60,17 @@ class CoinceTest {
         assertEquals(Coince.FENETRE_ECHEC, c.ticks);
     }
 
+    /** Après un échec à rejoindre son poste, toute l'attente compte (plan A3, graine 42 : deux jours au fond d'un creux). */
+    @Test
+    void apresUnEchecVersLePosteToutLAttenteCompte() {
+        Coince c = new Coince();
+        c.relever(0, 64, 0, 20, 0, true);
+        c.echec(0, true);
+        int t = 20;
+        while (t <= 20 * 60 * 30 && !c.relever(0, 64, 0, 20, t, true)) t += 20;
+        assertEquals(Coince.DELAI, t, "ramené au bout du délai, pas seulement une minute comptée");
+    }
+
     @Test
     void remisAuTravailApresLAttenteUnRetourDePlus() {
         Coince c = new Coince();

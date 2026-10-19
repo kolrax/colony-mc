@@ -1333,6 +1333,9 @@ public final class Actions {
             if (pres && !horsDAtteinte) {
                 if (t.distanceTo(c) > 3) { mobile = true; marcher(t, c.position(), 1.15); }
                 else {
+                    // Arrivé près de lui, il ne le suit plus : il attend (Coince). Sinon, au fond d'un creux avec son chef, le compte
+                    // « coincé » repartait de zéro chaque seconde et il n'était jamais ramené au poste, où est sa pioche (graine 42).
+                    mobile = false;
                     t.getNavigation().stop();
                     t.getLookControl().setLookAt(c);
                     if (!annonce) { t.dire(texte + " (accroupi + clic droit avec l'objet en main pour me le donner)"); annonce = true; }

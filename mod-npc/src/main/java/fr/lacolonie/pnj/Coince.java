@@ -81,9 +81,11 @@ final class Coince {
     void travail() { retours = 0; sansPlaceEcrit = false; }
 
     /**
-     * Un relevé, tous les {@code pas} ticks, à sa position du moment ({@code attente} : sans action, ou à attendre que le
-     * cerveau décide). Vrai s'il est coincé depuis {@link #DELAI} ticks, que son dernier retour au poste date d'au moins
-     * {@link #ENTRE_DEUX} ticks, et qu'il n'a pas déjà été ramené {@link #RETOURS_MAX} fois sans travailler entre-temps.
+     * Un relevé, tous les {@code pas} ticks, à sa position du moment ({@code attente} : sans action, à attendre que le
+     * cerveau décide, ou qu'on lui donne ce qu'il demande). Après un échec à rejoindre son poste, toute l'attente compte ;
+     * après un autre échec, seulement pendant {@link #FENETRE_ECHEC}. Vrai s'il est coincé depuis {@link #DELAI} ticks, que
+     * son dernier retour au poste date d'au moins {@link #ENTRE_DEUX} ticks, et qu'il n'a pas déjà été ramené
+     * {@link #RETOURS_MAX} fois sans travailler entre-temps.
      */
     boolean relever(double x, double y, double z, int pas, long maintenant, boolean attente) {
         double dx = x - this.x, dy = y - this.y, dz = z - this.z;
@@ -91,7 +93,9 @@ final class Coince {
         marche = false;
         if (!depart || dx * dx + dy * dy + dz * dz > PROGRES * PROGRES) { progres(x, y, z); return false; }
         if (maintenant - dernierRetour > OUBLI_RETOURS) retours = 0;
-        if (voulu || echec && attente && maintenant - echecDate <= FENETRE_ECHEC) ticks += pas;
+        // Son poste hors d'atteinte : tout le temps qu'il attend compte, pas seulement la minute qui suit (plan A3, graine 42 : au
+        // fond d'un creux, il redemandait sa pioche à son chef, puis attendait ; une minute comptée par essai, ramené au bout de 2 jours).
+        if (voulu || echec && attente && (echecPoste || maintenant - echecDate <= FENETRE_ECHEC)) ticks += pas;
         return ticks >= DELAI && maintenant - dernierRetour >= ENTRE_DEUX && maintenant >= pasAvant && retours < RETOURS_MAX;
     }
 
