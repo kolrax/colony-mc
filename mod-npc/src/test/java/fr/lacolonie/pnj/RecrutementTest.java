@@ -125,4 +125,18 @@ class RecrutementTest {
             for (Vie.Replique r : e.getValue())
                 for (String mot : List.of("joueur", "serveur", "Minecraft", " IA ")) assertFalse(r.texte().contains(mot), mot + " dans [" + e.getKey() + "]");
     }
+
+    /** Correction F3 : la liste des métiers ouverts (vide ou absente : tous), sans casse ni accents ; l'interrupteur du panneau en ferme en plus. */
+    @Test
+    void metiersOuverts() {
+        assertTrue(Recrutement.metierActif("mineur", null, null), "réglage absent : tous");
+        assertTrue(Recrutement.metierActif("mineur", List.of(), List.of()), "liste vide : tous");
+        assertTrue(Recrutement.metierActif("mineur", List.of(" ", ""), List.of()), "liste sans nom : tous");
+        assertTrue(Recrutement.metierActif("guerisseur", List.of("Guérisseur", "bucheron"), List.of()), "accents et majuscules");
+        assertTrue(Recrutement.metierActif("bucheron", List.of("BÛCHERON "), List.of()));
+        assertFalse(Recrutement.metierActif("mineur", List.of("guérisseur", "bucheron"), List.of()), "hors de la liste");
+        assertFalse(Recrutement.metierActif("mineur", List.of(), List.of("mineur")), "fermé au panneau");
+        assertFalse(Recrutement.metierActif("bucheron", List.of("bucheron"), List.of("Bûcheron")), "fermé au panneau, même dans la liste");
+        assertFalse(Recrutement.metierActif(null, List.of(), List.of()));
+    }
 }

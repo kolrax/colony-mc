@@ -1,6 +1,7 @@
 package fr.lacolonie.pnj;
 
 import java.text.Normalizer;
+import java.util.Collection;
 import java.util.Locale;
 
 /**
@@ -45,6 +46,23 @@ final class Recrutement {
         if (reputation <= -30) return "reputation_terrible";
         if (reputation <= -10) return "reputation_mauvaise";
         return "reputation_neutre";
+    }
+
+    /**
+     * Correction F3 : le métier est ouvert sur ce monde. {@code actifs} (réglage {@code metiers_actifs}) : vide ou absent,
+     * tous le sont ; sinon, seulement ceux de la liste. {@code inactifs} (l'interrupteur du panneau web) en ferme en plus.
+     * Les noms se comparent sans casse ni accents (« Guérisseur » = « guerisseur »).
+     */
+    static boolean metierActif(String id, Collection<String> actifs, Collection<String> inactifs) {
+        if (id == null) return false;
+        String m = simple(id);
+        if (inactifs != null && inactifs.stream().anyMatch(x -> x != null && simple(x).equals(m))) return false;
+        return actifs == null || actifs.stream().noneMatch(x -> x != null && !x.isBlank()) || actifs.stream().anyMatch(x -> x != null && simple(x).equals(m));
+    }
+
+    /** Sans accents, en minuscules, sans espaces autour. */
+    static String simple(String s) {
+        return Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).strip();
     }
 
     /** Le texte d'un panneau est une affiche d'embauche : « On embauche », « Recrute mineurs »… */

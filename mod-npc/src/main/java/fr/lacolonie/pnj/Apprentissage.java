@@ -90,6 +90,7 @@ final class Apprentissage {
     /** « Va te former » : le chef paie de sa bourse, il part étudier. Renvoie sa réponse. */
     static String commencer(Travailleur t, ServerPlayer chef) {
         if (t.chef == null || !t.chef.equals(chef.getUUID())) return "Embauche-moi d'abord, et l'on parlera d'apprentissage.";
+        if (!Reglages.metierActif(t.metier)) return "Nul maître n'enseigne plus mon métier en ces terres, chef. Je continuerai l'ouvrage tel que je le sais.";
         if (t.niveau >= Etoiles.MAX) return "Je suis maître en mon métier, chef : nul ne peut plus rien m'apprendre.";
         if (t.memoire.getLong("formation_fin") > 0) return "Je suis déjà en apprentissage, chef.";
         long prix = Etoiles.prix(t.niveau, reglage().prix_formation);

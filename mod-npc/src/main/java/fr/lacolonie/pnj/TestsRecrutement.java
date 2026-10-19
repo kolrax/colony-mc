@@ -189,4 +189,40 @@ public class TestsRecrutement {
         h.assertTrue(r.chercheurs.chance == 0.8, "ensuite, le réglage choisi reste (" + r.chercheurs.chance + ")");
         h.succeed();
     }
+
+    /**
+     * Correction F3 : avec {@code metiers_actifs}, un métier fermé n'a plus de chercheurs, ne s'embauche ni ne se forme ;
+     * ses ouvriers déjà engagés restent au travail. Les réglages sont remis comme avant.
+     */
+    @GameTest(template = "vide", timeoutTicks = 100, batch = "recrutement")
+    public static void metiersFermes(GameTestHelper h) {
+        Reglages r = Reglages.actuel;
+        List<String> actifs = new ArrayList<>(r.metiers_actifs), inactifs = new ArrayList<>(r.metiers_inactifs);
+        List<Travailleur> tous = new ArrayList<>();
+        try {
+            ServerPlayer chef = h.makeMockServerPlayerInLevel();
+            Travailleur ancien = TestsCout.pnj(h, null, tous); // un mineur embauché avant la fermeture
+            ancien.embaucher(chef);
+            h.assertTrue(ancien.mode != Travailleur.Mode.CHOMEUR, "embauché quand tout est ouvert (" + ancien.mode + ")");
+            r.metiers_actifs = new ArrayList<>(List.of("Bûcheron", "guérisseur"));
+            r.metiers_inactifs = new ArrayList<>();
+            h.assertTrue(Metier.actifs().size() == 2 && Metier.actifs().containsAll(List.of("bucheron", "guerisseur")), "seuls ces chercheurs viennent (" + Metier.actifs() + ")");
+            Travailleur mineur = TestsCout.pnj(h, null, tous);
+            mineur.embaucher(chef);
+            h.assertTrue(mineur.mode == Travailleur.Mode.CHOMEUR && mineur.chef == null, "un mineur ne s'embauche plus (" + mineur.mode + ")");
+            String reponse = Apprentissage.commencer(ancien, chef);
+            h.assertTrue(ancien.memoire.getLong("formation_fin") == 0 && reponse.startsWith("Nul maître"), "ni ne se forme (« " + reponse + " »)");
+            h.assertTrue(ancien.mode != Travailleur.Mode.CHOMEUR && chef.getUUID().equals(ancien.chef), "l'ancien reste au service (" + ancien.mode + ")");
+            Travailleur bucheron = TestsCout.pnj(h, null, tous);
+            bucheron.tirerAuSort("bucheron", 3);
+            bucheron.embaucher(chef);
+            h.assertTrue(bucheron.mode != Travailleur.Mode.CHOMEUR, "un bûcheron, si (" + bucheron.mode + ")");
+            r.metiers_inactifs.add("bucheron");
+            h.assertTrue(Metier.actifs().equals(List.of("guerisseur")), "l'interrupteur du panneau en ferme en plus (" + Metier.actifs() + ")");
+        } finally {
+            r.metiers_actifs = actifs;
+            r.metiers_inactifs = inactifs;
+        }
+        TestsCout.fin(h, tous);
+    }
 }

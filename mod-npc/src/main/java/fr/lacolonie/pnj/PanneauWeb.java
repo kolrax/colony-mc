@@ -123,7 +123,7 @@ public final class PanneauWeb {
             x.put("id", mt.id);
             x.put("nom", mt.nom);
             x.put("description", mt.description);
-            x.put("actif", !Reglages.actuel.metiers_inactifs.contains(mt.id));
+            x.put("actif", Reglages.metierActif(mt.id));
             x.put("commandes", mt.commandes.stream().map(c -> c.nom).toList());
             metiers.add(x);
         }
@@ -169,8 +169,11 @@ public final class PanneauWeb {
 
     static Map<String, Object> actif(String id, boolean actif) {
         if (!Metier.existe(id)) return resultat("métier inconnu : " + id);
-        Reglages.actuel.metiers_inactifs.remove(id);
-        if (!actif) Reglages.actuel.metiers_inactifs.add(id);
+        Reglages r = Reglages.actuel;
+        r.metiers_inactifs.removeIf(m -> Recrutement.simple(m).equals(id));
+        if (!actif) r.metiers_inactifs.add(id);
+        else if (!Reglages.metierActif(id)) r.metiers_actifs.add(id); // hors de la liste des métiers ouverts (correction F3) : il y entre
+
         try { Reglages.sauver(); } catch (IOException e) { return resultat(e.getMessage()); }
         return resultat(null);
     }

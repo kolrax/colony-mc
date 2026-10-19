@@ -239,7 +239,7 @@ public abstract class Metier {
     static { TOUS.put("macon", new Macon()); } // lot 10
 
     static List<String> actifs() {
-        return TOUS.keySet().stream().filter(m -> !Reglages.actuel.metiers_inactifs.contains(m)).toList();
+        return TOUS.keySet().stream().filter(Reglages::metierActif).toList();
     }
 
     static String nom(String id) { Metier m = de(id); return m == null ? id : m.nom; }

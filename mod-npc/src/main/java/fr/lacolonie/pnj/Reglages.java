@@ -85,6 +85,12 @@ public class Reglages {
     public Chercheurs chercheurs = new Chercheurs();
     /** Les étoiles qui montent (lot 13) : expérience, formation payée, hausse de paie ({@link Etoiles}). */
     public Etoiles.Reglage etoiles = new Etoiles.Reglage();
+    /**
+     * Correction F3 : les métiers ouverts sur ce monde (« bucheron », « guerisseur »…, sans casse ni accents). Vide : tous.
+     * Un métier fermé n'a plus de chercheurs d'emploi, ne s'embauche ni ne se forme ; ses ouvriers déjà engagés continuent.
+     * {@code metiers_inactifs} (l'interrupteur du panneau web) en ferme en plus. Voir {@link #metierActif}.
+     */
+    public List<String> metiers_actifs = new ArrayList<>();
     public List<String> metiers_inactifs = new ArrayList<>();
     /** Une conversation entre deux ouvriers d'un même chef au plus toutes les N secondes, par colonie (0 = jamais). */
     public int secondes_entre_conversations = 180;
@@ -206,6 +212,9 @@ public class Reglages {
             r.valider();
             actuel = r;
             sauver();
+            for (String m : r.metiers_actifs)
+                if (Metier.TOUS.keySet().stream().noneMatch(id -> Recrutement.simple(id).equals(Recrutement.simple(m))))
+                    ColoniePnj.LOG.warn("metiers_actifs : métier inconnu « {} » (connus : {})", m, String.join(", ", Metier.TOUS.keySet()));
         } catch (IOException e) {
             ColoniePnj.LOG.error("Réglages illisibles, valeurs par défaut utilisées", e);
         }
@@ -237,6 +246,8 @@ public class Reglages {
         if (chercheurs == null) chercheurs = new Chercheurs();
         etoiles = Etoiles.Reglage.valide(etoiles);
         if (metiers_inactifs == null) metiers_inactifs = new ArrayList<>();
+        if (metiers_actifs == null) metiers_actifs = new ArrayList<>();
+        metiers_actifs.removeIf(m -> m == null || m.isBlank());
         minutes_entre_paies = Math.max(1, minutes_entre_paies);
         paies_impayees_avant_greve = Math.max(1, paies_impayees_avant_greve);
         pnj_max_par_joueur = Math.clamp(pnj_max_par_joueur, 0, PNJ_MAX);
@@ -285,6 +296,9 @@ public class Reglages {
         chercheurs.minutes_entre_arrivees = Math.max(1, chercheurs.minutes_entre_arrivees);
         chercheurs.duree_minutes = Math.max(1, chercheurs.duree_minutes);
     }
+
+    /** Le métier est ouvert sur ce monde (correction F3, {@link Recrutement#metierActif}). */
+    public static boolean metierActif(String id) { return Recrutement.metierActif(id, actuel.metiers_actifs, actuel.metiers_inactifs); }
 
     // --- Argent -------------------------------------------------------------------------------
 

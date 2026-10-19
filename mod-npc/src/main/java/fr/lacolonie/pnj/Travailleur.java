@@ -1072,7 +1072,8 @@ public class Travailleur extends PathfinderMob {
 
         if (mode == Mode.CHOMEUR) {
             long duree = Reglages.actuel.chercheurs.duree_minutes * 60_000L;
-            if (System.currentTimeMillis() > arrivee + duree && level().getNearestPlayer(this, 16) == null) discard();
+            // Un métier fermé (correction F3) : il s'en va aussi, sans attendre, dès que personne ne le voit.
+            if ((System.currentTimeMillis() > arrivee + duree || tickCount % 100 == 0 && !Reglages.metierActif(metier)) && level().getNearestPlayer(this, 16) == null) discard();
             return;
         }
         // Copie locale : une action peut elle-même remplacer ou effacer l'action en cours (ex. la paie qui déclenche la grève).
@@ -2403,8 +2404,8 @@ public class Travailleur extends PathfinderMob {
     void embaucher(ServerPlayer p) {
         if (mode != Mode.CHOMEUR) return;
 
-        if (Reglages.actuel.metiers_inactifs.contains(metier) || !Metier.existe(metier)) {
-            signaler(p, "Ce métier n'est plus proposé sur le serveur.");
+        if (!Reglages.metierActif(metier) || !Metier.existe(metier)) {
+            signaler(p, "Ce métier n'a plus cours en ces terres : nul ne peut plus l'y louer.");
             return;
         }
         int nb = ColoniePnj.pnjDe(p.getServer(), p.getUUID()).size(), payes = payes(p); // avant qu'il ne soit des leurs
