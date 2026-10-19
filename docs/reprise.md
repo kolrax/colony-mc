@@ -1,23 +1,25 @@
 # Reprise : où on en est
 
-Mise à jour : 19/10/2026, ~12 h 20 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 19/10/2026, ~15 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 1.0.21** (19/10, 12 h 10 UTC, serveur seul : mineuse figée près du poste ; 1.0.20 à 08 h 14, 1.0.18 à 07 h 01 avec le modpack), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (pas pré-généré : demande à l'Admin, toujours ouverte). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
-- **Modpack : 1.0.18** (19/10, 07 h 03 UTC, obligatoire : paquet de carte `reperes2`), avec Distant Horizons. Le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`.
-- `main` = la 1.0.21 (3ef8f62 + journal) : **308/308 JUnit, 417/417 en jeu** (4e passe du chef ; les 3 premières : `tondunmouton` ; `descenddelafalaise` ; `chassedenuit` + `bucheronpresdelalave`). **`bucheronpresdelalave` a échoué 2 fois sur 6 passes aujourd'hui** (à terre, 1 PV, lave pendant `ramasser`) : à regarder (test de sécurité).
-- La branche `en-cours` existe encore sur GitHub (égale à `main`) : sa suppression est refusée (403) depuis le cloud. Sans danger.
-- Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW.
+- **Serveur : 1.0.22** (19/10, serveur seul : E4 chutes ≤ 3 blocs et ramassage loin de la lave ; voir le journal pour l'heure), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`**. Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
+- **Modpack : 1.0.18** (obligatoire : paquet de carte `reperes2`). Le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`.
+- `main` = la 1.0.22 (e1d7902 + journal) : **308/308 JUnit, 420/420 en jeu** (1re passe du chef).
+- La branche `en-cours` existe encore sur GitHub (suppression refusée, 403) : sans danger, elle ne contient rien qui ne soit sur `main`.
+- Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW (fiche `e4` repassée en cours puis livrée en 1.0.22).
 
 ## Prochaine étape (exacte)
-1. **Plan : 1 case restante, A** (`python3 tools/suivi.py reste` = 1). E est cochée (1.0.18).
-2. **Mineuse figée en « deposer »** : FAIT en 1.0.21. Cause : au fond de sa galerie à 3,7 blocs du poste derrière la roche, `Itineraire` disait « inaccessible », `Deposer` échouait (`bureau_inaccessible`) et le Cerveau relançait sans fin. Corrections : `Itineraire.percerVers`/`roche` (vers son propre poste seulement, pierre naturelle, même dans le tampon), `Coince.posteHorsDAtteinte`, pause 5 s du Cerveau après `bureau_inaccessible`, filet `sansAvancer` (10 min sans avancer de 2 blocs ni s'éloigner de 8). Pas de GameTest dédié au filet `sansAvancer`.
-3. **A3, restes** : errance au pied ; le seau ne sert jamais en vraie montagne (0 eau versée en 7 parties ce matin) ; `getMaxFallDistance` = 6 (chutes 7 à 22 coups par partie) : décision « jamais plus de 3 blocs » à prendre ; pilier contre le mur d'une maison possible (relecture 1.0.20, mineur : il reprend ses blocs, rien de cassé).
-4. **A1/A3 fantôme** : rejouer `montagne.txt` sur la 1.0.20 avec les graines 1234567 et 20261019 (seule la 42 a été jouée : mineur sorti du creux, 109 pierres, mission finie, 1 ramené au poste, 0 mort).
-5. Restes : `docs/plus-tard.md`.
+1. **Plan : 1 case restante, A** (`python3 tools/suivi.py reste` = 1).
+2. **Chutes encore vues en vraie partie** (fantôme 1.0.22 avant retouches, graine 1234567 : 10 coups, 31 PV, ~3 PV par coup → des chutes d'~6 blocs restent alors que `getMaxFallDistance` = 3). Le rapport du fantôme ne dit ni qui, ni d'où, ni de quelle hauteur : **ajouter cette trace à `Fantome.java`** (hauteur de chute, action en cours, position), puis trouver la source (pilier ? creusage vers le bas ? recul ? chemin direct `directRate` ?).
+3. **Graine 42 : chute à l'embauche** (2 coups, 15 PV, ticks 4-167) quand les ouvriers rejoignent le fantôme au fond d'un creux 7 blocs sous le poste (`suivre`).
+4. **Graine 42 : le mineur reste 2 jours au fond du creux** (« demander », puis « bras croisés », 1 terre posée sur 33) sur la 1.0.21 comme sur la 1.0.22 ; il en sortait sur la 1.0.20 → recul de la 1.0.21 ou des deux lignes de relecture de la 1.0.20 (`Demander`).
+5. **Bûcheron au seau sans pioche qui retaille la pierre** (146 à 210 blocs par partie sur 1.0.21/1.0.22, graine 1234567 ; 16 sur la 1.0.19).
+6. Reste A3 : errance au pied, seau peu utilisé. Restes : `docs/plus-tard.md`.
+7. Rapport du soir à KOLRAX (après 18 h Paris = 16 h UTC) si aucune session ne l'a fait.
 
 ## Session en cours
-- aucune (session 19/10 09 h 00 - 12 h 20 UTC, terminée : 1.0.21). Avant : (session 19/10 06 h 00 - 08 h 30 UTC, terminée : 1.0.18 + modpack 1.0.18 (E5), 1.0.19 (A3 mains nues), 1.0.20 (A3 creux)).
+- aucune (session 19/10 13 h 00 - 15 h 40 UTC, terminée : 1.0.22). Avant : session 19/10 09 h 00 - 12 h 20 UTC (1.0.21).
 
 ## La 1.0.0 en bref (refonte « ouvriers robots »)
 - Mission (`Travailleur.Mission` : id du catalogue, quantité/stock, une fois/tous les jours, lieu, horaires), file, `Missions.donner`/`Missions.action` (écran et fantôme), statut unique `Statut` (entityData `STATUT`, recalculé toutes les 5 s), `t.bloquer(raison)`/`debloquer`.

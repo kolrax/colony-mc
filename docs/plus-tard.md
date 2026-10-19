@@ -194,3 +194,10 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - Relecture 1.0.20 : le pilier de `choisirEtape` (`commencerAPoser`) ne regarde pas `Monde.construit` (contrairement à la nage) : il peut monter le long du mur d'une maison jusqu'au toit (blocs repris, rien de cassé).
 - `mainsNues` n'est pas sauvegardé (revient à 0 au rechargement : au pire 8 pierres de plus).
 - Le fantôme compte maintenant dans « arrêts > 3 s » le temps passé à creuser ou poser : chiffres pas comparables avec avant la 1.0.19.
+
+## Relectures 1.0.22 (19/10, E4), mineurs non faits
+- Ramassage sur ordre (« ramasser », « défricher zone ») : les objets au bord de la lave sont laissés sans un mot, il annonce quand même « terrain dégagé ».
+- Une case qui touche à la fois l'eau et la lave peut être classée « bord d'eau » (coût 0) : le chemin peut encore y passer (l'objet, lui, est bien exclu).
+- `marchePosee` : le sol d'arrivée n'est pas comparé à la hauteur du but (il peut descendre dans un ravin à l'opposé, puis remonter en pilier).
+- Marche posée oubliée sans être reprise si l'ouvrier est téléporté ou s'éloigne de plus de 16 blocs juste après (comme les piliers).
+- `marchePosee` peut coller un bloc (repris ensuite) contre un mur construit : voulu pour sortir d'un enclos par le pilier ; jamais contre un coffre ou un four.
