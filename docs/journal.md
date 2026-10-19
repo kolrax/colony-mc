@@ -764,3 +764,14 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Tests du chef : 306/306 ; en jeu 405/405 (1.0.16, 2e passe : 1re 403/405 sur `chassedenuit` et `horairesGenerauxSansEffet`, capricieux connus) puis 407/407 (1.0.17).
 - Fantôme montagne : voir les deux entrées de la nuit (1.0.16 : 4 parties ; 1.0.17 : 3 parties).
 - **Pas fini** : branche `a3-main-nue` (1.0.18, verte, pas relue) ; voir `docs/reprise.md`. E5 attend 7 h UTC.
+
+## 2026-10-19 07 h 01 UTC : 1.0.18 livrée, serveur puis modpack 1.0.18 obligatoire (E5 repère Xaero)
+- Ce qui change en jeu : un ouvrier à terre fait apparaître un repère rouge sur la carte Xaero de son chef. Le paquet réseau de la carte s'appelle maintenant `reperes2` (facultatif) : un client de l'ancien modpack se connecte encore mais ne voit plus ses ouvriers sur la carte, d'où le modpack obligatoire.
+- Commit livré : `main` 882a84d (`mod_version=1.0.18`). Tests : **307/307 JUnit**, en jeu **409/409** (passe du chef).
+- Jar `colonie_pnj-1.0.18.jar` : **1 887 116 octets**, sha1 `dc615edd533b39e98771bbe21fa3e687a2acc09c` (revérifié avant l'envoi).
+- `list` à 07 h 00 : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer. Serveur encore figé ~45 min juste avant (« 53445 ticks behind » à 07 h 00, 0 joueur).
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 887 116) ; `colonie_pnj-1.0.17.jar` rangé dans `/mods-off`, 1.0.18 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.17 -> 1.0.18) », **« Done (2.050s) » à 07 h 01 min 27 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Erreurs d'autres mods seulement (282 tables de butin, 1 DISTXFORM de create_sa, 1 NullPointerException de Distant Horizons dans l'End).
+- Modpack **1.0.18** : verrou posé, `pack/embarques/colonie_pnj-1.0.11.jar` retiré (déjà dans `archive/`), 1.0.18 embarqué ; `build.py 1.0.18` : 33 mods, `verifier.py` passé, `lock.json` identique à la 1.0.11.1 (Distant Horizons dedans) ; `release.py prepare` ; fonction `modpack` redéployée (projet `wegefcdewecwjvmhaaxb`).
+- Téléchargement vérifié (`download?l=modrinth&v=1.0.18`, 1 904 904 octets) : `overrides/mods/colonie_pnj-1.0.18.jar`, 1 887 116 octets, **sha1 `dc615edd533b39e98771bbe21fa3e687a2acc09c`** = jar livré ; `l=curseforge` répond 200.
+- Annonce Discord (`release.py announce 1.0.18`) à **07 h 03 UTC**, en dernier ; verrou retiré ensuite.
