@@ -158,6 +158,35 @@ final class Itineraire {
 
     static long cellule(BlockPos p) { return ((long) (p.getX() >> 3) << 32) ^ ((p.getZ() >> 3) & 0xffffffffL); }
 
+    /**
+     * Plan A3 (11 chutes de 3,3 et 4,8 blocs au joueur fantôme, en montagne) : sur les prochains points de son chemin, une
+     * descente de 2 blocs ou plus, ou une marche à monter juste avant une descente. En courant, il sautait sur la marche,
+     * passait par-dessus sur son élan et tombait d'un bloc de plus que prévu.
+     */
+    static boolean descenteDevant(Path c) {
+        if (c == null || c.isDone()) return false;
+        int fin = Math.min(c.getNodeCount() - 1, c.getNextNodeIndex() + 4);
+        for (int i = Math.max(1, c.getNextNodeIndex()); i <= fin; i++) {
+            int d = c.getNode(i - 1).y - c.getNode(i).y;
+            if (d >= 2 || d > 0 && i >= 2 && c.getNode(i - 1).y > c.getNode(i - 2).y) return true;
+        }
+        return false;
+    }
+
+    /** Plan A3 : sa vitesse (facteur) au bord d'une descente ({@link #auBord}). */
+    static final double VITESSE_BORD = 0.5;
+
+    /**
+     * Plan A3 : le prochain point de son chemin est 2 blocs ou plus sous ses pieds (il va descendre), ou c'est une marche à
+     * monter juste avant une telle descente. Il y va lentement : sur son élan, il passait par-dessus le bord et retombait un
+     * pas plus loin, parfois un bloc plus bas (chutes de 4 blocs au joueur fantôme).
+     */
+    static boolean auBord(Path c, int y) {
+        if (c == null || c.isDone()) return false;
+        int i = c.getNextNodeIndex(), n = c.getNode(i).y;
+        return n <= y - 2 || n > y && i + 1 < c.getNodeCount() && c.getNode(i + 1).y <= n - 2;
+    }
+
     /** Un pas de marche vers le but (appelé à chaque tick par l'action en cours). */
     void avancer(Travailleur t, double vitesse, int age) {
         if (bloque) return; // c'est à l'action de décider (elle échoue ou attend)
@@ -167,7 +196,8 @@ final class Itineraire {
         Vec3 p = t.position();
         double dh = horizontale(p, but), dv = Math.abs(but.y - p.y);
         // Il court sur les longues distances et en nageant (comme un joueur : 30 % plus vite, et il a plus faim).
-        boolean courir = dh > 20 || t.isInWater();
+        // Plan A3 : pas devant une descente (sur son élan, il passerait par-dessus le bord et tomberait plus bas).
+        boolean courir = t.isInWater() || dh > 20 && !descenteDevant(nav.getPath());
         double v = vitesse;
         t.setSprinting(courir);
 

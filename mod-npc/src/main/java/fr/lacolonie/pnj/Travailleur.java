@@ -553,6 +553,10 @@ public class Travailleur extends PathfinderMob {
                     operation = Operation.WAIT;
                     mob.setZza(0);
                 }
+                // Plan A3 : au bord d'une descente de 2 blocs ou plus (ou sur la marche juste avant), il ralentit : il tombe
+                // presque à plomb là où son chemin descend, au lieu de retomber un pas plus loin, parfois un bloc plus bas.
+                if (operation == Operation.MOVE_TO && mob.onGround() && Itineraire.auBord(mob.getNavigation().getPath(), mob.getBlockY()))
+                    speedModifier = Math.min(speedModifier, Itineraire.VITESSE_BORD);
                 super.tick();
             }
         };
