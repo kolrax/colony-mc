@@ -734,3 +734,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Tests** : 306/306 JUnit ; en jeu, 1re passe du chef 395/396 (`horairesGenerauxSansEffet`, « la paie s'enregistre (-1) » ; 3/3 lancé seul), 2e passe **396/396**. Instable possible à surveiller.
 - **Livraison** : 0 joueur ; jar 1 871 948 octets, sha1 `e10a35421c6b…`, même taille dans `/mods-off` ; 1.0.14 rangée dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` ; DH, Burnt, GeckoLib, Chunky pas touchés. « colonie_pnj (version 1.0.14 -> 1.0.15) », « Preparing level "ouverture" », **« Done (1.831s) » à 02 h 17 UTC**, panneau des PNJ ouvert. Pas de modpack, pas d'annonce.
 - **Serveur figé** ~91 min avant (« 109532 ticks behind », 0 joueur), après ~27 min vers 00 h 40 : signalé à l'Admin (pause de l'hébergeur ?).
+
+## 2026-10-19 04 h 06 UTC : 1.0.16 livrée, serveur seul (A3 montagne : il monte et reprend toute sa terre)
+- Commit livré : `main` c941e94 (`mod_version=1.0.16`). Tests du chef : **306/306 JUnit** ; en jeu, 1re passe 403/405 (`chassedenuit`, `horairesGenerauxSansEffet`, deux tests déjà connus capricieux), 2e passe **405/405**.
+- Jar `colonie_pnj-1.0.16.jar` : **1 881 335 octets**, sha1 `35e8eba01d8cbe66e26a049c733797b6e45bda0b` (revérifié avant l'envoi).
+- `list` : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer.
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 881 335) ; `colonie_pnj-1.0.15.jar` rangé dans `/mods-off`, 1.0.16 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.15 -> 1.0.16) », **« Done (1.918s) » à 04 h 06 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Les seules erreurs viennent d'autres mods (tables de butin de `railways` et `create_enchantment_industry`, mixin client de `create_sa`), comme avant.
+- Serveur encore figé ~19 min juste avant (« 23221 ticks behind » à 04 h 04, 0 joueur) : même souci de pause déjà signalé à l'Admin.
+- Pas de modpack, pas d'annonce : le client n'a pas changé.
