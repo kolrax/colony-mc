@@ -182,8 +182,10 @@ final class Itineraire {
                 finChoix();
                 retirerEau(t); // la colonne d'eau : il la reprend dans son seau, sorti ou pas
                 if (sorti) reprendre(t);
-                else if (sortieNage && departPose != null) posesRatees.add(departPose); // sorti de l'eau mais pas sur le bord
+                // Sorti de l'eau mais pas sur le bord, ou pas arrivé sur sa marche posée : il ne recommence pas d'ici.
+                else if ((sortieNage || sortieMarche) && departPose != null) posesRatees.add(departPose);
                 sortieNage = false;
+                sortieMarche = false;
             }
             else {
                 t.diag = "monte en " + montee.toShortString();
@@ -958,7 +960,8 @@ final class Itineraire {
      * Une marche de plus vers le bas, comme un joueur : un escalier qui descend dans la paroi (vers le but d'abord, de côté
      * si devant c'est le vide), sinon un trou d'un bloc sous ses pieds ; arrivé à la hauteur du but, un pas de galerie vers
      * lui. Seulement des blocs naturels ({@link Lieux#peutCasser}), jamais un liquide, et un appui à 3 blocs au plus sous
-     * la marche (jamais de chute plus haute). Rien n'est posé, donc rien n'est laissé. Vrai s'il a commencé.
+     * la marche (jamais de chute plus haute). Rien n'est posé, donc rien n'est laissé. S'il ne peut rien tailler (un mur
+     * construit, de la roche sans pioche) : une marche posée contre la paroi ({@link #marchePosee}). Vrai s'il a commencé.
      */
     private boolean descendre(Travailleur t, long maintenant) {
         if (!evasionPermise(t) || !t.onGround() || t.isInWater()) return false;
@@ -967,11 +970,13 @@ final class Itineraire {
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
         boolean ok = false;
+        BlockPos ancienneMontee = montee;
         if (p.getY() > Mth.floor(but.y)) {
             // Sans l'outil qu'il faut (de la pierre sans pioche), un trou d'un bloc sous lui : trois fois moins à creuser qu'une marche.
-            if (!recolte(t, t.level().getBlockState(p.below()))) ok = marche(t, List.of(p.below()), p.below());
+            if (!recolte(t, t.level().getBlockState(p.below()))) ok = marchePosee(t, dirs) || marche(t, List.of(p.below()), p.below());
             for (Direction d : dirs) if (!ok) ok = marche(t, List.of(p.relative(d).above(), p.relative(d), p.relative(d).below()), p.relative(d).below());
             if (!ok) ok = marche(t, List.of(p.below()), p.below());
+            if (!ok) ok = marchePosee(t, dirs);
         } else for (Direction d : dirs)
             if (!ok && horizontale(Vec3.atBottomCenterOf(p.relative(d)), but) < horizontale(pos, but) - 0.5) ok = marche(t, List.of(p.relative(d), p.relative(d).above()), p.relative(d));
         if (!ok) return false;
@@ -980,10 +985,12 @@ final class Itineraire {
         // Le trajet d'étape en cours le ramènerait en haut après chaque marche : il l'oublie.
         oublierPlan();
         if (aCreuser != null) t.getNavigation().stop();
-        // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but : plus haut, Minecraft le ferait sauter de 6 blocs
-        // (getMaxFallDistance) et il se blesserait. Là, une recherche par marche ; plus haut, il continue de creuser.
+        // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but (getMaxFallDistance : jamais de chute plus haute,
+        // la recherche échouerait). Là, une recherche par marche ; plus haut, il continue de creuser.
         directRate = p.getY() - 1 - Mth.floor(but.y) > 3 ? 2 : horizontale(pos, but) <= 8 ? 1 : 0;
-        montee = null;
+        // Une montée d'avant est oubliée ; pas le pas qu'il vient de lancer (une marche sans rien à creuser, monter()) :
+        // effacé, il restait sur place et essayait une autre direction, jusqu'à creuser la paroi derrière lui.
+        if (montee == ancienneMontee) montee = null;
         etape = null;
         choixRates = 0;
         return true;
@@ -1022,6 +1029,34 @@ final class Itineraire {
         if (aCreuser == null) monter(t);
         else { progres = 0; echecs = 0; Cerveau.dire(t, "descend", 600, "Pas de chemin pour descendre : je taille des marches."); }
         return true;
+    }
+
+    /**
+     * Plan E4 (jamais de chute de plus de 3 blocs) : au bord d'un à-pic de 4 ou 5 blocs (ou à un pas du bord), un bloc de
+     * son sac qu'il saura reprendre : il le pose contre la paroi, à portée de main ({@link Actions#aPortee}), à 3 blocs au
+     * plus sous le bord et au-dessus du sol,
+     * descend dessus puis au sol. Le bloc est suivi comme ceux de son pilier : une fois descendu, il le reprend d'office.
+     * Vrai s'il a commencé.
+     */
+    private boolean marchePosee(Travailleur t, List<Direction> dirs) {
+        Level l = t.level();
+        BlockPos p = t.blockPosition();
+        if (posesRatees.contains(p) || caseDeChantier(t, false, true) < 0) return false;
+        for (Direction d : dirs)
+            for (int k = 1; k <= 2; k++) {
+                BlockPos n = p.relative(d, k), bord = n.relative(d.getOpposite());
+                if (!Monde.libre(l, n) || !Monde.libre(l, n.above()) || k == 2 && !Monde.debout(l, bord)) break;
+                int h = 1; // n.below(h) : le premier bloc qui n'est pas libre sous la case au-delà du bord
+                while (h <= 6 && Monde.libre(l, n.below(h))) h++;
+                if (h < 5 || h > 6 || !Monde.debout(l, n.below(h - 1)) || Monde.mortel(l, n.below(h - 1))) continue;
+                int j = Math.max(2, h - 3); // la marche : 3 blocs au plus sous le bord, et 3 au plus au-dessus du sol
+                // Une paroi pour la tenir (pas un coffre, un four… : rien qui se range), et à portée de main, comme un joueur.
+                if (!Monde.solide(l, bord.below(j)) || l.getBlockEntity(bord.below(j)) != null || !Actions.aPortee(t, n.below(j))) continue;
+                pont.clear();
+                pont.add(n.below(j));
+                return commencer(t, p, n.below(j - 1), "marche", "Trop haut pour sauter : je pose une marche contre la paroi.");
+            }
+        return false;
     }
 
     private void commencerCreusage(Travailleur t, boolean mainsNues) {
@@ -1313,6 +1348,7 @@ final class Itineraire {
     private boolean commencer(Travailleur t, BlockPos depart, BlockPos sortie, String cle, String texte) {
         departPose = depart;
         issue = sortie;
+        sortieMarche = false;
         poseFin = ageCourant + 100;
         Cerveau.dire(t, cle, 600, texte);
         return true;
@@ -1330,6 +1366,11 @@ final class Itineraire {
             if (age % 5 != 0) return;
             if (!poserBloc(t, q, caseDeChantier(t))) { abandonner(t); return; }
             poses.add(q);
+            if (q.equals(issue.below())) { // la marche posée contre une paroi (marchePosee) : reprise d'office, comme un pilier
+                t.pilierPose.add(new PoseDePilier(q, t.level().getBlockState(q).getBlock(), t.level().dimension(), t.level().getGameTime()));
+                t.pilierVu = t.level().getGameTime();
+                sortieMarche = true;
+            }
             posesFaites++;
             pont.remove(0);
             poseFin = age + 100;
@@ -1422,6 +1463,8 @@ final class Itineraire {
      * s'arrête un bloc plus bas, pour ne pas couler sur le bord) ; {@code sortieNage} : il sort sur le bord après une nage.
      */
     private boolean aLaNage, sortieNage;
+    /** Il va sur la marche qu'il vient de poser ({@link #marchePosee}). */
+    private boolean sortieMarche;
 
     static int seauDEau(Travailleur t) {
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (t.inventaire.getItem(i).is(Items.WATER_BUCKET)) return i;

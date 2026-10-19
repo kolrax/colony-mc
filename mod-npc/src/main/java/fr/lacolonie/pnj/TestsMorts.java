@@ -138,7 +138,7 @@ public class TestsMorts {
 
     /**
      * En haut d'une falaise à pic de 11 blocs, sans descente ; son bureau en bas, à 14 blocs. Il ne doit pas se jeter
-     * dans le vide (au pire il reste en haut, coincé). Garde-fou : le saut d'à-pic est borné à 6 blocs.
+     * dans le vide (au pire il reste en haut, coincé). Garde-fou : le saut d'à-pic est borné à 3 blocs (plan E4).
      */
     @GameTest(template = "grand", timeoutTicks = 1100, skyAccess = true, batch = "morts")
     public static void falaiseSansDescente(GameTestHelper h) {
@@ -152,21 +152,46 @@ public class TestsMorts {
     }
 
     /**
-     * Une falaise de 11 blocs en deux à-pics (6 puis 5) : il peut descendre en sautant (3 + 2 points de vie), comme un
-     * joueur. Il arrive en bas sans perdre plus de la moitié de sa vie.
+     * Une arête de pierre de 9 blocs en deux à-pics vers son bureau (4 puis 5, sur un replat d'un bloc ; de l'autre côté,
+     * 9 d'un coup), sans pioche, de la terre en poche. Avant (1.0.21), il sautait chaque à-pic (1 + 2 points de vie). Plan
+     * E4 (jamais de chute de plus de 3 blocs) : il pose une marche de terre contre chaque paroi, à portée de main, descend
+     * par elle sans se blesser, et reprend sa terre. (Arête de 2 blocs, replat d'un : où qu'il soit, la marche est à portée ;
+     * sur un large plateau, sans pioche, il creuserait d'abord sous lui à mains nues.)
      */
-    @GameTest(template = "grand", timeoutTicks = 1100, skyAccess = true, batch = "morts")
+    @GameTest(template = "grand", timeoutTicks = 1600, skyAccess = true, batch = "morts")
     public static void falaiseEnDeuxAPics(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
-        for (int x = 0; x <= 9; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= (x <= 7 ? 12 : 6); y++) h.setBlock(x, y, z, Blocks.STONE);
-        Travailleur t = TestsJeu.ouvrier(h, "mineur", 4, 13, 12, ItemStack.EMPTY, new BlockPos(18, 2, 12));
+        for (int x = 6; x <= 8; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= (x <= 7 ? 10 : 6); y++) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 6, 11, 12, new ItemStack(Items.DIRT, 16), new BlockPos(18, 2, 12));
         debutant(t);
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
         Suivi s = suivre(h, t);
-        h.runAtTickTime(h.getTick() + 1000, () -> {
+        h.runAtTickTime(h.getTick() + 1500, () -> {
             boolean arrive = t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16;
+            int terre = t.compter(Actions.Filtre.de("minecraft:dirt"));
             h.assertTrue(arrive, "il doit être descendu jusqu'au bureau (" + s.texte() + ")");
-            finir(h, "falaiseEnDeuxAPics", t, s, 0.5);
+            h.assertTrue(terre == 16, "il doit avoir repris ses marches de terre (" + terre + " terre, " + s.texte() + ")");
+            finir(h, "falaiseEnDeuxAPics", t, s, 0.9, "fall");
+        });
+    }
+
+    /**
+     * Plan E4 (« pas de chute de plus de 3 blocs », KOLRAX) : en haut d'une marche de pierre de 5 blocs, son bureau en bas,
+     * un escalier taillé dans la paroi à 10 blocs de là. Avant, en pleine vie, il sautait les 5 blocs (2 points de vie ; en
+     * montagne, 7 à 22 coups de chute par partie au joueur fantôme). Maintenant, il fait le détour par l'escalier.
+     */
+    @GameTest(template = "grand", timeoutTicks = 700, skyAccess = true, batch = "morts")
+    public static void nesautePasDeCinqBlocs(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        for (int x = 0; x <= 9; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= 6; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 10; x <= 13; x++) for (int y = 2; y <= 15 - x; y++) h.setBlock(x, y, 2, Blocks.STONE); // l'escalier
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 5, 7, 12, ItemStack.EMPTY, new BlockPos(16, 2, 12));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 2));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 600, () -> {
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être descendu jusqu'au bureau (" + s.texte() + ")");
+            finir(h, "nesautePasDeCinqBlocs", t, s, 0.9, "fall");
         });
     }
 

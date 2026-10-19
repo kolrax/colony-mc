@@ -2618,11 +2618,12 @@ public class Travailleur extends PathfinderMob {
     }
 
     /**
-     * Comme un joueur, il saute d'un petit à-pic (6 blocs, quelques points de vie) plutôt que de rester bloqué au bord ;
-     * affaibli (affamé, blessé), il ne prend plus ce risque (3 blocs, sans dégâts).
+     * Jamais une chute de plus de 3 blocs (règle de KOLRAX, plan E4), même en pleine vie : sa recherche de chemin ne le fait
+     * pas sauter plus bas (3 blocs : sans dégâts). Un à-pic plus haut, il le contourne ou le descend en taillant des marches
+     * ({@link Itineraire}). Avant, il sautait jusqu'à 6 blocs en pleine vie : 7 à 22 coups de chute par partie en montagne.
      */
     @Override
-    public int getMaxFallDistance() { return getHealth() > 10 ? 6 : 3; }
+    public int getMaxFallDistance() { return 3; }
 
     @Override
     public boolean removeWhenFarAway(double distance) { return false; }
