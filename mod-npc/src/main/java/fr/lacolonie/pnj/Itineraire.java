@@ -16,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
@@ -178,10 +179,14 @@ final class Itineraire {
                 finChoix();
                 retirerEau(t); // la colonne d'eau : il la reprend dans son seau, sorti ou pas
                 if (sorti) reprendre(t);
+                else if (sortieNage && departPose != null) posesRatees.add(departPose); // sorti de l'eau mais pas sur le bord
             }
             else {
                 t.diag = "monte en " + montee.toShortString();
-                if (t.eau != null) t.eauVue = t.level().getGameTime();
+                if (t.eau != null) {
+                    t.eauVue = t.level().getGameTime();
+                    if (t.onGround() && !t.isInWater()) retirerEau(t); // hors de l'eau, sur le bord : il la reprend tout de suite
+                }
                 if (t.onGround() && age % 10 == 0) {
                     Path c = chercher(t, montee, 0, Charge.Origine.MONTEE);
                     if (c != null) t.getNavigation().moveTo(c, 1.0);
@@ -1125,6 +1130,7 @@ final class Itineraire {
     /** En haut du pilier ou au bout du pont : il marche jusqu'au bord, puis reprend son chemin. */
     private void sortirSurLeBord(int age) {
         pilier = null;
+        sortieNage = aLaNage;
         aLaNage = false;
         montee = issue;
         monteeFin = age + 60;
@@ -1157,8 +1163,11 @@ final class Itineraire {
 
     // --- La colonne d'eau (plan A3) : avec un seau d'eau, il monte à la nage, puis reprend l'eau ----------
 
-    /** Il monte par une colonne d'eau : {@code pilier} est la place de l'eau, {@code pilierHaut} la hauteur du bord. */
-    private boolean aLaNage;
+    /**
+     * Il monte par une colonne d'eau : {@code pilier} est la place de l'eau, {@code pilierHaut} la hauteur du bord (l'eau
+     * s'arrête un bloc plus bas, pour ne pas couler sur le bord) ; {@code sortieNage} : il sort sur le bord après une nage.
+     */
+    private boolean aLaNage, sortieNage;
 
     static int seauDEau(Travailleur t) {
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (t.inventaire.getItem(i).is(Items.WATER_BUCKET)) return i;
@@ -1167,9 +1176,10 @@ final class Itineraire {
 
     /**
      * Au pied d'une paroi, un seau d'eau dans son sac : il verse l'eau à ses pieds et monte à la nage. À chaque fois qu'il
-     * s'élève, il reprend l'eau et la reverse un bloc plus haut (une seule source à la fois), jusqu'à la hauteur d'un bord
-     * sûr où il sort ; en haut, il la reprend dans son seau. Jamais dans le Nether (l'eau s'y évapore), jamais sur ou contre
-     * une construction, pas plus haut que le pilier ({@link #PILIER_MAX}, {@link #PILIER_AFFAIBLI} affaibli).
+     * s'élève, il reprend l'eau et la reverse un bloc plus haut (une seule source à la fois), jusqu'à un bloc sous un bord
+     * sûr où il sort ; en haut, il la reprend dans son seau. Seulement dans un puits fermé (chaque case qui recevra l'eau,
+     * de l'air, entourée de blocs pleins : l'eau ne coule nulle part ailleurs). Jamais dans le Nether (l'eau s'y évapore),
+     * jamais sur ou contre une construction, pas plus haut que le pilier ({@link #PILIER_MAX}, {@link #PILIER_AFFAIBLI} affaibli).
      */
     private boolean commencerALaNage(Travailleur t) {
         Level l = t.level();
@@ -1177,20 +1187,23 @@ final class Itineraire {
         int i = seauDEau(t);
         if (i < 0 || t.eau != null || l.dimensionType().ultraWarm() || posesRatees.contains(p) || !t.onGround() || t.isInWater()
                 || !Monde.solide(l, p.below()) || Monde.construit(l, p.below())) return false;
-        BlockState pieds = l.getBlockState(p);
-        if (!pieds.canBeReplaced() || !pieds.getFluidState().isEmpty() || Monde.construit(l, p)) return false;
+        BlockState pieds = l.getBlockState(p); // de l'air, ou une herbe sauvage
+        if (!pieds.isAir() && !pieds.is(Blocks.SHORT_GRASS) && !pieds.is(Blocks.FERN) && !pieds.is(Blocks.DEAD_BUSH)) return false;
         Vec3 pos = t.position();
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
         for (Direction d : dirs) if (Monde.construit(l, p.relative(d)) || Monde.construit(l, p.above().relative(d))) return false;
         int haut = t.getHealth() > 10 ? PILIER_MAX : PILIER_AFFAIBLI;
         for (int k = 1; k <= haut; k++) {
+            BlockPos c = p.above(k - 1); // la case qui recevra l'eau : de l'air (sauf ses pieds), fermée de tous côtés
+            if (k > 1 && !l.getBlockState(c).isAir()) return false;
+            for (Direction d : dirs) if (!Monde.solide(l, c.relative(d))) return false; // un puits ouvert : l'eau s'en irait
             if (!Monde.libre(l, p.above(k)) || !Monde.libre(l, p.above(k + 1))) return false; // un plafond, un liquide
             for (Direction d : dirs) if (Monde.construit(l, p.above(k + 1).relative(d))) return false; // contre une construction
             for (Direction d : dirs) {
                 BlockPos bord = p.above(k).relative(d);
                 if (Monde.debout(l, bord) && Monde.solide(l, bord.below()) && !Monde.mortel(l, bord) && l.getFluidState(bord).isEmpty()) {
-                    l.setBlock(p, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+                    l.setBlock(p, Blocks.WATER.defaultBlockState(), 3);
                     t.inventaire.setItem(i, new ItemStack(Items.BUCKET));
                     l.playSound(null, p, net.minecraft.sounds.SoundEvents.BUCKET_EMPTY, net.minecraft.sounds.SoundSource.NEUTRAL, 1, 1);
                     t.swing(InteractionHand.MAIN_HAND);
@@ -1214,11 +1227,13 @@ final class Itineraire {
         t.eauVue = l.getGameTime();
         t.getMoveControl().setWantedPosition(pilier.getX() + 0.5, t.getY(), pilier.getZ() + 0.5, 0.6);
         t.getJumpControl().jump();
-        if (pilier.getY() >= pilierHaut) { if (t.getY() >= pilierHaut - 0.3) sortirSurLeBord(age); return; }
-        if (t.getY() < pilier.getY() + 0.4 || !Monde.libre(l, pilier.above())) return;
+        if (t.getY() < pilier.getY() + 0.4) return;
+        // Un bloc sous le bord : il nage contre le bord et en sort (l'eau ne monte pas plus haut, elle coulerait dessus).
+        if (pilier.getY() >= pilierHaut - 1) { sortirSurLeBord(age); return; }
+        if (!l.getBlockState(pilier.above()).isAir()) { abandonner(t); return; } // quelque chose a pris la place : il n'y verse pas
         // Il s'est élevé dans l'eau : il la reprend et la reverse un bloc plus haut.
-        l.setBlock(pilier.above(), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
-        l.setBlock(pilier, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        l.setBlock(pilier.above(), Blocks.WATER.defaultBlockState(), 3);
+        l.setBlock(pilier, Blocks.AIR.defaultBlockState(), 3);
         pilier = pilier.above();
         t.eau = pilier;
         poseFin = age + 100;
@@ -1228,22 +1243,30 @@ final class Itineraire {
     static void retirerEau(Travailleur t) {
         BlockPos q = t.eau;
         if (q == null) return;
-        t.eau = null;
         Level l = t.level();
-        if (!l.isLoaded(q) || !l.getFluidState(q).is(FluidTags.WATER) || !l.getFluidState(q).isSource()) return;
-        l.setBlock(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        if (!l.isLoaded(q)) return; // le coin n'est pas chargé : il garde l'endroit et la reprendra plus tard
+        t.eau = null;
+        if (!l.getFluidState(q).is(FluidTags.WATER) || !l.getFluidState(q).isSource()) return;
+        l.setBlock(q, Blocks.AIR.defaultBlockState(), 3);
         l.playSound(null, q, net.minecraft.sounds.SoundEvents.BUCKET_FILL, net.minecraft.sounds.SoundSource.NEUTRAL, 1, 1);
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
             ItemStack s = t.inventaire.getItem(i);
             if (!s.is(Items.BUCKET)) continue;
             if (s.getCount() == 1) t.inventaire.setItem(i, new ItemStack(Items.WATER_BUCKET));
-            else { s.shrink(1); t.inventaire.addItem(new ItemStack(Items.WATER_BUCKET)); }
+            else {
+                s.shrink(1);
+                ItemStack r = t.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
+                if (!r.isEmpty()) t.spawnAtLocation(r); // le sac est plein : le seau d'eau à ses pieds, pas perdu
+            }
             t.inventaire.setChanged();
             return;
         }
     }
 
-    /** Une colonne d'eau laissée par un trajet abandonné (ordre changé, trajet refait) : il la reprend quand même. */
+    /**
+     * Une colonne d'eau laissée par un trajet abandonné (ordre changé, trajet refait), ou par un arrêt ou un coin déchargé
+     * en pleine montée (l'endroit est sauvegardé, {@code eauVue} ne l'est pas) : il la reprend quand même.
+     */
     static void eauOubliee(Travailleur t) { if (t.eau != null && t.level().getGameTime() - t.eauVue > 40) retirerEau(t); }
 
     /** Une autre créature que lui (un joueur, un ouvrier, une bête) se tient sur ce bloc. */

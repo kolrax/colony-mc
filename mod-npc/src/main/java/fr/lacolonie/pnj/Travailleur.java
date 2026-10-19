@@ -2446,6 +2446,7 @@ public class Travailleur extends PathfinderMob {
         t.putLong("SortieDepuis", sortieDepuis);
         t.putBoolean("Expedition", expedition);
         t.putLongArray("Trace", trace.stream().mapToLong(BlockPos::asLong).toArray());
+        if (eau != null) t.putLong("Eau", eau.asLong()); // arrêt ou coin déchargé en pleine montée à la nage : il la reprendra
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
         t.putString("Talents", Talents.texte(talents));
@@ -2507,6 +2508,7 @@ public class Travailleur extends PathfinderMob {
         expedition = t.getBoolean("Expedition");
         trace.clear();
         for (long l : t.getLongArray("Trace")) trace.add(BlockPos.of(l));
+        eau = t.contains("Eau") ? BlockPos.of(t.getLong("Eau")) : null; // eauVue repart de 0 : il la reprend dès la première seconde
         // « Debut », « Fin » et « JoursExpedition » des anciennes sauvegardes : ignorés (corrections du 18/10, plus de réglage général).
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
         surcout = t.contains("Surcout") ? Math.clamp(t.getDouble("Surcout"), 1, Cout.FACTEUR_MAX) : 1; // avant le lot 11 : ×1
