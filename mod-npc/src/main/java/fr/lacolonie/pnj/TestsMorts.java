@@ -138,7 +138,7 @@ public class TestsMorts {
 
     /**
      * En haut d'une falaise à pic de 11 blocs, sans descente ; son bureau en bas, à 14 blocs. Il ne doit pas se jeter
-     * dans le vide (au pire il reste en haut, coincé). Garde-fou : le saut d'à-pic est borné à 6 blocs.
+     * dans le vide (au pire il reste en haut, coincé). Garde-fou : le saut d'à-pic est borné à 3 blocs (plan E4).
      */
     @GameTest(template = "grand", timeoutTicks = 1100, skyAccess = true, batch = "morts")
     public static void falaiseSansDescente(GameTestHelper h) {
@@ -152,21 +152,24 @@ public class TestsMorts {
     }
 
     /**
-     * Une falaise de 11 blocs en deux à-pics (6 puis 5) : il peut descendre en sautant (3 + 2 points de vie), comme un
-     * joueur. Il arrive en bas sans perdre plus de la moitié de sa vie.
+     * Une falaise de 11 blocs en deux à-pics (6 puis 5), sans pioche, de la terre en poche. Avant (1.0.21), il sautait
+     * chaque à-pic (3 + 2 points de vie). Plan E4 (jamais de chute de plus de 3 blocs) : il pose une marche de terre contre
+     * chaque paroi, descend par elle sans se blesser, et reprend sa terre.
      */
     @GameTest(template = "grand", timeoutTicks = 1100, skyAccess = true, batch = "morts")
     public static void falaiseEnDeuxAPics(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
         for (int x = 0; x <= 9; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= (x <= 7 ? 12 : 6); y++) h.setBlock(x, y, z, Blocks.STONE);
-        Travailleur t = TestsJeu.ouvrier(h, "mineur", 4, 13, 12, ItemStack.EMPTY, new BlockPos(18, 2, 12));
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 4, 13, 12, new ItemStack(Items.DIRT, 16), new BlockPos(18, 2, 12));
         debutant(t);
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
         Suivi s = suivre(h, t);
         h.runAtTickTime(h.getTick() + 1000, () -> {
             boolean arrive = t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16;
+            int terre = t.compter(Actions.Filtre.de("minecraft:dirt"));
             h.assertTrue(arrive, "il doit être descendu jusqu'au bureau (" + s.texte() + ")");
-            finir(h, "falaiseEnDeuxAPics", t, s, 0.5);
+            h.assertTrue(terre == 16, "il doit avoir repris ses marches de terre (" + terre + " terre, " + s.texte() + ")");
+            finir(h, "falaiseEnDeuxAPics", t, s, 0.9, "fall");
         });
     }
 
