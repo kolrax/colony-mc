@@ -176,6 +176,7 @@ final class Itineraire {
         if (montee != null) {
             if (t.blockPosition().equals(montee) || age > monteeFin) {
                 boolean sorti = t.blockPosition().equals(montee);
+                if (enDescente) { enDescente = false; derniereMarche = t.level().getGameTime(); }
                 montee = null;
                 etape = null;
                 finChoix();
@@ -269,6 +270,7 @@ final class Itineraire {
         if (phase < 0) {
             visites.merge(cellule(ici), 1, Integer::sum);
             if (montagne(t, maintenant, v)) return;
+            if (descente(t, maintenant, dh)) return;
             phase = 0;
         }
 
@@ -333,7 +335,7 @@ final class Itineraire {
                 finChoix();
                 // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
                 // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
-                if (dh <= 8 && !sousTerre(t)) { oublierPlan(); t.getNavigation().stop(); bloque = true; t.diag = "inaccessible"; return; }
+                if (dh <= 8 && !sousTerre(t) && !(t.blockPosition().getY() - Mth.floor(but.y) >= DESCENTE_MIN && descendre(t, maintenant))) { oublierPlan(); t.getNavigation().stop(); bloque = true; t.diag = "inaccessible"; return; }
                 echecs = 0;
                 return;
             }
@@ -359,6 +361,8 @@ final class Itineraire {
         if (evasionPermise(t) && grimper && caseDeChantier(t, false, true) >= 0 && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         // Pas de bloc qu'il saurait reprendre, mais un seau d'eau : il monte à la nage par une colonne d'eau, qu'il reprend en haut.
         if (evasionPermise(t) && grimper && commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return; }
+        // Le but est plus bas : il descend en creusant des marches, pas un escalier qui monte.
+        if (ici.getY() > Mth.floor(but.y) && descendre(t, maintenant)) return;
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -866,7 +870,7 @@ final class Itineraire {
      */
     private boolean montagne(Travailleur t, long maintenant, double v) {
         Vec3 p = t.position();
-        double m = horizontale(p, but) + 1.5 * Math.max(0, but.y - p.y);
+        double m = horizontale(p, but) + 1.5 * Math.abs(but.y - p.y); // en montant comme en descendant (la descente s'en sert)
         BlockPos vise = auPied;
         boolean arrive = vise != null && vise.distSqr(t.blockPosition()) <= 2;
         auPied = null;
@@ -902,6 +906,84 @@ final class Itineraire {
         prolonge = false; // il s'arrête au pied : de là, il grimpe
         auPied = pied;
         t.diag = "va au pied de la paroi " + pied.toShortString();
+        return true;
+    }
+
+    // --- La descente (plan A3) : le but est nettement plus bas et aucun chemin complet n'y mène ---------------
+
+    /** Il ne se met à creuser pour descendre que vers un but au moins tant de blocs plus bas. */
+    static final int DESCENTE_MIN = 4;
+    /** La marche où il descend quand le creusage en cours sera fini (null : il monte ou avance comme avant). */
+    private BlockPos marcheBas;
+    /** Quand (temps du monde) il a commencé sa dernière marche de descente : jusqu'à 5 s après, il continue sans attendre. */
+    private long derniereMarche = Long.MIN_VALUE / 2;
+    /** La marche en cours est une marche de descente (à son arrivée, {@link #derniereMarche} est remis à l'heure). */
+    private boolean enDescente;
+
+    /**
+     * Doit-il descendre en creusant, maintenant ? Le but est au moins {@link #DESCENTE_MIN} blocs plus bas et le chemin
+     * direct n'y mène pas (une corniche, le haut d'une falaise), ou il ne s'en rapproche plus depuis {@link #STAGNATION}
+     * ticks ; ou il vient de descendre une marche (il continue). Vrai s'il a commencé une marche.
+     */
+    private boolean descente(Travailleur t, long maintenant, double dh) {
+        int haut = t.blockPosition().getY() - Mth.floor(but.y);
+        boolean suite = maintenant - derniereMarche < 100;
+        if (haut < (suite ? 0 : DESCENTE_MIN) || !suite && !(directRate >= 2 && dh <= 40 && haut <= 20) && maintenant - meilleurDate < STAGNATION) return false;
+        return descendre(t, maintenant);
+    }
+
+    /**
+     * Une marche de plus vers le bas, comme un joueur : un escalier qui descend dans la paroi (vers le but d'abord, de côté
+     * si devant c'est le vide), sinon un trou d'un bloc sous ses pieds ; arrivé à la hauteur du but, un pas de galerie vers
+     * lui. Seulement des blocs naturels ({@link Lieux#peutCasser}), jamais un liquide, et un appui à 3 blocs au plus sous
+     * la marche (jamais de chute plus haute). Rien n'est posé, donc rien n'est laissé. Vrai s'il a commencé.
+     */
+    private boolean descendre(Travailleur t, long maintenant) {
+        if (!evasionPermise(t) || !t.onGround() || t.isInWater()) return false;
+        BlockPos p = t.blockPosition();
+        Vec3 pos = t.position();
+        List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
+        dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
+        boolean ok = false;
+        if (p.getY() > Mth.floor(but.y)) {
+            for (Direction d : dirs) if (!ok) ok = marche(t, List.of(p.relative(d).above(), p.relative(d), p.relative(d).below()), p.relative(d).below());
+            if (!ok) ok = marche(t, List.of(p.below()), p.below());
+        } else for (Direction d : dirs)
+            if (!ok && horizontale(Vec3.atBottomCenterOf(p.relative(d)), but) < horizontale(pos, but) - 0.5) ok = marche(t, List.of(p.relative(d), p.relative(d).above()), p.relative(d));
+        if (!ok) return false;
+        derniereMarche = maintenant;
+        // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but : plus haut, Minecraft le ferait sauter de 6 blocs
+        // (getMaxFallDistance) et il se blesserait. Là, une recherche par marche ; plus haut, il continue de creuser.
+        directRate = p.getY() - 1 - Mth.floor(but.y) > 3 ? 2 : horizontale(pos, but) <= 8 ? 1 : 0;
+        montee = null;
+        etape = null;
+        choixRates = 0;
+        return true;
+    }
+
+    /** Creuse {@code blocs} (ceux qui ne sont pas déjà vides) puis va en {@code q}, si c'est sans risque. */
+    private boolean marche(Travailleur t, List<BlockPos> blocs, BlockPos q) {
+        Level l = t.level();
+        if (pasFaits.contains(q) || Monde.eboulement(l, q, 2)) return false;
+        boolean appui = false;
+        for (int k = 1; k <= 3 && !appui; k++) {
+            BlockPos s = q.below(k);
+            BlockState sol = l.getBlockState(s);
+            if (!sol.getFluidState().isEmpty() || sol.is(Blocks.MAGMA_BLOCK) || Monde.mortel(l, s)) break;
+            appui = Monde.solide(l, s) && !blocs.contains(s);
+        }
+        if (!appui || !blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b)))) return false;
+        if (!Monde.libre(l, q) && !blocs.contains(q) || !Monde.libre(l, q.above()) && !blocs.contains(q.above())) return false;
+        if (pasFaits.size() > 64) pasFaits.clear();
+        pasFaits.add(q);
+        aCasser.clear();
+        for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
+        marcheBas = q;
+        enDescente = true;
+        monte = false;
+        aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
+        if (aCreuser == null) monter(t);
+        else { progres = 0; echecs = 0; Cerveau.dire(t, "descend", 600, "Pas de chemin pour descendre : je taille des marches."); }
         return true;
     }
 
@@ -999,7 +1081,8 @@ final class Itineraire {
 
     /** Le passage est dégagé : il monte sur la marche suivante (ou avance d'un pas en galerie). */
     private void monter(Travailleur t) {
-        BlockPos vers = monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        BlockPos vers = marcheBas != null ? marcheBas : monte ? t.blockPosition().relative(sens).above() : t.blockPosition().relative(sens);
+        marcheBas = null;
         if (Monde.eboulement(t.level(), vers, 2)) { etape = null; return; } // du gravier y tombe : il le recreusera d'abord
         montee = vers;
         monteeFin = ageCourant + 60;

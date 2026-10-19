@@ -1239,8 +1239,11 @@ public class Travailleur extends PathfinderMob {
     void surveillerCoince() {
         coince.mode(mode == Mode.ATTENDRE);
         Actions.Action a = action instanceof Consignes.Faire f && f.sous != null ? f.sous : action;
-        if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger() || isSleeping()
-                || a instanceof Actions.Reposer || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) {
+        // Le repos et le sommeil ne comptent pas, mais n'effacent pas non plus le temps déjà passé coincé (plan A3) : coincé
+        // sur une corniche le soir, il dormait, le compte repartait de zéro chaque nuit et il restait là près d'un jour entier.
+        if (isSleeping() || a instanceof Actions.Reposer) { coince.marche = false; return; }
+        if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger()
+                || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) {
             coince.progres(getX(), getY(), getZ());
             return;
         }

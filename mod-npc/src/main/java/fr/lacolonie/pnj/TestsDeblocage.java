@@ -348,6 +348,31 @@ public class TestsDeblocage {
         });
     }
 
+    /**
+     * Plan A3 (la descente) : en haut d'une falaise de pierre naturelle de 10 blocs, sans chemin pour descendre, son bureau
+     * en bas. Avant, il se disait « inaccessible » sur la corniche jusqu'au retour forcé au poste. Maintenant, il creuse un
+     * escalier qui descend dans la paroi et rejoint son bureau sans tomber de plus de 3 blocs ni se blesser.
+     */
+    @GameTest(template = "grand", timeoutTicks = 2000, skyAccess = true)
+    public static void descendDeLaFalaise(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 13; y++)
+            if (z <= 9 || y <= 3) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 14, 5, new ItemStack(Items.IRON_PICKAXE), new BlockPos(12, 4, 18));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        double[] chute = {0};
+        double[] haut = {t.getY()};
+        h.onEachTick(() -> {
+            if (t.onGround() || t.isInWater()) { chute[0] = Math.max(chute[0], haut[0] - t.getY()); haut[0] = t.getY(); }
+            else haut[0] = Math.max(haut[0], t.getY());
+        });
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", vie " + t.getHealth() + ", chute " + chute[0];
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être descendu jusqu'à son bureau (" + e + ")");
+            h.assertTrue(chute[0] <= 3.1 && t.getHealth() >= t.getMaxHealth(), "sans chute de plus de 3 blocs ni blessure (" + e + ")");
+            t.discard();
+        });
+    }
+
     /** Un ouvrier qui doit attendre là (gardé, prisonnier), envoyé dehors : il ne pose ni ne creuse pour s'en aller. */
     @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true)
     public static void prisonnierNeSEvadePas(GameTestHelper h) {
