@@ -188,3 +188,9 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - E3 : l'ouvrier prend la meilleure armure du dépôt sans en laisser aux guerriers du poste (à trancher).
 - E2 : icône de peur absente pendant le repli ; la fiche dit « Je fuis un danger ! » au repos sans danger.
 - Tests capricieux vus sous charge (4 serveurs de test en file) : `TestsGuerrier.mannequin`, `TestsChef.sansOrdreSInterpose`, `TestsGuerrier.chasseDeNuit`.
+
+## 19/10 (session du matin)
+- Mineuse figée en « deposer » à 3 blocs du poste (fantôme montagne, graine 20261019, 1 fois sur 2) : cause non trouvée ; `surveillerCoince` ignore tout à moins de 6 blocs du poste.
+- Relecture 1.0.20 : le pilier de `choisirEtape` (`commencerAPoser`) ne regarde pas `Monde.construit` (contrairement à la nage) : il peut monter le long du mur d'une maison jusqu'au toit (blocs repris, rien de cassé).
+- `mainsNues` n'est pas sauvegardé (revient à 0 au rechargement : au pire 8 pierres de plus).
+- Le fantôme compte maintenant dans « arrêts > 3 s » le temps passé à creuser ou poser : chiffres pas comparables avec avant la 1.0.19.
