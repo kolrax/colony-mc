@@ -152,17 +152,17 @@ public class TestsMorts {
     }
 
     /**
-     * Une arête de pierre de 11 blocs en deux à-pics vers son bureau (6 puis 5 ; de l'autre côté, 11 d'un coup), sans
-     * pioche, de la terre en poche. Avant (1.0.21), il sautait chaque à-pic (3 + 2 points de vie). Plan E4 (jamais de
-     * chute de plus de 3 blocs) : il pose une marche de terre contre chaque paroi, descend par elle sans se blesser, et
-     * reprend sa terre. (Arête de 2 blocs : où qu'il soit en haut, le bord est à un pas ; sur un large plateau, sans
-     * pioche, il creuserait d'abord sous lui à mains nues.)
+     * Une arête de pierre de 9 blocs en deux à-pics vers son bureau (4 puis 5, sur un replat d'un bloc ; de l'autre côté,
+     * 9 d'un coup), sans pioche, de la terre en poche. Avant (1.0.21), il sautait chaque à-pic (1 + 2 points de vie). Plan
+     * E4 (jamais de chute de plus de 3 blocs) : il pose une marche de terre contre chaque paroi, à portée de main, descend
+     * par elle sans se blesser, et reprend sa terre. (Arête de 2 blocs, replat d'un : où qu'il soit, la marche est à portée ;
+     * sur un large plateau, sans pioche, il creuserait d'abord sous lui à mains nues.)
      */
     @GameTest(template = "grand", timeoutTicks = 1600, skyAccess = true, batch = "morts")
     public static void falaiseEnDeuxAPics(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
-        for (int x = 6; x <= 9; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= (x <= 7 ? 12 : 6); y++) h.setBlock(x, y, z, Blocks.STONE);
-        Travailleur t = TestsJeu.ouvrier(h, "mineur", 6, 13, 12, new ItemStack(Items.DIRT, 16), new BlockPos(18, 2, 12));
+        for (int x = 6; x <= 8; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= (x <= 7 ? 10 : 6); y++) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 6, 11, 12, new ItemStack(Items.DIRT, 16), new BlockPos(18, 2, 12));
         debutant(t);
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
         Suivi s = suivre(h, t);

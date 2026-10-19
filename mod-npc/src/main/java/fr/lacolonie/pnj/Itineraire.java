@@ -182,8 +182,10 @@ final class Itineraire {
                 finChoix();
                 retirerEau(t); // la colonne d'eau : il la reprend dans son seau, sorti ou pas
                 if (sorti) reprendre(t);
-                else if (sortieNage && departPose != null) posesRatees.add(departPose); // sorti de l'eau mais pas sur le bord
+                // Sorti de l'eau mais pas sur le bord, ou pas arrivé sur sa marche posée : il ne recommence pas d'ici.
+                else if ((sortieNage || sortieMarche) && departPose != null) posesRatees.add(departPose);
                 sortieNage = false;
+                sortieMarche = false;
             }
             else {
                 t.diag = "monte en " + montee.toShortString();
@@ -1030,8 +1032,9 @@ final class Itineraire {
     }
 
     /**
-     * Plan E4 (jamais de chute de plus de 3 blocs) : au bord d'un à-pic de 4 à 6 blocs (ou à un pas du bord), un bloc de
-     * son sac qu'il saura reprendre : il le pose contre la paroi, à 3 blocs au plus sous le bord et au-dessus du sol,
+     * Plan E4 (jamais de chute de plus de 3 blocs) : au bord d'un à-pic de 4 ou 5 blocs (ou à un pas du bord), un bloc de
+     * son sac qu'il saura reprendre : il le pose contre la paroi, à portée de main ({@link Actions#aPortee}), à 3 blocs au
+     * plus sous le bord et au-dessus du sol,
      * descend dessus puis au sol. Le bloc est suivi comme ceux de son pilier : une fois descendu, il le reprend d'office.
      * Vrai s'il a commencé.
      */
@@ -1044,10 +1047,11 @@ final class Itineraire {
                 BlockPos n = p.relative(d, k), bord = n.relative(d.getOpposite());
                 if (!Monde.libre(l, n) || !Monde.libre(l, n.above()) || k == 2 && !Monde.debout(l, bord)) break;
                 int h = 1; // n.below(h) : le premier bloc qui n'est pas libre sous la case au-delà du bord
-                while (h <= 7 && Monde.libre(l, n.below(h))) h++;
-                if (h < 5 || h > 7 || !Monde.debout(l, n.below(h - 1)) || Monde.mortel(l, n.below(h - 1))) continue;
+                while (h <= 6 && Monde.libre(l, n.below(h))) h++;
+                if (h < 5 || h > 6 || !Monde.debout(l, n.below(h - 1)) || Monde.mortel(l, n.below(h - 1))) continue;
                 int j = Math.max(2, h - 3); // la marche : 3 blocs au plus sous le bord, et 3 au plus au-dessus du sol
-                if (!Monde.solide(l, bord.below(j))) continue; // pas de paroi pour la tenir
+                // Une paroi pour la tenir (pas un coffre, un four… : rien qui se range), et à portée de main, comme un joueur.
+                if (!Monde.solide(l, bord.below(j)) || l.getBlockEntity(bord.below(j)) != null || !Actions.aPortee(t, n.below(j))) continue;
                 pont.clear();
                 pont.add(n.below(j));
                 return commencer(t, p, n.below(j - 1), "marche", "Trop haut pour sauter : je pose une marche contre la paroi.");
@@ -1344,6 +1348,7 @@ final class Itineraire {
     private boolean commencer(Travailleur t, BlockPos depart, BlockPos sortie, String cle, String texte) {
         departPose = depart;
         issue = sortie;
+        sortieMarche = false;
         poseFin = ageCourant + 100;
         Cerveau.dire(t, cle, 600, texte);
         return true;
@@ -1364,6 +1369,7 @@ final class Itineraire {
             if (q.equals(issue.below())) { // la marche posée contre une paroi (marchePosee) : reprise d'office, comme un pilier
                 t.pilierPose.add(new PoseDePilier(q, t.level().getBlockState(q).getBlock(), t.level().dimension(), t.level().getGameTime()));
                 t.pilierVu = t.level().getGameTime();
+                sortieMarche = true;
             }
             posesFaites++;
             pont.remove(0);
@@ -1457,6 +1463,8 @@ final class Itineraire {
      * s'arrête un bloc plus bas, pour ne pas couler sur le bord) ; {@code sortieNage} : il sort sur le bord après une nage.
      */
     private boolean aLaNage, sortieNage;
+    /** Il va sur la marche qu'il vient de poser ({@link #marchePosee}). */
+    private boolean sortieMarche;
 
     static int seauDEau(Travailleur t) {
         for (int i = 0; i < t.inventaire.getContainerSize(); i++) if (t.inventaire.getItem(i).is(Items.WATER_BUCKET)) return i;
