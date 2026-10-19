@@ -591,6 +591,18 @@ final class Transporteur extends Metier {
     /** « Porte ce coffre au dépôt », « prends dans ce coffre », « dépose dans celui-là », « oublie tes trajets ». */
     static Actions.Action consigne(Travailleur t, String mode, Consignes.Consigne c) { return new Ordre(mode, c); }
 
+    /**
+     * Un ordre de trajet donné mais pas encore retenu (« Rentrer » juste après) : il le retient tout de suite, pour que
+     * le bouton ne l'efface pas. Retenir ne prend qu'un instant (pas de marche).
+     */
+    static void retenirAvant(Travailleur t) {
+        Consignes.Consigne c = t.consigne;
+        Repertoire.Entree e = c == null ? null : c.entree();
+        if (e == null || !Trajets.TRAVAUX.contains(e.arg())) return;
+        if (t.action instanceof Consignes.Faire f && f.c == c && f.etape > 0) return; // déjà en train de le retenir
+        new Ordre(e.arg(), c).tick(t);
+    }
+
     /** Il retient (ou oublie) un trajet, et dit ce qu'il a compris. */
     static final class Ordre extends Actions.Action {
         final String mode;
@@ -643,6 +655,7 @@ final class Transporteur extends Metier {
                 return echec("trop_de_trajets");
             }
             ecrire(t, l);
+            Missions.reprendre(t); // tout juste embauché, il suivait son chef : il se met au travail, comme pour une mission
             t.memoire.remove("transport_repos");
             t.memoire.putInt("trajet_vides", 0);
             retenirMachine(t, tr.source());

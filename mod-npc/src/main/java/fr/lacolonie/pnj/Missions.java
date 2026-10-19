@@ -137,6 +137,7 @@ public final class Missions {
                 t.majPoste();
                 if (t.bureau == null) { Travailleur.signaler(p, t.prenom + " n'a pas de poste de travail."); break; }
                 if (t.mode == Travailleur.Mode.GREVE) { Travailleur.signaler(p, t.prenom + " est en grève : il reste au poste."); break; }
+                Transporteur.retenirAvant(t); // un trajet tout juste ordonné n'est pas perdu
                 Consignes.annuler(t);
                 t.memoire.putBoolean("rappel", true);
                 t.mode = Travailleur.Mode.TRAVAIL;
