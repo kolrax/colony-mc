@@ -309,7 +309,7 @@ final class Itineraire {
                 sortieAvance = 0;
                 if (sortie != null) { finChoix(); choixRates = 0; return; }
                 sortieRatee = true; // pas de sortie à pied : inutile de la rechercher à chaque marche qu'il creuse
-                if (evasionPermise(t)) commencerCreusage(t);
+                if (evasionPermise(t)) commencerCreusage(t, true); // enfoui, sans sortie à pied : même à mains nues, il se taille un passage
                 if (aCreuser != null) { finChoix(); choixRates = 0; return; }
             }
             candidats = candidats(t, l, ici, p, dh);
@@ -363,7 +363,7 @@ final class Itineraire {
         if (evasionPermise(t) && grimper && commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return; }
         // Le but est plus bas : il descend en creusant des marches, pas un escalier qui monte.
         if (ici.getY() - Mth.floor(but.y) >= DESCENTE_MIN && dh <= DESCENTE_RAYON && descendre(t, maintenant)) return;
-        if (evasionPermise(t)) commencerCreusage(t);
+        if (evasionPermise(t)) commencerCreusage(t, false);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
         // il monte sur des blocs de son sac, ou jette un petit pont.
@@ -895,7 +895,7 @@ final class Itineraire {
         if (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return true; }
         BlockPos devant = t.blockPosition().relative(Direction.getNearest(but.x - p.x, 0, but.z - p.z)).above();
         if (!Monde.traversable(t.level(), devant) && !sansOutilPourLaParoi(t)) {
-            commencerCreusage(t);
+            commencerCreusage(t, false);
             if (aCreuser != null || montee != null) { choixRates = 0; return true; }
         }
         if (!jeton(maintenant)) { montagneProchain = 0; return false; }
@@ -1009,7 +1009,7 @@ final class Itineraire {
         return true;
     }
 
-    private void commencerCreusage(Travailleur t) {
+    private void commencerCreusage(Travailleur t, boolean mainsNues) {
         Level l = t.level();
         BlockPos p = t.blockPosition();
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
@@ -1042,8 +1042,8 @@ final class Itineraire {
             boolean libre = !aCreuserIci && Monde.debout(l, marche) && !pasFaits.contains(marche)
                     && (i < dirs.size() || horizontale(Vec3.atBottomCenterOf(marche), but) < horizontale(Vec3.atBottomCenterOf(p), but) - 0.5);
             // Plan A3 : jamais un escalier taillé à mains nues dans ce qu'il ne récolte pas (de la pierre sans pioche, ~8 blocs
-            // par minute, rien de gagné) : il monte par ses blocs ou son seau, contourne, ou se dit coincé (et il le dit).
-            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b) && recolte(t, l.getBlockState(b)))) && (aCreuserIci || libre)) {
+            // par minute, rien de gagné) : il monte par ses blocs ou son seau, contourne, ou se dit coincé (et il le dit). Seule exception : enfoui sans sortie à pied ({@code mainsNues}).
+            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b) && (mainsNues || recolte(t, l.getBlockState(b))))) && (aCreuserIci || libre)) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();
