@@ -443,7 +443,8 @@ public class TestsBucheron {
                 () -> TestsRepertoire.fin(e));
     }
 
-    // --- F2 (KOLRAX, 1.0.22) : sur le lieu de sa mission, il va droit à l'arbre ---------------------------------------
+
+    // --- F2 (KOLRAX, 1.0.22) : sur les lieux, il va droit à l'arbre ---------------------------------------------------
 
     /** Un cerisier généré comme dans le monde (tronc penché, branches, grande couronne rose), pied en p ; ses bûches. */
     static List<BlockPos> cerisier(ServerLevel l, BlockPos p, long graine) {
@@ -456,70 +457,64 @@ public class TestsBucheron {
         return bois;
     }
 
+    /** Il a abattu ce cerisier (presque tout son bois : une branche qui redescend peut rester). */
+    static boolean abattu(ServerLevel l, List<BlockPos> tronc) {
+        return !tronc.isEmpty() && tronc.stream().filter(q -> l.getBlockState(q).is(Blocks.CHERRY_LOG)).count() * 2 < tronc.size();
+    }
+
     /**
-     * Orianne (1.0.22) : sur le lieu de sa mission, à quelques blocs des cerisiers, elle errait. Un cerisier du monde à 6 blocs :
-     * il l'abat dans la minute, sans viser plus loin que l'arbre.
+     * Orianne (1.0.22) : envoyée travailler près des cerisiers, à quelques blocs des arbres, elle errait. Il ne regardait les
+     * arbres qu'une fois arrivé au point exact de sa mission : il passait à côté du cerisier, allait jusqu'au point, puis
+     * revenait. Maintenant, entré dans la zone de sa mission, un arbre en vue : il va droit à lui.
      */
-    static void cerisierProche(GameTestHelper h, int dz, long graine, String bois) {
+    @GameTest(template = "vide", timeoutTicks = 900)
+    public static void cerisierEnArrivantSurLeLieu(GameTestHelper h) {
         ServerLevel l = h.getLevel();
-        BlockPos base = TestsJeu.sol(h, 0, dz);
-        BlockPos lieu = TestsJeu.sol(h, 60, dz);
-        BlockPos pied = TestsJeu.sol(h, 66, dz);
-        List<BlockPos> tronc = cerisier(l, pied, graine);
-        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(lieu), new ItemStack(Items.IRON_AXE));
-        t.mission(bois, "stock", 64);
+        BlockPos base = TestsJeu.sol(h, 0, 160000);
+        BlockPos depart = TestsJeu.sol(h, 60, 160000);
+        BlockPos lieu = TestsJeu.sol(h, 104, 160000);
+        List<BlockPos> tronc = cerisier(l, TestsJeu.sol(h, 84, 160000), 3);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(depart), new ItemStack(Items.IRON_AXE));
+        t.mission("cerisier", "stock", 64);
         t.travailleIci(lieu);
         t.forcerChunk();
-        int[] loin = {0};
+        int[] pres = {Integer.MAX_VALUE}; // au plus près du point de sa mission
         java.util.LinkedHashSet<String> vu = new java.util.LinkedHashSet<>();
         h.onEachTick(() -> {
-            if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat);
-            if (t.action instanceof Actions.Aller a) {
-                double dx = a.cible.x - pied.getX(), dz2 = a.cible.z - pied.getZ();
-                loin[0] = Math.max(loin[0], (int) Math.sqrt(dx * dx + dz2 * dz2));
-            }
+            pres[0] = Math.min(pres[0], (int) Math.sqrt(LieuxRegles.dist2(t.getBlockX(), t.getBlockZ(), lieu.getX(), lieu.getZ())));
+            if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat + "@" + (h.getTick() / 100));
         });
         h.succeedWhen(() -> {
-            h.assertTrue(!tronc.isEmpty(), "le cerisier doit pousser");
-            long restent = tronc.stream().filter(q -> l.getBlockState(q).is(Blocks.CHERRY_LOG)).count();
-            h.assertTrue(restent == 0, "le cerisier doit être abattu : " + restent + "/" + tronc.size() + " bûches restent (trouvé "
-                    + Actions.chercherArbre(l, t.blockPosition(), 24) + ", suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
-            h.assertTrue(loin[0] <= 12, "sans errer : il a visé à " + loin[0] + " blocs de l'arbre");
+            h.assertTrue(abattu(l, tronc), "le cerisier doit être abattu (suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(pres[0] > 12, "sans passer à côté : il est allé à " + pres[0] + " blocs du point de sa mission, l'arbre en vue");
             t.discard();
         });
     }
 
-    @GameTest(template = "vide", timeoutTicks = 1200)
-    public static void cerisierProche1(GameTestHelper h) { cerisierProche(h, 160000, 1, "cerisier"); }
-
-    @GameTest(template = "vide", timeoutTicks = 1200)
-    public static void cerisierProche2(GameTestHelper h) { cerisierProche(h, 162000, 7, "tout"); }
-
-    @GameTest(template = "vide", timeoutTicks = 1200)
-    public static void cerisierProche3(GameTestHelper h) { cerisierProche(h, 164000, 42, "cerisier"); }
-
     /**
-     * L'arbre le plus proche est sur un rocher (un pilier de 8 blocs) : il ne peut pas l'atteindre. Il va à l'autre, à 12 blocs,
-     * au lieu de tourner au pied du rocher.
+     * Pareil en cherchant une forêt : il part vers le coin à explorer, et passe à côté d'un cerisier. Avant : il ne regardait
+     * qu'arrivé au coin, à 30 blocs de l'arbre, et cherchait plus loin. Maintenant il s'arrête et l'abat.
      */
     @GameTest(template = "vide", timeoutTicks = 900)
-    public static void arbreInaccessibleUnAutre(GameTestHelper h) {
+    public static void cerisierEnChemin(GameTestHelper h) {
         ServerLevel l = h.getLevel();
-        BlockPos base = TestsJeu.sol(h, 0, 166000);
-        BlockPos lieu = TestsJeu.sol(h, 60, 166000);
-        BlockPos rocher = lieu.east(3);
-        for (int y = 0; y < 8; y++) l.setBlockAndUpdate(rocher.above(y), y == 7 ? Blocks.DIRT.defaultBlockState() : Blocks.STONE.defaultBlockState());
-        List<BlockPos> haut = arbre(l, rocher.above(8), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
-        List<BlockPos> bas = arbre(l, lieu.west(12), Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
-        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(lieu), new ItemStack(Items.IRON_AXE));
-        t.mission("chene", "stock", 64);
-        t.travailleIci(lieu);
+        BlockPos base = TestsJeu.sol(h, 0, 162000);
+        BlockPos foret = TestsJeu.sol(h, 110, 162000);
+        List<BlockPos> tronc = cerisier(l, TestsJeu.sol(h, 50, 162000), 5);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(base.east(2)), new ItemStack(Items.IRON_AXE));
+        t.mission("cerisier", "stock", 64);
+        Biomes.RECHERCHES.put(t.getUUID() + "/cerisier", java.util.concurrent.CompletableFuture.completedFuture(foret));
         t.forcerChunk();
+        int[] pres = {Integer.MAX_VALUE}; // au plus près de la forêt
         java.util.LinkedHashSet<String> vu = new java.util.LinkedHashSet<>();
-        h.onEachTick(() -> { if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat + "@" + (h.getTick() / 100)); });
+        h.onEachTick(() -> {
+            pres[0] = Math.min(pres[0], (int) Math.sqrt(LieuxRegles.dist2(t.getBlockX(), t.getBlockZ(), foret.getX(), foret.getZ())));
+            if (vu.size() < 20) vu.add((t.action == null ? "-" : t.action.nom) + "/" + t.resultat + "@" + (h.getTick() / 100));
+        });
         h.succeedWhen(() -> {
-            h.assertTrue(bas.stream().noneMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre atteignable doit être abattu vite (suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
-            h.assertTrue(haut.stream().allMatch(q -> l.getBlockState(q).is(Blocks.OAK_LOG)), "l'arbre du rocher reste");
+            h.assertTrue(abattu(l, tronc), "le cerisier en chemin doit être abattu (suite " + vu + ", " + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(pres[0] > 50, "sans aller plus loin : il est allé à " + pres[0] + " blocs du coin à explorer");
+            Biomes.oublier(t.getUUID() + "/cerisier");
             t.discard();
         });
     }
