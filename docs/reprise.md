@@ -1,23 +1,23 @@
 # Reprise : où on en est
 
-Mise à jour : 19/10/2026, ~08 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 19/10/2026, ~12 h 20 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 1.0.20** (19/10, ~08 h 20 UTC, serveur seul ; 1.0.18 à 07 h 01 avec le modpack, 1.0.19 à 07 h 31), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (pas pré-généré : demande à l'Admin, toujours ouverte). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
+- **Serveur : 1.0.21** (19/10, 12 h 10 UTC, serveur seul : mineuse figée près du poste ; 1.0.20 à 08 h 14, 1.0.18 à 07 h 01 avec le modpack), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (pas pré-généré : demande à l'Admin, toujours ouverte). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
 - **Modpack : 1.0.18** (19/10, 07 h 03 UTC, obligatoire : paquet de carte `reperes2`), avec Distant Horizons. Le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`.
-- `main` = la 1.0.20 (b05308d + journal) : **307/307 JUnit, 414/414 en jeu**. Tests capricieux vus ce matin : `chassedenuit` (2 fois), `sortdelalave`, `fuitlemonstrequilafrappe`, `descenddelafalaise` (1 fois chez l'agent).
+- `main` = la 1.0.21 (3ef8f62 + journal) : **308/308 JUnit, 417/417 en jeu** (4e passe du chef ; les 3 premières : `tondunmouton` ; `descenddelafalaise` ; `chassedenuit` + `bucheronpresdelalave`). **`bucheronpresdelalave` a échoué 2 fois sur 6 passes aujourd'hui** (à terre, 1 PV, lave pendant `ramasser`) : à regarder (test de sécurité).
 - La branche `en-cours` existe encore sur GitHub (égale à `main`) : sa suppression est refusée (403) depuis le cloud. Sans danger.
 - Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW.
 
 ## Prochaine étape (exacte)
 1. **Plan : 1 case restante, A** (`python3 tools/suivi.py reste` = 1). E est cochée (1.0.18).
-2. **Mineuse figée en « deposer » à 3 blocs du poste** (fantôme `montagne.txt` graine 20261019, 1 fois sur 2 sur la 1.0.19, rapports perdus avec le conteneur) : cause non trouvée. Pistes de l'agent : `surveillerCoince` remet le compte à zéro à moins de 6 blocs du poste (`distanceToSqr(bureau) < 36`), donc jamais ramenée ; `Deposer` devrait échouer après `sansProgres` 2400 ticks sauf si `route.occupe()` reste vrai ou si l'action n'est plus tickée. Rejouer la graine avec le diag d'Itinéraire enregistré dans le rapport.
+2. **Mineuse figée en « deposer »** : FAIT en 1.0.21. Cause : au fond de sa galerie à 3,7 blocs du poste derrière la roche, `Itineraire` disait « inaccessible », `Deposer` échouait (`bureau_inaccessible`) et le Cerveau relançait sans fin. Corrections : `Itineraire.percerVers`/`roche` (vers son propre poste seulement, pierre naturelle, même dans le tampon), `Coince.posteHorsDAtteinte`, pause 5 s du Cerveau après `bureau_inaccessible`, filet `sansAvancer` (10 min sans avancer de 2 blocs ni s'éloigner de 8). Pas de GameTest dédié au filet `sansAvancer`.
 3. **A3, restes** : errance au pied ; le seau ne sert jamais en vraie montagne (0 eau versée en 7 parties ce matin) ; `getMaxFallDistance` = 6 (chutes 7 à 22 coups par partie) : décision « jamais plus de 3 blocs » à prendre ; pilier contre le mur d'une maison possible (relecture 1.0.20, mineur : il reprend ses blocs, rien de cassé).
 4. **A1/A3 fantôme** : rejouer `montagne.txt` sur la 1.0.20 avec les graines 1234567 et 20261019 (seule la 42 a été jouée : mineur sorti du creux, 109 pierres, mission finie, 1 ramené au poste, 0 mort).
 5. Restes : `docs/plus-tard.md`.
 
 ## Session en cours
-- aucune (session 19/10 06 h 00 - 08 h 30 UTC, terminée : 1.0.18 + modpack 1.0.18 (E5), 1.0.19 (A3 mains nues), 1.0.20 (A3 creux)).
+- aucune (session 19/10 09 h 00 - 12 h 20 UTC, terminée : 1.0.21). Avant : (session 19/10 06 h 00 - 08 h 30 UTC, terminée : 1.0.18 + modpack 1.0.18 (E5), 1.0.19 (A3 mains nues), 1.0.20 (A3 creux)).
 
 ## La 1.0.0 en bref (refonte « ouvriers robots »)
 - Mission (`Travailleur.Mission` : id du catalogue, quantité/stock, une fois/tous les jours, lieu, horaires), file, `Missions.donner`/`Missions.action` (écran et fantôme), statut unique `Statut` (entityData `STATUT`, recalculé toutes les 5 s), `t.bloquer(raison)`/`debloquer`.
