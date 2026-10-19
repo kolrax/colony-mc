@@ -249,4 +249,50 @@ public class TestsTrajets {
             h.succeed();
         });
     }
+
+    /** Un sol de pierre (y = 1 à 3) et de l'air au-dessus, sur x = 0 à 23, z = 8 à 15. */
+    static void sol(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 8; z < 16; z++) {
+            for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
+            for (int y = 4; y <= 7; y++) h.setBlock(x, y, z, Blocks.AIR);
+        }
+    }
+
+    /**
+     * Correction F6 : une bande de poudre de neige (x = 11 et 12, z = 9 à 12, deux blocs de fond, au ras du sol) barre le
+     * chemin tout droit vers le bureau ; on peut la contourner par z = 13 et 14. Il la contourne, n'y entre jamais et ne gèle pas.
+     * Avant, Minecraft tenait le dessus de la poudre pour un sol (DANGER_POWDER_SNOW à 0) : il marchait dessus et s'y enfonçait.
+     */
+    @GameTest(template = "grand", timeoutTicks = 400, skyAccess = true)
+    public static void contourneLaPoudreDeNeige(GameTestHelper h) {
+        sol(h);
+        for (int x = 1; x <= 22; x++) for (int y = 4; y <= 6; y++) { h.setBlock(x, y, 8, Blocks.STONE); h.setBlock(x, y, 15, Blocks.STONE); }
+        for (int x = 11; x <= 12; x++) for (int z = 9; z <= 12; z++) for (int y = 2; y <= 3; y++) h.setBlock(x, y, z, Blocks.POWDER_SNOW);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 3, 4, 10, new ItemStack(Items.BREAD), new BlockPos(20, 4, 10));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        int[] arret = arretMax(h, t);
+        h.onEachTick(() -> h.assertFalse(t.dansLaNeige() || t.getTicksFrozen() > 0, "il ne doit jamais entrer dans la poudre de neige (" + etat(t, arret) + ")"));
+        h.succeedWhen(() -> {
+            h.assertTrue(arrive(t), "il doit arriver au bureau (" + etat(t, arret) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Correction F6 : posé au fond d'une fosse de poudre de neige (3 x 3, deux blocs de fond), il en sort en moins de 5 s,
+     * sans prendre de dégâts de froid. Avant, il y restait enfoncé et gelait.
+     */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void sortDeLaPoudreDeNeige(GameTestHelper h) {
+        sol(h);
+        for (int x = 10; x <= 12; x++) for (int z = 10; z <= 12; z++) for (int y = 2; y <= 3; y++) h.setBlock(x, y, z, Blocks.POWDER_SNOW);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 11, 2, 11, new ItemStack(Items.BREAD), new BlockPos(20, 4, 11));
+        float vie = t.getHealth();
+        h.onEachTick(() -> h.assertTrue(t.getHealth() >= vie && t.getTicksFrozen() == 0, "il ne doit pas geler (vie " + t.getHealth() + ", gel " + t.getTicksFrozen() + ")"));
+        h.succeedWhen(() -> {
+            h.assertTrue(!t.dansLaNeige() && t.onGround() && Monde.debout(t.level(), t.blockPosition()),
+                    "il doit être sorti de la neige, debout sur un sol (" + TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", en " + t.blockPosition().toShortString() + ")");
+            t.discard();
+        });
+    }
 }
