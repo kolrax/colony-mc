@@ -502,6 +502,27 @@ public class TestsDeblocage {
         });
     }
 
+    /**
+     * Plan A3 (la descente, relecture) : sur une corniche de pierre de 22 blocs de haut (plus de 20 : le chemin direct n'est
+     * jamais tenté), loin des tests, son bureau en bas à une quinzaine de blocs. Avant, le trajet d'étape en cours le
+     * renvoyait sur la corniche après chaque marche creusée : il errait là-haut sans fin. Maintenant, il descend jusqu'en bas.
+     */
+    @GameTest(template = "vide", timeoutTicks = 2400, skyAccess = true)
+    public static void descendDeLaHauteCorniche(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 977 * 400, 60000);
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 0; y < 22; y++) l.setBlock(base.offset(x, y, z), Blocks.STONE.defaultBlockState(), 2);
+        Travailleur t = TestsJeu.employe(h, "mineur", base.offset(6, 0, 26), Vec3.atBottomCenterOf(base.offset(4, 22, 6)), new ItemStack(Items.IRON_PICKAXE));
+        t.forcerChunk();
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être descendu de la corniche jusqu'à son bureau (" + e + ")");
+            t.discard();
+            for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 0; y < 22; y++) l.setBlock(base.offset(x, y, z), Blocks.AIR.defaultBlockState(), 2);
+        });
+    }
+
     /** Un ouvrier qui doit attendre là (gardé, prisonnier), envoyé dehors : il ne pose ni ne creuse pour s'en aller. */
     @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true)
     public static void prisonnierNeSEvadePas(GameTestHelper h) {

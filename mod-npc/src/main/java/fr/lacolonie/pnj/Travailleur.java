@@ -939,8 +939,12 @@ public class Travailleur extends PathfinderMob {
     private int precisionCree = 1;
     /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
-    /** Quand (temps du monde) il a fait sa dernière marche de descente (plan A3) : d'une action à l'autre, il continue de descendre. */
+    /**
+     * Quand (temps du monde) il a fait sa dernière marche de descente (plan A3), et vers quel but : d'une action à l'autre,
+     * il continue de descendre, mais seulement vers ce même but.
+     */
     long descenteVue = Long.MIN_VALUE / 2;
+    Vec3 descenteBut;
     /** L'eau qu'il a versée de son seau pour monter à la nage (plan A3), et quand il s'en est servi en dernier : il la reprend toujours. */
     BlockPos eau;
     long eauVue;
