@@ -207,6 +207,7 @@ public final class Fantome {
         casses.clear();
         survie.evenements.clear();
         survie.coups.clear();
+        survie.chutes.clear();
         chutes.clear();
         deplacements.clear();
         posesOuvriers.clear();
@@ -331,6 +332,8 @@ public final class Fantome {
         static final Gson JSON = new Gson();
         final List<JsonObject> evenements = new ArrayList<>();
         final Map<String, double[]> coups = new TreeMap<>();
+        /** Plan A3 : chaque dégât de chute d'un ouvrier (qui, où, de quelle hauteur, en faisant quoi). */
+        final List<JsonObject> chutes = new ArrayList<>();
 
         /**
          * La cause d'après le type de dégâts ({@code fall}, {@code lava}, {@code mob_attack}…) et l'auteur (l'id de son
@@ -462,7 +465,26 @@ public final class Fantome {
 
     /** Un coup reçu (debout ou à terre) : seulement additionné par cause. */
     static void coup(Travailleur t, net.minecraft.world.damagesource.DamageSource src, float perte) {
-        if (suivi(t) && perte > 0) survie.coup(cause(t, src), perte);
+        if (!suivi(t) || perte <= 0) return;
+        survie.coup(cause(t, src), perte);
+        if (src.is(net.minecraft.world.damagesource.DamageTypes.FALL) && survie.chutes.size() < Survie.MAX) {
+            // Plan A3 : qui tombe, d'où, de quelle hauteur ; fallDistance n'est remise à zéro qu'après le coup (Entity.checkFallDamage).
+            JsonObject o = new JsonObject();
+            o.addProperty("tick", t.level().getGameTime());
+            o.addProperty("ouvrier", t.prenom);
+            o.addProperty("metier", t.metier);
+            o.addProperty("x", Math.round(t.getX() * 10) / 10.0);
+            o.addProperty("y", Math.round(t.getY() * 10) / 10.0);
+            o.addProperty("z", Math.round(t.getZ() * 10) / 10.0);
+            o.addProperty("hauteur", Math.round(t.fallDistance * 10) / 10.0);
+            o.addProperty("depart_y", Math.round((t.getY() + t.fallDistance) * 10) / 10.0);
+            o.addProperty("vie_perdue", Math.round(perte * 10) / 10.0);
+            o.addProperty("vie_restante", Math.round(t.getHealth() * 10) / 10.0);
+            o.addProperty("action", t.action == null ? "" : t.action.nom);
+            o.addProperty("sous_action", t.diag);
+            o.addProperty("statut", t.statut());
+            survie.chutes.add(o);
+        }
     }
 
     // --- Les déplacements des ouvriers (plan A, point 5) ----------------------------------------------------
@@ -1283,6 +1305,7 @@ public final class Fantome {
         r.add("blessures", survie.liste("blessure"));
         r.add("releves_seuls", survie.liste("releve_seul"));
         r.add("morts", survie.liste("mort"));
+        r.add("chutes", GSON.toJsonTree(survie.chutes));
         // Plan A, point 5 : les trajets (arrêts, demi-tours), les blocs posés encore là, l'eau laissée.
         JsonObject dep = deplacementsRapport(l);
         r.add("deplacements", dep);
