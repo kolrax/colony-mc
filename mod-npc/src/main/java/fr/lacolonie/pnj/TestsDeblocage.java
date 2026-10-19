@@ -119,6 +119,30 @@ public class TestsDeblocage {
         });
     }
 
+    /**
+     * Plan F1 (« un PNJ se met à sauter en boucle statiquement ») : le point visé est juste au-dessus de lui, hors
+     * d'atteinte (rien pour s'y poser), et redemandé à chaque tick, comme le font la marche (nœud au-dessus de lui) ou une
+     * montée. Avant : il sautait à chaque atterrissage, sans fin. Maintenant : quelques sauts, puis il renonce.
+     */
+    @GameTest(template = "grand", timeoutTicks = 260, skyAccess = true)
+    public static void neSautePasSurPlaceSansFin(GameTestHelper h) {
+        Travailleur t = immobile(h, 12.5, 4, 12.5);
+        long debut = h.getTick();
+        int[] sauts = {0};
+        boolean[] auSol = {true};
+        h.onEachTick(() -> {
+            t.pauseCerveau = 5; // rien d'autre ne le fait bouger
+            t.getMoveControl().setWantedPosition(t.getX(), t.getBlockY() + 1.0, t.getZ(), 1.0);
+            if (auSol[0] && !t.onGround() && t.getDeltaMovement().y > 0.2) sauts[0]++;
+            auSol[0] = t.onGround();
+            if (h.getTick() - debut >= 200) {
+                h.assertTrue(sauts[0] <= Sauts.MAX + 1, "en 10 s, il ne doit sauter que quelques fois, puis renoncer (" + sauts[0] + " sauts)");
+                t.discard();
+                h.succeed();
+            }
+        });
+    }
+
     // --- Les blocs de son pilier repris d'office (plan A3) : seulement les siens, jamais sous quelqu'un ----------
 
     /** Un sol de pierre (y 1 à 3) et un ouvrier qui attend là (il ne part nulle part de lui-même), en (x, y, z) exactement. */

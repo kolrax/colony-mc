@@ -196,7 +196,7 @@ final class Itineraire {
                 if (t.onGround() && age % 10 == 0) {
                     Path c = chercher(t, montee, 0, Charge.Origine.MONTEE);
                     if (c != null) t.getNavigation().moveTo(c, 1.0);
-                    else t.getJumpControl().jump();
+                    else t.sauter();
                 }
                 t.getMoveControl().setWantedPosition(montee.getX() + 0.5, montee.getY(), montee.getZ() + 0.5, 1.0);
                 ageCourant = age;
@@ -1208,7 +1208,7 @@ final class Itineraire {
         montee = vers;
         monteeFin = ageCourant + 60;
         echecs = 0; // il avance : ce n'est pas un échec
-        if (monte) t.getJumpControl().jump();
+        if (monte) t.sauter();
         t.getMoveControl().setWantedPosition(montee.getX() + 0.5, montee.getY(), montee.getZ() + 0.5, 1.0);
         etape = null;
     }
@@ -1396,7 +1396,7 @@ final class Itineraire {
         } else caseSaut = -1;
         double cx = pilier.getX() + 0.5, cz = pilier.getZ() + 0.5, dx = t.getX() - cx, dz = t.getZ() - cz;
         t.getMoveControl().setWantedPosition(cx, t.getY(), cz, 0.6);
-        if (t.onGround() && dx * dx + dz * dz < 0.09) t.getJumpControl().jump();
+        if (t.onGround() && dx * dx + dz * dz < 0.09 && !t.sauter()) abandonner(t); // il saute sans que le bloc se pose : il renonce
     }
 
     /** La pose n'a rien donné : il n'y recommence pas d'ici, attend un peu plus à chaque fois, et finit par se dire coincé. */
