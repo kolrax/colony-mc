@@ -176,7 +176,7 @@ final class Itineraire {
         if (montee != null) {
             if (t.blockPosition().equals(montee) || age > monteeFin) {
                 boolean sorti = t.blockPosition().equals(montee);
-                if (enDescente) { enDescente = false; derniereMarche = t.level().getGameTime(); }
+                if (enDescente) { enDescente = false; t.descenteVue = t.level().getGameTime(); }
                 montee = null;
                 etape = null;
                 finChoix();
@@ -917,9 +917,7 @@ final class Itineraire {
     static final int DESCENTE_RAYON = 24;
     /** La marche où il descend quand le creusage en cours sera fini (null : il monte ou avance comme avant). */
     private BlockPos marcheBas;
-    /** Quand (temps du monde) il a commencé sa dernière marche de descente : jusqu'à 5 s après, il continue sans attendre. */
-    private long derniereMarche = Long.MIN_VALUE / 2;
-    /** La marche en cours est une marche de descente (à son arrivée, {@link #derniereMarche} est remis à l'heure). */
+    /** La marche en cours est une marche de descente (à son arrivée, {@link Travailleur#descenteVue} est remis à l'heure). */
     private boolean enDescente;
 
     /**
@@ -930,7 +928,7 @@ final class Itineraire {
      */
     private boolean descente(Travailleur t, long maintenant, double dh) {
         int haut = t.blockPosition().getY() - Mth.floor(but.y);
-        boolean suite = maintenant - derniereMarche < 100;
+        boolean suite = maintenant - t.descenteVue < 100; // il vient de descendre une marche (peut-être pour une autre action)
         if (dh > DESCENTE_RAYON || haut < (suite ? 0 : DESCENTE_MIN) || !suite && !(directRate >= 2 && haut <= 20) && maintenant - meilleurDate < STAGNATION) return false;
         return descendre(t, maintenant);
     }
@@ -949,12 +947,14 @@ final class Itineraire {
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
         boolean ok = false;
         if (p.getY() > Mth.floor(but.y)) {
+            // Sans l'outil qu'il faut (de la pierre sans pioche), un trou d'un bloc sous lui : trois fois moins à creuser qu'une marche.
+            if (!recolte(t, t.level().getBlockState(p.below()))) ok = marche(t, List.of(p.below()), p.below());
             for (Direction d : dirs) if (!ok) ok = marche(t, List.of(p.relative(d).above(), p.relative(d), p.relative(d).below()), p.relative(d).below());
             if (!ok) ok = marche(t, List.of(p.below()), p.below());
         } else for (Direction d : dirs)
             if (!ok && horizontale(Vec3.atBottomCenterOf(p.relative(d)), but) < horizontale(pos, but) - 0.5) ok = marche(t, List.of(p.relative(d), p.relative(d).above()), p.relative(d));
         if (!ok) return false;
-        derniereMarche = maintenant;
+        t.descenteVue = maintenant;
         // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but : plus haut, Minecraft le ferait sauter de 6 blocs
         // (getMaxFallDistance) et il se blesserait. Là, une recherche par marche ; plus haut, il continue de creuser.
         directRate = p.getY() - 1 - Mth.floor(but.y) > 3 ? 2 : horizontale(pos, but) <= 8 ? 1 : 0;
