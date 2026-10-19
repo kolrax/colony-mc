@@ -1033,7 +1033,10 @@ public final class Fantome {
         if (!Metier.existe(metier)) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Métier inconnu : " + metier)).create();
         Travailleur t = ColoniePnj.TRAVAILLEUR.get().create(j.serverLevel());
         if (t == null) return 0;
-        BlockPos p = surface(j.serverLevel(), j.blockPosition().south(2));
+        // Une place sûre près du fantôme, à sa hauteur : le dessus du terrain à 2 blocs pouvait être le haut d'un tronc, ou le
+        // fond d'un creux (graine 42 : une bûcheronne tombait de 13 blocs à l'embauche ; une autre naissait au fond du creux).
+        BlockPos sure = Monde.placeSure(j.serverLevel(), j.blockPosition().south(2));
+        BlockPos p = sure != null ? sure : surface(j.serverLevel(), j.blockPosition().south(2));
         t.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, 0, 0);
         t.tirerAuSort(metier, niveau);
         j.serverLevel().addFreshEntity(t);
