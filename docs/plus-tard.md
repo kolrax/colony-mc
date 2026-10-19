@@ -201,3 +201,11 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - `marchePosee` : le sol d'arrivée n'est pas comparé à la hauteur du but (il peut descendre dans un ravin à l'opposé, puis remonter en pilier).
 - Marche posée oubliée sans être reprise si l'ouvrier est téléporté ou s'éloigne de plus de 16 blocs juste après (comme les piliers).
 - `marchePosee` peut coller un bloc (repris ensuite) contre un mur construit : voulu pour sortir d'un enclos par le pilier ; jamais contre un coffre ou un four.
+
+## Lot 18 (19/10 au soir), restes des relectures
+- F1 : le `MoveControl` de base (dans `super.tick()`) saute encore seul quand le point visé est plus haut et à moins d'un bloc (pas seulement à 0,15) : une action qui redemande sans fin un point adjacent sous un plafond n'est pas limitée par `Sauts`. Pas reproduit.
+- F1 : pilier (bloc qui ne se pose pas) et sortie d'abri : causes de sauts secondaires, non reproduites par un test.
+- F2 : `vigilance` du bûcheron cherche un arbre (rayon 24, ~43 000 lectures) toutes les 2 s pendant une marche de recherche, même en traversant sa colonie : ne pas chercher dans la colonie, ou espacer à 4-5 s, si le banc à 50 PNJ le montre.
+- F2 : clé `cherche_vers` jamais effacée de la mémoire (sans effet) ; point d'exploration sauté quand il s'arrête en chemin.
+- F2 : le but d'une marche lointaine pris sur la carte des hauteurs qui compte le bois (un point sous une branche est posé sur la branche) : test passé sur l'ancien code, non corrigé.
+- F3 : le bouton « Embaucher » de l'écran d'entretien reste affiché pour un métier fermé (écran client : le serveur refuse avec un message).
