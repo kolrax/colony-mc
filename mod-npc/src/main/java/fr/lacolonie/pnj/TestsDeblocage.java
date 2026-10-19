@@ -745,4 +745,50 @@ public class TestsDeblocage {
             h.succeed();
         });
     }
+
+    /**
+     * Plan A3 (le joueur fantôme, montagne, 1.0.17) : un bûcheron sans pioche, un seau d'eau en poche, au fond d'une fosse de
+     * pierre naturelle de 3 blocs, large de 2 (l'eau s'y répandrait : pas de colonne d'eau), son bureau en haut. Avant, il
+     * taillait à mains nues un escalier dans la pierre (230 à 306 blocs en 2 jours). Maintenant, il ne touche pas à la pierre :
+     * il se dit coincé, réclame une pioche, et garde son seau.
+     */
+    @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true)
+    public static void neTaillePasLaPierreAMainsNues(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 6; y++)
+            if (x < 12 || x > 13 || z != 12 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 4, 12, new ItemStack(Items.WATER_BUCKET), new BlockPos(12, 7, 4));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.runAtTickTime(450, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
+            int pierres = 0;
+            for (int x = 9; x <= 16; x++) for (int z = 9; z <= 15; z++) for (int y = 4; y <= 6; y++)
+                if (h.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) pierres++;
+            t.discard();
+            h.assertTrue(pierres == 8 * 7 * 3 - 6, "il ne doit pas tailler la pierre à mains nues (" + pierres + " pierres, " + e + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:water_bucket")) == 1, "il doit garder son seau d'eau (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Plan A3 (le joueur fantôme, montagne, 1.0.17 : 11 h au fond du trou de sa descente sans être ramené) : le temps passé à
+     * creuser sans s'éloigner compte aussi comme coincé. Enfoui sous 8 blocs de pierre, une pioche de bois, son bureau en
+     * haut : il creuse, mais au bout du délai (abaissé à 15 s) sans s'être éloigné de 8 blocs, il est ramené au poste.
+     * Avant, le creusage ne comptait jamais : il n'était pas ramené.
+     */
+    @GameTest(template = "grand", timeoutTicks = 800, skyAccess = true, batch = "deblocage")
+    public static void creuserSansAvancerCompte(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 13; y++)
+            if (x != 12 || z != 12 || y < 4 || y > 5) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.WOODEN_PICKAXE), new BlockPos(12, 14, 2));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        Vec3[] avant = {t.position()};
+        double[] saut = {0};
+        h.onEachTick(() -> { saut[0] = Math.max(saut[0], t.position().distanceTo(avant[0])); avant[0] = t.position(); });
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
+            h.assertTrue(saut[0] > 4, "il doit avoir été ramené au poste (saut de " + String.format("%.1f", saut[0]) + " blocs, " + e + ")");
+            t.discard();
+        });
+    }
 }
