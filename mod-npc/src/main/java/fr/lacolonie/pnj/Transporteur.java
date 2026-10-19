@@ -599,7 +599,7 @@ final class Transporteur extends Metier {
         Consignes.Consigne c = t.consigne;
         Repertoire.Entree e = c == null ? null : c.entree();
         if (e == null || !Trajets.TRAVAUX.contains(e.arg())) return;
-        if (t.action instanceof Consignes.Faire f && f.c == c && f.etape > 0) return; // déjà en train de le retenir
+        if (t.action instanceof Consignes.Faire f && f.c == c && f.etape > 0 && f.sous == null) return; // déjà retenu
         new Ordre(e.arg(), c).tick(t);
     }
 
