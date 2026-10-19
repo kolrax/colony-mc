@@ -1242,7 +1242,8 @@ public class Travailleur extends PathfinderMob {
     /**
      * Toutes les secondes : le temps qu'il passe coincé ({@link Coince}). Ce temps ne compte que s'il pourrait être ramené :
      * il a un poste, il travaille (ou fait grève), sans danger, ni bateau, ni repos, ni sommeil, ne suit pas une créature
-     * qui bouge, et il est à plus de 6 blocs du poste ; sinon le compte repart de zéro. Au bout de 5 minutes, il est ramené.
+     * qui bouge, et il est à plus de 6 blocs du poste, ou plus près mais sans arriver là où il va (plan A3 : à 3 blocs du poste,
+     * derrière une paroi, il n'y était jamais ramené) ; sinon le compte repart de zéro. Au bout de 5 minutes, il est ramené.
      */
     void surveillerCoince() {
         coince.mode(mode == Mode.ATTENDRE);
@@ -1251,7 +1252,7 @@ public class Travailleur extends PathfinderMob {
         // sur une corniche le soir, il dormait, le compte repartait de zéro chaque nuit et il restait là près d'un jour entier.
         if (isSleeping() || a instanceof Actions.Reposer) { coince.marche = false; return; }
         if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger()
-                || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36) {
+                || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36 && !coince.echec) {
             coince.progres(getX(), getY(), getZ());
             return;
         }

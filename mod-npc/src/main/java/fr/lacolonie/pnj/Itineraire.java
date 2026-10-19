@@ -148,6 +148,9 @@ final class Itineraire {
         this.versLeBureau = t.bureau != null && Vec3.atBottomCenterOf(t.bureau).distanceToSqr(but) < 64;
     }
 
+    // DIAG-A3 (temporaire)
+    String etatTemp() { return "bloque=" + bloque + " aCreuser=" + aCreuser + " sortie=" + (sortie == null ? "null" : indexSortie + "/" + sortie.size()) + " pilier=" + pilier + " pont=" + pont.size() + " montee=" + montee + " monteeFin=" + monteeFin + " reprise=" + reprise + " enDescente=" + enDescente + " phase=" + phase + " plan=" + plan.size() + " parti=" + parti + " prochainChoix=" + prochainChoix + " attendDepuis=" + attendDepuis + " directRate=" + directRate + " echecs=" + echecs + " direct=" + (direct == null ? "null" : direct.canReach() + "@" + direct.getEndNode()) + " etape=" + etape + " poses=" + poses.size() + " posesFaites=" + posesFaites + " but=" + but; }
+
     /** Il creuse ou suit la route vers la sortie : il ne marche pas droit vers le but, mais il avance. */
     boolean occupe() { return aCreuser != null || sortie != null || pilier != null || !pont.isEmpty(); }
 
@@ -341,6 +344,9 @@ final class Itineraire {
                     // Le but est juste au-dessus (il est tombé dans un creux à ciel ouvert, assez large pour y marcher) : il
                     // monte sur des blocs qu'il reprendra, ou à la nage, avant de se dire bloqué (Godefroy, montagne, 1.0.19).
                     if (but.y > p.y + 2 && evasionPermise(t) && (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t))) { montee = null; etape = null; return; }
+                    // Le but est juste derrière une paroi de roche qu'il sait tailler (le mineur au fond de sa galerie, à côté
+                    // du poste : Arnaud, montagne, 1.0.20) : il perce droit vers lui au lieu de se dire bloqué.
+                    if (evasionPermise(t) && percerVers(t)) { montee = null; etape = null; return; }
                     bloque = true;
                     t.diag = "inaccessible";
                     return;
@@ -1109,6 +1115,38 @@ final class Itineraire {
         aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
         if (aCreuser == null && !reprise) monter(t);
         if (aCreuser == null) reprise = false;
+    }
+
+    /**
+     * Le but est tout près, sans chemin, derrière une paroi naturelle qu'il sait récolter : il perce un pas de galerie (pieds et
+     * tête) dans la direction qui le rapproche le plus du but, puis y avance. Jamais une construction ni ce qu'il ne récolte pas,
+     * jamais sous du gravier ou du sable, ni au-dessus d'un vide. Vrai s'il s'y met.
+     */
+    private boolean percerVers(Travailleur t) {
+        Level l = t.level();
+        BlockPos p = t.blockPosition();
+        Vec3 pos = t.position();
+        if (!t.onGround()) return false;
+        List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
+        dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
+        for (Direction d : dirs) {
+            BlockPos q = p.relative(d);
+            if (horizontale(Vec3.atBottomCenterOf(q), but) > horizontale(pos, but) - 0.5) continue; // il ne s'en rapprocherait pas
+            List<BlockPos> blocs = List.of(q, q.above());
+            if (blocs.stream().allMatch(b -> Monde.traversable(l, b)) || !Monde.solide(l, q.below()) || Monde.tombe(l, q.above(2))) continue;
+            if (!blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b) && recolte(t, l.getBlockState(b))))) continue;
+            monte = false;
+            sens = d;
+            marcheBas = null;
+            aCasser.clear();
+            for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
+            aCreuser = aCasser.get(0);
+            progres = 0;
+            echecs = 0;
+            Cerveau.dire(t, "creuse", 600, "C'est juste derrière cette roche : je perce un passage.");
+            return true;
+        }
+        return false;
     }
 
     /** La paroi devant lui, vers le but, n'est pas vide et il n'a rien pour la récolter (de la pierre, sans pioche). */

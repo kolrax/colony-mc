@@ -225,6 +225,11 @@ final class Cerveau {
 
 
 
+        // Le poste était hors d'atteinte à l'instant : il n'y repart pas aussitôt (plan A3 : Arnaud relançait son dépôt tous les
+        // quelques ticks, deux jours durant, à 3 blocs du poste). Il souffle 5 s ; ce temps compte comme coincé (Coince), même
+        // près du poste, et il y sera ramené au besoin.
+        if ("bureau_inaccessible".equals(t.resultat)) { attendre(t, 5); return; }
+
         // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {
             if ("depot_plein".equals(t.resultat)) {

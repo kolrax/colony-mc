@@ -107,6 +107,12 @@ public final class Actions {
         private Itineraire route;
         private Vec3 dernier;
         private int immobile, sansProgres;
+        /**
+         * Le filet (plan A3) : depuis combien de ticks de marche il ne s'est pas rapproché du but de 2 blocs, même en creusant ou
+         * en posant des blocs. Au bout de {@link #SANS_AVANCER_MAX}, il se dit coincé : jamais une action figée pour des jours.
+         */
+        private int sansAvancer;
+        static final int SANS_AVANCER_MAX = 5 * 60 * 20;
         private double meilleure = Double.MAX_VALUE;
         /** Sa cible bouge (le chef, une créature) : ne pas l'atteindre n'est pas être coincé (Coince). */
         boolean mobile;
@@ -130,6 +136,7 @@ public final class Actions {
             dernier = null;
             meilleure = Double.MAX_VALUE;
             sansProgres = 0;
+            sansAvancer = 0;
             immobile = 0;
         }
 
@@ -157,6 +164,7 @@ public final class Actions {
                 t.diag = "attend que le terrain soit prêt";
                 // Pas compté « coincé » (Coince) : il attend le serveur, pas un passage ; sinon il pouvait être ramené au poste.
                 sansProgres++; // au bout de 2 minutes d'attente, il se dira coincé
+                sansAvancer++;
                 immobile = 0;
                 dernier = null;
                 return;
@@ -167,8 +175,11 @@ public final class Actions {
             // poser qui avance l'éloigne de plus de 8 blocs bien avant 5 minutes : le compte repart alors de zéro.
             if (!mobile) t.coince.marche = true;
             double d = p.distanceTo(cible);
-            if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
+            boolean rapproche = d < meilleure - 2;
+            if (rapproche || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
+            // Creuser ou poser sans jamais se rapprocher (le même bloc, sans fin) : au bout de 5 minutes, ce n'est plus avancer.
+            sansAvancer = rapproche ? 0 : sansAvancer + 1;
             // Il attend son tour pour chercher une étape, ou le délai après un choix raté : ce temps-là ne compte pas.
             if (age % 40 == 0) {
                 if (!route.attend(t.level().getGameTime()))
@@ -177,11 +188,17 @@ public final class Actions {
             }
         }
 
+        // DIAG-A3 (temporaire)
+        String etatTemp() { return "age=" + age + " raison=" + raison + " immobile=" + immobile + " sansProgres=" + sansProgres + " sansAvancer=" + sansAvancer + " meilleure=" + meilleure + " coince=" + coince() + " route=" + (route == null ? "null" : route.etatTemp()); }
+
         /** Il a marché pendant cette action (vers une cible). */
         boolean aMarche() { return route != null; }
 
-        /** Coincé : plus aucun passage vers le but, immobile depuis 15 s, ou sans se rapprocher depuis 2 minutes. */
-        boolean coince() { return route != null && route.bloque || immobile >= 300 || sansProgres >= 2400; }
+        /**
+         * Coincé : plus aucun passage vers le but, immobile depuis 15 s, sans se rapprocher depuis 2 minutes, ou depuis 5 minutes
+         * même en creusant ou en posant des blocs.
+         */
+        boolean coince() { return route != null && route.bloque || immobile >= 300 || sansProgres >= 2400 || sansAvancer >= SANS_AVANCER_MAX; }
 
         Etat echec(String r) { raison = r; return Etat.ECHEC; }
     }

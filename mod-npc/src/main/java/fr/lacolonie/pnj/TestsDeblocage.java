@@ -557,6 +557,55 @@ public class TestsDeblocage {
         });
     }
 
+    /**
+     * Plan A3 (le joueur fantôme, montagne, 1.0.20) : une butte de roche de 9 blocs (x 0 à 12), son poste au pied, dehors
+     * (13, 4, 12). Le mineur est au fond de l'escalier qu'il a taillé dans la butte (11, 5, 9), à 3 blocs et demi du poste mais
+     * derrière la roche ; l'escalier remonte vers l'ouest jusqu'au sommet, d'où l'on ne redescend pas (un à-pic). Sa mission
+     * (32 pierres) est dans son sac (une pile qu'il garde, plus 40) : il veut les déposer.
+     */
+    static Travailleur pocheDuMineur(GameTestHelper h, ItemStack outil) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 0; x <= 12; x++) for (int z = 0; z < 24; z++) for (int y = 4; y <= 12; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int k = 0; k <= 8; k++) for (int y = 5 + k; y <= 7 + k; y++) h.setBlock(11 - k, y, 9, Blocks.AIR);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 11, 5, 9, outil, new BlockPos(13, 4, 12));
+        t.mission("pierre", "quantite", 32);
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 64));
+        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 40));
+        return t;
+    }
+
+    /**
+     * Avec sa pioche, il perce la roche qui le sépare du poste et y dépose ses pierres. Avant : « poste inaccessible » à
+     * chaque essai, relancé aussitôt, sans fin (figé deux jours à 3 blocs du poste, jamais ramené).
+     */
+    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true)
+    public static void perceLaRocheJusquAuPoste(GameTestHelper h) {
+        Travailleur t = pocheDuMineur(h, new ItemStack(Items.IRON_PICKAXE));
+        Bureau.Entite d = TestsBucheron.depot(t);
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
+            h.assertTrue(d.compter(Actions.Filtre.de("minecraft:cobblestone")) >= 32, "il doit avoir déposé ses pierres (" + e + ")");
+            h.assertTrue(t.coince.retours == 0, "à pied, sans être ramené (" + e + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * Le filet : sans pioche, il ne peut pas percer. Près du poste comme ailleurs, ce temps à ne pas y arriver compte : il est
+     * ramené au poste (délai abaissé) et y dépose. Avant : jamais ramené à moins de 6 blocs du poste, figé pour de bon.
+     */
+    @GameTest(template = "grand", timeoutTicks = 1200, skyAccess = true, batch = "deblocage")
+    public static void rameneMemePresDuPoste(GameTestHelper h) {
+        Travailleur t = pocheDuMineur(h, ItemStack.EMPTY);
+        Bureau.Entite d = TestsBucheron.depot(t);
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", coincé " + t.coince.ticks;
+            h.assertTrue(t.coince.retours >= 1, "il doit avoir été ramené au poste (" + e + ")");
+            h.assertTrue(d.compter(Actions.Filtre.de("minecraft:cobblestone")) >= 32, "puis y avoir déposé ses pierres (" + e + ")");
+            t.discard();
+        });
+    }
+
     /** Une tour de planches de 5 blocs de haut (qu'il ne peut ni creuser ni escalader), son chef dessus ; son bureau à l'autre bout. */
     static net.minecraft.server.level.ServerPlayer chefSurUneTour(GameTestHelper h) {
         for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
