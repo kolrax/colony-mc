@@ -33,7 +33,7 @@ public class TestsReserve {
 
     /**
      * A3 : la terre et le seau d'eau donnés à un ouvrier servent à monter (pilier, colonne d'eau). Au dépôt, il garde 16 terre
-     * et le seau d'eau ; le reste (terre en trop, seau vide en plus, pierre) est rangé. Le transporteur, lui, dépose tout.
+     * et le seau d'eau ; le reste (terre en trop, seau vide en plus, fer brut) est rangé. Le transporteur, lui, dépose tout.
      */
     @GameTest(template = "vide", timeoutTicks = 100)
     public static void garderTerreEtSeauPourMonter(GameTestHelper h) {
@@ -44,15 +44,15 @@ public class TestsReserve {
         t.inventaire.addItem(new ItemStack(Items.BUCKET));
         t.inventaire.addItem(new ItemStack(Items.DIRT, 40));
         t.inventaire.addItem(new ItemStack(Items.WATER_BUCKET));
-        t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 10));
-        h.assertTrue(Actions.Deposer.aDeposer(t, Metier.de("mineur").garder, null) == 35, "il compte déposer 24 terre, la pierre et le seau vide : "
+        t.inventaire.addItem(new ItemStack(Items.RAW_IRON, 10));
+        h.assertTrue(Actions.Deposer.aDeposer(t, Metier.de("mineur").garder, null) == 35, "il compte déposer 24 terre, le fer brut et le seau vide : "
                 + Actions.Deposer.aDeposer(t, Metier.de("mineur").garder, null));
         Actions.Etat e = new Actions.Deposer(Metier.de("mineur").garder).tick(t);
         h.assertTrue(e == Actions.Etat.OK, "dépôt réussi (" + e + ", " + t.resultat + ")");
         h.assertTrue(t.compter(Actions.Filtre.de("minecraft:dirt")) == 16, "16 terre restent au sac : " + t.compter(Actions.Filtre.de("minecraft:dirt")));
         h.assertTrue(t.compter(Actions.Filtre.de("minecraft:water_bucket")) == 1, "le seau d'eau reste au sac");
-        h.assertTrue(t.compter(Actions.Filtre.de("minecraft:bucket")) == 0 && t.compter(Actions.Filtre.de("minecraft:cobblestone")) == 0, "le seau vide et la pierre sont rangés");
-        h.assertTrue(d.compter(Actions.Filtre.de("minecraft:dirt")) == 24 && d.compter(Actions.Filtre.de("minecraft:cobblestone")) == 10, "le reste au dépôt");
+        h.assertTrue(t.compter(Actions.Filtre.de("minecraft:bucket")) == 0 && t.compter(Actions.Filtre.de("minecraft:raw_iron")) == 0, "le seau vide et le fer brut sont rangés");
+        h.assertTrue(d.compter(Actions.Filtre.de("minecraft:dirt")) == 24 && d.compter(Actions.Filtre.de("minecraft:raw_iron")) == 10, "le reste au dépôt");
         h.assertTrue(!Actions.Deposer.utile(t, Metier.de("mineur").garder), "plus rien à déposer");
         // Le transporteur : tout son sac est sa charge.
         Travailleur p = TestsOutils.ouvrier(h, "transporteur", 472, b, ItemStack.EMPTY);
