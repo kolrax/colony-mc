@@ -226,4 +226,40 @@ public class TestsBlessures {
             t.discard();
         });
     }
+
+    /**
+     * Plan E6 : le rapport du joueur fantôme compte la mise à terre et la mort de ses ouvriers, avec leur cause. L'un meurt
+     * dans la lave (cause « lave ») ; l'autre tombe de haut (blessure « chute »), déjà relevé seul il y a peu, et meurt au
+     * bout de son temps à terre (« à terre sans secours, après chute »). Tout se joue en un tick (le fantôme n'entre pas
+     * dans le monde). Coin 965.
+     */
+    @GameTest(template = "vide")
+    public static void fantomeCompteMortsEtCauses(GameTestHelper h) {
+        BlockPos base = TestsJeu.sol(h, 965 * 400, 60000);
+        Fantome.Joueur avant = Fantome.joueur, moi = new Fantome.Joueur(h.getLevel());
+        Fantome.joueur = moi;
+        Fantome.survie.evenements.clear();
+        try {
+            Travailleur brule = ouvrier(h, "mineur", base, base.west(3), moi.getUUID(), new ItemStack(Items.IRON_PICKAXE));
+            Travailleur tombe = ouvrier(h, "bucheron", base, base.east(3), moi.getUUID(), new ItemStack(Items.IRON_AXE));
+            brule.hurt(brule.damageSources().lava(), 100);
+            tombe.hurt(tombe.damageSources().fall(), 100);
+            h.assertTrue(!brule.isAlive() && tombe.aTerre, "l'un mort, l'autre à terre");
+            tombe.memoire.putLong(Blessures.RELEVE_SEUL, h.getLevel().getGameTime());
+            tombe.aTerreTicks = 1;
+            tombe.tickATerre();
+            h.assertFalse(tombe.isAlive(), "mort au bout de son temps à terre");
+            var r = Fantome.survie.resume();
+            h.assertTrue(r.get("morts").getAsInt() == 2 && r.get("blessures").getAsInt() == 1, "2 morts, 1 blessure : " + r);
+            h.assertTrue(r.getAsJsonObject("morts_par_cause").has("lave"), "la lave : " + r);
+            h.assertTrue(r.getAsJsonObject("morts_par_cause").has("à terre sans secours, après chute"), "à terre après une chute : " + r);
+            h.assertTrue(r.getAsJsonObject("blessures_par_cause").has("chute"), "la chute : " + r);
+            h.assertTrue(r.getAsJsonObject("coups_par_cause").has("lave") && r.getAsJsonObject("coups_par_cause").has("chute"), "les coups : " + r);
+            h.succeed();
+        } finally {
+            Fantome.joueur = avant;
+            Fantome.survie.evenements.clear();
+            Fantome.survie.coups.clear();
+        }
+    }
 }

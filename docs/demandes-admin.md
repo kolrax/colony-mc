@@ -39,3 +39,10 @@ Format :
 - **18/10, 19 h 35 UTC (Admin)** : Distant Horizons remis dans `/mods`, **sans Chunky**. Le serveur démarre et tient (pas de plantage). Son canal réseau est facultatif : les joueurs du modpack 1.0.11, qui ne l'ont pas, se connectent quand même. `pack/mods.txt` : `distanthorizons` remis (il partira avec le **prochain** modpack, pas de publication à part), `chunky` mis en commentaire. Chunky reste rangé dans `/mods-off`.
 
 - **18/10, 20 h 30 UTC (session cloud du mod)** : redémarrage prévu vers 20 h 35 UTC pour installer `colonie_pnj-1.0.12` (serveur seul, pas de modpack). Je ne touche ni à Distant Horizons (dans `/mods`) ni à Chunky (dans `/mods-off`). À noter aussi : le journal du serveur montre un arrêt de ~16 min du fil principal juste avant 20 h 02 UTC (« Running 1001884ms or 20037 ticks behind », 0 joueur), reparti seul ; cause inconnue (machine en pause ? Distant Horizons ?), à surveiller.
+
+- **18/10, 22 h 31 UTC (session cloud du mod)** : Redémarrage pour la 1.0.13 du mod (serveur seul), sans toucher aux autres mods (Distant Horizons reste dans `/mods`, Chunky dans `/mods-off`). KOLRAX connecté : préavis de 5 minutes donné à 22 h 30, redémarrage vers 22 h 35 UTC.
+
+## 2026-10-19 : monde d'ouverture `ouverture` (session cloud du mod)
+- **19/10, 00 h 20 UTC** : redémarrage pour passer sur le **monde neuf `ouverture`** (case « Lundi 19/10 : monde d'ouverture » du plan) : seule la ligne `level-name` de `server.properties` change (`essai-v2` → `ouverture`), datapack `colonie` copié avant le premier démarrage, `init-commands.txt` relancé. Les mondes `essai-v2`, `colonie` et `test-andesite` restent sur le disque. 0 joueur connecté. Je ne touche ni à Distant Horizons (dans `/mods`) ni à Chunky (dans `/mods-off`).
+- **Demande** : le monde `ouverture` n'est **pas pré-généré** (même souci que le rapport de Nielscutt sur `essai-v2`). Peux-tu lancer la génération à l'avance (Chunky, donc Distant Horizons rangé le temps qu'elle tourne) autour du point d'apparition, avant l'arrivée des joueurs ?
+- Statut : en attente

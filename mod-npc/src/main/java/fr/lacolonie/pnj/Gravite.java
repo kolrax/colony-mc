@@ -13,6 +13,9 @@ enum Gravite {
 
     /** Un jour de jeu, en ticks : la blessure perd un cran par jour. */
     static final long JOUR = 24000;
+    /** Les réglages (plan E6, recopiés par {@link Reglages#valider}) : minutes à terre (légère, grave, très grave), jours par cran de guérison. */
+    static volatile int[] minutesATerre = {3, 5, 8};
+    static volatile double joursParCran = 1.0;
 
     /**
      * La gravité d'un coup de {@code degats} points pour une vie de {@code vieMax} : moins d'un dixième, rien ; moins d'un
@@ -43,7 +46,7 @@ enum Gravite {
 
     /** Ce qu'il en reste, {@code depuis} le moment de la blessure jusqu'à {@code maintenant} (un cran par jour de jeu). */
     static Gravite actuelle(Gravite g, long depuis, long maintenant) {
-        long jours = Math.max(0, maintenant - depuis) / JOUR;
+        long jours = Math.max(0, maintenant - depuis) / Math.max(1, (long) (JOUR * joursParCran));
         return values()[(int) Math.max(0, g.ordinal() - Math.min(jours, 3))];
     }
 
@@ -52,10 +55,11 @@ enum Gravite {
      * (légère), 5 min (grave), 8 min (très grave).
      */
     int ticksATerre() {
+        int[] m = minutesATerre;
         return switch (this) {
-            case AUCUNE, LEGERE -> 3 * 60 * 20;
-            case GRAVE -> 5 * 60 * 20;
-            case TRES_GRAVE -> 8 * 60 * 20;
+            case AUCUNE, LEGERE -> m[0] * 60 * 20;
+            case GRAVE -> m[1] * 60 * 20;
+            case TRES_GRAVE -> m[2] * 60 * 20;
         };
     }
 

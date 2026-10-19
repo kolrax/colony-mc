@@ -174,6 +174,17 @@ public class Reglages {
     public int regen_faim = 15;
     /** S'équiper (plan E3) : passé au dépôt, chaque ouvrier prend la meilleure armure qu'il y trouve, case par case. */
     public boolean armure_depot = true;
+    /** Survie (plan E6) : la vie d'un ouvrier à une étoile, et ce que chaque étoile de plus y ajoute (avant ses talents). */
+    public int vie_base = 20;
+    public int vie_par_etoile = 2;
+    /** Le temps à terre, en minutes, avant de se relever seul ou de mourir, selon la gravité : légère, grave, très grave. */
+    public int[] a_terre_minutes = {3, 5, 8};
+    /** La vie rendue quand on le relève (à manger, une potion de soin). */
+    public int releve_vie = 6;
+    /** Une blessure perd un cran de gravité tous les tant de jours de jeu (légère 1 cran, grave 2, très grave 3). */
+    public double blessure_jours_par_cran = 1.0;
+    /** La guérison lente (nourri, faim d'au moins 15) : un point de vie toutes ces secondes ; une fois et demie plus lente après des nuits d'affilée. */
+    public int soin_lent_secondes = 10;
 
     public static Reglages actuel = new Reglages();
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -251,6 +262,15 @@ public class Reglages {
         moral_vol_max = Math.max(0, moral_vol_max);
         deuil_secondes_enterrement = Math.clamp(deuil_secondes_enterrement, 1, 300);
         deuil_rayon = Math.clamp(deuil_rayon, 8, 128);
+        vie_base = Math.clamp(vie_base, 1, 1000);
+        vie_par_etoile = Math.clamp(vie_par_etoile, 0, 100);
+        if (a_terre_minutes == null || a_terre_minutes.length != 3) a_terre_minutes = new int[]{3, 5, 8};
+        for (int i = 0; i < 3; i++) a_terre_minutes[i] = Math.clamp(a_terre_minutes[i], 1, 60);
+        releve_vie = Math.clamp(releve_vie, 1, 1000);
+        blessure_jours_par_cran = Double.isNaN(blessure_jours_par_cran) ? 1.0 : Math.clamp(blessure_jours_par_cran, 0.05, 30.0);
+        soin_lent_secondes = Math.clamp(soin_lent_secondes, 1, 600);
+        Gravite.minutesATerre = a_terre_minutes.clone();
+        Gravite.joursParCran = blessure_jours_par_cran;
         liens_vitesse = Double.isNaN(liens_vitesse) ? 1.0 : Math.clamp(liens_vitesse, 0.1, 10.0);
         caractere_diamant = Math.clamp(caractere_diamant, 0, 100);
         if (betes_par_enclos <= 0) betes_par_enclos = 12;

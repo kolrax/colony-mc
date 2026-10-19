@@ -78,6 +78,8 @@ final class Itineraire {
     static int budget = BUDGET;
     /** -1 : pas de choix en cours ; 0 : le but ; 1 : la trace ; 2 : la sortie de sous terre ; 3 : les étapes autour. */
     private int phase = -1, curseur, essais, recherchesCeTick;
+    /** Le tick du monde de {@code recherchesCeTick}. */
+    private long tickJetons = Long.MIN_VALUE;
     private List<BlockPos> candidats;
     private final List<BlockPos> rates = new ArrayList<>();
     /** Après un choix où rien n'était atteignable, il ne recommence pas avant ce moment (temps du monde). */
@@ -113,7 +115,10 @@ final class Itineraire {
      * Les refus et les passe-droits sont comptés dans {@link Charge}.
      */
     boolean jeton(long maintenant) {
-        if (recherchesCeTick >= PAR_TICK) return false;
+        // Le compte de ses recherches est celui du tick en cours : rien d'autre n'a à le remettre à zéro (sinon, en marche
+        // sur un trajet fini, il restait plein et tout jeton était refusé pour toujours).
+        if (tickJetons != maintenant) { tickJetons = maintenant; recherchesCeTick = 0; }
+        if (recherchesCeTick >= PAR_TICK) { if (attendDepuis < 0) attendDepuis = maintenant; return false; }
         if (budget <= 0) {
             if (attendDepuis < 0) attendDepuis = maintenant;
             boolean force = passeDroit == maintenant
@@ -134,7 +139,7 @@ final class Itineraire {
      * Il attend son tour pour chercher une étape (jeton refusé) ou le délai après un choix raté : il est immobile, mais
      * ce n'est pas d'être coincé (l'action ne doit pas compter ce temps-là comme « immobile »).
      */
-    boolean attend(long maintenant) { return attendDepuis >= 0 || maintenant < prochainChoix; }
+    boolean attend(long maintenant) { return attendDepuis >= 0 || maintenant < prochainChoix || !plan.isEmpty() && !parti; }
 
     Itineraire(Travailleur t, Vec3 but) {
         this.but = but;
@@ -192,9 +197,10 @@ final class Itineraire {
         if (age % 20 == 0 && age >= bateauPas && embarquer(t)) return;
 
         // De près : le chemin direct, s'il mène bien au but.
-        if (dh <= 40 && dv <= 20 && directRate < 2) {
+        if (dh <= 40 && dv <= 20 && directRate < 2 && plan.isEmpty()) {
             t.diag = "chemin direct";
-            if (phase >= 0) finChoix(); // un choix d'étape laissé en route : ses positions ne valent plus rien
+            if (phase >= 0) finChoix();
+            attendDepuis = -1; // un choix d'étape laissé en route : ses positions ne valent plus rien
             if (p.distanceToSqr(but) < 2.25 && nav.isDone()) { t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
             // Au bout du chemin accepté, sans le recalculer à chaque tick (seulement toutes les 20 ticks) : s'il mène au but,
             // il fait les derniers pas tout droit ; s'il s'arrête à côté (bloc à casser, coffre, ou but de l'autre côté
@@ -227,7 +233,8 @@ final class Itineraire {
             return;
         }
 
-        // De loin, ou quand le chemin direct n'arrive pas au but : étape par étape.
+        // De loin, ou quand le chemin direct n'arrive pas au but : le trajet calculé d'avance (plan A1), étape par étape.
+        if (!plan.isEmpty()) { suivrePlan(t, v); return; }
         boolean arrive = etape != null && p.distanceToSqr(etape) < 6.25;
         if (phase >= 0 || etape == null || arrive || nav.isDone() && age % 10 == 0) {
             if (!t.onGround() && !t.isInWater()) return; // Minecraft ne calcule un chemin qu'au sol ou dans l'eau
@@ -246,7 +253,6 @@ final class Itineraire {
         Level l = t.level();
         long maintenant = l.getGameTime();
         if (maintenant < prochainChoix) return;
-        recherchesCeTick = 0;
         BlockPos ici = t.blockPosition();
         Vec3 p = t.position();
         double dh = horizontale(p, but);
@@ -316,7 +322,7 @@ final class Itineraire {
                 finChoix();
                 // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
                 // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
-                if (dh <= 8 && !sousTerre(t)) { t.getNavigation().stop(); etape = null; bloque = true; t.diag = "inaccessible"; return; }
+                if (dh <= 8 && !sousTerre(t)) { oublierPlan(); t.getNavigation().stop(); bloque = true; t.diag = "inaccessible"; return; }
                 echecs = 0;
                 return;
             }
@@ -423,10 +429,192 @@ final class Itineraire {
         if (c == null || !c.canReach()) return false;
         choixRates = 0;
         chemin = c;
-        etape = cible;
         t.diag = "étape " + q.getX() + " " + q.getZ() + " (but à " + (int) horizontale(t.position(), but) + " blocs)";
-        t.getNavigation().moveTo(c, v);
+        // Plan A1 : il ne part pas encore. Le trajet se prolonge d'abord depuis le bout de cette étape jusqu'au but (ou aussi
+        // loin que le terrain chargé le permet), puis il le suit d'un bout à l'autre (suivrePlan).
+        oublierPlan();
+        etape = cible;
+        plan.add(c);
+        planFini = q.equals(BlockPos.containing(but));
+        prolonge = !planFini && !cibleMobile;
         return true;
+    }
+
+    // --- Le trajet calculé d'avance, comme un GPS (plan A1) ---------------------------------------------
+
+    /** Au plus tant d'étapes calculées d'avance (près de 300 blocs). */
+    static final int PLAN_MAX = 12;
+    /** Points essayés au plus pour prolonger le trajet d'une étape (le premier choix, depuis sa place, en essaie 18). */
+    static final int ESSAIS_SUITE = 6;
+    /**
+     * Le trajet : des chemins complets mis bout à bout, chacun cherché depuis la fin du précédent ({@link #depuis}). Le
+     * dernier mène au but ({@code planFini}), ou s'arrête là où le terrain n'est pas encore chargé. Il ne part qu'une fois le
+     * calcul fini ({@code parti}), et ne le refait que s'il est coupé.
+     */
+    private final List<Path> plan = new ArrayList<>();
+    private int morceau;
+    private boolean planFini, prolonge, parti;
+    /** Les points qui restent à essayer pour prolonger le trajet (null : pas de prolongement en cours). */
+    private List<BlockPos> suite;
+    private int curseurSuite, essaisSuite;
+
+    /** Combien d'étapes de son trajet il connaît d'avance (0 : pas de trajet calculé en cours). */
+    int etapesConnues() { return plan.size(); }
+
+    /** La dernière étape connue de son trajet mène au but. */
+    boolean trajetComplet() { return planFini; }
+
+    private void oublierPlan() {
+        plan.clear();
+        morceau = 0;
+        planFini = prolonge = parti = false;
+        suite = null;
+        etape = null;
+        attendDepuis = -1; // sinon attend() resterait vrai, et l'évitement des 3 s (immobile) ne viendrait plus
+    }
+
+    /** La cible bouge (le chef, un autre ouvrier) : il ne calcule pas son trajet d'avance, une étape à la fois suffit. */
+    boolean cibleMobile;
+
+    /**
+     * Suit le trajet calculé. Au bout d'une étape, il enchaîne la suivante sans rien recalculer. Il ne le refait que s'il
+     * est coupé : il s'est arrêté avant le bout (un bloc posé, quelqu'un en travers, le jeu a dû refaire le chemin), ou il
+     * est resté immobile ({@link #immobile}). Au bout d'un trajet qui s'arrête avant le but, il choisit la suite de là.
+     */
+    private void suivrePlan(Travailleur t, double v) {
+        var nav = t.getNavigation();
+        if (prolonge) prolonger(t);
+        if (!parti) {
+            if (prolonge) { t.diag = "prépare son trajet (" + plan.size() + " étapes)"; return; }
+            parti = true;
+            nav.moveTo(plan.get(morceau), v);
+        }
+        Path seg = plan.get(morceau);
+        etape = Vec3.atBottomCenterOf(seg.getEndNode().asBlockPos());
+        Path suivi = nav.getPath();
+        if (!nav.isDone() && (suivi == seg || seg.sameAs(suivi))) {
+            if (t.tickCount % 20 == 0) t.diag = "trajet : étape " + (morceau + 1) + "/" + plan.size() + (planFini ? "" : " (suite à calculer)") + ", but à " + (int) horizontale(t.position(), but) + " blocs";
+            return;
+        }
+        // Le jeu a refait le chemin de lui-même (une porte ouverte, un bloc posé près du trajet) jusqu'au bout de cette
+        // étape : il le garde, sans s'arrêter ni recalculer le reste.
+        if (!nav.isDone() && suivi != null && suivi.canReach() && suivi.getEndNode() != null
+                && suivi.getEndNode().asBlockPos().distSqr(seg.getEndNode().asBlockPos()) <= 2) { plan.set(morceau, suivi); return; }
+        if (auBout(t, seg)) {
+            visites.merge(cellule(t.blockPosition()), 1, Integer::sum); // seulement les endroits vraiment atteints
+            if (morceau + 1 < plan.size()) {
+                morceau++;
+                // Une étape calculée il y a un moment : un coup d'œil sur ses cases (un bloc posé, de la lave) ; sinon il la refait seule.
+                if (!praticable(t.level(), plan.get(morceau)) && !refaireEtape(t, v)) return;
+                nav.moveTo(plan.get(morceau), v);
+                // Sa dernière étape connue : il essaie de prolonger le trajet en marchant (le terrain devant lui s'est chargé).
+                if (morceau == plan.size() - 1 && !planFini && plan.size() < PLAN_MAX && !cibleMobile) prolonge = true;
+                return;
+            }
+            // Au bout du trajet : les derniers pas tout droit seulement si ce chemin mène bien au but.
+            if (planFini) { if (seg.canReach()) t.getMoveControl().setWantedPosition(but.x, but.y, but.z, v); return; }
+            if (!prolonge) oublierPlan(); // d'ici, il choisit la suite (choisirEtape)
+            return;
+        }
+        // Coupé avant le bout : il refait seulement cette étape, d'où il est, en gardant les suivantes (jamais un chemin partiel).
+        if (t.onGround() || t.isInWater()) refaireEtape(t, v);
+    }
+
+    /**
+     * Refait l'étape en cours depuis sa place, jusqu'au même bout : les étapes suivantes restent bonnes. Faux s'il attend un
+     * jeton (il réessaie au tick suivant) ; sans chemin complet, tout le trajet est refait d'ici.
+     */
+    private boolean refaireEtape(Travailleur t, double v) {
+        var nav = t.getNavigation();
+        BlockPos bout = plan.get(morceau).getEndNode().asBlockPos();
+        if (!jeton(t.level().getGameTime())) { nav.stop(); return false; }
+        Path c = chercher(t, bout, 0, Charge.Origine.ETAPE, Math.max(PORTEE_MIN, portee(t.blockPosition(), bout)), 1);
+        if (c == null || !c.canReach()) { t.diag = "trajet coupé"; nav.stop(); oublierPlan(); return false; }
+        plan.set(morceau, c);
+        nav.moveTo(c, v);
+        return true;
+    }
+
+    /** Les cases d'un chemin calculé sont toujours libres (pas de bloc posé à hauteur des pieds ou de la tête, pas de lave). */
+    static boolean praticable(Level l, Path c) {
+        for (int i = 0; i < c.getNodeCount(); i++) {
+            BlockPos n = c.getNodePos(i);
+            for (BlockPos q : List.of(n, n.above())) {
+                if (!l.isLoaded(q)) continue; // pas de chunk chargé pendant le tick
+                BlockState st = l.getBlockState(q);
+                if (st.is(BlockTags.DOORS) || st.is(BlockTags.FENCE_GATES)) continue; // il les ouvre
+                if (Monde.traversable(l, q)) continue;
+                // Aux pieds, un bloc bas qu'il franchit (tapis, neige, dalle) : la marche du jeu y passe.
+                var forme = st.getCollisionShape(l, q);
+                if (q == n && st.getFluidState().isEmpty() && !st.is(net.minecraft.world.level.block.Blocks.FIRE) && forme.max(Direction.Axis.Y) <= 0.5) continue;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prolonge le trajet d'une étape depuis la fin de la dernière : le but s'il est à portée, sinon un point qui le rapproche
+     * du but d'au moins 4 blocs (jamais un demi-tour). Étalé sur plusieurs ticks avec les mêmes jetons que le choix d'une
+     * étape ({@link #jeton}). Rien de trouvé : le trajet s'arrête là, il partira sur ce qu'il connaît.
+     */
+    private void prolonger(Travailleur t) {
+        Level l = t.level();
+        long maintenant = l.getGameTime();
+        BlockPos d = plan.get(plan.size() - 1).getEndNode().asBlockPos();
+        Vec3 pd = Vec3.atBottomCenterOf(d);
+        double dh = horizontale(pd, but);
+        if (suite == null) {
+            if (plan.size() >= PLAN_MAX) { prolonge = false; return; }
+            if (dh <= 48 && Math.abs(but.y - d.getY()) <= 24) {
+                if (!jeton(maintenant)) return;
+                BlockPos q = BlockPos.containing(but);
+                Path c = depuis(t, d, q, Math.max(PORTEE_MIN, portee(d, q)), 1);
+                // Comme le chemin direct : arrêté juste à côté du but (bloc à casser, coffre), c'est bon aussi.
+                if (c != null && (c.canReach() || c.getEndNode() != null && c.getEndNode().asBlockPos().distSqr(q) <= 4)) {
+                    plan.add(c);
+                    planFini = true;
+                    prolonge = false;
+                    return;
+                }
+            }
+            suite = candidats(t, l, d, pd, dh).stream().filter(c -> horizontale(Vec3.atBottomCenterOf(c), but) < dh - 4).toList();
+            curseurSuite = 0;
+            essaisSuite = 0;
+            rates.clear();
+        }
+        for (; curseurSuite < suite.size() && essaisSuite < ESSAIS_SUITE; curseurSuite++) {
+            BlockPos c = suite.get(curseurSuite);
+            if (rates.stream().anyMatch(r -> r.distSqr(c) < 64)) continue;
+            if (!jeton(maintenant)) return;
+            essaisSuite++;
+            Path ch = depuis(t, d, c, portee(d, c), NOEUDS_ETAPE);
+            if (ch != null && ch.canReach()) { plan.add(ch); suite = null; rates.clear(); return; }
+            rates.add(c);
+        }
+        suite = null;
+        rates.clear();
+        prolonge = false;
+    }
+
+    /**
+     * Une recherche de chemin depuis {@code depart} (la fin d'une étape où il n'est pas encore) jusqu'à q : la même marche
+     * que d'habitude ({@link Evaluateur}, endroits évités compris), dans une région autour du départ. Comptée comme une
+     * recherche d'étape ({@link Charge}).
+     */
+    static Path depuis(Travailleur t, BlockPos depart, BlockPos q, float portee, float noeuds) {
+        if (t.chercheur == null || !(t.getNavigation().getNodeEvaluator() instanceof Evaluateur e)) return null;
+        int r = (int) portee + 8;
+        var region = new net.minecraft.world.level.PathNavigationRegion(t.level(), depart.offset(-r, -r, -r), depart.offset(r, r, r));
+        long debut = System.nanoTime();
+        t.origineChemin = Charge.Origine.ETAPE;
+        e.depart = depart;
+        try { return t.chercheur.findPath(region, t, Set.of(q), portee, 1, noeuds); }
+        finally {
+            e.depart = null;
+            t.origineChemin = Charge.Origine.AUTRE;
+            Charge.ICI.mesurer(Charge.Partie.CHEMINS, debut);
+        }
     }
 
     /** Vraiment sous terre : sans ciel, et à plus de 8 blocs sous la surface (pas sous un toit, un arbre ou un surplomb). */
@@ -523,7 +711,7 @@ final class Itineraire {
         direct = null;
         directDate = -1000;
         chemin = null;
-        etape = null;
+        oublierPlan();
         if (phase >= 0) finChoix();
         t.diag = "évite " + premier.toShortString();
         Cerveau.dire(t, "detour", 600, "Quelque chose me barre la route : je passe ailleurs.");
@@ -535,6 +723,12 @@ final class Itineraire {
         private final Map<Long, Long> evites = new HashMap<>();
 
         Evaluateur() { setCanPassDoors(true); } // comme celui de Minecraft pour la marche
+
+        /** Plan A1 : chercher depuis cet endroit plutôt que depuis là où il se tient (null : sa place). */
+        BlockPos depart;
+
+        @Override
+        public net.minecraft.world.level.pathfinder.Node getStart() { return depart != null ? getStartNode(depart) : super.getStart(); }
 
         void eviter(BlockPos q, long maintenant, long fin) {
             if (evites.size() > 64) evites.values().removeIf(f -> f <= maintenant);
@@ -1011,6 +1205,7 @@ final class Itineraire {
         t.getNavigation().stop();
         t.setSprinting(false);
         finChoix();
+        oublierPlan();
         bateauBloque = 0;
         barreFin = 0;
         Cerveau.dire(t, "bateau", 600, "Je prends le bateau pour traverser.");
@@ -1074,7 +1269,7 @@ final class Itineraire {
         var objet = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
         t.memoire.remove("bateau");
         t.ranger(new ItemStack(objet == Items.AIR ? Items.OAK_BOAT : objet));
-        etape = null;
+        oublierPlan();
         chemin = null;
         directRate = 0;
         finChoix();

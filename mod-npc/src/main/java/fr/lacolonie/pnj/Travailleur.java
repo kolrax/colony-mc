@@ -644,7 +644,7 @@ public class Travailleur extends PathfinderMob {
 
     /** Sa vie selon son niveau et ses talents (sans le soigner) : à l'arrivée, au chargement. */
     void appliquerVie() {
-        double vie = 20 + 2 * (niveau - 1) + Talents.vie(talents);
+        double vie = Reglages.actuel.vie_base + Reglages.actuel.vie_par_etoile * (niveau - 1) + Talents.vie(talents);
         var max = getAttribute(Attributes.MAX_HEALTH);
         if (max != null && max.getBaseValue() != vie) {
             max.setBaseValue(vie);
@@ -932,10 +932,17 @@ public class Travailleur extends PathfinderMob {
     Charge.Origine origineChemin = Charge.Origine.AUTRE;
     /** Portée réduite de la prochaine recherche (posée par {@link Itineraire} le temps de l'appel) ; 0 : la portée normale (FOLLOW_RANGE). */
     float porteeChemin;
+    /** Son chercheur de chemin (plan A1 : {@code Itineraire.depuis} cherche aussi depuis la fin d'une étape pas encore atteinte). */
+    net.minecraft.world.level.pathfinder.PathFinder chercheur;
+    /** Le dernier chemin calculé par sa navigation, et la précision demandée (reprise quand le jeu le refait). */
+    private Path cheminCree;
+    private int precisionCree = 1;
     /** Les points d'étape qu'il n'a pas pu atteindre depuis là où il était (voir {@link Itineraire}) : clé → fin de l'oubli (temps du monde). */
     final java.util.Map<Long, Long> etapesRatees = new java.util.HashMap<>();
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
+    /** Dont les recherches d'étape (choix et calcul du trajet d'avance, Itineraire) : lues par les tests. */
+    int recherchesEtape;
     private int recherchesCeTick;
     private long tickRecherches = -1;
 
@@ -944,6 +951,7 @@ public class Travailleur extends PathfinderMob {
         long tick = level().getGameTime();
         if (tick != tickRecherches) { tickRecherches = tick; recherchesCeTick = 0; }
         recherches++;
+        if (origineChemin == Charge.Origine.ETAPE) recherchesEtape++;
         recherchesPireTick = Math.max(recherchesPireTick, ++recherchesCeTick);
         Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick, nanos);
     }
@@ -956,7 +964,7 @@ public class Travailleur extends PathfinderMob {
             protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int max) {
                 super.createPathFinder(max); // pose l'évaluateur de la marche (portes comprises)
                 nodeEvaluator = new Itineraire.Evaluateur(); // le même, qui sait éviter un endroit où il est resté bloqué (plan A2)
-                return new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
+                return chercheur = new net.minecraft.world.level.pathfinder.PathFinder(nodeEvaluator, max) {
                     @Override
                     public Path findPath(net.minecraft.world.level.PathNavigationRegion r, Mob m, java.util.Set<BlockPos> cibles, float portee, int precision, float profondeur) {
                         long debut = System.nanoTime();
@@ -967,12 +975,36 @@ public class Travailleur extends PathfinderMob {
                 };
             }
 
+            /**
+             * Un bloc a changé près du chemin (porte ouverte, feuilles, bloc posé) : Minecraft le refait vers la cible de sa
+             * dernière recherche, qui peut être une autre étape (plan A1 : les étapes suivantes sont cherchées depuis la fin de la
+             * précédente). On le refait vers le bout du chemin suivi ; l'Itineraire l'adopte s'il y mène.
+             */
+            @Override
+            public void recomputePath() {
+                Path p = getPath();
+                if (level.isClientSide || p == null || p.isDone() || p.getTarget() == null) { super.recomputePath(); return; }
+                if (level.getGameTime() - timeLastRecompute > 20L) {
+                    BlockPos cible = p.getTarget();
+                    int precision = p == cheminCree ? precisionCree : 1; // celle de la recherche d'origine (1 : une étape)
+                    path = null;
+                    path = createPath(cible, precision);
+                    timeLastRecompute = level.getGameTime();
+                    hasDelayedRecomputation = false;
+                } else hasDelayedRecomputation = true;
+            }
+
             @Override
             protected Path createPath(java.util.Set<BlockPos> cibles, int decalage, boolean auDessus, int precision, float portee) {
                 if (level.isClientSide) return super.createPath(cibles, decalage, auDessus, precision, portee);
                 if (porteeChemin > 0) portee = Math.min(portee, porteeChemin); // une recherche courte (étapes) : région et exploration réduites
                 long debut = System.nanoTime();
-                try { return super.createPath(cibles, decalage, auDessus, precision, portee); }
+                try {
+                    Path c = super.createPath(cibles, decalage, auDessus, precision, portee);
+                    cheminCree = c;
+                    precisionCree = precision;
+                    return c;
+                }
                 finally { Charge.ICI.mesurer(Charge.Partie.CHEMINS, debut); }
             }
         };
@@ -1270,7 +1302,7 @@ public class Travailleur extends PathfinderMob {
             faim = Math.max(0, faim - 1);
 
         }
-        if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus)) { // les nuits d'affilée ralentissent la guérison
+        if (++soinCompteur >= Nuit.soin(memoire.getInt("nuits"), Reglages.actuel.nuit_nuits_avant_malus) * Reglages.actuel.soin_lent_secondes / 10) { // les nuits d'affilée ralentissent la guérison
             soinCompteur = 0;
             if (faim >= 15 && getHealth() < getMaxHealth()) heal(1);
             else if (faim == 0 && getHealth() > 1) hurt(damageSources().starve(), 1);
@@ -1424,7 +1456,7 @@ public class Travailleur extends PathfinderMob {
     void relever(Player p) {
         aTerre = false;
         setPose(Pose.STANDING);
-        setHealth(6);
+        setHealth(Math.min(getMaxHealth(), Reglages.actuel.releve_vie));
         majNom();
         Besoins.dire(this, "releve", null);
     }
@@ -1463,8 +1495,9 @@ public class Travailleur extends PathfinderMob {
         // La gravité du coup (vie vraiment perdue, source) : notée s'il reste debout, aggravée s'il tombe à terre (tomberATerre).
         boolean debout = !aTerre && !level().isClientSide;
         if (debout) { vieAvantCoup = getHealth(); sourceCoup = Blessures.source(src); }
-        float avant = vieAvantCoup;
+        float avant = vieAvantCoup, vie = getHealth();
         boolean touche = super.hurt(src, amount);
+        if (touche) Fantome.coup(this, src, vie - getHealth()); // plan E6 : le rapport du joueur fantôme
         if (touche && debout && !aTerre) Blessures.blesser(this, Gravite.du(avant - getHealth(), getMaxHealth(), sourceCoup));
         vieAvantCoup = -1;
         // Frappé par son chef : il s'en souvient (le moral baisse, et il le dira s'il refuse un ordre).
@@ -1485,8 +1518,10 @@ public class Travailleur extends PathfinderMob {
             ColoniePnj.LOG.info("{} ({}, chef {}) tombe à terre en {} : {}", prenom, metier, chef, blockPosition().toShortString(),
                     src.getLocalizedDeathMessage(this).getString());
             tomberATerre();
+            Fantome.aTerre(this, src); // plan E6 : le rapport du joueur fantôme
             return;
         }
+        if (!dead && !isRemoved()) Fantome.mort(this, src);
         super.die(src);
         if (!level().isClientSide && chef != null && level() instanceof ServerLevel sl) {
             Courrier.de(sl.getServer()).marquerMort(this, Messages.date(level()));

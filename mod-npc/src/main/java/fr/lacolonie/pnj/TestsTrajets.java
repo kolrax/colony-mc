@@ -97,6 +97,144 @@ public class TestsTrajets {
         });
     }
 
+    /**
+     * Plan A1 : un long trajet sur du plat (100 blocs, terrain chargé) est calculé en entier avant de partir, comme par un
+     * GPS, puis suivi d'un bout à l'autre : plus aucune recherche de chemin une fois parti, et jamais un pas en arrière.
+     * Avant, il cherchait une nouvelle étape à chaque fois qu'il en atteignait une, puis le chemin direct près du but.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900, skyAccess = true)
+    public static void trajetCalculeAvantDePartir(GameTestHelper h) {
+        Travailleur t = longTrajet(h, 151000, false, 900);
+        Vec3 depart = t.position(), but = Vec3.atBottomCenterOf(TestsJeu.sol(h, 100, 151000));
+        int[] auDepart = {-1};
+        double[] meilleure = {Double.MAX_VALUE}, recul = {0};
+        h.onEachTick(() -> {
+            if (auDepart[0] < 0 && Itineraire.horizontale(t.position(), depart) > 3) auDepart[0] = t.recherches;
+            double d = Itineraire.horizontale(t.position(), but);
+            meilleure[0] = Math.min(meilleure[0], d);
+            recul[0] = Math.max(recul[0], d - meilleure[0]);
+        });
+        h.succeedWhen(() -> {
+            String e = "à " + (int) Itineraire.horizontale(t.position(), but) + " blocs du but, " + t.recherches + " recherches dont "
+                    + auDepart[0] + " avant de partir, plus grand recul " + String.format("%.1f", recul[0]) + " blocs, " + t.diag;
+            h.assertTrue(t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
+            t.discard();
+            liberer(h);
+            h.assertTrue(auDepart[0] > 0 && t.recherches - auDepart[0] <= 1, "le trajet doit être calculé avant de partir, pas en route (" + e + ")");
+            h.assertTrue(recul[0] < 2, "il ne doit jamais revenir sur ses pas (" + e + ")");
+        });
+    }
+
+    /**
+     * Le même long trajet, coupé à mi-chemin par un mur percé d'une porte en bois sur sa route. Il l'ouvre : le jeu refait
+     * alors de lui-même son chemin (un bloc a changé tout près). Il garde ce chemin, qui mène au bout de la même étape : pas
+     * de nouveau calcul de son trajet, pas d'arrêt d'une seconde.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900, skyAccess = true)
+    public static void passeUnePorteSansRecalculer(GameTestHelper h) {
+        Travailleur t = longTrajet(h, 152000, true, 900);
+        BlockPos porte = PORTES.get(h);
+        boolean[] ouverte = {false};
+        Vec3 depart = t.position(), but = Vec3.atBottomCenterOf(TestsJeu.sol(h, 100, 152000));
+        int[] auDepart = {-1}, arret = {0}, depuis = {0};
+        Vec3[] repere = {depart};
+        h.onEachTick(() -> {
+            Vec3 p = t.position();
+            if (auDepart[0] < 0 && Itineraire.horizontale(p, depart) > 3) auDepart[0] = t.recherchesEtape;
+            if (h.getLevel().getBlockState(porte).getOptionalValue(net.minecraft.world.level.block.DoorBlock.OPEN).orElse(false)) ouverte[0] = true;
+            if (auDepart[0] < 0 || Itineraire.horizontale(p, repere[0]) >= 0.5) { repere[0] = p; depuis[0] = 0; }
+            else arret[0] = Math.max(arret[0], ++depuis[0]);
+        });
+        h.succeedWhen(() -> {
+            String e = "à " + (int) Itineraire.horizontale(t.position(), but) + " blocs du but, " + t.recherchesEtape + " recherches d'étape dont "
+                    + auDepart[0] + " avant de partir, " + t.recherches + " en tout, plus long arrêt " + arret[0] + " ticks, " + t.diag;
+            h.assertTrue(t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
+            t.discard();
+            liberer(h);
+            h.assertTrue(ouverte[0], "il doit passer par la porte (" + e + ")");
+            h.assertTrue(auDepart[0] > 0 && t.recherchesEtape == auDepart[0], "la porte ne doit pas faire recalculer son trajet (" + e + ")");
+            h.assertTrue(arret[0] < 20, "il ne doit pas s'arrêter une seconde à la porte (" + e + ")");
+        });
+    }
+
+    /**
+     * Un trajet de 150 blocs calculé d'avance (5 étapes), puis, une fois parti, un pilier de 2 blocs posé sur la ligne droite
+     * dans chacune des 3 étapes suivantes : à chacune, il refait l'étape seule. Il ne doit jamais se figer (avant : au
+     * troisième, plus aucune recherche ne lui était permise, et il restait planté jusqu'à se dire coincé).
+     */
+    @GameTest(template = "vide", timeoutTicks = 1200, skyAccess = true)
+    public static void troisCoupuresSansSeFiger(GameTestHelper h) {
+        Travailleur t = longTrajet(h, 153000, false, 1200, 150);
+        Vec3 depart = t.position(), but = Vec3.atBottomCenterOf(TestsJeu.sol(h, 150, 153000));
+        boolean[] pose = {false};
+        int[] arret = {0}, depuis = {0};
+        Vec3[] repere = {depart};
+        h.onEachTick(() -> {
+            Vec3 p = t.position();
+            if (!pose[0] && Itineraire.horizontale(p, depart) > 12) {
+                pose[0] = true;
+                for (int x : new int[]{45, 73, 101}) {
+                    BlockPos q = TestsJeu.sol(h, x, 153000);
+                    h.getLevel().setBlockAndUpdate(q, Blocks.STONE_BRICKS.defaultBlockState());
+                    h.getLevel().setBlockAndUpdate(q.above(), Blocks.STONE_BRICKS.defaultBlockState());
+                }
+            }
+            if (!pose[0] || Itineraire.horizontale(p, repere[0]) >= 0.5) { repere[0] = p; depuis[0] = 0; }
+            else arret[0] = Math.max(arret[0], ++depuis[0]);
+        });
+        h.succeedWhen(() -> {
+            String e = "à " + (int) Itineraire.horizontale(t.position(), but) + " blocs du but, " + t.recherchesEtape + " recherches d'étape, plus long arrêt "
+                    + arret[0] + " ticks, " + t.diag + ", action " + (t.action == null ? "-" : t.action.nom) + ", résultat " + t.resultat;
+            h.assertTrue(pose[0] && t.position().distanceToSqr(but) < 9, "il doit arriver (" + e + ")");
+            t.discard();
+            liberer(h);
+            h.assertTrue(arret[0] < 20, "il ne doit pas rester planté sur place (" + e + ")");
+        });
+    }
+
+    static final java.util.Map<GameTestHelper, BlockPos> PORTES = new java.util.HashMap<>();
+    static final java.util.Map<GameTestHelper, java.util.List<net.minecraft.world.level.ChunkPos>> FORCES = new java.util.HashMap<>();
+
+    /**
+     * Un ouvrier qui part pour 100 blocs vers l'est, sur le monde plat à {@code dz} de ce test, terrain chargé tout du long
+     * (chunks forcés, libérés à la fin, réussite ou échec) ; {@code porte} : un mur de 3 blocs de haut à mi-chemin, de 49 blocs
+     * de large, percé d'une porte en bois sur la ligne droite.
+     */
+    static Travailleur longTrajet(GameTestHelper h, int dz, boolean porte, int duree) { return longTrajet(h, dz, porte, duree, 100); }
+
+    static Travailleur longTrajet(GameTestHelper h, int dz, boolean porte, int duree, int longueur) {
+        ServerLevel l = h.getLevel();
+        BlockPos depart = TestsJeu.sol(h, 0, dz), arrivee = TestsJeu.sol(h, longueur, dz);
+        java.util.List<net.minecraft.world.level.ChunkPos> forces = new java.util.ArrayList<>();
+        for (int x = depart.getX() - 32; x <= arrivee.getX() + 32; x += 16)
+            for (int z = -32; z <= 32; z += 16) {
+                var c = new net.minecraft.world.level.ChunkPos(new BlockPos(x, 0, depart.getZ() + z));
+                forces.add(c);
+                l.setChunkForced(c.x, c.z, true);
+            }
+        FORCES.put(h, forces);
+        h.runAtTickTime(h.getTick() + duree - 2, () -> liberer(h));
+        if (porte) {
+            BlockPos m = TestsJeu.sol(h, 50, dz);
+            for (int z = -24; z <= 24; z++) for (int y = 0; y < 3; y++) l.setBlockAndUpdate(m.offset(0, y, z), Blocks.STONE_BRICKS.defaultBlockState());
+            var d = Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST);
+            l.setBlock(m, d.setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2);
+            PORTES.put(h, m);
+            l.setBlock(m.above(), d.setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2);
+        }
+        Travailleur t = TestsJeu.employe(h, "mineur", depart, Vec3.atBottomCenterOf(depart), ItemStack.EMPTY);
+        t.mode = Travailleur.Mode.ATTENDRE; // le cerveau ne lui donne rien d'autre à faire
+        t.forcerChunk();
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(arrivee), 2));
+        return t;
+    }
+
+    static void liberer(GameTestHelper h) {
+        PORTES.remove(h);
+        var forces = FORCES.remove(h);
+        if (forces != null) for (var c : forces) h.getLevel().setChunkForced(c.x, c.z, false);
+    }
+
     /** Témoin : sans le changement de chemin (lot « trajets_temoin »), la même cabosse le retient bien sur place. */
     @GameTest(template = "grand", timeoutTicks = 300, skyAccess = true, batch = "trajets_temoin")
     public static void temoinResteRetenuSansDetour(GameTestHelper h) {
