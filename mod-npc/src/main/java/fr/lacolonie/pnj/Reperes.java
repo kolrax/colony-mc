@@ -16,8 +16,11 @@ import java.util.UUID;
 final class Reperes {
     private Reperes() {}
 
-    /** Ce que le chef voit d'un ouvrier sur sa carte : son prénom et sa place (dimension, bloc). */
-    record Repere(UUID id, String prenom, String dim, int x, int y, int z) {}
+    /**
+     * Ce que le chef voit d'un ouvrier sur sa carte : son prénom, sa place (dimension, bloc), et s'il est à terre (plan E,
+     * point 5 : son repère est rouge tant qu'il attend d'être relevé).
+     */
+    record Repere(UUID id, String prenom, String dim, int x, int y, int z, boolean aTerre) {}
 
     /** Un ouvrier du monde, avec son chef ({@code null} pour un chercheur d'emploi). */
     record Ouvrier(UUID chef, Repere repere) {}
@@ -59,5 +62,11 @@ final class Reperes {
         if (prenom == null || prenom.isBlank()) return "Ou";
         String p = prenom.strip();
         return p.length() <= LETTRES ? p : p.substring(0, LETTRES);
+    }
+
+    /** Le nom du repère (survol, liste, étiquette) : son prénom, suivi de « à terre » tant qu'il attend d'être relevé. */
+    static String nom(Repere r) {
+        String p = r.prenom() == null ? "" : r.prenom();
+        return r.aTerre() ? p + " (à terre)" : p;
     }
 }

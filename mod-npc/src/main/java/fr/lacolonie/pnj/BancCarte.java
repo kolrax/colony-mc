@@ -19,7 +19,7 @@ import java.util.UUID;
  * Banc photo de la carte (plan D), pour le développement seulement ({@code ./gradlew runCarte}, propriété
  * {@code colonie.carte}, jamais chez un joueur) : Xaero y est chargé. Dans un monde solo, trois ouvriers du joueur (Jean,
  * Isabeau, Gauthier), un ouvrier d'un autre chef (Voisin) et un chercheur d'emploi (Errant) ; une capture de la
- * mini-carte, puis une de la carte du monde. Seuls les trois premiers doivent y être. Puis il quitte.
+ * mini-carte, puis une de la carte du monde. Seuls les trois premiers doivent y être, Isabeau à terre, en rouge. Puis il quitte.
  */
 @EventBusSubscriber(modid = ColoniePnj.MODID, value = Dist.CLIENT)
 public final class BancCarte {
@@ -60,7 +60,7 @@ public final class BancCarte {
 
     static void photo(Minecraft mc, String nom) {
         ColoniePnj.LOG.info("banc carte : {} (écran {} ; Xaero {} ; reçus {} ; repères {})", nom, mc.screen == null ? "aucun" : mc.screen.getClass().getSimpleName(),
-                CarteClient.XAERO, CarteClient.dernier.stream().map(Reperes.Repere::prenom).toList(),
+                CarteClient.XAERO, CarteClient.dernier.stream().map(Reperes::nom).toList(),
                 CarteClient.XAERO ? XaeroOuvriers.noms() : "-");
         Screenshot.grab(mc.gameDirectory, nom, mc.getMainRenderTarget(), m -> ColoniePnj.LOG.info("photo : {}", m.getString()));
     }
@@ -72,7 +72,10 @@ public final class BancCarte {
         l.setWeatherParameters(60000, 0, false, false);
         BlockPos b = p.blockPosition();
         String[][] siens = {{"Jean", "mineur", "14", "0"}, {"Isabeau", "bucheron", "-24", "12"}, {"Gauthier", "fermier", "4", "-30"}};
-        for (String[] s : siens) ouvrier(l, b, s[1], Integer.parseInt(s[2]), Integer.parseInt(s[3]), p.getUUID(), s[0]);
+        for (String[] s : siens) {
+            Travailleur t = ouvrier(l, b, s[1], Integer.parseInt(s[2]), Integer.parseInt(s[3]), p.getUUID(), s[0]);
+            if (s[0].equals("Isabeau")) t.tomberATerre(); // E5 : son repère doit être rouge, « Isabeau (à terre) »
+        }
         ouvrier(l, b, "mineur", -6, -16, UUID.randomUUID(), "Voisin");
         Travailleur errant = ColoniePnj.TRAVAILLEUR.get().create(l);
         BlockPos q = sol(l, b.offset(10, 0, 18));
@@ -82,10 +85,11 @@ public final class BancCarte {
         l.addFreshEntity(errant);
     }
 
-    static void ouvrier(ServerLevel l, BlockPos b, String metier, int dx, int dz, UUID chef, String prenom) {
+    static Travailleur ouvrier(ServerLevel l, BlockPos b, String metier, int dx, int dz, UUID chef, String prenom) {
         BlockPos q = sol(l, b.offset(dx, 0, dz));
         Travailleur t = Travailleur.auTravail(l, metier, q, Vec3.atBottomCenterOf(q), chef, ItemStack.EMPTY);
         t.prenom = prenom;
+        return t;
     }
 
     static BlockPos sol(ServerLevel l, BlockPos p) {

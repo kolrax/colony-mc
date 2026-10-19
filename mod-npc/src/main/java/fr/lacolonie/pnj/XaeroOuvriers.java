@@ -45,6 +45,9 @@ final class XaeroOuvriers {
     /** Les noms des repères affichés (le banc de la carte les écrit dans le journal). */
     static List<String> noms() { return AFFICHES.values().stream().map(p -> p.repere().getName()).sorted().toList(); }
 
+    /** Doré d'ordinaire ; rouge tant qu'il est à terre, en attente d'être relevé (plan E, point 5). */
+    static WaypointColor couleur(Reperes.Repere r) { return r.aTerre() ? WaypointColor.RED : WaypointColor.GOLD; }
+
     static void oublier() {
         AFFICHES.clear();
         session = null;
@@ -73,14 +76,16 @@ final class XaeroOuvriers {
                 w.setX(r.x());
                 w.setY(r.y());
                 w.setZ(r.z());
-                if (!w.getName().equals(r.prenom())) {
-                    w.setName(r.prenom());
+                if (!w.getName().equals(Reperes.nom(r))) { // renommé, tombé à terre ou relevé
+                    w.setName(Reperes.nom(r));
                     w.setInitials(Reperes.symbole(r.prenom()));
+                    w.setWaypointColor(couleur(r));
+                    change = true; // la carte du monde relit sa couleur
                 }
                 continue;
             }
             if (p != null) p.groupe().remove(id); // il a changé de dimension
-            Waypoint w = new Waypoint(r.x(), r.y(), r.z(), r.prenom(), Reperes.symbole(r.prenom()), WaypointColor.GOLD, WaypointPurpose.NORMAL);
+            Waypoint w = new Waypoint(r.x(), r.y(), r.z(), Reperes.nom(r), Reperes.symbole(r.prenom()), couleur(r), WaypointPurpose.NORMAL);
             groupe.add(id, w);
             AFFICHES.put(id, new Place(groupe, w));
             change = true;
