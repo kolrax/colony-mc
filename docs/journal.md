@@ -743,3 +743,13 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Journal : « colonie_pnj (version 1.0.15 -> 1.0.16) », **« Done (1.918s) » à 04 h 06 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Les seules erreurs viennent d'autres mods (tables de butin de `railways` et `create_enchantment_industry`, mixin client de `create_sa`), comme avant.
 - Serveur encore figé ~19 min juste avant (« 23221 ticks behind » à 04 h 04, 0 joueur) : même souci de pause déjà signalé à l'Admin.
 - Pas de modpack, pas d'annonce : le client n'a pas changé.
+
+## 2026-10-19 04 h 47 UTC : 1.0.17 livrée, serveur seul (A3 descente)
+- Ce qui change en jeu : l'ouvrier redescend d'une corniche en taillant des marches dans la paroi naturelle ; le compte « coincé » ne repart plus de zéro chaque nuit.
+- Commit livré : `main` a56146c (`mod_version=1.0.17`). Tests relus après le commit : **306/306 JUnit**, en jeu **407/407** (« All 407 required tests passed », passe du chef à 04 h 44 UTC).
+- Jar `colonie_pnj-1.0.17.jar` : **1 883 860 octets**, sha1 `30c8d39e19e8b2040b8292cdce7ba86111f99968` (revérifié avant l'envoi).
+- `list` : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer.
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 883 860) ; `colonie_pnj-1.0.16.jar` rangé dans `/mods-off`, 1.0.17 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.16 -> 1.0.17) », **« Done (1.860s) » à 04 h 46 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Les seules erreurs viennent d'autres mods (282 tables de butin, 1 DISTXFORM), comme avant.
+- Serveur encore figé ~30 min juste avant (« 36305 ticks behind » à 04 h 45, 0 joueur) : même souci de pause déjà signalé à l'Admin.
+- Pas de modpack, pas d'annonce : le client n'a pas changé.
