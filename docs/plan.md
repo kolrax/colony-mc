@@ -130,3 +130,4 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [ ] F3 : métiers activés choisis dans la configuration (`metiers_actifs` dans `reglages.json`, `/pnj recharger`) ; au départ : bûcheron, chasseur, guérisseur, mineur, pêcheur
 - [ ] F1 : un ouvrier qui saute sur place en boucle
 - [ ] F2 : sur le lieu de sa mission, le bûcheron va droit à l'arbre le plus proche qu'il peut atteindre (cerisiers compris), sans errer
+- [ ] F6 : la neige poudreuse est évitée comme la lave (un ouvrier y est tombé et y est mort de froid) ; s'il y tombe quand même, il en sort aussitôt
