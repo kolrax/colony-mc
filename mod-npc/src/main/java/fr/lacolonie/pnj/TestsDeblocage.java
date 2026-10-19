@@ -63,8 +63,8 @@ public class TestsDeblocage {
     /**
      * Enfermé dans un enclos de planches de 4 blocs de haut (qu'il ne peut pas creuser), de la pierre taillée en poche,
      * son bureau dehors à 10 blocs : il monte sur des blocs posés sous lui, sort par le haut du mur et rejoint son bureau.
-     * Avant, il se disait coincé et y restait. Il a une pioche : une fois sur le mur, il reprend les blocs qu'il a à portée
-     * de main (les trois du haut ; celui du bas est trop loin, il reste).
+     * Avant, il se disait coincé et y restait. Il a une pioche : une fois sur le mur, il reprend tout son pilier, penché
+     * au bord, jusqu'au bloc du bas (plan A3 ; avant, celui-là, trop loin, restait dans l'enclos).
      */
     @GameTest(template = "grand", timeoutTicks = 1200, skyAccess = true)
     public static void sortEnPosantDesBlocs(GameTestHelper h) {
@@ -76,10 +76,46 @@ public class TestsDeblocage {
             String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", pierres " + t.compter(Actions.Filtre.de("minecraft:cobblestone"));
             h.assertTrue(planches(h) == 32, "il ne doit pas casser l'enclos (" + e + ")");
             h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + e + ")");
-            h.assertTrue(h.getBlockState(new BlockPos(12, 4, 12)).is(Blocks.COBBLESTONE), "il doit être sorti sur un pilier de blocs posés (" + e + ")");
-            h.assertTrue(h.getBlockState(new BlockPos(12, 7, 12)).isAir() && h.getBlockState(new BlockPos(12, 5, 12)).isAir(),
-                    "il doit avoir repris les blocs à portée de main (" + e + ")");
+            h.assertTrue(t.memoire.getCompound("dits").contains("pilier"), "il doit être sorti sur un pilier de blocs posés (" + e + ")");
+            for (int y = 4; y <= 7; y++) h.assertTrue(h.getBlockState(new BlockPos(12, y, 12)).isAir(), "il doit avoir repris tout son pilier (" + e + ")");
+            h.assertTrue(t.compter(Actions.Filtre.de("minecraft:cobblestone")) == 16, "sans perdre une pierre (" + e + ")");
             t.discard();
+        });
+    }
+
+    /**
+     * Plan A3 : le monde s'arrête (ou son coin se décharge) en pleine montée sur son pilier, dans l'enclos. Il est
+     * sauvegardé là, retiré sans rien reprendre, puis relu et renvoyé à son bureau : ses blocs sont toujours suivis, il
+     * finit de sortir et reprend tout son pilier, l'ancien comme le nouveau, sans perdre une pierre.
+     */
+    @GameTest(template = "grand", timeoutTicks = 1600, skyAccess = true)
+    public static void reprendSonPilierApresUnArret(GameTestHelper h) {
+        enclos(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, new ItemStack(Items.COBBLESTONE, 16), new BlockPos(12, 4, 2));
+        t.inventaire.addItem(new ItemStack(Items.IRON_PICKAXE));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        Travailleur[] copie = new Travailleur[1];
+        h.succeedWhen(() -> {
+            if (copie[0] == null) {
+                h.assertTrue(t.pilierPose.size() >= 2, "en attente de la montée (" + t.diag + ")");
+                net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                t.saveWithoutId(tag);
+                t.setRemoved(net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK); // sans passer par remove()
+                Travailleur c = ColoniePnj.TRAVAILLEUR.get().create(h.getLevel());
+                c.load(tag);
+                c.setUUID(java.util.UUID.randomUUID());
+                h.assertTrue(h.getLevel().addFreshEntity(c), "relu dans le monde");
+                Cerveau.lancer(c, new Actions.Aller(Vec3.atBottomCenterOf(c.bureau), 3));
+                copie[0] = c;
+                h.assertTrue(false, "relu, en attente");
+            }
+            Travailleur c = copie[0];
+            String e = TestsJeu.etat(c, c.bureau) + ", " + c.diag + ", pierres " + c.compter(Actions.Filtre.de("minecraft:cobblestone"));
+            h.assertTrue(planches(h) == 32, "il ne doit pas casser l'enclos (" + e + ")");
+            h.assertTrue(c.distanceToSqr(Vec3.atBottomCenterOf(c.bureau)) < 16, "il doit être sorti et arrivé au bureau (" + e + ")");
+            for (int y = 4; y <= 8; y++) h.assertTrue(h.getBlockState(new BlockPos(12, y, 12)).isAir(), "il doit avoir repris tout son pilier (" + e + ")");
+            h.assertTrue(c.compter(Actions.Filtre.de("minecraft:cobblestone")) == 16, "sans perdre une pierre (" + e + ")");
+            c.discard();
         });
     }
 

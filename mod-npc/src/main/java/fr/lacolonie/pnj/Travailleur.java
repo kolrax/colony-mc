@@ -942,6 +942,9 @@ public class Travailleur extends PathfinderMob {
     /** L'eau qu'il a versée de son seau pour monter à la nage (plan A3), et quand il s'en est servi en dernier : il la reprend toujours. */
     BlockPos eau;
     long eauVue;
+    /** Les blocs de son pilier (plan A3), et quand il s'en est occupé en dernier : suivis comme l'eau, il les reprend toujours. */
+    final List<BlockPos> pilierPose = new ArrayList<>();
+    long pilierVu;
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
     /** Dont les recherches d'étape (choix et calcul du trajet d'avance, Itineraire) : lues par les tests. */
@@ -1019,7 +1022,7 @@ public class Travailleur extends PathfinderMob {
         Charge mesure = Charge.ICI;
         long h = System.nanoTime();
         if (tickCount % 20 == 0) { forcerChunk(); h = mesure.mesurer(Charge.Partie.CHUNKS, h); }
-        if (tickCount % 20 == 0) Itineraire.eauOubliee(this); // un trajet abandonné en pleine montée à la nage : l'eau ne reste pas
+        if (tickCount % 20 == 0) { Itineraire.eauOubliee(this); Itineraire.pilierOublie(this); } // un trajet abandonné en pleine montée : ni eau ni blocs laissés
         if ((tickCount + getId()) % 20 == 3) majTete();
         if ((tickCount + getId()) % 100 == 3) { majLieu(); majStatut(); }
         if (aTerre) { tickATerre(); mesure.mesurer(Charge.Partie.CORPS, h); return; }
@@ -1271,6 +1274,7 @@ public class Travailleur extends PathfinderMob {
         if (isSleeping()) stopSleeping();
         finirAction("ramene");
         Itineraire.retirerEau(this); // une colonne d'eau en cours : reprise tant que le coin est chargé
+        Itineraire.retirerPilier(this, true); // les blocs de son pilier aussi
         getNavigation().stop();
         trace.clear();
         etapesRatees.clear();
@@ -1564,6 +1568,7 @@ public class Travailleur extends PathfinderMob {
     @Override
     protected void dropAllDeathLoot(ServerLevel level, DamageSource src) {
         Itineraire.retirerEau(this); // l'eau revient dans son seau avant qu'il parte à la tombe
+        Itineraire.retirerPilier(this, true); // et les blocs de son pilier dans son sac
         List<ItemStack> tout = new ArrayList<>();
         for (int i = 0; i < inventaire.getContainerSize(); i++) if (!inventaire.getItem(i).isEmpty()) tout.add(inventaire.removeItemNoUpdate(i));
         for (EquipmentSlot s : EquipmentSlot.values()) {
@@ -1598,13 +1603,14 @@ public class Travailleur extends PathfinderMob {
     /** Par un portail : l'eau de l'ancien monde est reprise avant de partir. */
     @Override
     public Entity changeDimension(net.minecraft.world.level.portal.DimensionTransition transition) {
-        if (!level().isClientSide) Itineraire.retirerEau(this);
+        if (!level().isClientSide) { Itineraire.retirerEau(this); Itineraire.retirerPilier(this, true); }
         return super.changeDimension(transition);
     }
 
     @Override
     public void remove(RemovalReason reason) {
         if (!level().isClientSide) Itineraire.retirerEau(this);
+        if (!level().isClientSide && reason.shouldDestroy()) Itineraire.retirerPilier(this, true); // retiré en pleine montée : ses blocs à ses pieds (un coin déchargé : gardés, repris au retour)
         if (reason.shouldDestroy() || reason == RemovalReason.CHANGED_DIMENSION) libererChunk();
         super.remove(reason);
     }
@@ -2455,6 +2461,7 @@ public class Travailleur extends PathfinderMob {
         t.putLong("SortieDepuis", sortieDepuis);
         t.putBoolean("Expedition", expedition);
         t.putLongArray("Trace", trace.stream().mapToLong(BlockPos::asLong).toArray());
+        if (!pilierPose.isEmpty()) t.putLongArray("Pilier", pilierPose.stream().mapToLong(BlockPos::asLong).toArray());
         if (eau != null) t.putLong("Eau", eau.asLong()); // arrêt ou coin déchargé en pleine montée à la nage : il la reprendra
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
@@ -2517,6 +2524,8 @@ public class Travailleur extends PathfinderMob {
         expedition = t.getBoolean("Expedition");
         trace.clear();
         for (long l : t.getLongArray("Trace")) trace.add(BlockPos.of(l));
+        pilierPose.clear();
+        for (long l : t.getLongArray("Pilier")) pilierPose.add(BlockPos.of(l)); // pilierVu repart de 0 : repris dès qu'il n'est plus dessus
         eau = t.contains("Eau") ? BlockPos.of(t.getLong("Eau")) : null; // eauVue repart de 0 : il la reprend dès la première seconde
         // « Debut », « Fin » et « JoursExpedition » des anciennes sauvegardes : ignorés (corrections du 18/10, plus de réglage général).
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;

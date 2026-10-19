@@ -16,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -160,6 +161,7 @@ final class Itineraire {
     /** Un pas de marche vers le but (appelé à chaque tick par l'action en cours). */
     void avancer(Travailleur t, double vitesse, int age) {
         if (bloque) return; // c'est à l'action de décider (elle échoue ou attend)
+        if (pilier != null || montee != null || reprise) t.pilierVu = t.level().getGameTime(); // son pilier : il s'en occupe encore
         if (t.getVehicle() instanceof Boat b) { naviguer(t, b, age); return; }
         var nav = t.getNavigation();
         Vec3 p = t.position();
@@ -852,6 +854,9 @@ final class Itineraire {
     private long meilleurDate = -1, montagneProchain;
     /** Les pieds de paroi où il est déjà allé grimper : il n'y retourne pas. */
     private final Set<BlockPos> pieds = new HashSet<>();
+    /** Le pied de paroi où il va grimper : arrivé là, il grimpe tout de suite (sans attendre, ni repartir sur une autre étape). */
+    private BlockPos auPied;
+    private boolean dernierPas;
 
     /**
      * Le but est plus haut et ses étapes ne l'en rapprochent plus depuis {@link #STAGNATION} ticks (il longe le pied de la
@@ -862,9 +867,21 @@ final class Itineraire {
     private boolean montagne(Travailleur t, long maintenant, double v) {
         Vec3 p = t.position();
         double m = horizontale(p, but) + 1.5 * Math.max(0, but.y - p.y);
-        if (meilleurDate < 0 || m < meilleur - 3) { meilleur = m; meilleurDate = maintenant; return false; }
-        if (but.y < p.y + 3 || maintenant - meilleurDate < STAGNATION || maintenant < montagneProchain || !evasionPermise(t)
+        BlockPos vise = auPied;
+        boolean arrive = vise != null && vise.distSqr(t.blockPosition()) <= 2;
+        auPied = null;
+        if (!arrive && (meilleurDate < 0 || m < meilleur - 3)) { meilleur = m; meilleurDate = maintenant; return false; }
+        if (but.y < p.y + 3 || !arrive && (maintenant - meilleurDate < STAGNATION || maintenant < montagneProchain) || !evasionPermise(t)
                 || sousTerre(t) || !t.onGround()) return false;
+        // Arrêté un pas avant le pied (le chemin s'arrête à côté) : il fait ce dernier pas, puis grimpe.
+        if (arrive && !t.blockPosition().equals(vise) && !dernierPas) {
+            dernierPas = true;
+            auPied = montee = vise;
+            monteeFin = ageCourant + 40;
+            etape = null;
+            return true;
+        }
+        dernierPas = false;
         montagneProchain = maintenant + 200;
         if (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return true; }
         BlockPos devant = t.blockPosition().relative(Direction.getNearest(but.x - p.x, 0, but.z - p.z)).above();
@@ -876,10 +893,14 @@ final class Itineraire {
         Path c = chercher(t, BlockPos.containing(but), 0, Charge.Origine.ETAPE);
         if (c == null || c.getEndNode() == null) return false;
         BlockPos pied = c.getEndNode().asBlockPos();
-        if (pied.distSqr(t.blockPosition()) <= 2 || pieds.contains(pied) || !jeton(maintenant)) return false;
+        if (pied.equals(t.blockPosition()) || pieds.contains(pied)) return false;
+        // À un pas du pied : il fait ce pas, puis grimpe (sans recherche de chemin).
+        if (pied.distSqr(t.blockPosition()) <= 2) { pieds.add(pied); dernierPas = true; auPied = montee = pied; monteeFin = ageCourant + 40; etape = null; return true; }
+        if (!jeton(maintenant)) return false;
         pieds.add(pied);
         if (!aller(t, pied, Vec3.atBottomCenterOf(pied), v, true, 1)) return false;
         prolonge = false; // il s'arrête au pied : de là, il grimpe
+        auPied = pied;
         t.diag = "va au pied de la paroi " + pied.toShortString();
         return true;
     }
@@ -958,6 +979,7 @@ final class Itineraire {
         l.destroyBlockProgress(t.getId(), aCreuser, -1);
         Actions.recolter(t, aCreuser);
         Actions.userOutil(t, 1);
+        t.pilierPose.remove(aCreuser);
         suivantACreuser(t);
     }
 
@@ -1153,6 +1175,8 @@ final class Itineraire {
             if (caseSaut < 0) { abandonner(t); return; }
             if (poserBloc(t, pilier, caseSaut)) {
                 poses.add(pilier);
+                t.pilierPose.add(pilier);
+                t.pilierVu = t.level().getGameTime();
                 posesFaites++;
                 pilier = pilier.above();
                 poseFin = age + 100;
@@ -1199,9 +1223,19 @@ final class Itineraire {
         for (int i = poses.size() - 1; i >= 0; i--) {
             BlockPos q = poses.get(i);
             BlockState st = l.getBlockState(q);
-            if (blocDeChantier(new ItemStack(st.getBlock().asItem())) && Actions.aPortee(t, q) && recolte(t, st) && creusable(l, q)
+            // Son pilier, juste à côté de lui sous le bord : il se penche et le reprend jusqu'en bas (plan A3, il n'en laisse rien).
+            boolean penche = t.pilierPose.contains(q) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6;
+            if (blocDeChantier(new ItemStack(st.getBlock().asItem())) && (Actions.aPortee(t, q) || penche) && recolte(t, st) && creusable(l, q)
                     && !q.equals(t.blockPosition().below())) liste.add(q);
         }
+        // Les blocs d'un pilier d'avant (trajet abandonné, arrêt en pleine montée), toujours suivis : repris avec, du haut vers le bas.
+        for (int i = t.pilierPose.size() - 1; i >= 0; i--) {
+            BlockPos q = t.pilierPose.get(i);
+            BlockState st = l.getBlockState(q);
+            if (!liste.contains(q) && blocDeChantier(new ItemStack(st.getBlock().asItem())) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6
+                    && recolte(t, st) && creusable(l, q)) liste.add(q);
+        }
+        liste.sort(Comparator.comparingInt(q -> -q.getY()));
         poses.clear();
         if (liste.isEmpty()) return;
         aCasser.clear();
@@ -1318,6 +1352,29 @@ final class Itineraire {
      * en pleine montée (l'endroit est sauvegardé, {@code eauVue} ne l'est pas) : il la reprend quand même.
      */
     static void eauOubliee(Travailleur t) { if (t.eau != null && t.level().getGameTime() - t.eauVue > 40) retirerEau(t); }
+
+    /**
+     * Il reprend les blocs de son pilier qui sont encore là (plan A3), dans son sac (plein : à ses pieds). Sans
+     * {@code force}, pas ceux sur lesquels il se tient ou qui portent quelqu'un. Un coin pas chargé : gardés pour plus tard.
+     */
+    static void retirerPilier(Travailleur t, boolean force) {
+        Level l = t.level();
+        BlockPos ici = t.blockPosition();
+        for (int i = t.pilierPose.size() - 1; i >= 0; i--) {
+            BlockPos q = t.pilierPose.get(i);
+            if (!l.isLoaded(q)) continue;
+            BlockState st = l.getBlockState(q);
+            if (!blocDeChantier(new ItemStack(st.getBlock().asItem()))) { t.pilierPose.remove(i); continue; } // déjà cassé ou remplacé
+            if (!force && (q.getX() == ici.getX() && q.getZ() == ici.getZ() && q.getY() < ici.getY() || occupe(t, q))) continue;
+            t.pilierPose.remove(i);
+            for (ItemStack d : Block.getDrops(st, (net.minecraft.server.level.ServerLevel) l, q, null)) t.ranger(d);
+            l.setBlock(q, Blocks.AIR.defaultBlockState(), 3);
+            l.playSound(null, q, st.getSoundType().getBreakSound(), net.minecraft.sounds.SoundSource.NEUTRAL, 1, 1);
+        }
+    }
+
+    /** Un pilier laissé par un trajet abandonné (ordre changé, abandon, arrêt en pleine montée) : il le reprend quand même. */
+    static void pilierOublie(Travailleur t) { if (!t.pilierPose.isEmpty() && t.level().getGameTime() - t.pilierVu > 40) retirerPilier(t, false); }
 
     /** Une autre créature que lui (un joueur, un ouvrier, une bête) se tient sur ce bloc. */
     static boolean occupe(Travailleur t, BlockPos q) {
