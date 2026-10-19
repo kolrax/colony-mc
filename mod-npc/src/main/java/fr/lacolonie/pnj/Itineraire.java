@@ -178,13 +178,15 @@ final class Itineraire {
 
     /**
      * Plan A3 : le prochain point de son chemin est 2 blocs ou plus sous ses pieds (il va descendre), ou c'est une marche à
-     * monter juste avant une telle descente. Il y va lentement : sur son élan, il passait par-dessus le bord et retombait un
+     * monter juste avant une telle descente, ou une marche à descendre juste avant un à-pic. Il y va lentement : sur son élan, il passait par-dessus le bord et retombait un
      * pas plus loin, parfois un bloc plus bas (chutes de 4 blocs au joueur fantôme).
      */
     static boolean auBord(Path c, int y) {
         if (c == null || c.isDone()) return false;
-        int i = c.getNextNodeIndex(), n = c.getNode(i).y;
-        return n <= y - 2 || n > y && i + 1 < c.getNodeCount() && c.getNode(i + 1).y <= n - 2;
+        int i = c.getNextNodeIndex(), n = c.getNode(i).y, apres = i + 1 < c.getNodeCount() ? c.getNode(i + 1).y : n;
+        // Une marche d'un bloc puis un à-pic (graine 1234567, (-54, 64, -315) : 68 → 67 → 64) : sur son élan, il passait
+        // par-dessus la marche et tombait des 4 blocs d'un coup.
+        return n <= y - 2 || n > y && apres <= n - 2 || n < y && apres <= y - 3;
     }
 
     /** Un pas de marche vers le but (appelé à chaque tick par l'action en cours). */

@@ -221,17 +221,33 @@ public class TestsMorts {
     }
 
     /**
-     * Une bande de pierre (13 de large) de hauteur {@code haut[x]} sur le monde plat, loin des autres tests ; un ouvrier ★
+     * Plan A3 (joueur fantôme, graine 1234567 : chute de 4,0 blocs au même rebord, partie après partie) : une marche d'un
+     * bloc, large d'un seul, au bord d'un à-pic de 3 blocs, trois fois ; un ouvrier ★★ (le niveau des ouvriers du fantôme,
+     * plus rapide). Sur son élan, il passait par-dessus la marche et tombait des 4 blocs d'un coup. Jamais de dégât de chute.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1800, batch = "morts")
+    public static void marcheAuBordDUnAPic(GameTestHelper h) {
+        int[] haut = new int[60];
+        for (int x = 0; x < haut.length; x++)
+            haut[x] = x <= 9 ? 14 : x == 10 ? 13 : x <= 15 ? 10 : x == 16 ? 9 : x <= 21 ? 6 : x == 22 ? 5 : x <= 27 ? 2 : 0;
+        descente(h, "marcheAuBordDUnAPic", haut, 163000, 2);
+    }
+
+    static void descente(GameTestHelper h, String nom, int[] haut, int dz) { descente(h, nom, haut, dz, 1); }
+
+    /**
+     * Une bande de pierre (13 de large) de hauteur {@code haut[x]} sur le monde plat, loin des autres tests ; un ouvrier
      * sans outil en haut, son bureau au pied, 59 blocs plus loin. Il doit y arriver sans aucun dégât de chute.
      */
-    static void descente(GameTestHelper h, String nom, int[] haut, int dz) {
+    static void descente(GameTestHelper h, String nom, int[] haut, int dz, int niveau) {
         ServerLevel l = h.getLevel();
         BlockPos o = TestsJeu.sol(h, 0, dz);
         for (int x = 0; x < haut.length; x++)
             for (int z = -6; z <= 6; z++) for (int k = 0; k < haut[x]; k++) l.setBlockAndUpdate(o.offset(x, k, z), Blocks.STONE.defaultBlockState());
         BlockPos bureau = o.offset(haut.length - 1, 0, 0);
         Travailleur t = TestsJeu.employe(h, "mineur", bureau, Vec3.atBottomCenterOf(o.offset(1, haut[1], 0)), ItemStack.EMPTY);
-        debutant(t);
+        t.niveau = niveau;
+        t.appliquerNiveau();
         t.forcerChunk();
         Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(bureau), 2));
         Suivi s = suivre(h, t);
