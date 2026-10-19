@@ -335,20 +335,55 @@ public class TestsMorts {
         debutant(t);
         Cerveau.lancer(t, new Actions.Ramasser(10, Actions.Filtre.de("tout")));
         Suivi s = suivre(h, t);
+        List<String> auBord = auBord(h, t);
+        h.runAtTickTime(h.getTick() + 700, () -> finRamassage(h, "ramasseAuBordDeLaLave", t, s, auBord, loin));
+    }
+
+    /**
+     * E4, le chemin : une pomme au bout d'un couloir taillé dans la roche, loin de toute lave. Le passage court (8 pas) longe
+     * un bloc de lave sur 3 cases ; un détour de 48 pas fait le tour. Il prend le détour : jamais le pied au bord de la lave
+     * en ramassant. (Avec le coût ordinaire de Minecraft, 8 par case, il passait au bord.)
+     */
+    @GameTest(template = "grand", timeoutTicks = 800, skyAccess = true, batch = "morts")
+    public static void ramasseSansLongerLaLave(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.GRASS_BLOCK);
+        // La roche (x 7..17), creusée : le couloir court en z = 22 (x 8..16), le détour par x = 8, z = 2 et x = 16.
+        for (int x = 7; x <= 17; x++) for (int z = 0; z < 24; z++) {
+            boolean couloir = z == 22 && x >= 8 && x <= 16 || z == 2 && x >= 8 && x <= 16 || (x == 8 || x == 16) && z >= 2 && z <= 22;
+            for (int y = 2; y <= 3; y++) h.setBlock(x, y, z, couloir ? Blocks.AIR : Blocks.STONE);
+        }
+        h.setBlock(12, 1, 23, Blocks.LAVA); // sous la roche, contre le couloir court : ses cases x 11..13 sont « au bord »
+        ServerLevel l = h.getLevel();
+        Vec3 a = h.absoluteVec(new Vec3(16.5, 2, 22.5));
+        net.minecraft.world.entity.item.ItemEntity pomme = new net.minecraft.world.entity.item.ItemEntity(l, a.x, a.y, a.z, new ItemStack(Items.APPLE), 0, 0, 0);
+        l.addFreshEntity(pomme);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 8, 2, 22, new ItemStack(Items.IRON_AXE), new BlockPos(2, 2, 2));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Ramasser(24, Actions.Filtre.de("tout")));
+        Suivi s = suivre(h, t);
+        List<String> auBord = auBord(h, t);
+        h.runAtTickTime(h.getTick() + 700, () -> finRamassage(h, "ramasseSansLongerLaLave", t, s, auBord, pomme));
+    }
+
+    /** Où il a posé le pied au bord de la lave en ramassant (5 au plus). */
+    static List<String> auBord(GameTestHelper h, Travailleur t) {
         List<String> auBord = new ArrayList<>();
         h.onEachTick(() -> {
-            if (t.isAlive() && t.action instanceof Actions.Ramasser && Monde.bordDeLave(l, t.blockPosition()) && auBord.size() < 5)
+            if (t.isAlive() && t.action instanceof Actions.Ramasser && Monde.bordDeLave(h.getLevel(), t.blockPosition()) && auBord.size() < 5)
                 auBord.add(rel(h, t.blockPosition()).toShortString() + " au tick " + h.getTick());
         });
-        h.runAtTickTime(h.getTick() + 700, () -> {
-            boolean pomme = !loin.isAlive();
-            ColoniePnj.LOG.info("[morts] ramasseAuBordDeLaLave : au bord {}, pomme {} ; {}", auBord, pomme, s.texte());
-            t.discard();
-            h.assertTrue(auBord.isEmpty(), "en ramassant, il ne doit jamais poser le pied au bord de la lave : " + auBord + " (" + s.texte() + ")");
-            h.assertTrue(pomme, "il doit ramasser la pomme à l'écart de la lave (" + s.texte() + ")");
-            s.verifier(0.5, LAVE);
-            h.succeed();
-        });
+        return auBord;
+    }
+
+    /** Fin d'un test de ramassage près de la lave : jamais au bord en ramassant, la pomme ramassée, ni brûlé ni à terre. */
+    static void finRamassage(GameTestHelper h, String nom, Travailleur t, Suivi s, List<String> auBord, net.minecraft.world.entity.item.ItemEntity loin) {
+        boolean pomme = !loin.isAlive();
+        ColoniePnj.LOG.info("[morts] {} : au bord {}, pomme {} ; {}", nom, auBord, pomme, s.texte());
+        t.discard();
+        h.assertTrue(auBord.isEmpty(), "en ramassant, il ne doit jamais poser le pied au bord de la lave : " + auBord + " (" + s.texte() + ")");
+        h.assertTrue(pomme, "il doit ramasser la pomme à l'écart de la lave (" + s.texte() + ")");
+        s.verifier(0.5, LAVE);
+        h.succeed();
     }
 
     // --- 4. Faim ---------------------------------------------------------------------------------------

@@ -1423,7 +1423,6 @@ public final class Actions {
 
         Etat tick(Travailleur t) {
             if (age > 20 * 40) return Etat.OK;
-            t.ramasseJusqua = t.level().getGameTime() + 1; // ses chemins évitent le bord de la lave (E4)
             // L'objet le plus proche : cherché quand le précédent est ramassé, et une fois par seconde (pas à chaque tick).
             // Un objet dans la lave ou à son bord immédiat, il le laisse (E4 : le bûcheron y tombait en ramassant).
             if (proche == null || !proche.isAlive() || age % 20 == 0) {
