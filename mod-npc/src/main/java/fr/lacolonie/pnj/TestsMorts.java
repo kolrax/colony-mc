@@ -312,6 +312,45 @@ public class TestsMorts {
         h.runAtTickTime(h.getTick() + 1100, () -> finir(h, "bucheronPresDeLaLave", t, s, 0.5, LAVE));
     }
 
+    /**
+     * E4 (bucheronPresDeLaLave tombait parfois dans la lave en ramassant) : des pousses posées au bord d'une mare de lave,
+     * une autre plus loin, à l'écart. Il ramasse celle à l'écart, laisse les autres, et ne pose jamais le pied au bord de la
+     * lave en ramassant.
+     */
+    @GameTest(template = "grand", timeoutTicks = 800, skyAccess = true, batch = "morts")
+    public static void ramasseAuBordDeLaLave(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.GRASS_BLOCK);
+        h.setBlock(12, 1, 12, Blocks.LAVA);
+        h.setBlock(13, 1, 12, Blocks.LAVA);
+        h.setBlock(12, 1, 13, Blocks.LAVA);
+        ServerLevel l = h.getLevel();
+        for (Vec3 v : new Vec3[]{new Vec3(11.7, 2, 12.5), new Vec3(14.3, 2, 12.5), new Vec3(12.5, 2, 14.3)}) {
+            Vec3 a = h.absoluteVec(v);
+            l.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(l, a.x, a.y, a.z, new ItemStack(Items.OAK_SAPLING), 0, 0, 0));
+        }
+        Vec3 a = h.absoluteVec(new Vec3(15.5, 2, 17.5));
+        net.minecraft.world.entity.item.ItemEntity loin = new net.minecraft.world.entity.item.ItemEntity(l, a.x, a.y, a.z, new ItemStack(Items.APPLE), 0, 0, 0);
+        l.addFreshEntity(loin);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 6, 2, 12, new ItemStack(Items.IRON_AXE), new BlockPos(4, 2, 4));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Ramasser(10, Actions.Filtre.de("tout")));
+        Suivi s = suivre(h, t);
+        List<String> auBord = new ArrayList<>();
+        h.onEachTick(() -> {
+            if (t.isAlive() && t.action instanceof Actions.Ramasser && Monde.bordDeLave(l, t.blockPosition()) && auBord.size() < 5)
+                auBord.add(rel(h, t.blockPosition()).toShortString() + " au tick " + h.getTick());
+        });
+        h.runAtTickTime(h.getTick() + 700, () -> {
+            boolean pomme = !loin.isAlive();
+            ColoniePnj.LOG.info("[morts] ramasseAuBordDeLaLave : au bord {}, pomme {} ; {}", auBord, pomme, s.texte());
+            t.discard();
+            h.assertTrue(auBord.isEmpty(), "en ramassant, il ne doit jamais poser le pied au bord de la lave : " + auBord + " (" + s.texte() + ")");
+            h.assertTrue(pomme, "il doit ramasser la pomme à l'écart de la lave (" + s.texte() + ")");
+            s.verifier(0.5, LAVE);
+            h.succeed();
+        });
+    }
+
     // --- 4. Faim ---------------------------------------------------------------------------------------
 
     /**

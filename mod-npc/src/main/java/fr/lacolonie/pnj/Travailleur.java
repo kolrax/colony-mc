@@ -970,6 +970,16 @@ public class Travailleur extends PathfinderMob {
         Charge.ICI.recherche(origineChemin, c == null || !c.canReach(), recherchesCeTick, nanos);
     }
 
+    /** Jusqu'à quand (temps du jeu) il ramasse ({@link Actions.Ramasser}) : il ne passe pas au bord de la lave (E4). Non sauvegardé. */
+    long ramasseJusqua;
+
+    /** En ramassant, les cases au bord de la lave sont des murs : il n'y pose pas le pied pour un objet tombé (E4). */
+    @Override
+    public float getPathfindingMalus(net.minecraft.world.level.pathfinder.PathType type) {
+        if (type == net.minecraft.world.level.pathfinder.PathType.DANGER_FIRE && ramasseJusqua >= level().getGameTime()) return -1f;
+        return super.getPathfindingMalus(type);
+    }
+
     /** Le calcul des chemins, mesuré et compté pour le banc de charge (tous les appels passent par ici). */
     @Override
     protected PathNavigation createNavigation(Level lvl) {

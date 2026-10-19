@@ -73,6 +73,16 @@ final class Monde {
     }
 
     /**
+     * De la lave dans p ou dans l'une des 26 cases autour : le bord immédiat d'une mare de lave (les cases que la marche de
+     * Minecraft dit « près du feu »). Il n'y va pas chercher un objet (E4 : le bûcheron y tombait en ramassant).
+     */
+    static boolean bordDeLave(Level l, BlockPos p) {
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-1, -1, -1), p.offset(1, 1, 1)))
+            if (l.getFluidState(q).is(FluidTags.LAVA)) return true;
+        return false;
+    }
+
+    /**
      * De la lave qui peut couler jusque dans sa case (pieds en p) : à côté de lui, à sa hauteur, assez haute pour s'étendre
      * encore d'une case (une source, ou une coulée de plus de 2). Une coulée arrivée au bout ne bouge plus : pas d'alerte.
      * Quatre lectures de blocs. Null s'il n'y en a pas, ou si sa case ne peut pas la recevoir (debout sur une dalle du bas,
