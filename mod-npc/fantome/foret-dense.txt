@@ -1,0 +1,33 @@
+# Plan A, point 5 (corrections A1, A2) : la forêt dense. Le poste dans la jungle la plus proche (arbres géants,
+# cacao, buissons, lianes). Un bûcheron (bois de la jungle) et un transporteur qui fait la navette entre un coffre
+# posé dans la jungle et le dépôt du poste. Attendu : pas d'arrêt de plus de 3 s sans nouveau trajet (une noix de
+# coco, un buisson ne le retiennent pas), pas d'allers-retours inutiles, une production non nulle (bois et
+# pierres au dépôt), aucune construction cassée, personne de blessé.
+time set 1000
+fantome apparait jungle
+fantome poste
+fantome donne minecraft:gold_ingot 24
+fantome embauche bucheron 2
+fantome embauche transporteur 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_axe 1
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+fantome mission bucheron jungle fois 32
+# Un coffre de 640 pierres dans la jungle, à une quinzaine de blocs : « porte le contenu de ce coffre au dépôt »
+# (le fantôme se tient dessus et le regarde ; le transporteur doit être à moins de 20 blocs).
+fantome coffre 12 10 minecraft:cobblestone 640
+# Tout juste embauché, sans mission, le transporteur reste « Te suit » même après l'ordre du trajet (vu le 19/10 à
+# 1 h) ; le bouton « Rentrer au poste » donné après l'ordre l'annule (« Rien à porter »). Le bouton d'abord, l'ordre ensuite.
+fantome bouton_ouvrier transporteur rentrer
+ticks 20
+fantome commande transporteur trajet
+fantome rapport foret-dense-debut
+attendre 5
+ticks 2400
+fantome rapport foret-dense-2min
+jours 1
+fantome rapport foret-dense-j1
+jours 1

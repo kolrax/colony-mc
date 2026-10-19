@@ -1,0 +1,37 @@
+# Plan A, point 5 (corrections A1, A2, A3) : la montagne. Le poste au pied de la plus haute montagne près du point
+# d'apparition ; les missions ont pour lieu le sommet (le repère trouvé par « apparait montagne »). Trois ouvriers :
+# un mineur avec pioche (et de la terre), un bûcheron sans pioche avec 32 blocs de terre, un bûcheron sans pioche avec
+# un seau d'eau. Attendu : ils montent (contournent, ou pilier de terre repris, ou colonne d'eau reprise), sans arrêt
+# sans fin ni allers-retours ; aucun bloc de chantier ni eau laissés ; aucune construction cassée ; personne ne tombe.
+# Le rapport compte : « deplacements » (arrêts de plus de 3 s en marche, demi-tours, retours au poste, blocs posés
+# encore là, eau laissée), « casses », « blessures » et « morts », et ce qui est arrivé au dépôt.
+time set 1000
+fantome apparait montagne
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche mineur 2
+fantome embauche bucheron 2
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+# Une pioche (pour le mineur seulement), deux haches et du pain au dépôt ; l'or à la caisse.
+fantome donne minecraft:iron_pickaxe 1
+fantome donne minecraft:iron_axe 2
+fantome donne minecraft:bread 32
+fantome donne minecraft:torch 32
+fantome depose
+fantome paie
+# Les missions au sommet, puis les blocs et le seau donnés en main propre (accroupi, clic droit), comme un joueur.
+fantome mission_repere mineur pierre fois 32
+fantome mission_repere bucheron1 tout fois 16
+fantome mission_repere bucheron2 tout fois 16
+fantome offre mineur minecraft:dirt 32
+fantome offre bucheron1 minecraft:dirt 32
+fantome offre bucheron2 minecraft:water_bucket 1
+fantome rapport montagne-debut
+attendre 5
+ticks 2400
+fantome rapport montagne-2min
+jours 1
+fantome rapport montagne-j1
+jours 1

@@ -60,6 +60,7 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
@@ -106,6 +107,7 @@ public final class Fantome {
     static void enregistrer() {
         NeoForge.EVENT_BUS.addListener(Fantome::commandes);
         NeoForge.EVENT_BUS.addListener(Fantome::evenement);
+        NeoForge.EVENT_BUS.addListener(Fantome::suivreDeplacements);
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> retirer(e.getServer()));
     }
 
@@ -206,6 +208,11 @@ public final class Fantome {
         survie.evenements.clear();
         survie.coups.clear();
         chutes.clear();
+        deplacements.clear();
+        posesOuvriers.clear();
+        eauxVersees.clear();
+        repere = null;
+        regard = null;
         synchronized (messages) { messages.clear(); }
         synchronized (ecrans) { ecrans.clear(); }
         carte = null;
@@ -254,6 +261,7 @@ public final class Fantome {
 
     /** Toute casse passe par {@code Level.destroyBlock(pos, ..., ouvrier)}, qui annonce BLOCK_DESTROY avec l'ouvrier pour cause. */
     static void evenement(VanillaGameEvent e) {
+        if (joueur != null && e.getVanillaEvent() == GameEvent.BLOCK_PLACE) { pose(e); return; }
         if (joueur == null || e.getVanillaEvent() != GameEvent.BLOCK_DESTROY) return;
         if (!(e.getContext().sourceEntity() instanceof Travailleur t) || !(e.getLevel() instanceof ServerLevel l)) return;
         BlockState st = e.getContext().affectedState();
@@ -457,6 +465,213 @@ public final class Fantome {
         if (suivi(t) && perte > 0) survie.coup(cause(t, src), perte);
     }
 
+    // --- Les déplacements des ouvriers (plan A, point 5) ----------------------------------------------------
+
+    /**
+     * Ce qu'un joueur verrait de leurs trajets, relevé toutes les 10 ticks pour chaque ouvrier du fantôme : les arrêts de
+     * plus de 3 s en pleine marche (il veut aller quelque part et ne bouge pas d'un demi-bloc), les demi-tours pendant une
+     * même action (deux pas de 2 s d'au moins 1,5 bloc en sens contraire), la distance parcourue et les retours au poste
+     * par téléportation ({@link Coince}, en dernier recours).
+     */
+    static final class Deplacement {
+        String prenom = "", metier = "", actionNom = "";
+        Vec3 ancre, dernier, dernierPas;
+        long ancreTick;
+        int immobileEnMarche, arrets, arretMax, demiTours, ramenes, retoursVus;
+        Object actionAncre, actionPas;
+        double parcouru;
+        final List<JsonObject> details = new ArrayList<>();
+    }
+
+    static final Map<UUID, Deplacement> deplacements = new LinkedHashMap<>();
+    /** Les blocs posés par ses ouvriers (pilier, pont, torches, pousses…), pour voir au rapport ce qui reste. */
+    static final List<JsonObject> posesOuvriers = new ArrayList<>();
+    /** Chaque place où un ouvrier a versé l'eau de son seau (plan A3), et qui l'a versée. */
+    static final Map<BlockPos, String> eauxVersees = new LinkedHashMap<>();
+    static final int MAX_DETAILS = 60, ARRET = 60;
+
+    static void suivreDeplacements(ServerTickEvent.Post e) {
+        Joueur j = joueur;
+        if (j == null || e.getServer().getTickCount() % 10 != 0) return;
+        long tick = e.getServer().overworld().getGameTime();
+        for (Travailleur t : ColoniePnj.pnjDe(e.getServer(), j.getUUID())) {
+            if (t.eau != null) eauxVersees.putIfAbsent(t.eau.immutable(), t.prenom);
+            Deplacement d = deplacements.computeIfAbsent(t.getUUID(), k -> new Deplacement());
+            d.prenom = t.prenom;
+            d.metier = t.metier;
+            Vec3 p = t.position();
+            boolean marche = t.coince.marche && !t.aTerre && !t.isPassenger();
+            Object action = t.action;
+            // Ramené au poste en dernier recours (Coince, 5 min coincé) : le compte de ses retours a monté.
+            if (t.coince.retours > d.retoursVus) { d.ramenes++; detail(d, "ramene", d.ancre == null ? p : d.ancre, tick, "coincé, ramené au poste", 0); d.dernierPas = null; d.dernier = null; }
+            d.retoursVus = t.coince.retours;
+            if (d.ancre == null || Itineraire.horizontale(p, d.ancre) >= 0.5 || Math.abs(p.y - d.ancre.y) >= 1.5 || action != d.actionAncre) {
+                finArret(d);
+                d.ancre = p;
+                d.ancreTick = tick;
+                d.actionAncre = action;
+                d.actionNom = t.action == null ? "" : t.action.nom;
+                d.immobileEnMarche = 0;
+            } else if (marche) {
+                d.immobileEnMarche += 10;
+                if (d.immobileEnMarche == ARRET) detail(d, "arret_debut", d.ancre, tick, d.actionNom + " ; " + t.diag, 0);
+            }
+            if (tick % 40 != 0) continue;
+            if (d.dernier != null) {
+                Vec3 pas = p.subtract(d.dernier).multiply(1, 0, 1);
+                double n = pas.length();
+                if (n > 30) d.dernierPas = null; // un saut de plus de 30 blocs en 2 s : pas un pas de marche
+                else {
+                    d.parcouru += n;
+                    if (action != d.actionPas) { d.dernierPas = null; d.actionPas = action; }
+                    if (n >= 1.5) {
+                        if (marche && d.dernierPas != null && pas.dot(d.dernierPas) < -0.7 * n * d.dernierPas.length()) {
+                            d.demiTours++;
+                            detail(d, "demi_tour", p, tick, (t.action == null ? "" : t.action.nom + " ; ") + t.diag, 0);
+                        }
+                        d.dernierPas = pas;
+                    }
+                }
+            }
+            d.dernier = p;
+        }
+    }
+
+    /** L'arrêt en cours se termine (il a bougé, ou changé d'action) : compté s'il a duré 3 s en pleine marche. */
+    static void finArret(Deplacement d) {
+        if (d.immobileEnMarche < ARRET) return;
+        d.arrets++;
+        d.arretMax = Math.max(d.arretMax, d.immobileEnMarche);
+        detail(d, "arret", d.ancre, d.ancreTick, d.actionNom, d.immobileEnMarche / 20);
+    }
+
+    static void detail(Deplacement d, String genre, Vec3 p, long tick, String quoi, int secondes) {
+        if (d.details.size() >= MAX_DETAILS) return;
+        JsonObject o = new JsonObject();
+        o.addProperty("genre", genre);
+        o.addProperty("tick", tick);
+        o.addProperty("pos", BlockPos.containing(p).toShortString());
+        if (secondes > 0) o.addProperty("secondes", secondes);
+        o.addProperty("quoi", quoi == null ? "" : quoi);
+        d.details.add(o);
+    }
+
+    /** Un bloc posé par un ouvrier : lui-même (le maçon), ou le faux joueur de {@link Actions#placer} à sa place. */
+    static void pose(VanillaGameEvent e) {
+        if (!(e.getLevel() instanceof ServerLevel l) || posesOuvriers.size() >= MAX_CASSES) return;
+        Entity src = e.getContext().sourceEntity();
+        UUID chef = joueur.getUUID();
+        Travailleur t = src instanceof Travailleur w ? w : null;
+        if (t == null && src instanceof FakePlayer fp && fp.getGameProfile().getId().equals(Actions.PROFIL.getId()))
+            t = l.getEntitiesOfClass(Travailleur.class, fp.getBoundingBox().inflate(1.5), w -> chef.equals(w.chef)).stream()
+                    .min(Comparator.comparingDouble(w -> w.distanceToSqr(fp))).orElse(null);
+        if (t == null || !chef.equals(t.chef)) return;
+        BlockPos p = BlockPos.containing(e.getEventPosition());
+        BlockState st = e.getContext().affectedState() != null ? e.getContext().affectedState() : l.getBlockState(p);
+        JsonObject o = new JsonObject();
+        o.addProperty("tick", l.getGameTime());
+        o.addProperty("pos", p.toShortString());
+        o.addProperty("bloc", BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString());
+        o.addProperty("ouvrier", t.prenom);
+        posesOuvriers.add(o);
+    }
+
+    /** Le rapport des trajets : par ouvrier, puis les blocs posés encore là et l'eau laissée. */
+    static JsonObject deplacementsRapport(ServerLevel l) {
+        JsonObject r = new JsonObject();
+        JsonArray par = new JsonArray();
+        int arrets = 0, demi = 0, ramenes = 0, max = 0;
+        for (Deplacement d : deplacements.values()) {
+            int a = d.arrets + (d.immobileEnMarche >= ARRET ? 1 : 0), m = Math.max(d.arretMax, d.immobileEnMarche) / 20;
+            JsonObject o = new JsonObject();
+            o.addProperty("prenom", d.prenom);
+            o.addProperty("metier", d.metier);
+            o.addProperty("parcouru", (int) d.parcouru);
+            o.addProperty("arrets_plus_de_3s", a);
+            o.addProperty("arret_le_plus_long_s", m);
+            if (d.immobileEnMarche >= ARRET)
+                o.addProperty("arret_en_cours", BlockPos.containing(d.ancre).toShortString() + " depuis " + d.immobileEnMarche / 20 + " s (" + d.actionNom + ")");
+            o.addProperty("demi_tours", d.demiTours);
+            o.addProperty("ramenes_au_poste", d.ramenes);
+            o.add("details", tableau(d.details));
+            par.add(o);
+            arrets += a;
+            demi += d.demiTours;
+            ramenes += d.ramenes;
+            max = Math.max(max, m);
+        }
+        r.add("ouvriers", par);
+        Map<String, int[]> parBloc = new TreeMap<>();
+        JsonArray chantier = new JsonArray();
+        for (JsonObject o : posesOuvriers) {
+            BlockPos q = parse(o.get("pos").getAsString());
+            String id = o.get("bloc").getAsString();
+            boolean la = l.isLoaded(q) && BuiltInRegistries.BLOCK.getKey(l.getBlockState(q).getBlock()).toString().equals(id);
+            int[] n = parBloc.computeIfAbsent(id, k -> new int[2]);
+            n[0]++;
+            if (la) n[1]++;
+            if (la && Itineraire.blocDeChantier(new ItemStack(l.getBlockState(q).getBlock().asItem())) && chantier.size() < 200) chantier.add(o);
+        }
+        JsonObject pb = new JsonObject();
+        parBloc.forEach((k, n) -> pb.addProperty(k, n[0] + " posés, " + n[1] + " encore là"));
+        r.add("blocs_poses", pb);
+        r.add("blocs_de_chantier_laisses", chantier);
+        Set<BlockPos> enCours = new java.util.HashSet<>();
+        if (joueur != null) for (Travailleur t : ColoniePnj.pnjDe(l.getServer(), joueur.getUUID())) if (t.eau != null) enCours.add(t.eau);
+        JsonArray eau = new JsonArray();
+        eauxVersees.forEach((q, qui) -> {
+            if (!enCours.contains(q) && l.isLoaded(q) && l.getFluidState(q).is(net.minecraft.tags.FluidTags.WATER) && l.getFluidState(q).isSource())
+                eau.add(q.toShortString() + " (" + qui + ")");
+        });
+        r.addProperty("places_d_eau_versee", eauxVersees.size());
+        r.add("eau_laissee", eau);
+        JsonObject s = new JsonObject();
+        s.addProperty("arrets_plus_de_3s", arrets);
+        s.addProperty("arret_le_plus_long_s", max);
+        s.addProperty("demi_tours", demi);
+        s.addProperty("ramenes_au_poste", ramenes);
+        s.addProperty("blocs_de_chantier_laisses", chantier.size());
+        s.addProperty("eau_laissee", eau.size());
+        r.add("resume", s);
+        return r;
+    }
+
+    /** Le sommet le plus haut à moins de 384 blocs du point d'apparition, et un pied sec 24 blocs plus bas au moins, le plus près possible. */
+    static BlockPos[] montagne(ServerLevel l) {
+        var gen = l.getChunkSource().getGenerator();
+        var rs = l.getChunkSource().randomState();
+        BlockPos s = l.getSharedSpawnPos();
+        int haut = Integer.MIN_VALUE, bx = s.getX(), bz = s.getZ();
+        for (int dx = -384; dx <= 384; dx += 16)
+            for (int dz = -384; dz <= 384; dz += 16) {
+                int h = gen.getBaseHeight(s.getX() + dx, s.getZ() + dz, Heightmap.Types.WORLD_SURFACE_WG, l, rs);
+                if (h > haut) { haut = h; bx = s.getX() + dx; bz = s.getZ() + dz; }
+            }
+        int cx = bx, cz = bz;
+        for (int dx = -16; dx <= 16; dx += 4)
+            for (int dz = -16; dz <= 16; dz += 4) {
+                int h = gen.getBaseHeight(cx + dx, cz + dz, Heightmap.Types.WORLD_SURFACE_WG, l, rs);
+                if (h > haut) { haut = h; bx = cx + dx; bz = cz + dz; }
+            }
+        int mer = l.getSeaLevel(), meilleur = Integer.MAX_VALUE, px = bx, pz = bz;
+        for (int k = 0; k < 16; k++) {
+            double a = k * Math.PI / 8;
+            for (int r = 16; r <= 160 && r < meilleur; r += 4) {
+                int x = bx + (int) (Math.cos(a) * r), z = bz + (int) (Math.sin(a) * r);
+                int h = gen.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, l, rs);
+                if (h <= mer + 1) break; // la mer ou un lac : pas de ce côté
+                if (h <= haut - 24) { meilleur = r; px = x; pz = z; break; }
+            }
+        }
+        BlockPos sommet = surface(l, new BlockPos(bx, 0, bz));
+        return new BlockPos[]{terrainLibre(l, new BlockPos(px, 0, pz), false), sommet};
+    }
+
+    /** Le point retenu par « apparait montagne » (le sommet) : le lieu d'une mission ({@code mission_repere}). */
+    static BlockPos repere;
+    /** Le coffre que le fantôme regardera pour le prochain ordre de la barre (« porte ce coffre au dépôt »). */
+    static BlockPos regard;
+
     // --- La commande -------------------------------------------------------------------------------------
 
     static void commandes(RegisterCommandsEvent e) {
@@ -465,6 +680,8 @@ public final class Fantome {
                 .executes(c -> apparait(c, "spawn"))
                 .then(Commands.literal("village").executes(c -> apparait(c, "village")))
                 .then(Commands.literal("foret").executes(c -> apparait(c, "foret")))
+                .then(Commands.literal("jungle").executes(c -> apparait(c, "jungle")))
+                .then(Commands.literal("montagne").executes(c -> apparait(c, "montagne")))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(c -> apparait(c, "pos"))));
         f.then(Commands.literal("va").then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(c -> {
             Joueur j = moi(c);
@@ -515,6 +732,24 @@ public final class Fantome {
         f.then(Commands.literal("commande").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("ordre", StringArgumentType.word())
                 .executes(c -> commandeBarre(c, ""))
                 .then(Commands.argument("complement", StringArgumentType.greedyString()).executes(c -> commandeBarre(c, StringArgumentType.getString(c, "complement")))))));
+        // Donner en main propre : l'objet en main, accroupi, clic droit sur l'ouvrier (Travailleur#mobInteract).
+        f.then(Commands.literal("offre").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("objet", ResourceLocationArgument.id())
+                .executes(c -> offrir(c, 1))
+                .then(Commands.argument("n", IntegerArgumentType.integer(1, 64)).executes(c -> offrir(c, IntegerArgumentType.getInteger(c, "n")))))));
+        // Une mission dont le lieu est le repère (le sommet trouvé par « apparait montagne ») : le lieu choisi à l'écran.
+        f.then(Commands.literal("mission_repere").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("id", StringArgumentType.word())
+                .then(Commands.argument("repetition", StringArgumentType.word()).then(Commands.argument("n", IntegerArgumentType.integer(0))
+                        .executes(c -> missionRepere(c, StringArgumentType.getString(c, "repetition"), IntegerArgumentType.getInteger(c, "n"))))))));
+        f.then(Commands.literal("va_repere").executes(c -> {
+            Joueur j = moi(c);
+            if (repere == null) return ok(c, "Pas de repère.");
+            deplacer(j, Vec3.atBottomCenterOf(repere));
+            return ok(c, "Le fantôme est au repère " + repere.toShortString() + ".");
+        }));
+        // Préparer un terrain : un coffre rempli au sol, à (dx, dz) du fantôme ; le prochain ordre de la barre le regarde.
+        f.then(Commands.literal("coffre").then(Commands.argument("dx", IntegerArgumentType.integer(-64, 64)).then(Commands.argument("dz", IntegerArgumentType.integer(-64, 64))
+                .then(Commands.argument("objet", ResourceLocationArgument.id()).then(Commands.argument("n", IntegerArgumentType.integer(1, 27 * 64))
+                        .executes(c -> coffre(c, IntegerArgumentType.getInteger(c, "dx"), IntegerArgumentType.getInteger(c, "dz"), IntegerArgumentType.getInteger(c, "n"))))))));
         f.then(Commands.literal("paie").executes(c -> ranger(c, true, null)));
         f.then(Commands.literal("depose").executes(c -> ranger(c, false, null))
                 .then(Commands.argument("objet", ResourceLocationArgument.id()).executes(c -> ranger(c, false, objet(c)))));
@@ -598,10 +833,24 @@ public final class Fantome {
                 if (b == null) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Aucune forêt à moins de 6400 blocs")).create();
                 p = terrainLibre(l, b.getFirst(), false);
             }
+            case "jungle" -> {
+                var b = l.findClosestBiome3d(h -> h.is(BiomeTags.IS_JUNGLE), l.getSharedSpawnPos(), 6400, 32, 64);
+                if (b == null) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Aucune jungle à moins de 6400 blocs")).create();
+                p = terrainLibre(l, b.getFirst(), false);
+            }
+            case "montagne" -> {
+                BlockPos[] m = montagne(l);
+                p = m[0];
+                apparaitre(l, Vec3.atBottomCenterOf(p));
+                repere = m[1];
+                return ok(c, "Le fantôme apparaît au pied d'une montagne en " + p.toShortString() + " ; sommet (repère) en " + m[1].toShortString()
+                        + " : " + (m[1].getY() - p.getY()) + " blocs plus haut, à " + (int) Itineraire.horizontale(Vec3.atCenterOf(p), Vec3.atCenterOf(m[1])) + " blocs.");
+            }
             default -> p = surface(l, l.getSharedSpawnPos());
         }
         apparaitre(l, Vec3.atBottomCenterOf(p));
-        return ok(c, "Le fantôme apparaît en " + p.toShortString() + (ou.equals("village") || ou.equals("foret") ? " (près d'un" + (ou.equals("village") ? " village" : "e forêt") + ")" : "") + ".");
+        return ok(c, "Le fantôme apparaît en " + p.toShortString() + (ou.equals("village") || ou.equals("foret") || ou.equals("jungle")
+                ? " (près d'un" + (ou.equals("village") ? " village" : ou.equals("jungle") ? "e jungle" : "e forêt") + ")" : "") + ".");
     }
 
     static BlockPos surface(ServerLevel l, BlockPos p) {
@@ -687,10 +936,57 @@ public final class Fantome {
     static int commandeBarre(CommandContext<CommandSourceStack> c, String complement) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         Joueur j = moi(c);
         Travailleur t = ouvrier(c, j);
-        approcher(j, t.position());
+        if (regard != null) {
+            // Il se tient sur le coffre et le regarde à ses pieds (« porte ce coffre au dépôt ») ; l'ouvrier doit l'entendre (20 blocs).
+            deplacer(j, Vec3.atBottomCenterOf(regard.above()));
+            j.setXRot(90);
+            regard = null;
+        } else approcher(j, t.position());
         String ordre = StringArgumentType.getString(c, "ordre");
         String r = BarreCommandes.executer(j, t, ordre, complement);
         return ok(c, "Commande « " + ordre + (complement.isEmpty() ? "" : " / " + complement) + " » à " + t.prenom + " : « " + r + " ».");
+    }
+
+    static int offrir(CommandContext<CommandSourceStack> c, int n) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Travailleur t = ouvrier(c, j);
+        Item item = objet(c);
+        approcher(j, t.position());
+        ItemStack avant = j.getMainHandItem();
+        j.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item, Math.min(n, item.getDefaultMaxStackSize())));
+        j.setShiftKeyDown(true);
+        var r = j.interactOn(t, InteractionHand.MAIN_HAND);
+        j.setShiftKeyDown(false);
+        int reste = j.getMainHandItem().getCount();
+        j.setItemInHand(InteractionHand.MAIN_HAND, avant);
+        return ok(c, t.prenom + " reçoit " + (Math.min(n, item.getDefaultMaxStackSize()) - reste) + " " + BuiltInRegistries.ITEM.getKey(item) + " (" + r + ").");
+    }
+
+    static int missionRepere(CommandContext<CommandSourceStack> c, String repetition, int n) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Travailleur t = ouvrier(c, j);
+        if (repere == null) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Pas de repère : /fantome apparait montagne")).create();
+        approcher(j, t.position());
+        var r = Missions.donner(j, t, StringArgumentType.getString(c, "id"), repetition, n, "toujours", repere);
+        return ok(c, (r.ok() ? "Mission acceptée par " : "Mission refusée par ") + t.prenom + " (lieu " + repere.toShortString() + ") : " + r.texte());
+    }
+
+    static int coffre(CommandContext<CommandSourceStack> c, int dx, int dz, int n) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        Joueur j = moi(c);
+        Item item = objet(c);
+        ServerLevel l = j.serverLevel();
+        BlockPos p = surface(l, j.blockPosition().offset(dx, 0, dz));
+        l.setBlock(p, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);
+        if (!(l.getBlockEntity(p) instanceof Container ct))
+            throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Coffre non posé en " + p.toShortString())).create();
+        for (int i = 0, reste = n; i < ct.getContainerSize() && reste > 0; i++) {
+            int k = Math.min(reste, item.getDefaultMaxStackSize());
+            ct.setItem(i, new ItemStack(item, k));
+            reste -= k;
+        }
+        ct.setChanged();
+        regard = p;
+        return ok(c, "Coffre de " + n + " " + BuiltInRegistries.ITEM.getKey(item) + " posé en " + p.toShortString() + " (à " + (int) Math.sqrt(p.distSqr(j.blockPosition())) + " blocs) ; le prochain ordre le regarde.");
     }
 
     static int boutonOuvrier(CommandContext<CommandSourceStack> c, CompoundTag d) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -986,6 +1282,10 @@ public final class Fantome {
         r.add("blessures", survie.liste("blessure"));
         r.add("releves_seuls", survie.liste("releve_seul"));
         r.add("morts", survie.liste("mort"));
+        // Plan A, point 5 : les trajets (arrêts, demi-tours), les blocs posés encore là, l'eau laissée.
+        JsonObject dep = deplacementsRapport(l);
+        r.add("deplacements", dep);
+        if (repere != null) r.addProperty("repere", repere.toShortString());
 
         JsonObject resume = new JsonObject();
         resume.addProperty("ouvriers", ouvriers.size());
@@ -996,6 +1296,7 @@ public final class Fantome {
         resume.addProperty("objets_au_depot", b == null ? 0 : total(b.depot));
         resume.addProperty("messages", r.getAsJsonArray("messages").size());
         resume.add("survie", survie.resume());
+        resume.add("deplacements", dep.get("resume"));
         r.add("resume", resume);
         return r;
     }
