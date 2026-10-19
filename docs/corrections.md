@@ -48,3 +48,11 @@ Ce qui empêche l'invincibilité : un deuxième K.O. pendant la blessure est mor
 
 ## Ordre
 Plans B et D d'abord (courts, et ils se livrent avec le même modpack), puis le plan E, puis le plan A. Une livraison par plan fini et vert.
+
+## Plan F : rapports du 18 et du 19/10 (ajoutés par KOLRAX le 19/10, PAS ENCORE LANCÉS : attendre son accord)
+Fiches `f1` à `f5` du panneau « Corrections des ouvriers ».
+1. **Saut en boucle** (1.0.22, 19/10 vers 19 h 16 à Paris) : un ouvrier saute sur place sans fin. Trouver la cause (pilier ou marche reprise, montée ratée, `Coince`…) et la corriger.
+2. **Sur place, agir intelligemment** (1.0.22) : « le bûcheron a du mal à trouver les arbres » ; « Orianne (bûcheronne) est proche du biome cerisiers, à quelques blocs des arbres, mais erre bizarrement ». Arrivé au lieu de sa mission, l'ouvrier va droit au travail le plus proche qu'il peut atteindre. Le cerisier (tronc penché, grande couronne) est à vérifier en particulier.
+3. **Ouvrir avec seulement certains métiers** : un réglage serveur (`reglages.json`) donne la liste des métiers actifs. Un métier inactif reste dans le mod, mais aucun chercheur d'emploi de ce métier n'apparaît, on ne peut pas l'embaucher ni le former, et il ne figure ni sur l'affiche ni dans les menus. La liste est choisie par KOLRAX. Côté serveur seulement si possible (sans nouveau modpack).
+4. **Carte Xaero** : un petit point par ouvrier au lieu des repères, et le détail de l'ouvrier au survol. Modpack obligatoire. Plutôt après la remise à zéro du quota (vendredi 23/10).
+5. **Idée** : une corne de chèvre pour donner un ordre à tous ses ouvriers. Bonus, après vendredi.
