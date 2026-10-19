@@ -545,6 +545,10 @@ public class Travailleur extends PathfinderMob {
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 0.0f);
         // Une cabosse de cacao (ou une noix de coco) arrête le passage : Minecraft la croit franchissable (plan A2).
         setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.COCOA, -1.0f);
+        // La poudre de neige est un mur, comme la lave : on s'y enfonce et on y gèle (correction F6). Minecraft laisse
+        // marcher sur elle (DANGER_POWDER_SNOW à 0).
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.POWDER_SNOW, -1.0f);
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DANGER_POWDER_SNOW, -1.0f);
         setCustomNameVisible(true);
         // Un point visé juste au-dessus ou au-dessous de lui : Minecraft le ferait tourner sur lui-même (en toupie).
         moveControl = new net.minecraft.world.entity.ai.control.MoveControl(this) {
@@ -1154,12 +1158,26 @@ public class Travailleur extends PathfinderMob {
     /** Jusqu'à quand (tickCount) ne pas chercher de refuge : il n'y en avait pas. */
     int sansRefugeJusqua;
 
-    /** Dans la lave ou le feu, enseveli dans un bloc (il étouffe), ou à bout d'air sous l'eau. */
+    /** Dans la lave ou le feu, dans la poudre de neige, enseveli dans un bloc (il étouffe), ou à bout d'air sous l'eau. */
     boolean enPeril() {
-        if (isInLava() || isInWall()) return true;
+        if (isInLava() || isInWall() || dansLaNeige()) return true;
         if (level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE)) return true;
         return getAirSupply() < 100 && isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
     }
+
+    /**
+     * Enfoncé dans la poudre de neige (pieds ou tête), ou juste au-dessus, où il s'enfonce : il en sort aussitôt (correction F6).
+     * Sinon, à peine hissé au bord de la poudre, il se croyait sauf, lâchait prise et retombait dedans.
+     */
+    boolean dansLaNeige() {
+        return level().getBlockState(blockPosition()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
+                || level().getBlockState(blockPosition().below()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
+                || level().getBlockState(BlockPos.containing(getEyePosition())).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW);
+    }
+
+    /** Il ne gèle jamais : tombé dans la poudre de neige, il en sort, mais n'y meurt pas de froid (correction F6). */
+    @Override
+    public boolean canFreeze() { return false; }
 
     /**
      * Le réflexe de survie, pour tout métier, tous les 5 ticks (quelques lectures de blocs) : en péril ({@link #enPeril}),
@@ -1174,7 +1192,7 @@ public class Travailleur extends PathfinderMob {
         // De la lave coule vers lui (une coulée qui s'étend encore, à côté de lui) : il s'écarte avant qu'elle n'entre dans sa case.
         BlockPos lave = peril || feu ? null : Monde.laveQuiVient(level(), blockPosition());
         if (!peril && !feu && lave == null) return;
-        boolean grave = isInLava() || isInWall() || level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE);
+        boolean grave = isInLava() || isInWall() || dansLaNeige() || level().getBlockState(blockPosition()).is(net.minecraft.tags.BlockTags.FIRE);
         // Pas de refuge à portée tout à l'heure : il ne refait pas la recherche avant une seconde (sauf danger grave).
         if (!grave && tickCount < sansRefugeJusqua) return;
         Actions.Echapper e = new Actions.Echapper(feu);

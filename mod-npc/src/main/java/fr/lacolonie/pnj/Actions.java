@@ -564,6 +564,22 @@ public final class Actions {
                     return age > 200 ? echec("perdu") : Etat.EN_COURS;
                 }
             }
+            if (!eau && t.dansLaNeige()) {
+                // Dans la poudre de neige (correction F6) : on ne marche pas dessus, on s'y enfonce, et on n'y monte qu'en se
+                // hissant. Il se hisse vers le bord sûr, comme hors d'un trou de lave ; sans bord à portée, il casse la neige
+                // qui l'enserre (un bloc naturel).
+                if (refuge == null || age % 20 == 0) choisir(t);
+                t.getNavigation().stop();
+                t.diag = "sort de la poudre de neige vers " + (refuge == null ? "rien" : refuge.toShortString());
+                if (refuge != null) {
+                    Vec3 c = Vec3.atBottomCenterOf(refuge), vers = c.subtract(t.position()).multiply(1, 0, 1);
+                    vers = vers.lengthSqr() > 1.0E-4 ? vers.normalize().scale(0.15) : Vec3.ZERO;
+                    t.setDeltaMovement(vers.x, t.getY() < refuge.getY() + 0.2 ? 0.4 : Math.min(t.getDeltaMovement().y, 0), vers.z);
+                    t.getLookControl().setLookAt(c);
+                } else for (BlockPos q : List.of(t.blockPosition(), BlockPos.containing(t.getEyePosition())))
+                    if (l.getBlockState(q).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW) && !Lieux.protege(t, q)) l.destroyBlock(q, false, t);
+                return age > 200 ? echec("perdu") : Etat.EN_COURS;
+            }
             // En feu sans eau qu'il puisse atteindre : il renonce (pause de 5 s), pour rester libre de fuir ou de se défendre.
             if (eau && refuge == null) { t.sansRefugeJusqua = t.tickCount + 100; return echec("sans_eau"); }
             boolean peril = eau ? t.isOnFire() && !t.isInWaterRainOrBubble() || t.enPeril() : t.enPeril();
