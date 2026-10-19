@@ -827,3 +827,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Tests** : 308/308 JUnit ; en jeu 417/417 à la 4e passe du chef (1re : `tondunmouton` ; 2e : `descenddelafalaise` ; 3e : `chassedenuit` + `bucheronpresdelalave`, tous capricieux connus). Nouveaux GameTests `perceLaRocheJusquAuPoste` (règles réelles), `rameneMemePresDuPoste`, `pasRameneApresUnEchecPresDuPoste` vus rouges ; `CoinceTest` (JUnit) pas vu rouge (méthode nouvelle).
 - **Fantôme `montagne.txt`** : graine 20261019, 4 parties sur 4 sans blocage (32 à 62 pierres) contre 1 sur 2 bloquée avant ; graine 1234567 : bûcherons très variables sur toutes les versions (1.0.20 : 16+8 puis 0+0 ; 1.0.21 : 16+0 puis 0+0), pas de régression nette ; le filet a été rallongé de 5 à 10 min par prudence. 0 mort, 0 bloc ni eau laissés, rien de construit cassé dans toutes les parties. Jeu d'essai qui a servi aux corrections : pas à l'aveugle.
 - **Reste (case A)** : errance des bûcherons au pied de la montagne, seau peu utilisé, chutes jusqu'à 6 blocs (décision « 3 blocs » à prendre), `bucheronpresdelalave` 2 échecs sur 6 passes.
+
+## 2026-10-19 15 h 07 UTC : 1.0.22 livrée, serveur seul (E4 : jamais de chute de plus de 3 blocs ; ramassage loin du bord de la lave)
+- Ce qui change en jeu : un ouvrier ne saute plus d'une hauteur de plus de 3 blocs ; pour descendre, il prend un escalier ou pose une marche contre la paroi, qu'il reprend ensuite. En ramassant, il laisse un objet tombé au bord de la lave et évite de longer la lave.
+- Commit livré : `main` e1d7902 (`mod_version=1.0.22`). Tests : **308/308 JUnit**, en jeu **420/420**.
+- Jar `colonie_pnj-1.0.22.jar` : **1 895 511 octets**, sha1 `8900841eb0f2c0b3fa2c866f73f29ff8a580ae5f` (revérifié avant l'envoi).
+- `list` à 15 h 05 puis 15 h 06 : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer.
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 895 511) ; `colonie_pnj-1.0.21.jar` rangé dans `/mods-off`, 1.0.22 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.21 -> 1.0.22) », **« Done (2.569s) » à 15 h 07 min 27 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Erreurs d'autres mods seulement (282 tables de butin de railways, 1 DISTXFORM de create_sa).
+- Pas de modpack, pas d'annonce : le client n'a pas changé (le modpack 1.0.18 reste le bon).
