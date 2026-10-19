@@ -753,3 +753,7 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Journal : « colonie_pnj (version 1.0.16 -> 1.0.17) », **« Done (1.860s) » à 04 h 46 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Les seules erreurs viennent d'autres mods (282 tables de butin, 1 DISTXFORM), comme avant.
 - Serveur encore figé ~30 min juste avant (« 36305 ticks behind » à 04 h 45, 0 joueur) : même souci de pause déjà signalé à l'Admin.
 - Pas de modpack, pas d'annonce : le client n'a pas changé.
+
+## 2026-10-19 04 h 56 UTC : joueur fantôme en montagne sur la 1.0.17 (3 parties)
+- Comparé aux 4 parties sur 1.0.16 : **0 ramené au poste** (1 par partie avant), **0 bloqué sur la corniche** (1 à 2 avant), descente « taille des marches » déclenchée par 2 à 3 ouvriers par partie ; **montée au seau d'eau vue** (4 à 7 endroits, 0 eau laissée) ; terre posée 19/39/46, 0 laissée ; 0 mort ; 0 construction cassée (619 à 742 casses, toutes naturelles) ; 1 à 2 ouvriers sur 3 au sommet.
+- Restes : le bûcheron au seau **sans pioche** taille à la main un escalier dans la pierre (230 à 306 blocs en 2 jours) et ne coupe aucun bois (0/16) ; partie 2, un ouvrier coincé 11 h de jeu au pied dans le trou de sa descente (-31, 65, -288) sans être ramené au poste ; une mineuse jamais montée (partie 2) ; chutes 12 à 22 coups (`getMaxFallDistance` = 6, décision à prendre) ; arrêts de 15-17 s à ramasser au sommet. Les deux premiers sont lancés sur la branche `a3-main-nue`.
