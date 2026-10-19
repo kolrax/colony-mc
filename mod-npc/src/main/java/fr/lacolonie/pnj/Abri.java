@@ -287,7 +287,7 @@ final class Abri {
                 // En l'air, les pieds au-dessus de la case : il pose le bloc sous lui.
                 if (t.getY() >= q.getY() + 1) { Actions.placer(t, q, t.inventaire.getItem(i)); return Actions.Etat.EN_COURS; }
                 t.getMoveControl().setWantedPosition(p.getX() + 0.5, t.getY(), p.getZ() + 0.5, 0.6);
-                if (t.onGround()) t.getJumpControl().jump();
+                if (t.onGround() && !t.sauter()) { t.memoire.remove("abri"); return echec("bloque"); } // il saute sans que le bloc se pose
                 return Actions.Etat.EN_COURS;
             }
             // Au bord : à portée de main, il pose le bloc dans le trou.

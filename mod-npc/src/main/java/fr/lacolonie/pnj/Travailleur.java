@@ -501,6 +501,8 @@ public class Travailleur extends PathfinderMob {
     int mainsNues;
     /** Ses sons : le délai entre deux d'un même genre ({@link Sons}). */
     final Cadence sons = new Cadence();
+    /** Ses sauts depuis une même case : quelques-uns, puis il renonce un moment (plan F1, {@link Sauts}). */
+    final Sauts sauts = new Sauts();
     public String resultat = "";
     /** Sa mémoire de travail (où en est sa mine, les coins qu'il connaît…), sauvegardée avec lui. */
     public CompoundTag memoire = new CompoundTag();
@@ -549,13 +551,23 @@ public class Travailleur extends PathfinderMob {
             @Override
             public void tick() {
                 if (operation == Operation.MOVE_TO && Math.abs(wantedX - mob.getX()) < 0.15 && Math.abs(wantedZ - mob.getZ()) < 0.15) {
-                    if (wantedY > mob.getY() + 0.6 && mob.onGround()) mob.getJumpControl().jump();
+                    if (wantedY > mob.getY() + 0.6 && mob.onGround()) sauter();
                     operation = Operation.WAIT;
                     mob.setZza(0);
                 }
                 super.tick();
             }
         };
+    }
+
+    /**
+     * Il saute, sauf s'il a déjà sauté plusieurs fois depuis cette case sans en sortir (plan F1 : « il saute en boucle sur
+     * place »). Faux : il renonce, et l'action en cours le voit immobile (elle change de plan, ou il finit compté coincé).
+     */
+    boolean sauter() {
+        if (!sauts.permis(blockPosition().asLong(), level().getGameTime())) return false;
+        getJumpControl().jump();
+        return true;
     }
 
     /** Les cibles qu'il n'a pas pu atteindre (identifiant → moment jusqu'auquel il les laisse), pour ne pas s'acharner. */

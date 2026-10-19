@@ -684,7 +684,7 @@ final class Macon extends Metier {
                         t.getNavigation().stop();
                         Vec3 v = Vec3.atBottomCenterOf(ecart);
                         t.getMoveControl().setWantedPosition(v.x, v.y, v.z, 0.7);
-                        if (ecart.getY() > t.getBlockY()) t.getJumpControl().jump();
+                        if (ecart.getY() > t.getBlockY()) t.sauter();
                     }
                 }
                 return Actions.Etat.EN_COURS;
