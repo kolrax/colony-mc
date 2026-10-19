@@ -497,7 +497,6 @@ public final class Fantome {
         for (Travailleur t : ColoniePnj.pnjDe(e.getServer(), j.getUUID())) {
             if (t.eau != null) eauxVersees.putIfAbsent(t.eau.immutable(), t.prenom);
             Deplacement d = deplacements.computeIfAbsent(t.getUUID(), k -> new Deplacement());
-            if (e.getServer().getTickCount() % 600 == 0) ColoniePnj.LOG.info("DIAG-A3 {} {} {} res={} diag={} coince={} : {}", t.prenom, t.blockPosition().toShortString(), t.action == null ? "-" : t.action.nom, t.resultat, t.diag, t.coince.ticks, t.action == null ? "" : t.action.etatTemp()); // DIAG-A3 (temporaire)
             d.prenom = t.prenom;
             d.metier = t.metier;
             Vec3 p = t.position();
@@ -1238,9 +1237,6 @@ public final class Fantome {
             String mem = t.memoire.toString();
             o.addProperty("memoire", mem.length() > 1500 ? mem.substring(0, 1500) : mem);
             if (b != null) o.addProperty("distance_poste", (int) Math.sqrt(t.blockPosition().distSqr(b.getBlockPos())));
-            // DIAG-A3 (temporaire)
-            o.addProperty("diag_temp", "diag=" + t.diag + " ; coince.ticks=" + t.coince.ticks + " retours=" + t.coince.retours + " ; dormir=" + t.isSleeping() + " aTerre=" + t.aTerre + " lettre=" + (t.lettreEnMain != null) + " ecoute=" + t.ecouteTicks + " pauseCerveau=" + t.pauseCerveau + " ; " + (t.action == null ? "" : t.action.getClass().getSimpleName() + " " + t.action.etatTemp()));
-            o.add("diag_lignes", GSON.toJsonTree(Itineraire.diagnostic(t)));
             o.add("fiche", json(t.fiche(false)));
             o.add("sac", contenu(t.inventaire));
             ouvriers.add(o);

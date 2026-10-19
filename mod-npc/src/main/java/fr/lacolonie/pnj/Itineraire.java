@@ -148,9 +148,6 @@ final class Itineraire {
         this.versLeBureau = t.bureau != null && Vec3.atBottomCenterOf(t.bureau).distanceToSqr(but) < 64;
     }
 
-    // DIAG-A3 (temporaire)
-    String etatTemp() { return "bloque=" + bloque + " aCreuser=" + aCreuser + " sortie=" + (sortie == null ? "null" : indexSortie + "/" + sortie.size()) + " pilier=" + pilier + " pont=" + pont.size() + " montee=" + montee + " monteeFin=" + monteeFin + " reprise=" + reprise + " enDescente=" + enDescente + " phase=" + phase + " plan=" + plan.size() + " parti=" + parti + " prochainChoix=" + prochainChoix + " attendDepuis=" + attendDepuis + " directRate=" + directRate + " echecs=" + echecs + " direct=" + (direct == null ? "null" : direct.canReach() + "@" + direct.getEndNode()) + " etape=" + etape + " poses=" + poses.size() + " posesFaites=" + posesFaites + " but=" + but; }
-
     /** Il creuse ou suit la route vers la sortie : il ne marche pas droit vers le but, mais il avance. */
     boolean occupe() { return aCreuser != null || sortie != null || pilier != null || !pont.isEmpty(); }
 
@@ -1143,7 +1140,7 @@ final class Itineraire {
             aCreuser = aCasser.get(0);
             progres = 0;
             echecs = 0;
-            Cerveau.dire(t, "creuse", 600, "C'est juste derrière cette roche : je perce un passage.");
+            Cerveau.dire(t, "creuse", 600, "C'est juste derrière cette paroi : je perce un passage.");
             return true;
         }
         return false;

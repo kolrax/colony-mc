@@ -191,9 +191,6 @@ public final class Actions {
             }
         }
 
-        // DIAG-A3 (temporaire)
-        String etatTemp() { return "age=" + age + " raison=" + raison + " immobile=" + immobile + " sansProgres=" + sansProgres + " sansAvancer=" + sansAvancer + " meilleure=" + meilleure + " coince=" + coince() + " route=" + (route == null ? "null" : route.etatTemp()); }
-
         /** Il a marché pendant cette action (vers une cible). */
         boolean aMarche() { return route != null; }
 
