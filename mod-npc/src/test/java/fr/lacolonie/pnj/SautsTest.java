@@ -25,4 +25,12 @@ class SautsTest {
         Sauts s = new Sauts();
         for (int i = 0; i < 20; i++) assertTrue(s.permis(7L, i * (Sauts.OUBLI + 1L)), "un saut toutes les 5 s, ce n'est pas sauter en boucle");
     }
+
+    @Test
+    void laPauseNeVautQueSurLaCaseFautive() {
+        Sauts s = new Sauts();
+        for (long t = 0; t <= 12L * Sauts.MAX; t += 12) s.permis(42L, t); // la pause tombe sur la case 42
+        assertFalse(s.permis(42L, 12L * Sauts.MAX + 12), "sur la même case, il attend");
+        assertTrue(s.permis(43L, 12L * Sauts.MAX + 24), "depuis une autre case (un pilier, une autre montée), il saute aussitôt");
+    }
 }
