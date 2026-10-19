@@ -180,6 +180,7 @@ final class Itineraire {
                 retirerEau(t); // la colonne d'eau : il la reprend dans son seau, sorti ou pas
                 if (sorti) reprendre(t);
                 else if (sortieNage && departPose != null) posesRatees.add(departPose); // sorti de l'eau mais pas sur le bord
+                sortieNage = false;
             }
             else {
                 t.diag = "monte en " + montee.toShortString();
@@ -1197,7 +1198,10 @@ final class Itineraire {
         for (int k = 1; k <= haut; k++) {
             BlockPos c = p.above(k - 1); // la case qui recevra l'eau : de l'air (sauf ses pieds), fermée de tous côtés
             if (k > 1 && !l.getBlockState(c).isAir()) return false;
-            for (Direction d : dirs) if (!Monde.solide(l, c.relative(d))) return false; // un puits ouvert : l'eau s'en irait
+            for (Direction d : dirs) { // un puits ouvert (ou un tapis, de la neige) : l'eau s'en irait
+                BlockPos q = c.relative(d);
+                if (!l.getBlockState(q).isFaceSturdy(l, q, d.getOpposite())) return false;
+            }
             if (!Monde.libre(l, p.above(k)) || !Monde.libre(l, p.above(k + 1))) return false; // un plafond, un liquide
             for (Direction d : dirs) if (Monde.construit(l, p.above(k + 1).relative(d))) return false; // contre une construction
             for (Direction d : dirs) {

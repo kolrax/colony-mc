@@ -1270,6 +1270,7 @@ public class Travailleur extends PathfinderMob {
         coince.ramene(maintenant);
         if (isSleeping()) stopSleeping();
         finirAction("ramene");
+        Itineraire.retirerEau(this); // une colonne d'eau en cours : reprise tant que le coin est chargé
         getNavigation().stop();
         trace.clear();
         etapesRatees.clear();
@@ -1562,6 +1563,7 @@ public class Travailleur extends PathfinderMob {
     /** Mort définitive : ses affaires vont dans un coffre à son nom. */
     @Override
     protected void dropAllDeathLoot(ServerLevel level, DamageSource src) {
+        Itineraire.retirerEau(this); // l'eau revient dans son seau avant qu'il parte à la tombe
         List<ItemStack> tout = new ArrayList<>();
         for (int i = 0; i < inventaire.getContainerSize(); i++) if (!inventaire.getItem(i).isEmpty()) tout.add(inventaire.removeItemNoUpdate(i));
         for (EquipmentSlot s : EquipmentSlot.values()) {
@@ -1591,6 +1593,13 @@ public class Travailleur extends PathfinderMob {
             tout.forEach(this::spawnAtLocation);
             lieuAffaires = "Ses affaires sont tombées par terre en " + blockPosition().toShortString() + ".";
         }
+    }
+
+    /** Par un portail : l'eau de l'ancien monde est reprise avant de partir. */
+    @Override
+    public Entity changeDimension(net.minecraft.world.level.portal.DimensionTransition transition) {
+        if (!level().isClientSide) Itineraire.retirerEau(this);
+        return super.changeDimension(transition);
     }
 
     @Override
