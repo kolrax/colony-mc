@@ -791,4 +791,28 @@ public class TestsDeblocage {
             t.discard();
         });
     }
+
+    /**
+     * Plan A3 (relecture des mains nues, 1.0.18) : sur un plateau de pierre naturelle, son bureau enfoui 6 blocs plus bas,
+     * presque sous lui, sans pioche, sans bloc qu'il reprendrait ni seau d'eau. Avant, il creusait à mains nues un puits
+     * d'un bloc dans la pierre, s'arrêtait à 8 blocs au fond, à ciel ouvert, sans pouvoir ni grimper ni recreuser : coincé
+     * dans son propre trou jusqu'au retour forcé au poste. Maintenant, il ne creuse pas : rien ne lui permettrait de remonter.
+     */
+    @GameTest(template = "grand", timeoutTicks = 1200, skyAccess = true)
+    public static void neCreusePasDePuitsSansIssue(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 10; y++) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "bucheron", 12, 11, 12, ItemStack.EMPTY, new BlockPos(13, 5, 12));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.runAtTickTime(1100, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag;
+            boolean issue = Itineraire.caseDeChantier(t, false, true) >= 0 || Itineraire.seauDEau(t) >= 0;
+            int pierres = 0;
+            for (int x = 6; x <= 18; x++) for (int z = 6; z <= 18; z++) for (int y = 6; y <= 10; y++)
+                if (h.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) pierres++;
+            t.discard();
+            h.assertFalse(issue, "le test veut un ouvrier sans bloc à reprendre ni seau (" + e + ")");
+            h.assertTrue(pierres == 13 * 13 * 5, "il ne doit pas creuser de puits à mains nues (" + (13 * 13 * 5 - pierres) + " pierres cassées, " + e + ")");
+            h.succeed();
+        });
+    }
 }

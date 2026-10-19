@@ -984,6 +984,10 @@ final class Itineraire {
         // Ce qu'il casserait sans rien en récolter (de la pierre sans pioche) : au plus MAINS_NUES blocs entre deux travaux.
         int nus = (int) blocs.stream().filter(b -> !Monde.traversable(l, b) && !recolte(t, l.getBlockState(b))).count();
         if (nus > 0 && t.mainsNues + nus > MAINS_NUES) return false;
+        // Et seulement s'il pourra remonter (des blocs qu'il reprend, un seau d'eau) ou s'il est déjà sous terre : au fond
+        // d'un puits taillé à mains nues, à ciel ouvert, il ne pourrait ni grimper ni recreuser la pierre (commencerCreusage
+        // la refuse hors de sous terre) ; il se dirait coincé et serait ramené au poste, piège qu'il se serait creusé lui-même.
+        if (nus > 0 && !sousTerre(t) && caseDeChantier(t, false, true) < 0 && seauDEau(t) < 0) return false;
         // Du gravier ou du sable juste au-dessus d'un bloc à creuser (le haut de la marche) lui tomberait dessus.
         for (BlockPos b : blocs) if (!blocs.contains(b.above()) && !Monde.traversable(l, b) && Monde.tombe(l, b.above())) return false;
         boolean appui = false;
@@ -997,7 +1001,6 @@ final class Itineraire {
         if (!Monde.libre(l, q) && !blocs.contains(q) || !Monde.libre(l, q.above()) && !blocs.contains(q.above())) return false;
         if (pasFaits.size() > 64) pasFaits.clear();
         pasFaits.add(q);
-        t.mainsNues += nus;
         aCasser.clear();
         for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
         marcheBas = q;
@@ -1083,6 +1086,7 @@ final class Itineraire {
         l.destroyBlockProgress(t.getId(), aCreuser, Math.min(9, (int) (progres / Actions.duree(t, st, aCreuser) * 10)));
         if (progres < Actions.duree(t, st, aCreuser)) return;
         l.destroyBlockProgress(t.getId(), aCreuser, -1);
+        if (enDescente && !recolte(t, st)) t.mainsNues++; // compté une fois le bloc vraiment cassé, sans rien en récolter
         Actions.recolter(t, aCreuser);
         Actions.userOutil(t, 1);
         BlockPos casse = aCreuser;
