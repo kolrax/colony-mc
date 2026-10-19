@@ -574,11 +574,19 @@ public class TestsDeblocage {
         return t;
     }
 
+    /** Le lot « percer » : les règles des lieux comme en vraie partie (le tampon de 8 blocs autour du poste, {@link Lieux#enEssai}). */
+    @BeforeBatch(batch = "percer")
+    public static void avantPercer(ServerLevel l) { Lieux.enEssai = true; }
+
+    @AfterBatch(batch = "percer")
+    public static void apresPercer(ServerLevel l) { Lieux.enEssai = false; }
+
     /**
-     * Avec sa pioche, il perce la roche qui le sépare du poste et y dépose ses pierres. Avant : « poste inaccessible » à
-     * chaque essai, relancé aussitôt, sans fin (figé deux jours à 3 blocs du poste, jamais ramené).
+     * Avec sa pioche, il perce la roche qui le sépare du poste (dans le tampon du poste, règles réelles) et y dépose ses
+     * pierres. Avant : « poste inaccessible » à chaque essai, relancé aussitôt, sans fin (figé deux jours à 3 blocs du poste,
+     * jamais ramené).
      */
-    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true)
+    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true, batch = "percer")
     public static void perceLaRocheJusquAuPoste(GameTestHelper h) {
         Travailleur t = pocheDuMineur(h, new ItemStack(Items.IRON_PICKAXE));
         Bureau.Entite d = TestsBucheron.depot(t);
@@ -603,6 +611,30 @@ public class TestsDeblocage {
             h.assertTrue(t.coince.retours >= 1, "il doit avoir été ramené au poste (" + e + ")");
             h.assertTrue(d.compter(Actions.Filtre.de("minecraft:cobblestone")) >= 32, "puis y avoir déposé ses pierres (" + e + ")");
             t.discard();
+        });
+    }
+
+    /**
+     * Près du poste, il échoue sans cesse à atteindre autre chose que le poste (l'intérieur d'une cabane de planches fermée, à
+     * 5 blocs du poste) : il n'est jamais ramené au poste (seul un échec récent à atteindre le poste compte près de lui).
+     */
+    @GameTest(template = "grand", timeoutTicks = 900, skyAccess = true, batch = "deblocage")
+    public static void pasRameneApresUnEchecPresDuPoste(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 16; x <= 18; x++) for (int z = 11; z <= 13; z++) for (int y = 4; y <= 7; y++)
+            if (x != 17 || z != 12 || y == 7) h.setBlock(x, y, z, Blocks.OAK_PLANKS);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 14, 4, 12, ItemStack.EMPTY, new BlockPos(12, 4, 12));
+        t.pauseCerveau = 100000; // il ne fait que ça
+        Vec3 dedans = h.absoluteVec(new Vec3(17.5, 4, 12.5));
+        int[] essais = {0};
+        double[] saut = sauts(h, t);
+        h.onEachTick(() -> { if (t.action == null) { essais[0]++; Cerveau.lancer(t, new Actions.Aller(dedans, 1)); } });
+        h.runAtTickTime(h.getTick() + 800, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", coincé " + t.coince.ticks + ", essais " + essais[0];
+            t.discard();
+            h.assertTrue(essais[0] >= 2, "il doit avoir échoué plusieurs fois (" + e + ")");
+            h.assertTrue(t.coince.retours == 0 && saut[0] < 2, "il ne doit pas être ramené au poste (saut de " + String.format("%.1f", saut[0]) + " blocs, " + e + ")");
+            h.succeed();
         });
     }
 

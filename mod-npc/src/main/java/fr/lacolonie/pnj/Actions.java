@@ -157,7 +157,11 @@ public final class Actions {
             // détour en cours (étapes, creusage) n'est jamais remis à zéro : une cible inaccessible reste « bloquée ».
             double ecart = route == null ? 0 : route.but.distanceToSqr(cible);
             if (route == null || ecart > 16
-                    || dePres && age % 10 == 0 && ecart > Math.max(1, p.distanceToSqr(cible) / 16) && route.surCheminDirect()) { route = new Itineraire(t, cible); route.cibleMobile = mobile; } // une cible qui bouge : pas de trajet calculé d'avance (plan A1)
+                    || dePres && age % 10 == 0 && ecart > Math.max(1, p.distanceToSqr(cible) / 16) && route.surCheminDirect()) {
+                if (route != null && ecart > 16) { repereAvance = Double.MAX_VALUE; sansAvancer = 0; } // un autre but : le filet repart de zéro
+                route = new Itineraire(t, cible);
+                route.cibleMobile = mobile; // une cible qui bouge : pas de trajet calculé d'avance (plan A1)
+            }
             // Il n'entre pas dans un coin que le monde n'a pas fini de préparer (terrain neuf en cours de génération) :
             // il s'y figerait. Il attend au bord, le temps que le serveur le termine.
             Vec3 cap = cible.subtract(p).multiply(1, 0, 1);

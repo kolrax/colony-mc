@@ -36,6 +36,8 @@ final class Coince {
     boolean echec;
     /** Quand (temps du monde) : l'échec ne compte que pendant {@link #FENETRE_ECHEC} ticks. */
     long echecDate;
+    /** Ce dernier échec était d'atteindre son poste (« bureau_inaccessible »). */
+    boolean echecPoste;
     /** Il a été mis à attendre au poste après {@link #RETOURS_MAX} retours (pas par son chef). */
     boolean attenteAuto;
     /** Retours au poste sans vrai travail entre eux. */
@@ -52,11 +54,20 @@ final class Coince {
         depart = true;
         ticks = 0;
         echec = false;
+        echecPoste = false;
         marche = false;
     }
 
-    /** Il a échoué à se rendre quelque part, maintenant. */
-    void echec(long maintenant) { echec = true; echecDate = maintenant; }
+    /** Il a échoué à se rendre quelque part, maintenant ({@code poste} : à son poste). */
+    void echec(long maintenant, boolean poste) { echec = true; echecDate = maintenant; echecPoste = poste; }
+
+    void echec(long maintenant) { echec(maintenant, false); }
+
+    /**
+     * Il vient d'échouer à atteindre son poste (depuis moins de {@link #FENETRE_ECHEC}) : même tout près du poste, son temps
+     * coincé compte (plan A3 : à 3 blocs, derrière la roche). Un vieil échec, ou vers autre chose, ne compte pas près du poste.
+     */
+    boolean posteHorsDAtteinte(long maintenant) { return echec && echecPoste && maintenant - echecDate <= FENETRE_ECHEC; }
 
     /**
      * Son mode, à chaque relevé. Mis à attendre au poste après deux retours, puis remis au travail par son chef : un seul
@@ -93,6 +104,7 @@ final class Coince {
         depart = false;
         ticks = 0;
         echec = false;
+        echecPoste = false;
         marche = false;
         retours++;
         sansPlaceEcrit = false;

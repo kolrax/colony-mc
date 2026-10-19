@@ -21,6 +21,20 @@ class CoinceTest {
         assertEquals(Coince.DELAI, jusquAuRetour(c, 0.5, 0));
     }
 
+    /** Près du poste, seul un échec récent à atteindre le poste lui-même compte (plan A3) ; ni un vieil échec, ni vers autre chose. */
+    @Test
+    void posteHorsDAtteinteSeulementSiRecentEtVersLePoste() {
+        Coince c = new Coince();
+        c.echec(1000, true);
+        assertTrue(c.posteHorsDAtteinte(1000 + Coince.FENETRE_ECHEC));
+        assertFalse(c.posteHorsDAtteinte(1001 + Coince.FENETRE_ECHEC), "un vieil échec ne compte plus");
+        c.echec(2000, false);
+        assertFalse(c.posteHorsDAtteinte(2000), "un échec vers autre chose (un bloc, un arbre) ne compte pas près du poste");
+        c.echec(3000, true);
+        c.progres(0, 64, 0);
+        assertFalse(c.posteHorsDAtteinte(3000), "arrivé quelque part : oublié");
+    }
+
     @Test
     void travaillerSurPlaceNeComptePas() {
         Coince c = new Coince();

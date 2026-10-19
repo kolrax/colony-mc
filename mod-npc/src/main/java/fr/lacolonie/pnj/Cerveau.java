@@ -116,6 +116,11 @@ final class Cerveau {
         }
 
 
+        // Le poste était hors d'atteinte à l'instant : il n'y repart pas aussitôt, pour rien (dépôt, paie, lettres, vivres, grève ;
+        // plan A3 : Arnaud relançait son dépôt tous les quelques ticks, deux jours durant, à 3 blocs du poste). Il souffle 5 s ;
+        // ce temps compte comme coincé (Coince), même près du poste, et il y sera ramené au besoin. Les dangers passent avant.
+        if ("bureau_inaccessible".equals(t.resultat)) { attendre(t, 5); return; }
+
         // En grève : il attend au poste que la caisse couvre ce qu'on lui doit.
         if (t.mode == Travailleur.Mode.GREVE) {
             long du = t.du();
@@ -224,11 +229,6 @@ final class Cerveau {
 
 
 
-
-        // Le poste était hors d'atteinte à l'instant : il n'y repart pas aussitôt (plan A3 : Arnaud relançait son dépôt tous les
-        // quelques ticks, deux jours durant, à 3 blocs du poste). Il souffle 5 s ; ce temps compte comme coincé (Coince), même
-        // près du poste, et il y sera ramené au besoin.
-        if ("bureau_inaccessible".equals(t.resultat)) { attendre(t, 5); return; }
 
         // Sac plein : direction le dépôt du poste, même de très loin.
         if (Monde.libres(t) == 0) {

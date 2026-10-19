@@ -341,8 +341,8 @@ final class Itineraire {
                     // Le but est juste au-dessus (il est tombé dans un creux à ciel ouvert, assez large pour y marcher) : il
                     // monte sur des blocs qu'il reprendra, ou à la nage, avant de se dire bloqué (Godefroy, montagne, 1.0.19).
                     if (but.y > p.y + 2 && evasionPermise(t) && (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t))) { montee = null; etape = null; return; }
-                    // Le but est juste derrière une paroi de roche qu'il sait tailler (le mineur au fond de sa galerie, à côté
-                    // du poste : Arnaud, montagne, 1.0.20) : il perce droit vers lui au lieu de se dire bloqué.
+                    // Son poste est juste derrière une paroi de roche qu'il sait tailler, à sa hauteur (le mineur au fond de sa
+                    // galerie, à côté du poste : Arnaud, montagne, 1.0.20) : il perce droit vers lui au lieu de se dire bloqué.
                     if (evasionPermise(t) && percerVers(t)) { montee = null; etape = null; return; }
                     bloque = true;
                     t.diag = "inaccessible";
@@ -1115,23 +1115,25 @@ final class Itineraire {
     }
 
     /**
-     * Le but est tout près, sans chemin, derrière une paroi naturelle qu'il sait récolter : il perce un pas de galerie (pieds et
-     * tête) dans la direction qui le rapproche le plus du but, puis y avance. Jamais une construction ni ce qu'il ne récolte pas,
-     * jamais sous du gravier ou du sable, ni au-dessus d'un vide. Vrai s'il s'y met.
+     * Son propre poste est tout près, à sa hauteur (un bloc près), sans chemin, derrière une paroi naturelle qu'il sait récolter :
+     * il perce un pas de galerie (pieds et tête) dans la direction qui le rapproche le plus du poste, puis y avance. Seulement ce
+     * qu'il a le droit de casser ({@link Lieux#peutCasser}), ou de la pierre naturelle même dans le tampon du poste
+     * ({@link #roche}) ; jamais une construction ni une structure, jamais sous du gravier ou du sable, ni au-dessus d'un vide, ni
+     * sous quelqu'un. Vrai s'il s'y met.
      */
     private boolean percerVers(Travailleur t) {
         Level l = t.level();
         BlockPos p = t.blockPosition();
         Vec3 pos = t.position();
-        if (!t.onGround()) return false;
+        if (!t.onGround() || t.bureau == null || Vec3.atBottomCenterOf(t.bureau).distanceToSqr(but) > 1 || Math.abs(but.y - p.getY()) > 1) return false;
         List<Direction> dirs = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         dirs.sort(Comparator.comparingDouble(d -> -(d.getStepX() * (but.x - pos.x) + d.getStepZ() * (but.z - pos.z))));
         for (Direction d : dirs) {
             BlockPos q = p.relative(d);
             if (horizontale(Vec3.atBottomCenterOf(q), but) > horizontale(pos, but) - 0.5) continue; // il ne s'en rapprocherait pas
             List<BlockPos> blocs = List.of(q, q.above());
-            if (blocs.stream().allMatch(b -> Monde.traversable(l, b)) || !Monde.solide(l, q.below()) || Monde.tombe(l, q.above(2))) continue;
-            if (!blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b) && recolte(t, l.getBlockState(b))))) continue;
+            if (blocs.stream().allMatch(b -> Monde.traversable(l, b)) || !Monde.solide(l, q.below()) || Monde.eboulement(l, q, 2) || occupe(t, q.above())) continue;
+            if (!blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || (Lieux.peutCasser(t, b) || roche(l, b)) && recolte(t, l.getBlockState(b))))) continue;
             monte = false;
             sens = d;
             marcheBas = null;
@@ -1144,6 +1146,17 @@ final class Itineraire {
             return true;
         }
         return false;
+    }
+
+    /**
+     * De la pierre naturelle (pierre, andésite, diorite, granite, ardoise des abîmes, tuf, minerais), ni construction ni pièce
+     * de structure : il peut la percer pour rejoindre son poste, même dans le tampon de 8 blocs autour du poste (pas la terre,
+     * le sable, le bois ni le pavé, qu'un joueur pose).
+     */
+    static boolean roche(Level l, BlockPos b) {
+        BlockState st = l.getBlockState(b);
+        return (st.is(BlockTags.BASE_STONE_OVERWORLD) || st.is(net.neoforged.neoforge.common.Tags.Blocks.ORES))
+                && !Lieux.construit(l, b) && !Monde.construit(l, b) && Monde.structure(l, b) == null;
     }
 
     /** La paroi devant lui, vers le but, n'est pas vide et il n'a rien pour la récolter (de la pierre, sans pioche). */
