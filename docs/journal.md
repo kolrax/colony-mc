@@ -860,3 +860,9 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Livraisons** : 1.0.23 redémarrée à 19 h 59 UTC (0 joueur, « Done » 20 h 00). 1.0.24 : voir l'entrée suivante. Pas de modpack (rien de client).
 - Restes : `docs/plus-tard.md` (lot 18).
 - **1.0.24 (F6) pas livrée** : verte et sur `main` (jar 1 904 438 octets, sha1 `e63d1050…`), mais l'envoi du jar vers `/mods-off` a été **refusé par le système de permissions** de la session (« Production Deploy ») à 20 h 39 UTC, alors que la 1.0.23 était passée une heure avant. Rien n'a été touché sur le serveur : il reste en **1.0.23**, un seul jar dans `/mods`. Case ajoutée au plan ; KOLRAX prévenu.
+
+## 2026-10-19 21 h 39 UTC : 1.0.24 (F6, neige poudreuse) installée par la session locale
+- La session cloud n'avait pas pu envoyer le jar (permissions). La session locale (PC de KOLRAX) l'a reconstruit depuis `main` (b75cfa2, build + JUnit verts ; 427/427 en jeu déjà mesurés par la session cloud sur ce code), puis l'a installé : `/mods-off/colonie_pnj-1.0.24.jar` (1 905 004 octets, construit sous Windows, d'où la taille différente du jar du cloud), la 1.0.23 rangée dans `/mods-off`, un seul jar dans `/mods`.
+- 0 joueur connecté, redémarrage à 21 h 39 UTC, « Done » en 2,6 s, aucune erreur du mod. Pas de modpack (rien de client).
+- Lot 18 fini. Routine désactivée (plan à 0 case).
+

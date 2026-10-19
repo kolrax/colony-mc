@@ -131,4 +131,4 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [x] F1 : un ouvrier qui saute sur place en boucle (1.0.23, `Sauts`)
 - [x] F2 : sur le lieu de sa mission, le bûcheron va droit à l'arbre le plus proche qu'il peut atteindre (cerisiers compris), sans errer (1.0.23)
 - [x] F6 : la neige poudreuse est évitée comme la lave (un ouvrier y est tombé et y est mort de froid) ; s'il y tombe quand même, il en sort aussitôt (1.0.24)
-- [ ] Livrer la 1.0.24 (F6) sur le serveur : prête et verte sur `main` (313/313, 427/427), l'envoi du jar a été refusé par le système de permissions de la session le 19/10 à 20 h 39 UTC ; il faut l'accord de KOLRAX (ou qu'il la livre lui-même)
+- [x] Livrer la 1.0.24 (F6) sur le serveur : prête et verte sur `main` (313/313, 427/427), l'envoi du jar a été refusé par le système de permissions de la session le 19/10 à 20 h 39 UTC ; il faut l'accord de KOLRAX (ou qu'il la livre lui-même)
