@@ -101,8 +101,8 @@ final class Bucheron extends Metier {
             if (!aller(t, t.lieuImpose, c)) t.travailleIci(null);
             return;
         }
-        BlockPos arbre = Actions.chercherArbre(l, t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null || aPortee(t, q, 0)));
-        if (arbre != null && t.peutAller(arbre)) {
+        BlockPos arbre = arbreEnVue(t, c);
+        if (arbre != null) {
             Lieux.choisi(t, arbre);
             t.debloquer(Statut.SANS_BOIS);
             m.remove("sans_bois_" + c.id);
@@ -164,6 +164,28 @@ final class Bucheron extends Metier {
             return;
         }
         if (!aller(t, e, c)) { Cerveau.oublierExploration(t, c.id); Cerveau.attendre(t, 5); }
+    }
+
+    /** L'arbre du bon bois qu'il peut abattre, le plus proche de lui (24 blocs), où il a le temps d'aller ; null sinon. */
+    static BlockPos arbreEnVue(Travailleur t, Bois c) {
+        BlockPos a = Actions.chercherArbre((ServerLevel) t.level(), t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null || aPortee(t, q, 0)));
+        return a != null && t.peutAller(a) ? a : null;
+    }
+
+    /**
+     * En chemin vers un coin à explorer ou vers le lieu de sa mission ({@link #aller}) : toutes les 2 secondes, s'il voit un
+     * arbre qu'il peut abattre (sur les lieux de sa mission : une fois entré dans leur zone), il s'arrête, et son travail
+     * suivant le prend. Avant, il ne regardait qu'arrivé au point exact : il passait à côté des arbres, puis revenait ou
+     * cherchait plus loin (F2 : Orianne, à quelques blocs des cerisiers, errait).
+     */
+    @Override
+    void vigilance(Travailleur t) {
+        if (!(t.action instanceof Actions.Aller a) || (t.tickCount + t.getId()) % 40 != 0 || !t.memoire.contains("cherche_vers")) return;
+        BlockPos vers = BlockPos.of(t.memoire.getLong("cherche_vers"));
+        if (Math.floor(a.cible.x) != vers.getX() || Math.floor(a.cible.z) != vers.getZ()) return; // une autre marche (rentrer, déposer…)
+        if (t.lieuImpose != null && !Lieux.ici(t, t.blockPosition())) return; // pas encore sur les lieux
+        Bois c = Metier.commande(t) instanceof Bois b ? b : (Bois) commandes.get(0);
+        if (arbreEnVue(t, c) != null) t.finirAction("arbre_en_vue");
     }
 
     /** Les points d'où repart la recherche de forêt, après le poste : 8 directions, à 240 puis à 400 blocs du poste. */
@@ -263,7 +285,7 @@ final class Bucheron extends Metier {
     /** Part vers ce point (en sortie ou en expédition). Faux si c'est trop loin : il le dit à son chef. */
     boolean aller(Travailleur t, BlockPos dest, Bois c) {
         switch (Cerveau.partir(t, dest, "chercher " + c.article)) {
-            case JOURNEE, EXPEDITION -> { return true; }
+            case JOURNEE, EXPEDITION -> { t.memoire.putLong("cherche_vers", dest.asLong()); return true; } // en chemin, il regarde les arbres (vigilance)
             case DEMAIN -> {
                 Cerveau.ecrire(t, "demain", 1800, "bois_demain", c.article, Messages.direction(t.bureau, dest) + " (vers " + dest.getX() + " " + dest.getZ() + ")");
                 if (!t.chezLui(t.blockPosition())) Cerveau.rentrer(t); else Cerveau.attendre(t, 60);
