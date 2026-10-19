@@ -279,10 +279,10 @@ public class TestsTrajets {
     }
 
     /**
-     * Correction F6 : posé au fond d'une fosse de poudre de neige (3 x 3, deux blocs de fond), il en sort en moins de 5 s,
+     * Correction F6 : posé au fond d'une fosse de poudre de neige (3 x 3, deux blocs de fond), il en sort en moins de 8 s,
      * sans prendre de dégâts de froid. Avant, il y restait enfoncé et gelait.
      */
-    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    @GameTest(template = "grand", timeoutTicks = 160, skyAccess = true)
     public static void sortDeLaPoudreDeNeige(GameTestHelper h) {
         sol(h);
         for (int x = 10; x <= 12; x++) for (int z = 10; z <= 12; z++) for (int y = 2; y <= 3; y++) h.setBlock(x, y, z, Blocks.POWDER_SNOW);

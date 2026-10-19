@@ -1165,9 +1165,13 @@ public class Travailleur extends PathfinderMob {
         return getAirSupply() < 100 && isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
     }
 
-    /** Enfoncé dans la poudre de neige (pieds ou tête) : il en sort aussitôt (correction F6). */
+    /**
+     * Enfoncé dans la poudre de neige (pieds ou tête), ou juste au-dessus, où il s'enfonce : il en sort aussitôt (correction F6).
+     * Sinon, à peine hissé au bord de la poudre, il se croyait sauf, lâchait prise et retombait dedans.
+     */
     boolean dansLaNeige() {
         return level().getBlockState(blockPosition()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
+                || level().getBlockState(blockPosition().below()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
                 || level().getBlockState(BlockPos.containing(getEyePosition())).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW);
     }
 
