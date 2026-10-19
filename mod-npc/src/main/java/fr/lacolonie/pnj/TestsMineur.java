@@ -376,7 +376,7 @@ public class TestsMineur {
         t.inventaire.addItem(new ItemStack(Items.RAW_IRON, 10));
         t.inventaire.addItem(new ItemStack(Items.COBBLESTONE, 20));
         t.inventaire.addItem(new ItemStack(Items.COAL, 5));
-        t.inventaire.addItem(new ItemStack(Items.DIRT, 7));
+        t.inventaire.addItem(new ItemStack(Items.DIRT, 23)); // il en garde 16 pour monter (A3)
         Cerveau.lancer(t, new Actions.Deposer(List.of()));
         h.succeedWhen(() -> {
             h.assertTrue(pierres.countItem(Items.COBBLESTONE) == 21 && pierres.countItem(Items.DIRT) == 7, "la pierre et la terre vont avec la pierre (" + pierres.countItem(Items.COBBLESTONE) + ")");

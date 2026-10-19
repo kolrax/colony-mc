@@ -199,6 +199,44 @@ public class TestsTransporteur {
                 () -> TestsRepertoire.fin(e));
     }
 
+    /**
+     * Tout juste embauché, il suit son chef : « porte le fer de ce coffre au dépôt » le met au travail (il ne reste pas
+     * « Te suit »), et le fer arrive. Avec {@code rentrer}, le bouton « Rentrer » est pressé juste après l'ordre : le trajet
+     * n'est pas perdu (avant, « Rien à porter »).
+     */
+    static void embaucheOrdonne(GameTestHelper h, int coin, boolean rentrer) {
+        ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        BlockPos base = TestsJeu.sol(h, coin * 400, 60000);
+        ServerLevel l = h.getLevel();
+        Vec3 o = Vec3.atBottomCenterOf(base);
+        chef.moveTo(o.x, o.y, o.z - 3);
+        Travailleur g = TestsJeu.employe(h, "transporteur", base, o.add(-0.5, 0, 2.5), ItemStack.EMPTY);
+        g.chef = chef.getUUID();
+        g.prenom = "Gaspard";
+        g.mode = Travailleur.Mode.SUIVRE;
+        g.forcerChunk();
+        BlockPos a = base.offset(6, 0, -3);
+        coffre(l, a, new ItemStack(Items.IRON_INGOT, 12));
+        Bureau.Entite d = TestsBucheron.depot(g);
+        Travailleur[] e = {g};
+        Essais.etapes(h, chef, e,
+                () -> {
+                    TestsRepertoire.regarderPoint(chef, Vec3.atCenterOf(a));
+                    g.parler(chef, "Porte le fer de ce coffre au dépôt");
+                    if (rentrer) Missions.action(chef, g, "rentrer", new net.minecraft.nbt.CompoundTag());
+                },
+                () -> h.assertTrue(Transporteur.lire(g).size() == 1, "le trajet est retenu : " + Transporteur.lire(g) + " / " + Paroles.echange(g)),
+                () -> h.assertTrue(g.mode == Travailleur.Mode.TRAVAIL, "il ne suit plus son chef : " + g.mode),
+                () -> h.assertTrue(TestsBucheron.compte(d, Items.IRON_INGOT) == 12, "le fer au dépôt : " + TestsBucheron.compte(d, Items.IRON_INGOT) + " (" + TestsJeu.etat(g, g.bureau) + ")"),
+                () -> TestsRepertoire.fin(e));
+    }
+
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void embaucheSeMetAuTrajet(GameTestHelper h) { embaucheOrdonne(h, 473, false); }
+
+    @GameTest(template = "vide", timeoutTicks = 1600)
+    public static void rentrerApresOrdreGardeLeTrajet(GameTestHelper h) { embaucheOrdonne(h, 474, true); }
+
     /** « Prends dans ce coffre », puis « dépose dans celui-là » : le trajet d'un coffre à l'autre, et le fer arrive. Coin 195, 200 blocs plus loin. */
     @GameTest(template = "vide", timeoutTicks = 1600)
     public static void prendsPuisDepose(GameTestHelper h) {

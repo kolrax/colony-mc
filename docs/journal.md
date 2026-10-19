@@ -712,3 +712,25 @@ Aucun code du mod touché, aucune action sur le serveur.
 - `init-commands.txt` relancé (liste blanche déjà à jour, op, keepInventory false, sommeil 50 %). `MONDE_NOTE` mis à jour dans `tools/etat.py`.
 - **Pas pré-généré** : Chunky ne peut pas tourner avec Distant Horizons (domaine de l'Admin) ; demande faite dans `docs/demandes-admin.md`. En attendant, le terrain se crée à la première visite (chargement lent aux bords).
 - Le monde a été créé avec la 1.0.13 ; les versions suivantes (A3, E5) s'installent sur ce même monde.
+
+## 2026-10-19 00 h 44 UTC : 1.0.14 livrée, serveur seul (A3 montagne au seau d'eau)
+- Commit livré : `main` 2d7c755 (`mod_version=1.0.14`). Tests du chef : **306/306 JUnit, 393/393 en jeu**.
+- Jar `colonie_pnj-1.0.14.jar` : **1 861 408 octets**, sha1 `02322cca999454b5ae7cdbd099a38af1e8c1d655` (revérifié avant l'envoi).
+- `list` : **0 joueur** (deux fois, juste avant l'envoi et juste avant le redémarrage) : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md`.
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 861 408) ; `colonie_pnj-1.0.13.jar` rangé dans `/mods-off`, 1.0.14 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.13 -> 1.0.14) », « Preparing level "ouverture" », **« Done (2.306s) » à 00 h 44 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur ni avertissement du mod**. Les seules erreurs du journal viennent d'autres mods (282 tables de butin illisibles, un mixin client de `create_sa`), comme avant.
+- Pas de modpack, pas d'annonce : le client n'a pas changé.
+
+## 2026-10-19 01 h 35 UTC : joueur fantôme en montagne et en forêt dense (branche `fantome-a`)
+- Scénarios `mod-npc/fantome/montagne.txt` et `foret-dense.txt`, outils du fantôme (`apparait montagne|jungle`, `offre`, `mission_repere`, `va_repere`, `coffre`) et partie `deplacements` du rapport (arrêts > 3 s, demi-tours, distance, retours au poste, blocs et eau laissés) sur `origin/fantome-a` (c1eb75a), build vert (306/306), pas encore sur `main`.
+- **Forêt dense (jungle)**, 3e partie (les deux premières ont servi à trouver le souci du transporteur) : 2 arrêts > 3 s (ramasser dans le feuillage, 16-17 s), 0 retour au poste, 0 bloc laissé, 0 blessé, 32/32 bûches, 640/640 pierres portées.
+- **Montagne** (poste au pied, sommet 37 blocs plus haut, 2 parties de 2 jours) : **pas bon**. Aucun ouvrier n'a monté par pilier ou colonne d'eau ; 29 puis 76 arrêts > 3 s, 60+ demi-tours ; descente ratée (« bureau_inaccessible », téléporté au poste, 3 sur 3, partie 1) ; un bûcheron perdu à 400 blocs ; une noyade mortelle au pied (partie 2) ; un mineur immobile une journée au sommet (« Aucun lieu sûr pour miner ») ; terre et seau donnés rangés au dépôt. 0 eau ni bloc laissé, 0 construction cassée.
+- Corrections lancées (branches `a3-montagne` : errance, montée quand le trajet ne progresse plus, descente ; `a3-sac` : terre et seau gardés, transporteur qui ne part pas après « porte ce coffre au dépôt »).
+
+## 2026-10-19 02 h 17 UTC : 1.0.15 livrée, serveur seul (terre et seau gardés pour monter, transporteur)
+- **A3 (sac)** : au dépôt, un ouvrier garde un seau (d'eau de préférence) et jusqu'à 16 terre pour monter, sauf ce que ses missions doivent livrer ; le transporteur dépose tout (`Actions.Deposer` : `montee`, `pourMonter`, `TERRE_GARDEE`). Le cuisinier suit la même règle de dépôt (sinon boucle au dépôt, relecture).
+- **Transporteur tout juste embauché** : « porte ce coffre au dépôt » le met au travail (`Missions.reprendre`) ; « Rentrer » juste après ne perd plus l'ordre (`Transporteur.retenirAvant` avant `Consignes.annuler`).
+- Tests `garderTerreEtSeauPourMonter`, `embaucheSeMetAuTrajet`, `rentrerApresOrdreGardeLeTrajet`, vus rouges sur l'ancien code. Une relecture : 0 bloquant, 1 moyen corrigé (cuisinier), mineurs laissés (éleveur qui peut garder un seau de trop ; condition « déjà retenu » inutile ; « Attendre » levé par un trajet, comme pour une mission).
+- **Tests** : 306/306 JUnit ; en jeu, 1re passe du chef 395/396 (`horairesGenerauxSansEffet`, « la paie s'enregistre (-1) » ; 3/3 lancé seul), 2e passe **396/396**. Instable possible à surveiller.
+- **Livraison** : 0 joueur ; jar 1 871 948 octets, sha1 `e10a35421c6b…`, même taille dans `/mods-off` ; 1.0.14 rangée dans `/mods-off`, un seul `colonie_pnj-*.jar` dans `/mods` ; DH, Burnt, GeckoLib, Chunky pas touchés. « colonie_pnj (version 1.0.14 -> 1.0.15) », « Preparing level "ouverture" », **« Done (1.831s) » à 02 h 17 UTC**, panneau des PNJ ouvert. Pas de modpack, pas d'annonce.
+- **Serveur figé** ~91 min avant (« 109532 ticks behind », 0 joueur), après ~27 min vers 00 h 40 : signalé à l'Admin (pause de l'hébergeur ?).

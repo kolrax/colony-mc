@@ -967,6 +967,7 @@ public final class Actions {
         /** Combien il en déposera ({@code f} : de cet objet ; null : de tout), sans la pile gardée de chaque objet ni ses pièces. */
         static int aDeposer(Travailleur t, List<Filtre> garder, Filtre f) {
             boolean[] garde = new boolean[garder.size()];
+            int[] montee = montee(t);
             int n = 0;
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
@@ -974,18 +975,55 @@ public final class Actions {
                 int k = -1;
                 for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
                 if (k >= 0) garde[k] = true;
-                else if (Reglages.piece(s) < 0 && (f == null || f.objet(s))) n += s.getCount();
+                else if (Reglages.piece(s) < 0 && (f == null || f.objet(s))) n += s.getCount() - pourMonter(t, s, montee);
             }
             return n;
         }
 
-        /** Range tout au dépôt, sauf une pile de chaque objet à garder (une pioche, des torches, à manger…). */
+        /** La réserve pour monter (plan A3, {@link Itineraire}) : jusqu'à tant de terre, en blocs reprenables à la main. */
+        static final int TERRE_GARDEE = 16;
+
+        /**
+         * Ce qu'il peut encore garder pour monter : {terre, seau} ; seau = 2 s'il a un seau d'eau (il garde celui-là), 1 un seau
+         * vide, 0 rien. Le transporteur n'en garde pas : tout son sac est la charge qu'il porte.
+         */
+        static int[] montee(Travailleur t) {
+            if ("transporteur".equals(t.metier)) return new int[] {0, 0};
+            int seau = 0;
+            for (int i = 0; i < t.inventaire.getContainerSize() && seau < 2; i++) {
+                ItemStack s = t.inventaire.getItem(i);
+                if (s.is(net.minecraft.world.item.Items.WATER_BUCKET)) seau = 2;
+                else if (s.is(net.minecraft.world.item.Items.BUCKET)) seau = 1;
+            }
+            return new int[] {TERRE_GARDEE, seau};
+        }
+
+        /**
+         * Combien de cette pile il garde au sac pour monter (pilier de terre, colonne d'eau) ; décompte {@code reste}
+         * (de {@link #montee}). Jamais ce qu'une de ses missions doit livrer.
+         */
+        static int pourMonter(Travailleur t, ItemStack s, int[] reste) {
+            boolean seau = reste[1] == 2 ? s.is(net.minecraft.world.item.Items.WATER_BUCKET) : reste[1] == 1 && s.is(net.minecraft.world.item.Items.BUCKET);
+            boolean terre = reste[0] > 0 && Mineur.TERRE.objet(s);
+            if (!seau && !terre) return 0;
+            for (Travailleur.Mission mi : t.missions) {
+                Metier.Commande ci = Metier.catalogue(t.metier, mi.id);
+                if (ci != null && ci.objet != null && ci.objet.objet(s)) return 0;
+            }
+            if (seau) { reste[1] = 0; return 1; }
+            int g = Math.min(reste[0], s.getCount());
+            reste[0] -= g;
+            return g;
+        }
+
+        /** Range tout au dépôt, sauf une pile de chaque objet à garder (une pioche, des torches, à manger…), et de quoi monter ({@link #pourMonter}). */
         Etat tick(Travailleur t) {
             Bureau.Entite b = arriver(t);
             if (b == null) return raison.isEmpty() ? Etat.EN_COURS : Etat.ECHEC;
             boolean plein = false, diamants = false, depose = false;
             long reserve = b.reserve.total();
             boolean[] garde = new boolean[garder.size()];
+            int[] montee = montee(t);
             for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
                 ItemStack s = t.inventaire.getItem(i);
                 if (s.isEmpty()) continue;
@@ -993,6 +1031,10 @@ public final class Actions {
                 for (int j = 0; j < garder.size() && k < 0; j++) if (!garde[j] && garder.get(j).objet(s)) k = j;
                 if (k >= 0) { garde[k] = true; continue; }
                 if (Reglages.piece(s) >= 0) continue; // sa bourse reste à lui (lot 11)
+                // Un seau et un peu de terre restent au sac : de quoi monter (pilier, colonne d'eau), sauf s'il doit les livrer.
+                int g = pourMonter(t, s, montee);
+                if (g >= s.getCount()) continue;
+                ItemStack gardee = g > 0 ? s.split(g) : ItemStack.EMPTY;
                 int avant = s.getCount();
                 // Ce qu'il livre compte pour la première quantité à livrer de cet objet.
                 Travailleur.Mission credit = null;
@@ -1002,11 +1044,11 @@ public final class Actions {
                 }
                 boolean diamant = s.is(net.minecraft.world.item.Items.DIAMOND);
                 ItemStack reste = b.ranger(s);
-                t.inventaire.setItem(i, reste);
                 if (diamant && reste.getCount() < avant) diamants = true;
                 if (reste.getCount() < avant) depose = true;
                 if (credit != null) credit.livre += avant - reste.getCount();
                 if (!reste.isEmpty()) plein = true;
+                t.inventaire.setItem(i, gardee.isEmpty() ? reste : gardee.copyWithCount(g + reste.getCount()));
             }
             t.swing(InteractionHand.MAIN_HAND);
             if (depose) Sons.depot(t, b.getBlockPos()); // le sac vidé ne sonne que s'il a vraiment laissé quelque chose
