@@ -125,14 +125,8 @@ final class Cuisinier extends Metier {
     @Override
     boolean enCours(Travailleur t) { return !t.memoire.getCompound("fournee").isEmpty(); }
 
-    /** Il porte autre chose que ce qu'il garde (son bateau). */
-    boolean aDeposer(Travailleur t) {
-        for (int i = 0; i < t.inventaire.getContainerSize(); i++) {
-            ItemStack s = t.inventaire.getItem(i);
-            if (!s.isEmpty() && garder.stream().noneMatch(g -> g.objet(s))) return true;
-        }
-        return false;
-    }
+    /** Il porte autre chose que ce qu'il garde (son bateau, sa paie, de quoi monter) : la même règle que le dépôt, sinon il y retournerait sans fin. */
+    boolean aDeposer(Travailleur t) { return Actions.Deposer.utile(t, garder); }
 
     // --- Ce qu'il fait ------------------------------------------------------------------------------------------
 
