@@ -171,6 +171,26 @@ public class TestsMorts {
     }
 
     /**
+     * Plan E4 (« pas de chute de plus de 3 blocs », KOLRAX) : en haut d'une marche de pierre de 5 blocs, son bureau en bas,
+     * un escalier taillé dans la paroi à 10 blocs de là. Avant, en pleine vie, il sautait les 5 blocs (2 points de vie ; en
+     * montagne, 7 à 22 coups de chute par partie au joueur fantôme). Maintenant, il fait le détour par l'escalier.
+     */
+    @GameTest(template = "grand", timeoutTicks = 700, skyAccess = true, batch = "morts")
+    public static void nesautePasDeCinqBlocs(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) h.setBlock(x, 1, z, Blocks.STONE);
+        for (int x = 0; x <= 9; x++) for (int z = 0; z < 24; z++) for (int y = 2; y <= 6; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 10; x <= 13; x++) for (int y = 2; y <= 15 - x; y++) h.setBlock(x, y, 2, Blocks.STONE); // l'escalier
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 5, 7, 12, ItemStack.EMPTY, new BlockPos(16, 2, 12));
+        debutant(t);
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 2));
+        Suivi s = suivre(h, t);
+        h.runAtTickTime(h.getTick() + 600, () -> {
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être descendu jusqu'au bureau (" + s.texte() + ")");
+            finir(h, "nesautePasDeCinqBlocs", t, s, 0.9, "fall");
+        });
+    }
+
+    /**
      * Enfermé dans un enclos de planches de 7 blocs de haut, de la pierre en poche, son bureau dehors : il monte sur un
      * pilier, sort par le haut du mur… et ne doit pas se jeter de 8 blocs de haut pour redescendre.
      */

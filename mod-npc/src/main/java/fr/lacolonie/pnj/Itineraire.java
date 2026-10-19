@@ -980,8 +980,8 @@ final class Itineraire {
         // Le trajet d'étape en cours le ramènerait en haut après chaque marche : il l'oublie.
         oublierPlan();
         if (aCreuser != null) t.getNavigation().stop();
-        // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but : plus haut, Minecraft le ferait sauter de 6 blocs
-        // (getMaxFallDistance) et il se blesserait. Là, une recherche par marche ; plus haut, il continue de creuser.
+        // Le chemin direct ne sert qu'à 3 blocs au plus au-dessus du but (getMaxFallDistance : jamais de chute plus haute,
+        // la recherche échouerait). Là, une recherche par marche ; plus haut, il continue de creuser.
         directRate = p.getY() - 1 - Mth.floor(but.y) > 3 ? 2 : horizontale(pos, but) <= 8 ? 1 : 0;
         montee = null;
         etape = null;
