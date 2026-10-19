@@ -108,13 +108,16 @@ public final class Actions {
         private Vec3 dernier;
         private int immobile, sansProgres;
         /**
-         * Le filet (plan A3) : depuis combien de ticks de marche il ne s'est pas rapproché du but de 2 blocs, même en creusant ou
-         * en posant des blocs. Au bout de {@link #SANS_AVANCER_MAX}, il se dit coincé : jamais une action figée pour des jours.
+         * Le filet (plan A3) : depuis combien de ticks de marche il ne s'est ni rapproché du but de 2 blocs, ni éloigné de plus de
+         * 8 blocs de l'endroit où le compte a commencé, même en creusant ou en posant des blocs. Au bout de
+         * {@link #SANS_AVANCER_MAX} (10 minutes), il se dit coincé : jamais une action figée pour des jours, sans couper un long
+         * détour ni une montée qui avancent.
          */
         private int sansAvancer;
-        /** Sa distance au but au dernier rapprochement de 2 blocs compté par {@link #sansAvancer}. */
+        /** Sa distance au but, et sa place, quand le compte de {@link #sansAvancer} a commencé. */
         private double repereAvance = Double.MAX_VALUE;
-        static final int SANS_AVANCER_MAX = 5 * 60 * 20;
+        private Vec3 departAvance;
+        static final int SANS_AVANCER_MAX = 10 * 60 * 20;
         private double meilleure = Double.MAX_VALUE;
         /** Sa cible bouge (le chef, une créature) : ne pas l'atteindre n'est pas être coincé (Coince). */
         boolean mobile;
@@ -140,6 +143,7 @@ public final class Actions {
             sansProgres = 0;
             sansAvancer = 0;
             repereAvance = Double.MAX_VALUE;
+            departAvance = null;
             immobile = 0;
         }
 
@@ -158,7 +162,7 @@ public final class Actions {
             double ecart = route == null ? 0 : route.but.distanceToSqr(cible);
             if (route == null || ecart > 16
                     || dePres && age % 10 == 0 && ecart > Math.max(1, p.distanceToSqr(cible) / 16) && route.surCheminDirect()) {
-                if (route != null && ecart > 16) { repereAvance = Double.MAX_VALUE; sansAvancer = 0; } // un autre but : le filet repart de zéro
+                if (route != null && ecart > 16) { repereAvance = Double.MAX_VALUE; departAvance = null; sansAvancer = 0; } // un autre but : le filet repart de zéro
                 route = new Itineraire(t, cible);
                 route.cibleMobile = mobile; // une cible qui bouge : pas de trajet calculé d'avance (plan A1)
             }
@@ -184,8 +188,8 @@ public final class Actions {
             double d = p.distanceTo(cible);
             if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
-            // Creuser ou poser sans jamais se rapprocher de 2 blocs (le même bloc, sans fin) : au bout de 5 minutes, ce n'est plus avancer.
-            if (d < repereAvance - 2) { repereAvance = d; sansAvancer = 0; }
+            // Creuser ou poser sur place sans jamais se rapprocher (le même bloc, sans fin) : au bout de 10 minutes, ce n'est plus avancer.
+            if (d < repereAvance - 2 || departAvance == null || p.distanceToSqr(departAvance) > 64) { repereAvance = d; departAvance = p; sansAvancer = 0; }
             else sansAvancer++;
             // Il attend son tour pour chercher une étape, ou le délai après un choix raté : ce temps-là ne compte pas.
             if (age % 40 == 0) {
