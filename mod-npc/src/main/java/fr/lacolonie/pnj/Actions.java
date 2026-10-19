@@ -1302,7 +1302,9 @@ public final class Actions {
             // Son chef hors d'atteinte (sur une tour, ou lui au fond d'un creux d'où il ne sort pas) : il va l'attendre au
             // poste comme s'il était absent. Marcher vers son chef ne compte pas « coincé » (il bouge), aller au poste si :
             // sinon il restait au fond pour toujours, jamais ramené (Godefroy, montagne, 1.0.19).
-            if (pres && t.distanceTo(c) > 3 && mobile && coince()) horsDAtteinte = true;
+            // Le trajet vers le chef ne vaut plus pour le poste (il resterait « bloqué ») ; revenu près de lui, il lui redemande.
+            if (pres && t.distanceTo(c) > 3 && mobile && coince()) { horsDAtteinte = true; nouveauBut(); }
+            else if (horsDAtteinte && pres && t.distanceTo(c) <= 3) { horsDAtteinte = false; nouveauBut(); }
             if (pres && !horsDAtteinte) {
                 if (t.distanceTo(c) > 3) { mobile = true; marcher(t, c.position(), 1.15); }
                 else {
