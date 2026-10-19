@@ -174,6 +174,7 @@ final class Itineraire {
         if (montee != null) {
             if (t.blockPosition().equals(montee) || age > monteeFin) {
                 boolean sorti = t.blockPosition().equals(montee);
+                if (!sorti) pasFaits.add(montee); // 3 s sans y arriver : cette marche ne sera plus essayée
                 montee = null;
                 etape = null;
                 finChoix();
@@ -266,6 +267,7 @@ final class Itineraire {
         double dh = horizontale(p, but);
         if (phase < 0) {
             visites.merge(cellule(ici), 1, Integer::sum);
+            if (montagne(t, maintenant, v)) return;
             phase = 0;
         }
 
@@ -351,9 +353,11 @@ final class Itineraire {
         // Il creuse : il avance, le prochain choix vient vite. Sinon, il attend de plus en plus (20, 40, 80… 200 ticks).
         // Plan A3 : la paroi devant lui ne se récolte pas avec ce qu'il a (de la pierre sans pioche) : la creuser serait long
         // et ne rendrait rien. Il monte d'abord sur des blocs de son sac (qu'il reprend ensuite), puis creuse s'il le faut.
-        if (evasionPermise(t) && sansOutilPourLaParoi(t) && caseDeChantier(t, false, true) >= 0 && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
+        // Le but est plus haut (une falaise, une montagne) : même avec une pioche, des blocs qu'il reprend vont plus vite qu'un escalier.
+        boolean grimper = sansOutilPourLaParoi(t) || but.y > p.y + 2;
+        if (evasionPermise(t) && grimper && caseDeChantier(t, false, true) >= 0 && commencerAPoser(t)) { montee = null; choixRates = 0; etape = null; return; }
         // Pas de bloc qu'il saurait reprendre, mais un seau d'eau : il monte à la nage par une colonne d'eau, qu'il reprend en haut.
-        if (evasionPermise(t) && sansOutilPourLaParoi(t) && commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return; }
+        if (evasionPermise(t) && grimper && commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return; }
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -838,6 +842,48 @@ final class Itineraire {
     private BlockPos montee;
     private int monteeFin;
     private final List<BlockPos> aCasser = new ArrayList<>();
+    /** Les marches déjà libres où il a déjà fait un pas pendant ce trajet : il n'y retourne pas (pas d'allers-retours). */
+    private final Set<BlockPos> pasFaits = new HashSet<>();
+
+    // --- La montagne (plan A3) : le but est plus haut et il ne s'en rapproche plus -------------------------
+
+    /** Sans gagner au moins 3 blocs vers le but (en hauteur comptée une fois et demie) pendant tant de ticks, il grimpe. */
+    static final int STAGNATION = 600;
+    private double meilleur;
+    private long meilleurDate = -1, montagneProchain;
+    /** Les pieds de paroi où il est déjà allé grimper : il n'y retourne pas. */
+    private final Set<BlockPos> pieds = new HashSet<>();
+
+    /**
+     * Le but est plus haut et ses étapes ne l'en rapprochent plus depuis {@link #STAGNATION} ticks (il longe le pied de la
+     * montagne) : au pied d'une paroi, il grimpe (blocs qu'il reprend, seau d'eau, escalier s'il a l'outil) ; sinon il va
+     * d'abord au plus près du but qu'un chemin atteint, par un chemin complet, pour y grimper. Une fois toutes les 10 s au
+     * plus (une recherche de chemin). Vrai s'il a commencé quelque chose.
+     */
+    private boolean montagne(Travailleur t, long maintenant, double v) {
+        Vec3 p = t.position();
+        double m = horizontale(p, but) + 1.5 * Math.max(0, but.y - p.y);
+        if (meilleurDate < 0 || m < meilleur - 3) { meilleur = m; meilleurDate = maintenant; return false; }
+        if (but.y < p.y + 3 || maintenant - meilleurDate < STAGNATION || maintenant < montagneProchain || !evasionPermise(t)
+                || sousTerre(t) || !t.onGround()) return false;
+        montagneProchain = maintenant + 200;
+        if (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return true; }
+        BlockPos devant = t.blockPosition().relative(Direction.getNearest(but.x - p.x, 0, but.z - p.z)).above();
+        if (!Monde.traversable(t.level(), devant) && !sansOutilPourLaParoi(t)) {
+            commencerCreusage(t);
+            if (aCreuser != null || montee != null) { choixRates = 0; return true; }
+        }
+        if (!jeton(maintenant)) { montagneProchain = 0; return false; }
+        Path c = chercher(t, BlockPos.containing(but), 0, Charge.Origine.ETAPE);
+        if (c == null || c.getEndNode() == null) return false;
+        BlockPos pied = c.getEndNode().asBlockPos();
+        if (pied.distSqr(t.blockPosition()) <= 2 || pieds.contains(pied) || !jeton(maintenant)) return false;
+        pieds.add(pied);
+        if (!aller(t, pied, Vec3.atBottomCenterOf(pied), v, true, 1)) return false;
+        prolonge = false; // il s'arrête au pied : de là, il grimpe
+        t.diag = "va au pied de la paroi " + pied.toShortString();
+        return true;
+    }
 
     private void commencerCreusage(Travailleur t) {
         Level l = t.level();
@@ -867,13 +913,17 @@ final class Itineraire {
             // Du gravier ou du sable sur un bloc de sa propre colonne lui tomberait dessus ; dans la marche, il attend qu'il
             // soit tombé (il le recassera de côté) avant d'y monter.
             boolean surLui = blocs.stream().anyMatch(b -> b.getX() == p.getX() && b.getZ() == p.getZ() && !Monde.traversable(l, b) && Monde.tombe(l, b.above()));
-            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b))) && (aCreuserIci || Monde.debout(l, marche))) {
+            // Une marche déjà libre n'est une solution que s'il ne l'a pas déjà essayée et, pour un pas de côté, qu'elle le
+            // rapproche du but : sinon il fait un pas et revient, sans fin (le joueur fantôme : 3 min entre deux cases).
+            boolean libre = !aCreuserIci && Monde.debout(l, marche) && !pasFaits.contains(marche)
+                    && (i < dirs.size() || horizontale(Vec3.atBottomCenterOf(marche), but) < horizontale(Vec3.atBottomCenterOf(p), but) - 0.5);
+            if (appui && !surLui && !Monde.eboulement(l, marche, 2) && blocs.stream().allMatch(b -> creusable(l, b) && (Monde.traversable(l, b) || Lieux.peutCasser(t, b))) && (aCreuserIci || libre)) {
                 monte = i < dirs.size();
                 sens = d;
                 aCasser.clear();
                 for (BlockPos b : blocs) if (!Monde.traversable(l, b)) aCasser.add(b);
                 aCreuser = aCasser.isEmpty() ? null : aCasser.get(0);
-                if (aCreuser == null) monter(t);
+                if (aCreuser == null) { if (pasFaits.size() > 64) pasFaits.clear(); pasFaits.add(marche); monter(t); }
                 else { progres = 0; echecs = 0; Cerveau.dire(t, "creuse", 600, "Je suis bloqué : je creuse un passage."); }
                 return;
             }

@@ -258,6 +258,60 @@ public class TestsDeblocage {
         });
     }
 
+    /**
+     * Plan A3 (le joueur fantôme : 3 minutes d'allers-retours entre deux cases voisines, « monte en … ») : enfermé dans un
+     * enclos de planches de deux cases, sans bloc ni seau, son bureau dehors. Le pas de côté vers l'autre case, déjà libre,
+     * n'est pas une solution : il ne le rapproche pas du but. Avant, il faisait ce pas, revenait, et recommençait sans fin,
+     * sans jamais se dire coincé. Maintenant il se dit coincé.
+     */
+    @GameTest(template = "grand", timeoutTicks = 700, skyAccess = true)
+    public static void pasDAllersRetoursEntreDeuxCases(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 3; y++) h.setBlock(x, y, z, Blocks.STONE);
+        for (int x = 11; x <= 14; x++) for (int z = 11; z <= 13; z++)
+            if (z != 12 || x == 11 || x == 14) for (int y = 4; y <= 7; y++) h.setBlock(x, y, z, Blocks.OAK_PLANKS);
+        Travailleur t = TestsJeu.employe(h, "mineur", h.absolutePos(new BlockPos(12, 4, 2)), h.absoluteVec(new Vec3(12.5, 4, 12.5)), new ItemStack(Items.BREAD));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        var fins = fins(h, t);
+        int[] pas = {0};
+        BlockPos[] avant = {t.blockPosition()};
+        h.onEachTick(() -> { if (!t.blockPosition().equals(avant[0])) { pas[0]++; avant[0] = t.blockPosition(); } });
+        h.runAtTickTime(h.getTick() + 600, () -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", fins " + fins + ", " + pas[0] + " changements de case";
+            t.discard();
+            h.assertTrue(fins.contains("aller:bloque"), "il doit se dire coincé (" + e + ")");
+            h.assertTrue(pas[0] <= 4, "il ne doit pas aller et venir entre les deux cases (" + e + ")");
+            h.succeed();
+        });
+    }
+
+    /**
+     * Plan A3 (montagne) : au fond d'une cuvette de pierre naturelle (16 x 10 blocs, 6 de haut), une pioche et de la terre en
+     * poche, son bureau en haut à une quinzaine de blocs. Avant, la montée sur blocs n'était essayée que sans pioche : il
+     * creusait un escalier dans la pierre. Maintenant, le but étant plus haut, il va au pied de la paroi, monte sur sa
+     * terre, la reprend en haut, et rejoint son bureau sans toucher à la pierre ni laisser de bloc.
+     */
+    @GameTest(template = "grand", timeoutTicks = 1600, skyAccess = true)
+    public static void grimpeLaFalaiseMemeAvecUnePioche(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 9; y++)
+            if (x < 4 || x > 19 || z < 12 || z > 21 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 17, new ItemStack(Items.DIRT, 16), new BlockPos(12, 10, 3));
+        t.inventaire.addItem(new ItemStack(Items.IRON_PICKAXE));
+        Cerveau.lancer(t, new Actions.Aller(Vec3.atBottomCenterOf(t.bureau), 3));
+        h.succeedWhen(() -> {
+            int pierres = 0, terre = 0;
+            for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 4; y <= 9; y++) {
+                var st = h.getBlockState(new BlockPos(x, y, z));
+                if (st.is(Blocks.STONE)) pierres++;
+                if (st.is(Blocks.DIRT)) terre++;
+            }
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", terre " + t.compter(Actions.Filtre.de("minecraft:dirt")) + ", " + pierres + " pierres";
+            h.assertTrue(pierres == 24 * 24 * 6 - 16 * 10 * 6, "il ne doit pas creuser d'escalier dans la pierre (" + e + ")");
+            h.assertTrue(t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 16, "il doit être monté jusqu'à son bureau (" + e + ")");
+            h.assertTrue(terre == 0 && t.compter(Actions.Filtre.de("minecraft:dirt")) == 16, "il doit avoir repris toute sa terre (" + e + ")");
+            t.discard();
+        });
+    }
+
     /** Un ouvrier qui doit attendre là (gardé, prisonnier), envoyé dehors : il ne pose ni ne creuse pour s'en aller. */
     @GameTest(template = "grand", timeoutTicks = 500, skyAccess = true)
     public static void prisonnierNeSEvadePas(GameTestHelper h) {
