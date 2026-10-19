@@ -576,7 +576,9 @@ public final class Actions {
                     vers = vers.lengthSqr() > 1.0E-4 ? vers.normalize().scale(0.15) : Vec3.ZERO;
                     t.setDeltaMovement(vers.x, t.getY() < refuge.getY() + 0.2 ? 0.4 : Math.min(t.getDeltaMovement().y, 0), vers.z);
                     t.getLookControl().setLookAt(c);
-                } else for (BlockPos q : List.of(t.blockPosition(), BlockPos.containing(t.getEyePosition())))
+                }
+                // Sans bord à portée, ou encore dedans au bout de 5 s (le bord est derrière la roche) : il casse la neige.
+                if (refuge == null || age > 100) for (BlockPos q : List.of(t.blockPosition(), BlockPos.containing(t.getEyePosition())))
                     if (l.getBlockState(q).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW) && !Lieux.protege(t, q)) l.destroyBlock(q, false, t);
                 return age > 200 ? echec("perdu") : Etat.EN_COURS;
             }
