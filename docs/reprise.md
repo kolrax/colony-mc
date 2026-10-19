@@ -1,13 +1,19 @@
 # Reprise : où on en est
 
-Mise à jour : 18/10/2026, 23 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 19/10/2026, ~02 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 1.0.13** (18/10, 22 h 36 UTC ; serveur seul, le modpack 1.0.11.1 reste bon), un seul jar dans `/mods` (les anciens rangés dans `/mods-off`), avec Burnt + GeckoLib (Distant Horizons : voir l'Admin), sur le **monde neuf `essai-v2`**. Les mondes `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
-- **Modpack : 1.0.11, obligatoire** (canal réseau **10** depuis la 1.0.11 : barre qui/quoi). `pack/release.py` ne garde plus que le jar maison de la dernière version (`GARDER_VERSIONS = 1` : deux jars dépassaient la limite de 5 Mo de la fonction Supabase). Autres mods inchangés depuis la 0.5.1 (`build.py` voulait monter JEI et lithostitched : `lock.json` remis comme avant, à demander à l'Admin si utile).
-- `main` = la 1.0.13 : **306/306 JUnit, 391/391 en jeu**, identique au serveur. Modpack publié par l'Admin : 1.0.11.1 (le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`). Distant Horizons est dans `/mods` du serveur, Chunky dans `/mods-off` : ne jamais les remettre ensemble.
-- Banc des écrans avec un vrai client : `cd mod-npc && LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runEcrans --no-daemon` (~3 min, 56 captures dans `run-photos/screenshots`).
-- Panneau : **« Refonte des ouvriers »** https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ (`plan/etapes`, `etat/courant`, `journal`, `essais` V01-V25). L'ancien panneau ne sert plus.
+- **Serveur : 1.0.14** (19/10, 00 h 44 UTC ; serveur seul), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (créé le 19/10 à 00 h 07 UTC, **pas pré-généré** : demande à l'Admin). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
+- **Modpack : 1.0.11.1** (publié par l'Admin), canal réseau 10. Le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`.
+- `main` = la 1.0.14 : **306/306 JUnit, 393/393 en jeu**.
+- Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW.
+
+## Prochaine étape (exacte)
+1. **E5 repère rouge Xaero, après 7 h UTC le 19/10** : branche **`origin/e5-xaero`** (à jour avec la 1.0.14 + test en jeu `repereAllerRetour`, vu rouge), relue. Paquet renommé `reperes2` : serveur puis modpack (> 1.0.11.1, `pack/verifier.py`) coup sur coup, annonce en dernier. Penser à `distanthorizons` dans `pack/mods.txt` (voir `docs/demandes-admin.md`). Passe complète des tests après fusion avec `main`.
+2. **A3 montagne, pas fini** (le joueur fantôme le montre) : branches **`origin/a3-montagne`** (errance sur un pas libre, montée quand le trajet ne progresse plus, descente) et **`origin/a3-sac`** (terre et seau gardés au sac ; transporteur qui ne part pas après « porte ce coffre au dépôt » et « Rentrer » qui annule l'ordre). Lire leur dernier commit (où ils en sont), finir, relire (une relecture), passe complète, livrer, puis rejouer `python3 tools/fantome.py mod-npc/fantome/montagne.txt` (scénario et outils sur `origin/fantome-a`, inclus dans les deux branches). Les deux branches partent de `fantome-a` : fusionner les deux dans une branche `integration`.
+3. Restes vus au fantôme en montagne : noyade mortelle au pied (-6, 61, -286, partie 2), mineur immobile au sommet « Aucun lieu sûr pour miner », bûcheron perdu à 400 blocs, bûcheron qui s'arrête 16 s à ramasser dans le feuillage de la jungle.
+4. Test `partEnExpeditionSansLit` vu rouge 2 fois sur 3 passes (19/10 nuit) : instable possible, à examiner.
+5. Restes : `docs/plus-tard.md`.
 
 ## La 1.0.0 en bref (refonte « ouvriers robots »)
 - Mission (`Travailleur.Mission` : id du catalogue, quantité/stock, une fois/tous les jours, lieu, horaires), file, `Missions.donner`/`Missions.action` (écran et fantôme), statut unique `Statut` (entityData `STATUT`, recalculé toutes les 5 s), `t.bloquer(raison)`/`debloquer`.
@@ -38,8 +44,8 @@ Mise à jour : 18/10/2026, 23 h 30 UTC. Une page à lire en début de session, a
 `panel.py upload` échoue. Ce qui marche : `panel.py write /mods-off/colonie_pnj-X.jar <jar>`, vérifier la taille (`panel.py ls /mods-off`), puis `panel.py mv` vers `/mods`.
 
 ## Session en cours
-- aucune (session 18/10 21 h 00 - 23 h 30 UTC, terminée : 1.0.13 livrée, serveur seul ; E5 prêt sur `e5-xaero`).
-- Joueur fantôme : `python3 tools/fantome.py mod-npc/fantome/morts-7j.txt` (~15-20 min), `trois-ouvriers.txt`, `mine-lave.txt` (un seul mineur : « embauche mineur 2 » = niveau 2).
+- aucune (session 19/10 00 h 00 - 02 h 45 UTC, terminée : monde `ouverture`, 1.0.14 livrée, fantôme montagne et forêt dense ; A3 montagne en cours sur `a3-montagne` et `a3-sac`).
+- Joueur fantôme : `python3 tools/fantome.py mod-npc/fantome/morts-7j.txt` (~15-20 min), `trois-ouvriers.txt`, `mine-lave.txt` (un seul mineur : « embauche mineur 2 » = niveau 2). Nouveaux : `montagne.txt`, `foret-dense.txt` (sur `fantome-a`).
 
 ## Avant (18/10 matin)
 - aucune (session 18/10 07 h 00 - 09 h 15 UTC, terminée : 1.0.5 et 1.0.6 livrées, serveur seul).
