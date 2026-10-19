@@ -1,6 +1,6 @@
 # Reprise : où on en est
 
-Mise à jour : 19/10/2026, ~15 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 19/10/2026, ~17 h 45 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
 - **Serveur : 1.0.22** (19/10, serveur seul : E4 chutes ≤ 3 blocs et ramassage loin de la lave ; voir le journal pour l'heure), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`**. Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
@@ -8,6 +8,13 @@ Mise à jour : 19/10/2026, ~15 h 30 UTC. Une page à lire en début de session, 
 - `main` = la 1.0.22 (e1d7902 + journal) : **308/308 JUnit, 420/420 en jeu** (1re passe du chef).
 - La branche `en-cours` existe encore sur GitHub (suppression refusée, 403) : sans danger, elle ne contient rien qui ne soit sur `main`.
 - Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW (fiche `e4` repassée en cours puis livrée en 1.0.22).
+
+## ARRÊT DEMANDÉ PAR KOLRAX (19/10, 16 h 45 UTC, consigne `stop-19-10`)
+Quota de la semaine à 88 %, routine désactivée. Ne reprendre que sur décision de KOLRAX. Rien de nouveau n'est sur `main` ni sur le serveur (toujours 1.0.22, modpack 1.0.18). Deux branches prêtes à reprendre, **ni relues ni fusionnées** :
+- **`origin/a3-creux42`** (14a1061) : mineur coincé au fond d'un creux (graine 42). Trois défauts du compte « coincé » (`Coince.relever` : toute l'attente compte après un échec vers le poste ; `surveillerCoince` : « demander » compte, aller vers son chef n'efface plus le compte ; `Demander` : arrivé près du chef il ne le suit plus, marcher vers le poste sans y arriver = échec). Fantôme : `embauche` pose l'ouvrier sur une place sûre (la « chute à l'embauche » venait de l'outil, pas du mod). Tests vus rouges sur 1.0.22 : `CoinceTest.apresUnEchecVersLePosteToutLAttenteCompte`, `demandeAuChefAuFondDuCreuxEstRamene`, `demandeAuFondDUnCreuxPresDuPosteEstRamene`. **309/309, 422/422.** Relecture lancée puis arrêtée : à refaire. Restes vus : chute de 10,8 blocs en allant au lit (chemin direct), 2 terres laissées une fois (-415,130,-366), mineur perdu dans les grottes.
+- **`origin/a3-chutes2`** = **`origin/en-cours`** (3f5f575, contient `a3-trace-chutes`) : chutes des bûcherons aux rebords : tests de chute à la course en terrasses (rouges sur 1.0.22), ne courent plus et ralentissent au bord d'une descente, pas de diagonale ni de coin coupé au bord d'un à-pic. Dernier message du développeur : « 423 verts » ; fantôme de vérification **pas fait**, aucune mesure. Relecture à faire.
+- Pour reprendre : fusionner les deux, passe complète, une relecture chacune, fantôme `montagne.txt` graines 1234567 et 42, puis livrer 1.0.23 (serveur seul).
+- Nouveau sur `main` (session locale de KOLRAX) : plan F dans `docs/corrections.md` (saut en boucle, bûcheron qui erre, métiers activables, points Xaero, corne de chèvre), F3 déjà fait.
 
 ## Prochaine étape (exacte)
 1. **Plan : 1 case restante, A** (`python3 tools/suivi.py reste` = 1).
