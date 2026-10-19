@@ -1,8 +1,10 @@
 package fr.lacolonie.pnj;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -10,6 +12,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -88,6 +91,54 @@ public class TestsCarte {
             h.assertTrue(Fantome.carte != null && !sonRepere(oriane).aTerre(), "relevée, repère normal : " + Fantome.carte);
             oriane.discard();
         });
+    }
+
+    /**
+     * Plan E, point 5 : le repère, écrit à la main (sept champs), revient du réseau tel qu'il est parti : chaque champ, le
+     * drapeau « à terre », un prénom trop long coupé à 60 lettres par le serveur, la liste entière ; au-delà de 64 lettres,
+     * le codec refuse. Rien dans le monde : échoue si l'on inverse deux champs de l'encodage.
+     */
+    @GameTest(template = "vide")
+    public static void repereAllerRetour(GameTestHelper h) {
+        UUID id = UUID.fromString("0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0");
+        String prenom = CarteOuvriers.court("É".repeat(10) + "x".repeat(200));
+        h.assertTrue(prenom.length() == 60, "prénom borné à 60 : " + prenom.length());
+        Reperes.Repere tombe = new Reperes.Repere(id, prenom, "minecraft:the_nether", -30_000_123, -64, 1_234_567, true);
+        Reperes.Repere lu = allerRetour(h, tombe);
+        h.assertTrue(lu.id().equals(id), "id : " + lu.id());
+        h.assertTrue(lu.prenom().equals(prenom), "prénom : " + lu.prenom());
+        h.assertTrue(lu.dim().equals("minecraft:the_nether"), "dimension : " + lu.dim());
+        h.assertTrue(lu.x() == -30_000_123 && lu.y() == -64 && lu.z() == 1_234_567, "place : " + lu);
+        h.assertTrue(lu.aTerre(), "le drapeau « à terre » arrive");
+        Reperes.Repere debout = new Reperes.Repere(new UUID(1, 2), "Oriane", "minecraft:overworld", 5, 70, -9, false);
+        Reperes.Repere deboutLu = allerRetour(h, debout);
+        h.assertTrue(deboutLu.equals(debout), "debout reste debout : " + deboutLu);
+        var liste = List.of(debout, new Reperes.Repere(new UUID(3, 4), "Bertrand", "minecraft:overworld", -5, 12, 9, true));
+        RegistryFriendlyByteBuf b = tampon(h);
+        CarteOuvriers.Paquet.CODEC.encode(b, new CarteOuvriers.Paquet(liste));
+        var listeLue = CarteOuvriers.Paquet.CODEC.decode(b).liste();
+        h.assertTrue(listeLue.equals(liste) && b.readableBytes() == 0, "la liste entière : " + listeLue);
+        Reperes.Repere tropLong = new Reperes.Repere(new UUID(5, 6), "x".repeat(65), "minecraft:overworld", 0, 0, 0, false);
+        boolean refuse = false;
+        try {
+            CarteOuvriers.Paquet.REPERE.encode(tampon(h), tropLong);
+        } catch (RuntimeException e) {
+            refuse = true;
+        }
+        h.assertTrue(refuse, "au-delà de 64 lettres, le codec refuse (d'où la coupe à 60 du serveur)");
+        h.succeed();
+    }
+
+    static RegistryFriendlyByteBuf tampon(GameTestHelper h) {
+        return new RegistryFriendlyByteBuf(Unpooled.buffer(), h.getLevel().registryAccess());
+    }
+
+    static Reperes.Repere allerRetour(GameTestHelper h, Reperes.Repere r) {
+        RegistryFriendlyByteBuf b = tampon(h);
+        CarteOuvriers.Paquet.REPERE.encode(b, r);
+        Reperes.Repere lu = CarteOuvriers.Paquet.REPERE.decode(b);
+        h.assertTrue(b.readableBytes() == 0, "rien ne reste dans le tampon : " + b.readableBytes());
+        return lu;
     }
 
     /** Le repère de cet ouvrier dans la dernière liste reçue (le joueur fantôme peut avoir d'autres ouvriers dans d'autres tests). */
