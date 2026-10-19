@@ -1006,6 +1006,20 @@ public class Travailleur extends PathfinderMob {
             }
 
             /**
+             * Plan A3 : il ne coupe pas au plus court là où son chemin monte ou descend : en biais, il passait au-dessus d'une
+             * case plus basse que celles du chemin (chutes de 4 blocs en montagne, au joueur fantôme).
+             */
+            @Override
+            public boolean canCutCorner(net.minecraft.world.level.pathfinder.PathType type) {
+                if (!super.canCutCorner(type)) return false;
+                Path c = getPath();
+                if (c == null || c.isDone() || level.isClientSide) return true;
+                int i = c.getNextNodeIndex();
+                int y = c.getNode(i).y;
+                return (i == 0 || c.getNode(i - 1).y == y) && (i + 1 >= c.getNodeCount() || c.getNode(i + 1).y == y);
+            }
+
+            /**
              * Un bloc a changé près du chemin (porte ouverte, feuilles, bloc posé) : Minecraft le refait vers la cible de sa
              * dernière recherche, qui peut être une autre étape (plan A1 : les étapes suivantes sont cherchées depuis la fin de la
              * précédente). On le refait vers le bout du chemin suivi ; l'Itineraire l'adopte s'il y mène.

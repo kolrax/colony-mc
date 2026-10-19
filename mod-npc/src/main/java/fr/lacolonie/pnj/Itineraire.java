@@ -805,6 +805,16 @@ final class Itineraire {
             evites.put(q.asLong(), fin);
         }
 
+        /**
+         * Plan A3 : pas de pas en diagonale à côté d'un à-pic trop haut (ou de la lave) : Minecraft l'accepte dès que la case
+         * d'à côté est plus basse, même interdite ; en passant le coin, il glissait dedans (chutes de 4 blocs au fantôme).
+         */
+        @Override
+        protected boolean isDiagonalValid(net.minecraft.world.level.pathfinder.Node racine, net.minecraft.world.level.pathfinder.Node x,
+                                          net.minecraft.world.level.pathfinder.Node z) {
+            return super.isDiagonalValid(racine, x, z) && x.costMalus >= 0 && z.costMalus >= 0;
+        }
+
         @Override
         public net.minecraft.world.level.pathfinder.PathType getPathType(net.minecraft.world.level.pathfinder.PathfindingContext c, int x, int y, int z) {
             if (!evites.isEmpty() && mob != null) {
