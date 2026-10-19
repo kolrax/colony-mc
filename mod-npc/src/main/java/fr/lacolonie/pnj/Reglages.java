@@ -298,7 +298,7 @@ public class Reglages {
     }
 
     /** Le métier est ouvert sur ce monde (correction F3, {@link Recrutement#metierActif}). */
-    public static boolean metierActif(String id) { return Recrutement.metierActif(id, actuel.metiers_actifs, actuel.metiers_inactifs); }
+    public static boolean metierActif(String id) { return Recrutement.metierActif(id, Recrutement.connus(actuel.metiers_actifs, Metier.TOUS.keySet()), actuel.metiers_inactifs); }
 
     // --- Argent -------------------------------------------------------------------------------
 

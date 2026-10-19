@@ -2,6 +2,7 @@ package fr.lacolonie.pnj;
 
 import java.text.Normalizer;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -58,6 +59,12 @@ final class Recrutement {
         String m = simple(id);
         if (inactifs != null && inactifs.stream().anyMatch(x -> x != null && simple(x).equals(m))) return false;
         return actifs == null || actifs.stream().noneMatch(x -> x != null && !x.isBlank()) || actifs.stream().anyMatch(x -> x != null && simple(x).equals(m));
+    }
+
+    /** Les noms de {@code actifs} qui sont de vrais métiers : une faute de frappe (« bucherons ») ne ferme pas tout le reste. */
+    static List<String> connus(Collection<String> actifs, Collection<String> metiers) {
+        if (actifs == null) return List.of();
+        return actifs.stream().filter(x -> x != null && metiers.stream().anyMatch(id -> simple(id).equals(simple(x)))).toList();
     }
 
     /** Sans accents, en minuscules, sans espaces autour. */

@@ -138,5 +138,10 @@ class RecrutementTest {
         assertFalse(Recrutement.metierActif("mineur", List.of(), List.of("mineur")), "fermé au panneau");
         assertFalse(Recrutement.metierActif("bucheron", List.of("bucheron"), List.of("Bûcheron")), "fermé au panneau, même dans la liste");
         assertFalse(Recrutement.metierActif(null, List.of(), List.of()));
+        // Une faute de frappe ne ferme pas tout : le nom inconnu est écarté, la liste ne garde que les vrais métiers.
+        List<String> connus = Recrutement.connus(List.of("bucherons"), List.of("bucheron", "mineur"));
+        assertTrue(connus.isEmpty());
+        assertTrue(Recrutement.metierActif("mineur", connus, List.of()), "faute de frappe seule : tous ouverts");
+        assertEquals(List.of("Mineur"), Recrutement.connus(List.of("Mineur", "pecheurs"), List.of("bucheron", "mineur")));
     }
 }
