@@ -209,3 +209,4 @@ Restes mineurs, à reprendre quand tous les lots ont leur première passe. Le pl
 - F2 : clé `cherche_vers` jamais effacée de la mémoire (sans effet) ; point d'exploration sauté quand il s'arrête en chemin.
 - F2 : le but d'une marche lointaine pris sur la carte des hauteurs qui compte le bois (un point sous une branche est posé sur la branche) : test passé sur l'ancien code, non corrigé.
 - F3 : le bouton « Embaucher » de l'écran d'entretien reste affiché pour un métier fermé (écran client : le serveur refuse avec un message).
+- F6 : `Monde.refuge` (rayon 4) ne regarde pas s'il y a un mur entre l'ouvrier et le bord : il pousse contre la roche ; filet ajouté (au bout de 5 s dans la poudre, il la casse), sans test dédié. Un ouvrier en bottes de cuir déclenche `Echapper` en marchant sur la poudre (sans gravité). La poudre posée par un joueur compte comme naturelle (cassée en dernier recours).

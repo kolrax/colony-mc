@@ -127,7 +127,7 @@ Forgeron, marchand, opérateur de machines Create, cheminot, veilleur de nuit, s
 - [x] Plan A : déplacements « GPS », arrêté par KOLRAX le 19/10 (fait à 95 % de la 1.0.11 à la 1.0.22 ; les cas rares qui restent sont dans `docs/plus-tard.md`, à reprendre seulement sur un rapport de joueur)
 
 ## 18. Avant l'ouverture, soir du 19/10 (voir `docs/corrections.md`, plan F)
-- [ ] F3 : métiers activés choisis dans la configuration (`metiers_actifs` dans `reglages.json`, `/pnj recharger`) ; au départ : bûcheron, chasseur, guérisseur, mineur, pêcheur
-- [ ] F1 : un ouvrier qui saute sur place en boucle
-- [ ] F2 : sur le lieu de sa mission, le bûcheron va droit à l'arbre le plus proche qu'il peut atteindre (cerisiers compris), sans errer
-- [ ] F6 : la neige poudreuse est évitée comme la lave (un ouvrier y est tombé et y est mort de froid) ; s'il y tombe quand même, il en sort aussitôt
+- [x] F3 : métiers activés choisis dans la configuration (`metiers_actifs` dans `reglages.json`, `/pnj recharger`) ; au départ : bûcheron, chasseur, guérisseur, mineur, pêcheur (1.0.23, 19/10)
+- [x] F1 : un ouvrier qui saute sur place en boucle (1.0.23, `Sauts`)
+- [x] F2 : sur le lieu de sa mission, le bûcheron va droit à l'arbre le plus proche qu'il peut atteindre (cerisiers compris), sans errer (1.0.23)
+- [x] F6 : la neige poudreuse est évitée comme la lave (un ouvrier y est tombé et y est mort de froid) ; s'il y tombe quand même, il en sort aussitôt (1.0.24)
