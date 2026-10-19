@@ -859,3 +859,4 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Fantôme** (une partie, jungle, graine 1234567, 1.0.23) : bûcheron mission de 32 finie en ~4 min de jeu (109 bûches au dépôt), 2 arrêts de plus de 3 s (17 s au plus), 3 demi-tours, 0 blessure, 0 mort, rien de construit cassé. Ne compte pas les sauts ; pas de cerisiers dans les scénarios.
 - **Livraisons** : 1.0.23 redémarrée à 19 h 59 UTC (0 joueur, « Done » 20 h 00). 1.0.24 : voir l'entrée suivante. Pas de modpack (rien de client).
 - Restes : `docs/plus-tard.md` (lot 18).
+- **1.0.24 (F6) pas livrée** : verte et sur `main` (jar 1 904 438 octets, sha1 `e63d1050…`), mais l'envoi du jar vers `/mods-off` a été **refusé par le système de permissions** de la session (« Production Deploy ») à 20 h 39 UTC, alors que la 1.0.23 était passée une heure avant. Rien n'a été touché sur le serveur : il reste en **1.0.23**, un seul jar dans `/mods`. Case ajoutée au plan ; KOLRAX prévenu.

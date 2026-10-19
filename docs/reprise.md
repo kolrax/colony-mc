@@ -1,6 +1,12 @@
 # Reprise : où on en est
 
-Mise à jour : 19/10/2026, ~17 h 45 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+Mise à jour : 19/10/2026, ~20 h 45 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
+
+## SOIR DU 19/10 (lot 18) : À LIRE D'ABORD
+- **Serveur : 1.0.23** (F1 saut en boucle, F2 bûcheron sur place, F3 `metiers_actifs` = bûcheron, chasseur, guérisseur, mineur, pêcheur), installée à 19 h 59 UTC, un seul jar dans `/mods`. Modpack inchangé (1.0.18).
+- **`main` = 1.0.24** (+ F6 neige poudreuse), verte (313/313, 427/427), **pas sur le serveur** : l'envoi du jar a été refusé par le système de permissions (« Production Deploy »). Seule case restante du plan : la livrer, avec l'accord de KOLRAX. Ne pas contourner ce refus.
+- Branches `a3-creux42` et `a3-chutes2` (plan A) : toujours de côté, interdites ce soir ; F4 et F5 après vendredi.
+- Restes du lot 18 : `docs/plus-tard.md`.
 
 ## Versions
 - **Serveur : 1.0.22** (19/10, serveur seul : E4 chutes ≤ 3 blocs et ramassage loin de la lave ; voir le journal pour l'heure), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`**. Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque.
