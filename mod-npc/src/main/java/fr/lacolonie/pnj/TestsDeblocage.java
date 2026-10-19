@@ -965,6 +965,25 @@ public class TestsDeblocage {
         });
     }
 
+    @GameTest(template = "grand", timeoutTicks = 900, skyAccess = true, batch = "deblocage")
+    public static void demandeAuFondDUnCreuxPresDuPosteEstRamene(GameTestHelper h) {
+        // Graine 42 (1.0.22, partie rejouée) : un trou de 4 blocs de fond à 5 blocs du poste, rien pour en sortir (ni bloc, ni
+        // pioche), son chef en haut, à plus de 3 blocs. Chaque demande commençait par marcher vers son chef (le compte « coincé »
+        // repartait de zéro), puis vers le poste, trop proche pour compter : deux jours au fond. Maintenant, il est ramené.
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 9; y++)
+            if (x < 10 || x > 14 || z < 10 || z > 14 || y < 6) h.setBlock(x, y, z, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 6, 13, ItemStack.EMPTY, new BlockPos(12, 10, 16));
+        var chef = chefAuBord(h, t);
+        Cerveau.lancer(t, new Actions.Demander("pioche", Actions.Filtre.de("minecraft:iron_pickaxe"), 1));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", coincé " + t.coince.ticks;
+            h.assertTrue(t.getY() >= h.absolutePos(new BlockPos(0, 10, 0)).getY() && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 9,
+                    "il doit avoir été ramené près du bureau (" + e + ")");
+            t.discard();
+            chef.discard();
+        });
+    }
+
     /**
      * Graine 42 (1.0.21 et 1.0.22) : au fond du creux, son chef tout près de lui, il vient d'échouer à rejoindre son poste
      * (sa pioche est au dépôt) et la redemande à son chef. Avant, cette attente ne comptait pas « coincé » (au mieux une

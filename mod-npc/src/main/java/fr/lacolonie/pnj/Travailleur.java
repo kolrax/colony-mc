@@ -1262,7 +1262,9 @@ public class Travailleur extends PathfinderMob {
         Actions.Action a = action instanceof Consignes.Faire f && f.sous != null ? f.sous : action;
         // Le repos et le sommeil ne comptent pas, mais n'effacent pas non plus le temps déjà passé coincé (plan A3) : coincé
         // sur une corniche le soir, il dormait, le compte repartait de zéro chaque nuit et il restait là près d'un jour entier.
-        if (isSleeping() || a instanceof Actions.Reposer) { coince.marche = false; return; }
+        // Marcher vers son chef pour lui demander quelque chose ne compte pas non plus, sans effacer le compte : au fond d'un
+        // creux, chaque nouvelle demande le remettait à zéro et il n'était jamais ramené (plan A3, graine 42).
+        if (isSleeping() || a instanceof Actions.Reposer || a instanceof Actions.Demander && a.mobile) { coince.marche = false; return; }
         if (bureau == null || chef == null || mode != Mode.TRAVAIL && mode != Mode.GREVE || menace() || isPassenger()
                 || a != null && a.mobile || distanceToSqr(Vec3.atBottomCenterOf(bureau)) < 36 && !coince.posteHorsDAtteinte(level().getGameTime())) {
             coince.progres(getX(), getY(), getZ());

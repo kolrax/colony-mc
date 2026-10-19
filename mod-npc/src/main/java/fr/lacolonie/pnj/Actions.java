@@ -1344,7 +1344,13 @@ public final class Actions {
                 if (!ecrit && Cerveau.parfois(t, "demande_" + type, 1800)) Courrier.ecrire(t, type, vals);
                 ecrit = true;
                 BlockPos bureau = t.bureau;
-                if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) { mobile = false; marcher(t, Vec3.atBottomCenterOf(bureau), 1.0); }
+                if (bureau != null && t.position().distanceToSqr(Vec3.atBottomCenterOf(bureau)) > 16) {
+                    mobile = false;
+                    marcher(t, Vec3.atBottomCenterOf(bureau), 1.0);
+                    // Le poste hors d'atteinte, même tout près (au fond d'un creux à 5 blocs, sous un surplomb, graine 42) : le temps
+                    // « coincé » compte (Coince), sinon il n'était jamais ramené.
+                    if (coince()) t.coince.echec(t.level().getGameTime(), true);
+                }
                 else if (bureau != null && !t.lettresADeposer.isEmpty()) { t.swing(InteractionHand.OFF_HAND); Courrier.deposer(t); }
             }
             return Etat.EN_COURS;
