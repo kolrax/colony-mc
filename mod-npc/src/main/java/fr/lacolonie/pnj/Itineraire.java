@@ -362,7 +362,7 @@ final class Itineraire {
         // Pas de bloc qu'il saurait reprendre, mais un seau d'eau : il monte à la nage par une colonne d'eau, qu'il reprend en haut.
         if (evasionPermise(t) && grimper && commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return; }
         // Le but est plus bas : il descend en creusant des marches, pas un escalier qui monte.
-        if (ici.getY() > Mth.floor(but.y) && descendre(t, maintenant)) return;
+        if (ici.getY() - Mth.floor(but.y) >= DESCENTE_MIN && dh <= DESCENTE_RAYON && descendre(t, maintenant)) return;
         if (evasionPermise(t)) commencerCreusage(t);
         if (aCreuser != null) { prochainChoix = maintenant + DELAI_APRES_ECHEC; choixRates = 0; return; }
         // Rien à creuser (des murs construits, trop haut), ou seulement un pas de côté déjà libre qui ne mène nulle part :
@@ -913,6 +913,8 @@ final class Itineraire {
 
     /** Il ne se met à creuser pour descendre que vers un but au moins tant de blocs plus bas. */
     static final int DESCENTE_MIN = 4;
+    /** Et seulement vers un but presque à la verticale (à 24 blocs au plus) : de loin, ce sont les étapes qui cherchent la descente. */
+    static final int DESCENTE_RAYON = 24;
     /** La marche où il descend quand le creusage en cours sera fini (null : il monte ou avance comme avant). */
     private BlockPos marcheBas;
     /** Quand (temps du monde) il a commencé sa dernière marche de descente : jusqu'à 5 s après, il continue sans attendre. */
@@ -921,14 +923,15 @@ final class Itineraire {
     private boolean enDescente;
 
     /**
-     * Doit-il descendre en creusant, maintenant ? Le but est au moins {@link #DESCENTE_MIN} blocs plus bas et le chemin
+     * Doit-il descendre en creusant, maintenant ? Le but est au moins {@link #DESCENTE_MIN} blocs plus bas (à
+     * {@link #DESCENTE_RAYON} blocs au plus à l'horizontale) et le chemin
      * direct n'y mène pas (une corniche, le haut d'une falaise), ou il ne s'en rapproche plus depuis {@link #STAGNATION}
      * ticks ; ou il vient de descendre une marche (il continue). Vrai s'il a commencé une marche.
      */
     private boolean descente(Travailleur t, long maintenant, double dh) {
         int haut = t.blockPosition().getY() - Mth.floor(but.y);
         boolean suite = maintenant - derniereMarche < 100;
-        if (haut < (suite ? 0 : DESCENTE_MIN) || !suite && !(directRate >= 2 && dh <= 40 && haut <= 20) && maintenant - meilleurDate < STAGNATION) return false;
+        if (dh > DESCENTE_RAYON || haut < (suite ? 0 : DESCENTE_MIN) || !suite && !(directRate >= 2 && haut <= 20) && maintenant - meilleurDate < STAGNATION) return false;
         return descendre(t, maintenant);
     }
 
