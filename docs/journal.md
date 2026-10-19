@@ -757,3 +757,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 ## 2026-10-19 04 h 56 UTC : joueur fantôme en montagne sur la 1.0.17 (3 parties)
 - Comparé aux 4 parties sur 1.0.16 : **0 ramené au poste** (1 par partie avant), **0 bloqué sur la corniche** (1 à 2 avant), descente « taille des marches » déclenchée par 2 à 3 ouvriers par partie ; **montée au seau d'eau vue** (4 à 7 endroits, 0 eau laissée) ; terre posée 19/39/46, 0 laissée ; 0 mort ; 0 construction cassée (619 à 742 casses, toutes naturelles) ; 1 à 2 ouvriers sur 3 au sommet.
 - Restes : le bûcheron au seau **sans pioche** taille à la main un escalier dans la pierre (230 à 306 blocs en 2 jours) et ne coupe aucun bois (0/16) ; partie 2, un ouvrier coincé 11 h de jeu au pied dans le trou de sa descente (-31, 65, -288) sans être ramené au poste ; une mineuse jamais montée (partie 2) ; chutes 12 à 22 coups (`getMaxFallDistance` = 6, décision à prendre) ; arrêts de 15-17 s à ramasser au sommet. Les deux premiers sont lancés sur la branche `a3-main-nue`.
+
+## 2026-10-19 03 h 00 - 05 h 40 UTC : session cloud, 1.0.16 et 1.0.17 livrées (A3 montagne)
+- **1.0.16** (04 h 06) : montée en montagne même avec une pioche, tout le pilier repris ; après relecture (0 bloquant, 3 moyens) : seulement ses propres blocs (`PoseDePilier` : bloc, monde, date ; jamais `Monde.construit`), jamais sous quelqu'un, rien qui tombe si le sac est plein, coffre de mort au sol. 6 tests nouveaux vus rouges.
+- **1.0.17** (04 h 47) : descente d'une corniche en taillant des marches (`descente`/`descendre`/`marche`), compte « coincé » en pause (et non remis à zéro) pendant le repos ; relecture (1 moyen fort : trajet d'étape non oublié ; 2 moyens ; 2 mineurs), tout corrigé. `descendDeLaFalaise` vu rouge ; `descendDeLaHauteCorniche` pas vu rouge.
+- Tests du chef : 306/306 ; en jeu 405/405 (1.0.16, 2e passe : 1re 403/405 sur `chassedenuit` et `horairesGenerauxSansEffet`, capricieux connus) puis 407/407 (1.0.17).
+- Fantôme montagne : voir les deux entrées de la nuit (1.0.16 : 4 parties ; 1.0.17 : 3 parties).
+- **Pas fini** : branche `a3-main-nue` (1.0.18, verte, pas relue) ; voir `docs/reprise.md`. E5 attend 7 h UTC.
