@@ -775,3 +775,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - Modpack **1.0.18** : verrou posé, `pack/embarques/colonie_pnj-1.0.11.jar` retiré (déjà dans `archive/`), 1.0.18 embarqué ; `build.py 1.0.18` : 33 mods, `verifier.py` passé, `lock.json` identique à la 1.0.11.1 (Distant Horizons dedans) ; `release.py prepare` ; fonction `modpack` redéployée (projet `wegefcdewecwjvmhaaxb`).
 - Téléchargement vérifié (`download?l=modrinth&v=1.0.18`, 1 904 904 octets) : `overrides/mods/colonie_pnj-1.0.18.jar`, 1 887 116 octets, **sha1 `dc615edd533b39e98771bbe21fa3e687a2acc09c`** = jar livré ; `l=curseforge` répond 200.
 - Annonce Discord (`release.py announce 1.0.18`) à **07 h 03 UTC**, en dernier ; verrou retiré ensuite.
+
+## 2026-10-19 07 h 30 UTC : 1.0.19 livrée, serveur seul (A3 : plus de pierre taillée à mains nues)
+- Ce qui change en jeu : un ouvrier sans pioche ne taille plus la pierre à mains nues (sauf enfoui sous terre, pour sortir) ; il ne creuse plus de puits vers le bas s'il ne peut pas remonter ; le temps passé à creuser ou poser sur place compte pour « coincé ».
+- Commit livré : `main` bbe3c3d (`mod_version=1.0.19`). Tests : **307/307 JUnit**, en jeu **412/412** (passe du chef).
+- Jar `colonie_pnj-1.0.19.jar` : **1 888 755 octets**, sha1 `e2a02c46014552e8d6d46db4ce9ee9136d834d21` (revérifié avant l'envoi).
+- `list` à 07 h 29 puis 07 h 30 : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer. Serveur encore figé ~14 min juste avant (« 16562 ticks behind » à 07 h 29, 0 joueur).
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 888 755) ; `colonie_pnj-1.0.18.jar` rangé dans `/mods-off`, 1.0.19 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.18 -> 1.0.19) », **« Done (2.047s) » à 07 h 30 min 54 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Erreurs d'autres mods seulement (282 tables de butin, 1 DISTXFORM).
+- Pas de modpack, pas d'annonce : le client n'a pas changé (le modpack 1.0.18 reste le bon).
