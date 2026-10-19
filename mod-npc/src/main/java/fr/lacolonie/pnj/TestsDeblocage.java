@@ -119,6 +119,135 @@ public class TestsDeblocage {
         });
     }
 
+    // --- Les blocs de son pilier repris d'office (plan A3) : seulement les siens, jamais sous quelqu'un ----------
+
+    /** Un sol de pierre (y 1 à 3) et un ouvrier qui attend là (il ne part nulle part de lui-même), en (x, y, z) exactement. */
+    static Travailleur immobile(GameTestHelper h, double x, double y, double z) {
+        for (int i = 0; i < 24; i++) for (int k = 0; k < 24; k++) for (int j = 1; j <= 3; j++) h.setBlock(i, j, k, Blocks.STONE);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 20, 4, 20, ItemStack.EMPTY, new BlockPos(20, 4, 20));
+        t.mode = Travailleur.Mode.ATTENDRE;
+        Vec3 p = h.absoluteVec(new Vec3(x, y, z));
+        t.moveTo(p.x, p.y, p.z);
+        return t;
+    }
+
+    /** Une colonne de ce bloc (y 4 à 7) en (x, z), notée comme le pilier qu'il vient de poser. */
+    static void pilierDe(GameTestHelper h, Travailleur t, int x, int z, net.minecraft.world.level.block.Block bloc) {
+        for (int y = 4; y <= 7; y++) {
+            h.setBlock(x, y, z, bloc);
+            t.pilierPose.add(new Itineraire.PoseDePilier(h.absolutePos(new BlockPos(x, y, z)), bloc, h.getLevel().dimension(), h.getLevel().getGameTime()));
+        }
+    }
+
+    static int dansColonne(GameTestHelper h, int x, int z, net.minecraft.world.level.block.Block bloc) {
+        int n = 0;
+        for (int y = 4; y <= 7; y++) if (h.getBlockState(new BlockPos(x, y, z)).is(bloc)) n++;
+        return n;
+    }
+
+    /** Quelqu'un (ici un mannequin) se tient sur son pilier : il n'en retire aucun bloc, même d'office. Avant : tout sauf le haut. */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void pilierPorteurGardeToutDessous(GameTestHelper h) {
+        Travailleur t = immobile(h, 12.5, 4, 12.5);
+        pilierDe(h, t, 5, 5, Blocks.DIRT);
+        h.spawn(net.minecraft.world.entity.EntityType.ARMOR_STAND, new Vec3(5.5, 8, 5.5));
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Itineraire.retirerPilier(t, false, false);
+            Itineraire.retirerPilier(t, true, false);
+            int n = dansColonne(h, 5, 5, Blocks.DIRT);
+            t.discard();
+            h.assertTrue(n == 4, "le pilier qui porte quelqu'un doit rester entier (" + n + " terres)");
+            h.succeed();
+        });
+    }
+
+    /** Il se tient sur le bord, sa boîte à cheval sur la colonne de son pilier (ses pieds comptés sur la case d'à côté) : il n'y touche pas. */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void pilierSousSaBoiteGarde(GameTestHelper h) {
+        Travailleur t = immobile(h, 6.2, 8, 5.5);
+        h.setBlock(6, 7, 5, Blocks.STONE); // le bord où il se tient
+        pilierDe(h, t, 5, 5, Blocks.DIRT);
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Vec3 p = h.absoluteVec(new Vec3(6.2, 8, 5.5));
+            t.moveTo(p.x, p.y, p.z);
+            Itineraire.retirerPilier(t, false, false);
+            int n = dansColonne(h, 5, 5, Blocks.DIRT);
+            t.discard();
+            h.assertTrue(n == 4, "le pilier sous lui doit rester (" + n + " terres)");
+            h.succeed();
+        });
+    }
+
+    /** Un bloc de son pilier remplacé par une pierre (pas la sienne) reste ; sa terre devenue herbe est bien reprise (en terre). */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void pilierNeReprendQueSesBlocs(GameTestHelper h) {
+        Travailleur t = immobile(h, 12.5, 4, 12.5);
+        pilierDe(h, t, 5, 5, Blocks.DIRT);
+        h.setBlock(5, 7, 5, Blocks.COBBLESTONE);
+        pilierDe(h, t, 8, 5, Blocks.DIRT);
+        for (int y = 4; y <= 7; y++) h.setBlock(8, y, 5, Blocks.GRASS_BLOCK);
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Itineraire.retirerPilier(t, false, false);
+            boolean pierre = h.getBlockState(new BlockPos(5, 7, 5)).is(Blocks.COBBLESTONE);
+            int herbe = 4 - dansColonne(h, 8, 5, Blocks.AIR), terre = t.compter(Actions.Filtre.de("minecraft:dirt"));
+            t.discard();
+            h.assertTrue(pierre, "la pierre posée par un autre doit rester");
+            h.assertTrue(herbe == 0 && terre == 7, "sa terre devenue herbe doit être reprise (" + herbe + " restent, " + terre + " terres dans son sac)");
+            h.succeed();
+        });
+    }
+
+    /** Un pilier à plus de 16 blocs de lui : il l'oublie, sans y toucher. */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void pilierLointainOublie(GameTestHelper h) {
+        Travailleur t = immobile(h, 22.5, 4, 22.5);
+        pilierDe(h, t, 1, 1, Blocks.DIRT);
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Itineraire.retirerPilier(t, true, false);
+            int n = dansColonne(h, 1, 1, Blocks.DIRT), suivis = t.pilierPose.size();
+            t.discard();
+            h.assertTrue(n == 4 && suivis == 0, "un pilier lointain est oublié, pas cassé (" + n + " terres, " + suivis + " suivies)");
+            h.succeed();
+        });
+    }
+
+    /** Son sac est plein : le bloc reste en place, rien ne tombe par terre. */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void pilierSacPleinResteEnPlace(GameTestHelper h) {
+        Travailleur t = immobile(h, 12.5, 4, 12.5);
+        for (int i = 0; i < t.inventaire.getContainerSize(); i++) t.inventaire.setItem(i, new ItemStack(Items.STONE, 64));
+        pilierDe(h, t, 5, 5, Blocks.DIRT);
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Itineraire.retirerPilier(t, true, false);
+            int n = dansColonne(h, 5, 5, Blocks.DIRT);
+            int parTerre = h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(h.absolutePos(BlockPos.ZERO)).inflate(30)).size();
+            t.discard();
+            h.assertTrue(n == 4 && parTerre == 0, "sac plein : le pilier reste, rien par terre (" + n + " terres, " + parTerre + " objets au sol)");
+            h.succeed();
+        });
+    }
+
+    /** Il meurt en haut de son pilier : le pilier est repris dans ses affaires, et le coffre est posé au sol, pas en l'air. */
+    @GameTest(template = "grand", timeoutTicks = 100, skyAccess = true)
+    public static void mortSurSonPilierTombeAuSol(GameTestHelper h) {
+        Travailleur t = immobile(h, 12.5, 8, 12.5);
+        pilierDe(h, t, 12, 12, Blocks.DIRT);
+        h.runAtTickTime(h.getTick() + 5, () -> {
+            Vec3 p = h.absoluteVec(new Vec3(12.5, 8, 12.5));
+            t.moveTo(p.x, p.y, p.z);
+            t.dropAllDeathLoot(h.getLevel(), t.damageSources().generic());
+            t.discard();
+            BlockPos sol = new BlockPos(12, 4, 12);
+            h.assertTrue(h.getBlockState(sol).is(Blocks.CHEST), "le coffre doit être au sol (" + h.getBlockState(sol) + ", au-dessus : " + h.getBlockState(new BlockPos(12, 8, 12)) + ")");
+            int terre = 0;
+            if (h.getLevel().getBlockEntity(h.absolutePos(sol)) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c)
+                for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(Items.DIRT)) terre += c.getItem(i).getCount();
+            h.assertTrue(terre == 4, "la terre du pilier doit être dans le coffre (" + terre + ")");
+            for (int y = 5; y <= 8; y++) h.assertTrue(h.getBlockState(new BlockPos(12, y, 12)).isAir(), "plus rien du pilier au-dessus du coffre");
+            h.succeed();
+        });
+    }
+
     /**
      * Plan A3 (montagne) : au fond d'un puits de pierre naturelle de 3 blocs, sans pioche, de la terre en poche, son bureau
      * en haut. Avant, il creusait un escalier dans la pierre à mains nues (7 s par bloc, rien de récolté). Maintenant il

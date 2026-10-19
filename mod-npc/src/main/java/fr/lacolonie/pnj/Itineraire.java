@@ -979,7 +979,8 @@ final class Itineraire {
         l.destroyBlockProgress(t.getId(), aCreuser, -1);
         Actions.recolter(t, aCreuser);
         Actions.userOutil(t, 1);
-        t.pilierPose.remove(aCreuser);
+        BlockPos casse = aCreuser;
+        t.pilierPose.removeIf(p -> p.pos().equals(casse));
         suivantACreuser(t);
     }
 
@@ -1175,7 +1176,7 @@ final class Itineraire {
             if (caseSaut < 0) { abandonner(t); return; }
             if (poserBloc(t, pilier, caseSaut)) {
                 poses.add(pilier);
-                t.pilierPose.add(pilier);
+                t.pilierPose.add(new PoseDePilier(pilier, t.level().getBlockState(pilier).getBlock(), t.level().dimension(), t.level().getGameTime()));
                 t.pilierVu = t.level().getGameTime();
                 posesFaites++;
                 pilier = pilier.above();
@@ -1224,16 +1225,17 @@ final class Itineraire {
             BlockPos q = poses.get(i);
             BlockState st = l.getBlockState(q);
             // Son pilier, juste à côté de lui sous le bord : il se penche et le reprend jusqu'en bas (plan A3, il n'en laisse rien).
-            boolean penche = t.pilierPose.contains(q) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6;
+            boolean penche = dansPilier(t, q) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6;
             if (blocDeChantier(new ItemStack(st.getBlock().asItem())) && (Actions.aPortee(t, q) || penche) && recolte(t, st) && creusable(l, q)
-                    && !q.equals(t.blockPosition().below())) liste.add(q);
+                    && !q.equals(t.blockPosition().below()) && t.inventaire.canAddItem(new ItemStack(st.getBlock().asItem()))) liste.add(q);
         }
         // Les blocs d'un pilier d'avant (trajet abandonné, arrêt en pleine montée), toujours suivis : repris avec, du haut vers le bas.
         for (int i = t.pilierPose.size() - 1; i >= 0; i--) {
-            BlockPos q = t.pilierPose.get(i);
+            PoseDePilier p = t.pilierPose.get(i);
+            BlockPos q = p.pos();
             BlockState st = l.getBlockState(q);
-            if (!liste.contains(q) && blocDeChantier(new ItemStack(st.getBlock().asItem())) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6
-                    && recolte(t, st) && creusable(l, q)) liste.add(q);
+            if (!liste.contains(q) && p.monde().equals(l.dimension()) && sienne(l, p) && q.getY() < t.getY() && horizontale(t.position(), Vec3.atCenterOf(q)) <= 1.6
+                    && recolte(t, st) && creusable(l, q) && !q.equals(t.blockPosition().below()) && t.inventaire.canAddItem(new ItemStack(st.getBlock().asItem()))) liste.add(q);
         }
         liste.sort(Comparator.comparingInt(q -> -q.getY()));
         poses.clear();
@@ -1353,28 +1355,68 @@ final class Itineraire {
      */
     static void eauOubliee(Travailleur t) { if (t.eau != null && t.level().getGameTime() - t.eauVue > 40) retirerEau(t); }
 
+    /** Un bloc de son pilier (plan A3) : où, lequel, dans quel monde et quand il l'a posé. Il ne reprend d'office que ceux-là. */
+    record PoseDePilier(BlockPos pos, Block bloc, net.minecraft.resources.ResourceKey<Level> monde, long date) {}
+
+    /** Il oublie un bloc de son pilier à plus de tant de blocs de lui, ou posé il y a plus de tant de ticks (5 min). */
+    static final int PILIER_LOIN = 16, PILIER_VIEUX = 6000;
+
+    static boolean dansPilier(Travailleur t, BlockPos q) {
+        for (PoseDePilier p : t.pilierPose) if (p.pos().equals(q)) return p.monde().equals(t.level().dimension()) && sienne(t.level(), p);
+        return false;
+    }
+
+    /** Le bloc est toujours celui qu'il a posé (sa terre a pu verdir), sans rien de construit dessus : c'est le sien. */
+    static boolean sienne(Level l, PoseDePilier p) {
+        BlockState st = l.getBlockState(p.pos());
+        boolean meme = st.is(p.bloc()) || p.bloc() == Blocks.DIRT && st.is(Blocks.GRASS_BLOCK);
+        return meme && !Monde.construit(l, p.pos());
+    }
+
+    /** Ce bloc est sous lui : sa boîte (pas seulement la case de ses pieds) passe au-dessus de cette colonne. */
+    static boolean sousLui(Travailleur t, BlockPos q) {
+        var b = t.getBoundingBox();
+        return q.getY() < t.getY() && b.maxX > q.getX() && b.minX < q.getX() + 1 && b.maxZ > q.getZ() && b.minZ < q.getZ() + 1;
+    }
+
+    /** Il se tient au-dessus d'un bloc de son pilier. */
+    static boolean surSonPilier(Travailleur t) {
+        for (PoseDePilier p : t.pilierPose) if (sousLui(t, p.pos())) return true;
+        return false;
+    }
+
     /**
-     * Il reprend les blocs de son pilier qui sont encore là (plan A3), dans son sac (plein : à ses pieds). Sans
-     * {@code force}, pas ceux sur lesquels il se tient ou qui portent quelqu'un. Un coin pas chargé : gardés pour plus tard.
+     * Il reprend les blocs de son pilier qui sont encore là (plan A3), dans son sac ; s'ils n'y rentrent pas, ils restent
+     * en place ({@code mort} : tout va dans son sac, puis dans sa tombe). Jamais un bloc qui porte quelqu'un d'autre, ni
+     * ceux en dessous ; sans {@code force}, pas non plus ceux sous lui. Il oublie (sans y toucher) ceux d'un autre monde,
+     * trop loin, trop vieux, ou qui ne sont plus les siens (cassés, remplacés, construits). Un coin pas chargé : gardés.
      */
-    static void retirerPilier(Travailleur t, boolean force) {
+    static void retirerPilier(Travailleur t, boolean force, boolean mort) {
         Level l = t.level();
-        BlockPos ici = t.blockPosition();
-        for (int i = t.pilierPose.size() - 1; i >= 0; i--) {
-            BlockPos q = t.pilierPose.get(i);
-            if (!l.isLoaded(q)) continue;
+        long maintenant = l.getGameTime();
+        t.pilierPose.removeIf(p -> !p.monde().equals(l.dimension()) || p.pos().distSqr(t.blockPosition()) > PILIER_LOIN * PILIER_LOIN
+                || maintenant - p.date() > PILIER_VIEUX || l.isLoaded(p.pos()) && !sienne(l, p));
+        // Les colonnes tenues : au-dessus d'un bloc porteur (quelqu'un dessus, ou lui sans force), rien n'est retiré en dessous.
+        List<BlockPos> porteurs = new ArrayList<>();
+        for (PoseDePilier p : t.pilierPose)
+            if (l.isLoaded(p.pos()) && (occupe(t, p.pos()) || !force && sousLui(t, p.pos()))) porteurs.add(p.pos());
+        List<PoseDePilier> liste = new ArrayList<>(t.pilierPose);
+        liste.sort(Comparator.comparingInt(p -> -p.pos().getY())); // du haut vers le bas
+        for (PoseDePilier p : liste) {
+            BlockPos q = p.pos();
+            if (!l.isLoaded(q) || porteurs.stream().anyMatch(o -> o.getX() == q.getX() && o.getZ() == q.getZ() && o.getY() >= q.getY())) continue;
             BlockState st = l.getBlockState(q);
-            if (!blocDeChantier(new ItemStack(st.getBlock().asItem()))) { t.pilierPose.remove(i); continue; } // déjà cassé ou remplacé
-            if (!force && (q.getX() == ici.getX() && q.getZ() == ici.getZ() && q.getY() < ici.getY() || occupe(t, q))) continue;
-            t.pilierPose.remove(i);
-            for (ItemStack d : Block.getDrops(st, (net.minecraft.server.level.ServerLevel) l, q, null)) t.ranger(d);
+            List<ItemStack> drops = Block.getDrops(st, (net.minecraft.server.level.ServerLevel) l, q, null);
+            if (!mort && !drops.stream().allMatch(t.inventaire::canAddItem)) continue; // le sac est plein : le bloc reste là
+            t.pilierPose.remove(p);
+            for (ItemStack d : drops) t.ranger(d);
             l.setBlock(q, Blocks.AIR.defaultBlockState(), 3);
             l.playSound(null, q, st.getSoundType().getBreakSound(), net.minecraft.sounds.SoundSource.NEUTRAL, 1, 1);
         }
     }
 
     /** Un pilier laissé par un trajet abandonné (ordre changé, abandon, arrêt en pleine montée) : il le reprend quand même. */
-    static void pilierOublie(Travailleur t) { if (!t.pilierPose.isEmpty() && t.level().getGameTime() - t.pilierVu > 40) retirerPilier(t, false); }
+    static void pilierOublie(Travailleur t) { if (!t.pilierPose.isEmpty() && t.level().getGameTime() - t.pilierVu > 40) retirerPilier(t, false, false); }
 
     /** Une autre créature que lui (un joueur, un ouvrier, une bête) se tient sur ce bloc. */
     static boolean occupe(Travailleur t, BlockPos q) {

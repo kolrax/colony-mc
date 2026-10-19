@@ -943,7 +943,7 @@ public class Travailleur extends PathfinderMob {
     BlockPos eau;
     long eauVue;
     /** Les blocs de son pilier (plan A3), et quand il s'en est occupé en dernier : suivis comme l'eau, il les reprend toujours. */
-    final List<BlockPos> pilierPose = new ArrayList<>();
+    final List<Itineraire.PoseDePilier> pilierPose = new ArrayList<>();
     long pilierVu;
     /** Ses recherches de chemin (depuis son apparition, non sauvegardé), et le plus qu'il en a fait sur un même tick. */
     int recherches, recherchesPireTick;
@@ -1274,7 +1274,7 @@ public class Travailleur extends PathfinderMob {
         if (isSleeping()) stopSleeping();
         finirAction("ramene");
         Itineraire.retirerEau(this); // une colonne d'eau en cours : reprise tant que le coin est chargé
-        Itineraire.retirerPilier(this, true); // les blocs de son pilier aussi
+        Itineraire.retirerPilier(this, true, false); // les blocs de son pilier aussi
         getNavigation().stop();
         trace.clear();
         etapesRatees.clear();
@@ -1568,7 +1568,8 @@ public class Travailleur extends PathfinderMob {
     @Override
     protected void dropAllDeathLoot(ServerLevel level, DamageSource src) {
         Itineraire.retirerEau(this); // l'eau revient dans son seau avant qu'il parte à la tombe
-        Itineraire.retirerPilier(this, true); // et les blocs de son pilier dans son sac
+        boolean perche = Itineraire.surSonPilier(this);
+        Itineraire.retirerPilier(this, true, true); // et les blocs de son pilier dans son sac
         List<ItemStack> tout = new ArrayList<>();
         for (int i = 0; i < inventaire.getContainerSize(); i++) if (!inventaire.getItem(i).isEmpty()) tout.add(inventaire.removeItemNoUpdate(i));
         for (EquipmentSlot s : EquipmentSlot.values()) {
@@ -1579,6 +1580,8 @@ public class Travailleur extends PathfinderMob {
 
         if (tout.isEmpty()) { lieuAffaires = "Il n'avait rien sur lui."; return; }
         BlockPos pos = blockPosition();
+        // Mort en haut de son pilier, repris : sa tombe va au sol, pas en l'air.
+        if (perche) for (int i = 0; i < Itineraire.PILIER_MAX + 2 && level.getBlockState(pos.below()).isAir(); i++) pos = pos.below();
         for (int i = 0; i < 3 && !level.getBlockState(pos).canBeReplaced(); i++) pos = pos.above();
         if (level.getBlockState(pos).canBeReplaced() && level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 3)
                 && level.getBlockEntity(pos) instanceof ChestBlockEntity coffre) {
@@ -1603,14 +1606,14 @@ public class Travailleur extends PathfinderMob {
     /** Par un portail : l'eau de l'ancien monde est reprise avant de partir. */
     @Override
     public Entity changeDimension(net.minecraft.world.level.portal.DimensionTransition transition) {
-        if (!level().isClientSide) { Itineraire.retirerEau(this); Itineraire.retirerPilier(this, true); }
+        if (!level().isClientSide) { Itineraire.retirerEau(this); Itineraire.retirerPilier(this, true, false); pilierPose.clear(); } // l'autre monde : oubliés
         return super.changeDimension(transition);
     }
 
     @Override
     public void remove(RemovalReason reason) {
         if (!level().isClientSide) Itineraire.retirerEau(this);
-        if (!level().isClientSide && reason.shouldDestroy()) Itineraire.retirerPilier(this, true); // retiré en pleine montée : ses blocs à ses pieds (un coin déchargé : gardés, repris au retour)
+        if (!level().isClientSide && reason.shouldDestroy()) Itineraire.retirerPilier(this, true, false); // retiré en pleine montée : ses blocs à ses pieds (un coin déchargé : gardés, repris au retour)
         if (reason.shouldDestroy() || reason == RemovalReason.CHANGED_DIMENSION) libererChunk();
         super.remove(reason);
     }
@@ -2461,7 +2464,18 @@ public class Travailleur extends PathfinderMob {
         t.putLong("SortieDepuis", sortieDepuis);
         t.putBoolean("Expedition", expedition);
         t.putLongArray("Trace", trace.stream().mapToLong(BlockPos::asLong).toArray());
-        if (!pilierPose.isEmpty()) t.putLongArray("Pilier", pilierPose.stream().mapToLong(BlockPos::asLong).toArray());
+        if (!pilierPose.isEmpty()) {
+            net.minecraft.nbt.ListTag liste = new net.minecraft.nbt.ListTag();
+            for (Itineraire.PoseDePilier p : pilierPose) {
+                CompoundTag c = new CompoundTag();
+                c.putLong("P", p.pos().asLong());
+                c.putString("B", net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(p.bloc()).toString());
+                c.putString("D", p.monde().location().toString());
+                c.putLong("T", p.date());
+                liste.add(c);
+            }
+            t.put("PilierPoses", liste);
+        }
         if (eau != null) t.putLong("Eau", eau.asLong()); // arrêt ou coin déchargé en pleine montée à la nage : il la reprendra
         t.putLong("Salaire", salaire);
         t.putDouble("Surcout", surcout);
@@ -2524,8 +2538,15 @@ public class Travailleur extends PathfinderMob {
         expedition = t.getBoolean("Expedition");
         trace.clear();
         for (long l : t.getLongArray("Trace")) trace.add(BlockPos.of(l));
-        pilierPose.clear();
-        for (long l : t.getLongArray("Pilier")) pilierPose.add(BlockPos.of(l)); // pilierVu repart de 0 : repris dès qu'il n'est plus dessus
+        pilierPose.clear(); // l'ancien « Pilier » (positions seules, jamais livré) est ignoré : sans le bloc posé, rien ne prouve qu'il est à lui
+        for (net.minecraft.nbt.Tag x : t.getList("PilierPoses", net.minecraft.nbt.Tag.TAG_COMPOUND)) { // pilierVu repart de 0 : repris dès qu'il n'est plus dessus
+            CompoundTag c = (CompoundTag) x;
+            var bloc = net.minecraft.resources.ResourceLocation.tryParse(c.getString("B"));
+            var monde = net.minecraft.resources.ResourceLocation.tryParse(c.getString("D"));
+            if (bloc == null || monde == null || !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(bloc)) continue;
+            pilierPose.add(new Itineraire.PoseDePilier(BlockPos.of(c.getLong("P")), net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(bloc),
+                    net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, monde), c.getLong("T")));
+        }
         eau = t.contains("Eau") ? BlockPos.of(t.getLong("Eau")) : null; // eauVue repart de 0 : il la reprend dès la première seconde
         // « Debut », « Fin » et « JoursExpedition » des anciennes sauvegardes : ignorés (corrections du 18/10, plus de réglage général).
         salaire = t.contains("Salaire") ? t.getLong("Salaire") : -1;
