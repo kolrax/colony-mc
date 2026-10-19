@@ -492,6 +492,32 @@ public class TestsBucheron {
     }
 
     /**
+     * Relecture F2 : arrivé au bord de la zone de sa mission, un cerisier juste dehors (à 7 blocs de lui) et un autre dedans
+     * (à 16 blocs). Il abat celui de la zone et laisse l'autre, même plus proche.
+     */
+    @GameTest(template = "vide", timeoutTicks = 900)
+    public static void cerisierDeLaZoneDAbord(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 170000);
+        BlockPos depart = TestsJeu.sol(h, 60, 170000);
+        BlockPos lieu = TestsJeu.sol(h, 104, 170000);
+        List<BlockPos> dehors = cerisier(l, TestsJeu.sol(h, 76, 170006), 3);
+        List<BlockPos> dedans = cerisier(l, TestsJeu.sol(h, 96, 170000), 5);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(depart), new ItemStack(Items.IRON_AXE));
+        t.mission("cerisier", "stock", 64);
+        t.travailleIci(lieu);
+        t.forcerChunk();
+        h.onEachTick(() -> {
+            if (dehors.stream().anyMatch(q -> !l.getBlockState(q).is(Blocks.CHERRY_LOG)))
+                h.fail("il a entamé le cerisier hors de la zone de sa mission (" + TestsJeu.etat(t, base) + ")");
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(abattu(l, dedans), "le cerisier de la zone doit être abattu (" + TestsJeu.etat(t, base) + ")");
+            t.discard();
+        });
+    }
+
+    /**
      * Pareil en cherchant une forêt : il part vers le coin à explorer, et passe à côté d'un cerisier. Avant : il ne regardait
      * qu'arrivé au coin, à 30 blocs de l'arbre, et cherchait plus loin. Maintenant il s'arrête et l'abat.
      */

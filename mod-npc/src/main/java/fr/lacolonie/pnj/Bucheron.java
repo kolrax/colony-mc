@@ -166,9 +166,12 @@ final class Bucheron extends Metier {
         if (!aller(t, e, c)) { Cerveau.oublierExploration(t, c.id); Cerveau.attendre(t, 5); }
     }
 
-    /** L'arbre du bon bois qu'il peut abattre, le plus proche de lui (24 blocs), où il a le temps d'aller ; null sinon. */
+    /**
+     * L'arbre du bon bois qu'il peut abattre, le plus proche de lui (24 blocs), où il a le temps d'aller ; null sinon. Sur
+     * les lieux de sa mission, seulement dans leur zone : arrivé au bord, il ne rase pas d'abord les arbres d'à côté.
+     */
     static BlockPos arbreEnVue(Travailleur t, Bois c) {
-        BlockPos a = Actions.chercherArbre((ServerLevel) t.level(), t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null || aPortee(t, q, 0)));
+        BlockPos a = Actions.chercherArbre((ServerLevel) t.level(), t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null ? Lieux.ici(t, q) : aPortee(t, q, 0)));
         return a != null && t.peutAller(a) ? a : null;
     }
 
