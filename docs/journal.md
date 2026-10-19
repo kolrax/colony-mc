@@ -810,3 +810,12 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **Mesures honnêtes** : le scénario du fantôme et les graines ont servi aux corrections : ce n'est plus un jeu à l'aveugle. Seule la graine 42 a été rejouée sur la 1.0.20.
 - Serveur toujours figé quand personne ne joue (14 à 45 min avant chaque redémarrage) : noté pour l'Admin.
 - **Reste** : case A du plan (errance au pied, seau peu utilisé, chutes de 6 blocs, mineuse figée), rapport du soir à KOLRAX.
+
+## 2026-10-19 12 h 10 UTC : 1.0.21 livrée, serveur seul (A3 : mineuse figée près du poste)
+- Ce qui change en jeu : un ouvrier bloqué derrière la roche tout près de son poste perce un passage dans la pierre naturelle (jamais dans une construction) ; un ouvrier qui ne peut pas rejoindre son poste tout proche y est ramené au bout de 5 min ; plus de relance en boucle d'une action (pause de 5 s) ; une action qui ne progresse pas du tout pendant 10 min finit par échouer.
+- Commit livré : `main` 3ef8f62 (`mod_version=1.0.21`). Tests : **308/308 JUnit**, en jeu **417/417**.
+- Jar `colonie_pnj-1.0.21.jar` : **1 892 365 octets**, sha1 `3021821a49bfaf5ba9705be764f29cc138f9d6e9` (revérifié avant l'envoi).
+- `list` à 12 h 08 puis 12 h 09 : **0 joueur** : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md` avant de redémarrer. Serveur encore figé ~3 h 38 min juste avant (« 261927 ticks behind » à 12 h 08, 0 joueur).
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 892 365) ; `colonie_pnj-1.0.20.jar` rangé dans `/mods-off`, 1.0.21 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.20 -> 1.0.21) », **« Done (3.896s) » à 12 h 10 min 35 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur du mod**. Erreurs d'autres mods seulement (282 tables de butin, 1 DISTXFORM).
+- Pas de modpack, pas d'annonce : le client n'a pas changé (le modpack 1.0.18 reste le bon).
