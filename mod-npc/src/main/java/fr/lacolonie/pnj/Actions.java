@@ -162,8 +162,10 @@ public final class Actions {
                 return;
             }
             route.avancer(t, vitesse, age);
-            // Il veut aller à un endroit fixe et ne creuse ni ne pose : ce temps compte s'il n'avance pas vraiment (Coince).
-            if (!mobile && !route.occupe()) t.coince.marche = true;
+            // Il veut aller à un endroit fixe : ce temps compte s'il n'avance pas vraiment (Coince), même s'il creuse ou pose
+            // (plan A3 : au fond du trou de sa descente, il creusait un peu à chaque essai et n'était jamais ramené). Creuser ou
+            // poser qui avance l'éloigne de plus de 8 blocs bien avant 5 minutes : le compte repart alors de zéro.
+            if (!mobile) t.coince.marche = true;
             double d = p.distanceTo(cible);
             if (d < meilleure - 2 || route.occupe()) { meilleure = Math.min(meilleure, d); sansProgres = 0; }
             else sansProgres++;
