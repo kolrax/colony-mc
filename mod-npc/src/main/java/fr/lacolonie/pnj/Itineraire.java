@@ -174,7 +174,6 @@ final class Itineraire {
         if (montee != null) {
             if (t.blockPosition().equals(montee) || age > monteeFin) {
                 boolean sorti = t.blockPosition().equals(montee);
-                if (!sorti) pasFaits.add(montee); // 3 s sans y arriver : cette marche ne sera plus essayée
                 montee = null;
                 etape = null;
                 finChoix();
