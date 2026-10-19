@@ -3,14 +3,14 @@
 Mise à jour : 19/10/2026, ~02 h 30 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
 ## Versions
-- **Serveur : 1.0.14** (19/10, 00 h 44 UTC ; serveur seul), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (créé le 19/10 à 00 h 07 UTC, **pas pré-généré** : demande à l'Admin). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
+- **Serveur : 1.0.15** (19/10, 02 h 17 UTC ; serveur seul), un seul jar dans `/mods` (les anciens dans `/mods-off`), avec Burnt + GeckoLib + Distant Horizons (Chunky dans `/mods-off` : ne jamais les remettre ensemble), sur le **monde d'ouverture `ouverture`** (créé le 19/10 à 00 h 07 UTC, **pas pré-généré** : demande à l'Admin). Les mondes `essai-v2`, `colonie` (0.9.43, Nielscutt) et `test-andesite` restent sur le disque : ne jamais les supprimer.
 - **Modpack : 1.0.11.1** (publié par l'Admin), canal réseau 10. Le prochain doit avoir un numéro plus grand et passer `pack/verifier.py`.
-- `main` = la 1.0.14 : **306/306 JUnit, 393/393 en jeu**.
+- `main` = la 1.0.15 : **306/306 JUnit, 396/396 en jeu** (1re passe 395/396 : `horairesGenerauxSansEffet`, instable possible).
 - Panneaux : « Refonte des ouvriers » https://claude.ai/artifact/CfnApV4mrmi1EtmMVYThkZ et « Corrections des ouvriers » https://claude.ai/artifact/PHChHnU2CX3tXnxanGD9nW.
 
 ## Prochaine étape (exacte)
 1. **E5 repère rouge Xaero, après 7 h UTC le 19/10** : branche **`origin/e5-xaero`** (à jour avec la 1.0.14 + test en jeu `repereAllerRetour`, vu rouge), relue. Paquet renommé `reperes2` : serveur puis modpack (> 1.0.11.1, `pack/verifier.py`) coup sur coup, annonce en dernier. Penser à `distanthorizons` dans `pack/mods.txt` (voir `docs/demandes-admin.md`). Passe complète des tests après fusion avec `main`.
-2. **A3 montagne, pas fini** (le joueur fantôme le montre) : branches **`origin/a3-montagne`** (errance sur un pas libre, montée quand le trajet ne progresse plus, descente) et **`origin/a3-sac`** (terre et seau gardés au sac ; transporteur qui ne part pas après « porte ce coffre au dépôt » et « Rentrer » qui annule l'ordre). Lire leur dernier commit (où ils en sont), finir, relire (une relecture), passe complète, livrer, puis rejouer `python3 tools/fantome.py mod-npc/fantome/montagne.txt` (scénario et outils sur `origin/fantome-a`, inclus dans les deux branches). Les deux branches partent de `fantome-a` : fusionner les deux dans une branche `integration`.
+2. **A3 montagne, pas fini** (le joueur fantôme le montre). `a3-sac` est **livré en 1.0.15** (terre et seau gardés, transporteur). Reste la branche **`origin/a3-montagne`** (e461638, partie de `fantome-a`, **à fusionner avec `main`**) : plus de boucle sur un pas libre (`pasDAllersRetoursEntreDeuxCases`, vu rouge avant, vert) ; montée par blocs/seau quand le but est plus haut et qu'il ne s'en rapproche plus depuis 30 s (`montagne()`, permise même avec une pioche) ; régression `sortParLesGaleries` corrigée (règle `pasFaits.add(montee)` retirée). **Rouge** : `grimpeLaFalaiseMemeAvecUnePioche` (laisse 3 terres au bas du pilier, `reprendre()` ne prend que ce qu'il touche ; ou montée trop lente en 1600 ticks). Pas de passe complète sur e461638. À faire : reprendre tout le pilier, passe complète, relecture, livrer, puis `python3 tools/fantome.py mod-npc/fantome/montagne.txt` (scénario et outils sur `origin/fantome-a`, pas encore sur `main` : à fusionner aussi). Descente du sommet (« bureau_inaccessible ») pas commencée.
 3. Restes vus au fantôme en montagne : noyade mortelle au pied (-6, 61, -286, partie 2), mineur immobile au sommet « Aucun lieu sûr pour miner », bûcheron perdu à 400 blocs, bûcheron qui s'arrête 16 s à ramasser dans le feuillage de la jungle.
 4. Test `partEnExpeditionSansLit` vu rouge 2 fois sur 3 passes (19/10 nuit) : instable possible, à examiner.
 5. Restes : `docs/plus-tard.md`.
@@ -44,7 +44,7 @@ Mise à jour : 19/10/2026, ~02 h 30 UTC. Une page à lire en début de session, 
 `panel.py upload` échoue. Ce qui marche : `panel.py write /mods-off/colonie_pnj-X.jar <jar>`, vérifier la taille (`panel.py ls /mods-off`), puis `panel.py mv` vers `/mods`.
 
 ## Session en cours
-- aucune (session 19/10 00 h 00 - 02 h 45 UTC, terminée : monde `ouverture`, 1.0.14 livrée, fantôme montagne et forêt dense ; A3 montagne en cours sur `a3-montagne` et `a3-sac`).
+- aucune (session 19/10 00 h 00 - 02 h 45 UTC, terminée : monde `ouverture`, 1.0.14 et 1.0.15 livrées, fantôme montagne et forêt dense ; A3 montagne en cours sur `a3-montagne`).
 - Joueur fantôme : `python3 tools/fantome.py mod-npc/fantome/morts-7j.txt` (~15-20 min), `trois-ouvriers.txt`, `mine-lave.txt` (un seul mineur : « embauche mineur 2 » = niveau 2). Nouveaux : `montagne.txt`, `foret-dense.txt` (sur `fantome-a`).
 
 ## Avant (18/10 matin)
