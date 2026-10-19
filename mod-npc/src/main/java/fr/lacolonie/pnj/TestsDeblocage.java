@@ -825,4 +825,62 @@ public class TestsDeblocage {
             if (h.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) n++;
         return n;
     }
+
+    /**
+     * Le creux à ciel ouvert de la montagne (Godefroy, graine 42, 1.0.19) : de la pierre pleine, sauf une fosse de 6 blocs
+     * de fond, longue de 17 blocs et large de 5 (il peut y marcher), son bureau juste au-dessus du bord, à 4 blocs.
+     */
+    static void fosse(GameTestHelper h) {
+        for (int x = 0; x < 24; x++) for (int z = 0; z < 24; z++) for (int y = 1; y <= 9; y++)
+            if (x < 4 || x > 20 || z < 10 || z > 14 || y < 4) h.setBlock(x, y, z, Blocks.STONE);
+    }
+
+    /** Son chef, un faux joueur, debout au bord de la fosse, à côté du bureau. */
+    static net.minecraft.server.level.ServerPlayer chefAuBord(GameTestHelper h, Travailleur t) {
+        net.minecraft.server.level.ServerPlayer chef = h.makeMockServerPlayerInLevel();
+        chef.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        Vec3 haut = h.absoluteVec(new Vec3(14.5, 10, 18.5));
+        chef.teleportTo(h.getLevel(), haut.x, haut.y, haut.z, 0, 0);
+        t.chef = chef.getUUID();
+        return chef;
+    }
+
+    /**
+     * Au fond de la fosse, contre la paroi, sans pioche, de la terre en poche ; il attend une pioche et son chef se tient au
+     * bord. Avant, une étape dans la fosse suffisait à dire son chef « inaccessible » : il ne posait jamais sa terre et
+     * restait au fond (Godefroy, deux jours). Maintenant il monte sur sa terre et sort.
+     */
+    @GameTest(template = "grand", timeoutTicks = 600, skyAccess = true)
+    public static void sortDUnCreuxSurSaTerre(GameTestHelper h) {
+        fosse(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 14, new ItemStack(Items.DIRT, 16), new BlockPos(12, 10, 18));
+        var chef = chefAuBord(h, t);
+        Cerveau.lancer(t, new Actions.Demander("pioche", Actions.Filtre.de("minecraft:iron_pickaxe"), 1));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", terre " + t.compter(Actions.Filtre.de("minecraft:dirt"));
+            h.assertTrue(t.getY() >= h.absolutePos(new BlockPos(0, 10, 0)).getY(), "il doit être sorti de la fosse (" + e + ")");
+            t.discard();
+            chef.discard();
+        });
+    }
+
+    /**
+     * La même fosse, rien à poser : il attend une pioche (« demander ») et son chef se tient au bureau, en haut. Avant, il
+     * « marchait vers son chef » (une cible qui bouge) : le temps coincé repartait de zéro chaque seconde et il restait au
+     * fond pour toujours. Maintenant, sa marche vers le chef bloquée compte : au bout du délai, il est ramené au poste.
+     */
+    @GameTest(template = "grand", timeoutTicks = 900, skyAccess = true, batch = "deblocage")
+    public static void demandeAuFondDuCreuxEstRamene(GameTestHelper h) {
+        fosse(h);
+        Travailleur t = TestsJeu.ouvrier(h, "mineur", 12, 4, 12, ItemStack.EMPTY, new BlockPos(12, 10, 18));
+        var chef = chefAuBord(h, t);
+        Cerveau.lancer(t, new Actions.Demander("pioche", Actions.Filtre.de("minecraft:iron_pickaxe"), 1));
+        h.succeedWhen(() -> {
+            String e = TestsJeu.etat(t, t.bureau) + ", " + t.diag + ", coincé " + t.coince.ticks;
+            h.assertTrue(t.getY() >= h.absolutePos(new BlockPos(0, 10, 0)).getY() && t.distanceToSqr(Vec3.atBottomCenterOf(t.bureau)) < 9,
+                    "il doit avoir été ramené près du bureau (" + e + ")");
+            t.discard();
+            chef.discard();
+        });
+    }
 }

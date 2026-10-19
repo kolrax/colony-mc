@@ -1283,6 +1283,8 @@ public final class Actions {
         final int nombre;
         String texte;
         boolean ecrit, annonce;
+        /** Son chef est là, mais aucun passage ne mène jusqu'à lui : il fait comme s'il était absent. */
+        boolean horsDAtteinte;
 
         Demander(String type, Filtre filtre, int nombre, Object... vals) { super("demander"); this.type = type; this.filtre = filtre; this.nombre = nombre; this.vals = vals; }
 
@@ -1296,7 +1298,12 @@ public final class Actions {
             }
             if (age > 20 * 150) return echec("pas_recu");
             ServerPlayer c = t.chefJoueur();
-            if (c != null && c.level() == t.level() && t.distanceTo(c) < 96) {
+            boolean pres = c != null && c.level() == t.level() && t.distanceTo(c) < 96;
+            // Son chef hors d'atteinte (sur une tour, ou lui au fond d'un creux d'où il ne sort pas) : il va l'attendre au
+            // poste comme s'il était absent. Marcher vers son chef ne compte pas « coincé » (il bouge), aller au poste si :
+            // sinon il restait au fond pour toujours, jamais ramené (Godefroy, montagne, 1.0.19).
+            if (pres && t.distanceTo(c) > 3 && mobile && coince()) horsDAtteinte = true;
+            if (pres && !horsDAtteinte) {
                 if (t.distanceTo(c) > 3) { mobile = true; marcher(t, c.position(), 1.15); }
                 else {
                     t.getNavigation().stop();

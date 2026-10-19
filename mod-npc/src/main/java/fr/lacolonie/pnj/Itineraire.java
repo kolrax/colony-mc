@@ -335,7 +335,16 @@ final class Itineraire {
                 finChoix();
                 // Il peut bouger, mais le but, tout près, n'a pas de chemin (derrière un mur, en hauteur, dans un trou) :
                 // inaccessible. Il ne tourne pas autour d'étape en étape (Raoul le 6 octobre) : l'action choisira autre chose.
-                if (dh <= 8 && !sousTerre(t) && !(t.blockPosition().getY() - Mth.floor(but.y) >= DESCENTE_MIN && descendre(t, maintenant))) { oublierPlan(); t.getNavigation().stop(); bloque = true; t.diag = "inaccessible"; return; }
+                if (dh <= 8 && !sousTerre(t) && !(t.blockPosition().getY() - Mth.floor(but.y) >= DESCENTE_MIN && descendre(t, maintenant))) {
+                    oublierPlan();
+                    t.getNavigation().stop();
+                    // Le but est juste au-dessus (il est tombé dans un creux à ciel ouvert, assez large pour y marcher) : il
+                    // monte sur des blocs qu'il reprendra, ou à la nage, avant de se dire bloqué (Godefroy, montagne, 1.0.19).
+                    if (but.y > p.y + 2 && evasionPermise(t) && (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t))) { montee = null; etape = null; return; }
+                    bloque = true;
+                    t.diag = "inaccessible";
+                    return;
+                }
                 echecs = 0;
                 return;
             }
