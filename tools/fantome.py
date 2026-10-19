@@ -156,6 +156,11 @@ def resume(rapport):
           f" morts : {s.get('morts', 0)} {s.get('morts_par_cause', {})}")
     for e in rapport.get("blessures", []) + rapport.get("morts", []):
         print(f"    jour {e['jour']} {e['heure']} h : {e['ouvrier']} ({e['metier']}) {e['genre']}, {e['cause']}, en {e['pos']}")
+    chutes = rapport.get("chutes", [])
+    print(f"Chutes (dégâts) : {len(chutes)}" + (" ; les dernières :" if chutes else ""))
+    for c in chutes[-15:]:
+        print(f"    [{c['tick']}] {c['ouvrier']} ({c['metier']}) tombe de {c['hauteur']} blocs (depuis y={c['depart_y']}) en"
+              f" {c['x']} {c['y']} {c['z']}, -{c['vie_perdue']} PV ; {c['action']} / {c['sous_action']} ; {c['statut']}")
     msgs = rapport.get("messages", [])
     print(f"Messages reçus : {len(msgs)}" + (" ; les derniers :" if msgs else ""))
     for m in msgs[-10:]:
