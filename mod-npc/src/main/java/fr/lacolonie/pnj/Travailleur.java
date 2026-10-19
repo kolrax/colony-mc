@@ -497,6 +497,8 @@ public class Travailleur extends PathfinderMob {
     public Actions.Action action;
     /** Le temps qu'il passe coincé, pour le ramener au poste en dernier recours (non sauvegardé). */
     final Coince coince = new Coince();
+    /** Blocs cassés à mains nues sans rien en récolter, en descendant, depuis son dernier vrai travail (Itineraire, plan A3). */
+    int mainsNues;
     /** Ses sons : le délai entre deux d'un même genre ({@link Sons}). */
     final Cadence sons = new Cadence();
     public String resultat = "";
@@ -1230,7 +1232,7 @@ public class Travailleur extends PathfinderMob {
                 && !(action instanceof Actions.SuivreChef || action instanceof Actions.Fuir || action instanceof Actions.Reposer))
             coince.progres(getX(), getY(), getZ());
         if ("ok".equals(r) && (action instanceof Actions.Casser || action instanceof Actions.Abattre || action instanceof Actions.Poser
-                || action instanceof Actions.Attaquer || action != null && action.travail)) { coince.travail(); Apprentissage.travail(this); }
+                || action instanceof Actions.Attaquer || action != null && action.travail)) { coince.travail(); mainsNues = 0; Apprentissage.travail(this); }
         if (action instanceof Actions.Attaquer || action instanceof Actions.Fuir || action instanceof Actions.Echapper) finDanger = level().getGameTime();
         if (action != null) action.fin(this);
         action = null;
