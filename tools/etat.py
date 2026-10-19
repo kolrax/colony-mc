@@ -15,7 +15,7 @@ import panel
 ROOT = Path(__file__).parent.parent
 ADRESSE = "lacolonie.mintservers.fr"
 # À changer quand le monde change (création du vrai monde à l'ouverture).
-MONDE_NOTE = "Monde essai-v2 créé le 17 oct. pour la 1.0.0 (nouvelle graine, datapack colonie). Monde colonie (0.9.43) et ancien monde test-andesite conservés sur le disque."
+MONDE_NOTE = "Monde ouverture créé le 19 oct. pour l'ouverture (nouvelle graine, datapack colonie). Mondes essai-v2 (refonte 1.0), colonie (0.9.43) et test-andesite conservés sur le disque."
 PORTS = [("Jeu", 25587), ("Chat vocal", 25951)]
 
 # server.properties : (clé, nom affiché, pourquoi)
