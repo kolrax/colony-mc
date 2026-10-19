@@ -712,3 +712,11 @@ Aucun code du mod touché, aucune action sur le serveur.
 - `init-commands.txt` relancé (liste blanche déjà à jour, op, keepInventory false, sommeil 50 %). `MONDE_NOTE` mis à jour dans `tools/etat.py`.
 - **Pas pré-généré** : Chunky ne peut pas tourner avec Distant Horizons (domaine de l'Admin) ; demande faite dans `docs/demandes-admin.md`. En attendant, le terrain se crée à la première visite (chargement lent aux bords).
 - Le monde a été créé avec la 1.0.13 ; les versions suivantes (A3, E5) s'installent sur ce même monde.
+
+## 2026-10-19 00 h 44 UTC : 1.0.14 livrée, serveur seul (A3 montagne au seau d'eau)
+- Commit livré : `main` 2d7c755 (`mod_version=1.0.14`). Tests du chef : **306/306 JUnit, 393/393 en jeu**.
+- Jar `colonie_pnj-1.0.14.jar` : **1 861 408 octets**, sha1 `02322cca999454b5ae7cdbd099a38af1e8c1d655` (revérifié avant l'envoi).
+- `list` : **0 joueur** (deux fois, juste avant l'envoi et juste avant le redémarrage) : pas de préavis. Redémarrage noté dans `docs/demandes-admin.md`.
+- Envoi sûr : jar écrit dans `/mods-off`, taille relue identique (1 861 408) ; `colonie_pnj-1.0.13.jar` rangé dans `/mods-off`, 1.0.14 mis dans `/mods` ; **exactement un** `colonie_pnj-*.jar` dans `/mods`. Distant Horizons, Burnt, GeckoLib (dans `/mods`) et Chunky (dans `/mods-off`) non touchés, rien supprimé.
+- Journal : « colonie_pnj (version 1.0.13 -> 1.0.14) », « Preparing level "ouverture" », **« Done (2.306s) » à 00 h 44 UTC**, panneau des PNJ ouvert (port 25776), **aucune erreur ni avertissement du mod**. Les seules erreurs du journal viennent d'autres mods (282 tables de butin illisibles, un mixin client de `create_sa`), comme avant.
+- Pas de modpack, pas d'annonce : le client n'a pas changé.
