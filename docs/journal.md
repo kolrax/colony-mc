@@ -705,3 +705,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - **E5 repère rouge Xaero** : fait et relu (aucun bloquant) sur `origin/e5-xaero` (eb69ed3), pas sur main. Paquet renommé `reperes2` (version 2, facultatif) : un client de l'ancien modpack se connecte mais ne voit plus ses ouvriers sur la carte → serveur et modpack coup sur coup, le 19/10 après 7 h UTC.
 - **A3 seau** : commencé sur `origin/a3-seau`, à relire et livrer par la session suivante.
 - **Incident évité** : j'ai arrêté tous les Gradle de la machine pendant qu'un agent travaillait (sans effet, aucune de ses commandes ne tournait). À ne plus faire : arrêter seulement son propre processus.
+
+## 2026-10-19 00 h 07 UTC : monde d'ouverture `ouverture` (case du plan cochée)
+- Nouveau monde **`ouverture`** (nouvelle graine) : seule la ligne `level-name` de `server.properties` changée (fichier relu identique après écriture) ; datapack `colonie` (112 fichiers, recomptés sur le serveur) copié dans `/ouverture/datapacks/colonie/` avant le premier démarrage. Les mondes `essai-v2`, `colonie` et `test-andesite` restent sur le disque.
+- `list` : 0 joueur. Un seul `colonie_pnj-*.jar` (1.0.13) dans `/mods`. Redémarrage noté dans `docs/demandes-admin.md`. « Preparing level "ouverture" », **« Done (46.881s) » à 00 h 07 UTC**, panneau des PNJ ouvert, aucune erreur du mod. `datapack list` montre `file/colonie (world)`.
+- `init-commands.txt` relancé (liste blanche déjà à jour, op, keepInventory false, sommeil 50 %). `MONDE_NOTE` mis à jour dans `tools/etat.py`.
+- **Pas pré-généré** : Chunky ne peut pas tourner avec Distant Horizons (domaine de l'Admin) ; demande faite dans `docs/demandes-admin.md`. En attendant, le terrain se crée à la première visite (chargement lent aux bords).
+- Le monde a été créé avec la 1.0.13 ; les versions suivantes (A3, E5) s'installent sur ce même monde.
