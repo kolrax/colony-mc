@@ -61,3 +61,9 @@ Fiches `f1` à `f5` du panneau « Corrections des ouvriers ».
 **À concevoir plus tard (pas ce soir)** : KOLRAX constate que les métiers qui posent problème sont surtout ceux qu'on dirigeait en leur parlant (le « chat »). Il faudra repenser leur commande avec des missions et des menus. Ne pas commencer sans son accord.
 
 **F6 (ajouté par KOLRAX le 19/10 à 19 h 50 heure de Paris, à faire CE SOIR avec F1 à F3)** : rapport en 1.0.22, en 75, 172, 66 : « Mort bête dans la poudre de neige. Il faut qu'ils l'évitent comme la lave. » `Monde.traversable` exclut déjà `POWDER_SNOW`, mais le chemin (le `PathType.POWDER_SNOW` du jeu, les marches, les piliers, les sauts…) l'y mène encore. Ce qu'on veut : la poudre de neige est un obstacle infranchissable dans toute recherche de chemin et tout déplacement, comme la lave. S'il y tombe malgré tout (chute, poussé), il en sort aussitôt vers le bloc solide le plus proche. Il ne doit jamais y mourir de froid. Un test : un ouvrier envoyé de l'autre côté d'une bande de poudre de neige la contourne et n'y entre jamais.
+
+## Plan G : rapports du 20/10 (ajoutés par l'Admin à la demande de KOLRAX)
+Fiches `g1` et `g2` du panneau « Corrections des ouvriers ».
+1. **Bouton « Reprendre le travail »** (rapport 19, KOLRAX, 1.0.24, en 181, 108, -193) : après avoir demandé à un ouvrier de le suivre, de rentrer au poste, etc., il faut un bouton pour qu'il reprenne la mission qu'il faisait avant.
+2. **Objet pris dans le poste d'un autre joueur** (rapport 20, Nielscutt, 1.0.24, en 175, 141, 125) : « J'ai réussi à prendre un item depuis le poste de travail d'un autre joueur. » **Décision de KOLRAX avant de coder** : les règles autorisent le vol en RP et il n'y a aucune protection de terrain, donc c'est peut-être voulu. Si KOLRAX veut le bloquer, ne bloquer que l'écran du poste (pas le coffre ni le bloc), et prévenir le propriétaire (« X a pris tel objet dans ton poste ») plutôt qu'interdire.
+
