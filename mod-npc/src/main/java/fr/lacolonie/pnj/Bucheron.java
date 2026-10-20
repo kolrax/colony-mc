@@ -193,6 +193,15 @@ final class Bucheron extends Metier {
      * « /pnj arbres » : les arbres de ce bois à {@code rayon} blocs autour de {@code centre}, et pour chacun pourquoi il ne
      * le prendrait pas, dans l'ordre des règles de {@link Actions#chercherArbre} et de {@link #arbreEnVue}.
      */
+    /** Le bloc pris pour une construction le plus proche de p dans le tampon ({@link Lieux#zoneConstruite}), pour le diagnostic (son nom seul : les arbres se regroupent par bloc). */
+    static String construitPres(ServerLevel l, BlockPos p) {
+        BlockPos meilleur = null;
+        int t = Lieux.TAMPON + 3;
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-t, -t, -t), p.offset(t, t, t)))
+            if (Lieux.compte(l.getBlockState(q)) && (meilleur == null || q.distSqr(p) < meilleur.distSqr(p))) meilleur = q.immutable();
+        return meilleur == null ? "coin pas chargé" : net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(l.getBlockState(meilleur).getBlock()).toString();
+    }
+
     static List<String> diagnosticArbres(Travailleur t, ServerLevel l, BlockPos centre, Bois c, int rayon) {
         java.util.Map<String, List<BlockPos>> parRaison = new java.util.TreeMap<>();
         int pasCharge = 0;
@@ -213,7 +222,7 @@ final class Bucheron extends Metier {
                     else if (Lieux.regles(l) && Lieux.dansStructure(l, p)) r = "dans une structure (" + Monde.structure(l, p) + ")";
                     else if (Lieux.regles(l) && Mineur.baseVoisine(t, p) != null) r = "chez un voisin (base de mineur)";
                     else if (Lieux.regles(l) && !Lieux.ici(t, p) && Lieux.dansColonie(t, p)) r = "dans la colonie";
-                    else if (Lieux.regles(l) && !Lieux.ici(t, p) && Lieux.zoneConstruite(l, p)) r = "près d'une construction";
+                    else if (Lieux.regles(l) && !Lieux.ici(t, p) && Lieux.zoneConstruite(l, p)) r = "près d'une construction : " + construitPres(l, p);
                     else if (Actions.arbre(l, p) == null) r = "pas reconnu comme un arbre naturel";
                     else if (t.lieuImpose == null && !aPortee(t, p, 0)) r = "trop loin du poste";
                     else if (!t.peutAller(p)) r = String.format(java.util.Locale.ROOT, "pas le temps de rentrer (%.1f h de marche + 1 h, il reste %.1f h)",

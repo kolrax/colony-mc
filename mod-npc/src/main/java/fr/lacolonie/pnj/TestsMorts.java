@@ -214,13 +214,16 @@ public class TestsMorts {
 
     // --- 2. Noyade -------------------------------------------------------------------------------------
 
-    /** Un lac de 61 blocs de large (3 de fond) entre lui et son bureau, sans bateau : il nage près d'une minute sans se noyer. */
+    /**
+     * Un lac de 61 blocs de large (3 de fond) entre lui et son bureau, sans bateau : il nage près d'une minute sans se noyer.
+     * Le lac fait 201 blocs de long : moins, en faire le tour à pied serait plus court que de le traverser, et le GPS le ferait.
+     */
     @GameTest(template = "vide", timeoutTicks = 1200, batch = "morts")
     public static void longueTraverseeALaNage(GameTestHelper h) {
         ServerLevel l = h.getLevel();
         BlockPos bureau = TestsJeu.sol(h, 0, 101000);
         for (int x = 6; x <= 66; x++)
-            for (int z = -40; z <= 40; z++) {
+            for (int z = -100; z <= 100; z++) {
                 BlockPos s = TestsJeu.sol(h, x, 101000 + z);
                 for (int k = 1; k <= 3; k++) l.setBlockAndUpdate(s.below(k), Blocks.WATER.defaultBlockState());
             }

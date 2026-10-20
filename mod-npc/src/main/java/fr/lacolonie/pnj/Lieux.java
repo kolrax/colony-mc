@@ -73,8 +73,22 @@ final class Lieux {
         return construit(st) || l.getBlockEntity(p) != null && !st.is(net.minecraft.world.level.block.Blocks.BEE_NEST);
     }
 
-    /** Ce qui compte pour le tampon : une construction qu'un joueur peut faire (pas les barrières ni les blocs de structure). */
-    static boolean compte(BlockState st) { return construit(st) && st.getBlock().defaultDestroyTime() >= 0; }
+    /**
+     * Ce qui compte pour le tampon : une construction qu'un joueur peut faire (pas les barrières ni les blocs de structure),
+     * sans les plantes qui poussent seules ({@link #pousseSeule}). Elles restent interdites à la casse ({@link #construit}).
+     */
+    static boolean compte(BlockState st) { return construit(st) && st.getBlock().defaultDestroyTime() >= 0 && !pousseSeule(st); }
+
+    /**
+     * Une plante qui pousse aussi seule dans la nature : pousse d'arbre, bambou, canne, cacao, citrouille, pastèque. Un
+     * bambou sauvage parmi les cerisiers (Terralith) faisait passer toute la forêt pour un jardin : Renaud, le 20/10, n'en
+     * abattait qu'un arbre, puis cherchait ailleurs.
+     */
+    static boolean pousseSeule(BlockState st) {
+        return st.is(net.minecraft.tags.BlockTags.SAPLINGS) || st.is(net.minecraft.world.level.block.Blocks.BAMBOO) || st.is(net.minecraft.world.level.block.Blocks.BAMBOO_SAPLING)
+                || st.is(net.minecraft.world.level.block.Blocks.SUGAR_CANE) || st.is(net.minecraft.world.level.block.Blocks.COCOA)
+                || st.is(net.minecraft.world.level.block.Blocks.PUMPKIN) || st.is(net.minecraft.world.level.block.Blocks.MELON);
+    }
 
     /** Le résultat du tampon, par case de 4 x 4 x 4 blocs : (fin de validité << 1) | résultat. */
     private static final Map<Cle, Long> ZONES = new ConcurrentHashMap<>();

@@ -71,6 +71,25 @@ public class TestsLieux {
     }
 
     /**
+     * Un arbre naturel hors de la colonie, avec du bambou sauvage et une pousse à 3 blocs (la forêt de cerisiers de Renaud,
+     * 20/10) : il l'abat. Avant : bambou et pousse comptaient comme une construction, et tout arbre à 8 blocs était épargné.
+     */
+    @GameTest(template = "vide", timeoutTicks = 700, batch = "lieux")
+    public static void arbreParmiLeBambouCoupe(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 138000);
+        BlockPos pied = base.east(30);
+        TestsBucheron.arbre(l, pied, Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 1);
+        for (int y = 0; y < 4; y++) l.setBlock(pied.offset(3, y, 0), Blocks.BAMBOO.defaultBlockState(), 2);
+        l.setBlock(pied.offset(0, 0, 3), Blocks.OAK_SAPLING.defaultBlockState(), 2);
+        Travailleur t = bucheron(h, base, 26);
+        h.succeedWhen(() -> {
+            h.assertTrue(!l.getBlockState(pied).is(Blocks.OAK_LOG), "l'arbre parmi le bambou doit être abattu (" + TestsJeu.etat(t, t.bureau) + ", " + t.diag + ")");
+            t.discard();
+        });
+    }
+
+    /**
      * Un arbre naturel hors de la colonie, mais dans l'emprise d'une structure générée (un village) : il n'y touche pas.
      * Avant : seul le bloc du pied était regardé, et seulement pour le mineur ; le joueur fantôme a vu 40 bûches coupées
      * dans un village.
