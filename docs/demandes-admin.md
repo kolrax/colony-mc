@@ -63,4 +63,5 @@ Format :
 - Demande : redémarrage vers 18 h 45 UTC pour installer colonie_pnj 1.0.25 (bûcheron sur place), serveur seul, sans toucher à Chunky ni à DH (Chunky reprend seul). 5 minutes de préavis en jeu.
 - Pourquoi : correction demandée par KOLRAX.
 - Statut : fait par la session locale
+- **20/10, 16 h 34 UTC (Admin)** : génération à l'avance du monde `ouverture` **finie** (35 721 chunks, carré de 3 000 blocs centré en -50 720, 35 min). Chunky rangé dans `/mods-off`, Distant Horizons remis dans `/mods`, serveur redémarré sans plantage. On revient à l'état normal.
 
