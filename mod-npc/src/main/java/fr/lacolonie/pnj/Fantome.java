@@ -668,7 +668,7 @@ public final class Fantome {
     }
 
     /** Le point retenu par « apparait montagne » (le sommet) : le lieu d'une mission ({@code mission_repere}). */
-    static BlockPos repere;
+    static BlockPos repere, pied;
     /** Le coffre que le fantôme regardera pour le prochain ordre de la barre (« porte ce coffre au dépôt »). */
     static BlockPos regard;
 
@@ -741,6 +741,13 @@ public final class Fantome {
         f.then(Commands.literal("mission_repere").then(Commands.argument("cible", StringArgumentType.word()).then(Commands.argument("id", StringArgumentType.word())
                 .then(Commands.argument("repetition", StringArgumentType.word()).then(Commands.argument("n", IntegerArgumentType.integer(0))
                         .executes(c -> missionRepere(c, StringArgumentType.getString(c, "repetition"), IntegerArgumentType.getInteger(c, "n"))))))));
+        // Le repère passe de l'autre côté de la montagne : le pied retourné par rapport au sommet (traverser plutôt que contourner).
+        f.then(Commands.literal("repere_derriere").executes(c -> {
+            Joueur j = moi(c);
+            if (repere == null || pied == null) return ok(c, "Pas de repère : /fantome apparait montagne");
+            repere = terrainLibre(j.serverLevel(), new BlockPos(2 * repere.getX() - pied.getX(), 0, 2 * repere.getZ() - pied.getZ()), false);
+            return ok(c, "Repère derrière la montagne en " + repere.toShortString() + ", à " + (int) Itineraire.horizontale(Vec3.atCenterOf(pied), Vec3.atCenterOf(repere)) + " blocs du pied.");
+        }));
         f.then(Commands.literal("va_repere").executes(c -> {
             Joueur j = moi(c);
             if (repere == null) return ok(c, "Pas de repère.");
@@ -849,6 +856,7 @@ public final class Fantome {
                 p = m[0];
                 apparaitre(l, Vec3.atBottomCenterOf(p));
                 repere = m[1];
+                pied = p;
                 return ok(c, "Le fantôme apparaît au pied d'une montagne en " + p.toShortString() + " ; sommet (repère) en " + m[1].toShortString()
                         + " : " + (m[1].getY() - p.getY()) + " blocs plus haut, à " + (int) Itineraire.horizontale(Vec3.atCenterOf(p), Vec3.atCenterOf(m[1])) + " blocs.");
             }
@@ -1240,6 +1248,7 @@ public final class Fantome {
             // et sa mémoire de travail (puits, marche, lieu…).
             o.addProperty("dernier_resultat", t.resultat);
             o.addProperty("blocage", t.blocage == null ? "" : t.blocage);
+            o.addProperty("diag", t.diag == null ? "" : t.diag);
             String mem = t.memoire.toString();
             o.addProperty("memoire", mem.length() > 1500 ? mem.substring(0, 1500) : mem);
             if (b != null) o.addProperty("distance_poste", (int) Math.sqrt(t.blockPosition().distSqr(b.getBlockPos())));

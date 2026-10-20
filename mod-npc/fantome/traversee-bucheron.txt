@@ -1,0 +1,90 @@
+# Un seul bûcheron (de la terre en poche), un rapport toutes les 5 s : le détail de sa traversée.
+time set 1000
+fantome apparait montagne
+fantome repere_derriere
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_axe 2
+fantome donne minecraft:bread 32
+fantome donne minecraft:torch 32
+fantome depose
+fantome paie
+fantome mission_repere bucheron tout fois 16
+fantome offre bucheron minecraft:dirt 32
+fantome rapport traversee-debut
+attendre 5
+ticks 100
+fantome rapport tb-01
+ticks 100
+fantome rapport tb-02
+ticks 100
+fantome rapport tb-03
+ticks 100
+fantome rapport tb-04
+ticks 100
+fantome rapport tb-05
+ticks 100
+fantome rapport tb-06
+ticks 100
+fantome rapport tb-07
+ticks 100
+fantome rapport tb-08
+ticks 100
+fantome rapport tb-09
+ticks 100
+fantome rapport tb-10
+ticks 100
+fantome rapport tb-11
+ticks 100
+fantome rapport tb-12
+ticks 100
+fantome rapport tb-13
+ticks 100
+fantome rapport tb-14
+ticks 100
+fantome rapport tb-15
+ticks 100
+fantome rapport tb-16
+ticks 100
+fantome rapport tb-17
+ticks 100
+fantome rapport tb-18
+ticks 100
+fantome rapport tb-19
+ticks 100
+fantome rapport tb-20
+ticks 100
+fantome rapport tb-21
+ticks 100
+fantome rapport tb-22
+ticks 100
+fantome rapport tb-23
+ticks 100
+fantome rapport tb-24
+ticks 100
+fantome rapport tb-25
+ticks 100
+fantome rapport tb-26
+ticks 100
+fantome rapport tb-27
+ticks 100
+fantome rapport tb-28
+ticks 100
+fantome rapport tb-29
+ticks 100
+fantome rapport tb-30
+ticks 100
+fantome rapport tb-31
+ticks 100
+fantome rapport tb-32
+ticks 100
+fantome rapport tb-33
+ticks 100
+fantome rapport tb-34
+ticks 100
+fantome rapport tb-35
+ticks 100
+fantome rapport tb-36

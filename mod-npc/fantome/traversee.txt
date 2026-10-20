@@ -1,0 +1,33 @@
+# Le lieu de travail est de l'autre côté de la montagne (le pied retourné par rapport au sommet) : il doit passer
+# par-dessus (ou au travers) plutôt que d'en faire le tour. Mêmes trois ouvriers que montagne.txt. On regarde la
+# distance au repère à 1, 2 et 4 minutes, les arrêts de plus de 3 s et les demi-tours.
+time set 1000
+fantome apparait montagne
+fantome repere_derriere
+fantome poste
+fantome donne minecraft:gold_ingot 32
+fantome embauche mineur 2
+fantome embauche bucheron 2
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_pickaxe 1
+fantome donne minecraft:iron_axe 2
+fantome donne minecraft:bread 32
+fantome donne minecraft:torch 32
+fantome depose
+fantome paie
+fantome mission_repere mineur pierre fois 32
+fantome mission_repere bucheron1 tout fois 16
+fantome mission_repere bucheron2 tout fois 16
+fantome offre mineur minecraft:dirt 32
+fantome offre bucheron1 minecraft:dirt 32
+fantome offre bucheron2 minecraft:water_bucket 1
+fantome rapport traversee-debut
+attendre 5
+ticks 1200
+fantome rapport traversee-1min
+ticks 1200
+fantome rapport traversee-2min
+ticks 2400
+fantome rapport traversee-4min

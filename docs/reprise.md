@@ -2,6 +2,10 @@
 
 Mise à jour : 19/10/2026, ~20 h 45 UTC. Une page à lire en début de session, avec `docs/refonte.md`, `docs/corrections.md` (lot 17, prime pour ce qu'il touche), `docs/plan.md` et la fin de `docs/journal.md`.
 
+## 20/10 SOIR (session locale) : À LIRE D'ABORD
+- **Serveur : 1.0.26** (voir le journal) : 1.0.25 = bûcheron efficace sur place ; 1.0.26 = **le GPS** (`Gps`, route du trajet entier) et **plus de système de montagne** (`Itineraire.montagne` retiré à la demande de KOLRAX). Pas de modpack (rien de client).
+- Les vieilles pistes du plan A ci-dessous (chutes, `a3-creux42`, `a3-chutes2`) datent d'avant ; à revoir avec le GPS avant de les reprendre.
+
 ## SOIR DU 19/10 (lot 18) : À LIRE D'ABORD
 - **Serveur : 1.0.23** (F1 saut en boucle, F2 bûcheron sur place, F3 `metiers_actifs` = bûcheron, chasseur, guérisseur, mineur, pêcheur), installée à 19 h 59 UTC, un seul jar dans `/mods`. Modpack inchangé (1.0.18).
 - **`main` = 1.0.24** (+ F6 neige poudreuse), verte (313/313, 427/427), **pas sur le serveur** : l'envoi du jar a été refusé par le système de permissions (« Production Deploy »). Seule case restante du plan : la livrer, avec l'accord de KOLRAX. Ne pas contourner ce refus.

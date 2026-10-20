@@ -32,6 +32,8 @@ import threading
 import time
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8")  # la console Windows (cp1252) refuse les symboles des statuts
+
 RACINE = Path(__file__).resolve().parent.parent
 MOD = RACINE / "mod-npc"
 RUN = MOD / "run-fantome"

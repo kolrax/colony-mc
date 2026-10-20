@@ -1406,7 +1406,9 @@ public class Travailleur extends PathfinderMob {
         if (tickCount % 100 == 0) equiperArmure();
         if (tickCount % 20 == 0) {
             if (bureau == null || chezLui(blockPosition())) {
-                if (expedition && sortieDepuis >= 0) { Cerveau.ecrire(this, "retour", Cerveau.UN_JOUR, "retour_expedition"); expedition = false; }
+                // Repasser chez lui en partant (le premier pas du trajet y revient) n'est pas rentrer : seulement s'il ne marche plus vers le dehors.
+                boolean enPartance = action instanceof Actions.Aller a && !chezLui(BlockPos.containing(a.cible));
+                if (expedition && sortieDepuis >= 0 && !enPartance) { Cerveau.ecrire(this, "retour", Cerveau.UN_JOUR, "retour_expedition"); expedition = false; }
                 if (expedition && !(action instanceof Actions.Aller)) expedition = false; // décidée, mais il n'est pas parti
                 sortieDepuis = -1;
                 trace.clear();

@@ -103,6 +103,7 @@ final class Itineraire {
     /** Un nouveau tick du serveur : le budget des étapes repart, et le passe-droit ira au plus ancien des affamés. */
     static void nouveauTick() {
         budget = BUDGET;
+        Gps.nouveauTick();
         passeDroitDonne = false;
         plusAncienne = plusAncienneVue;
         plusAncienneVue = Long.MAX_VALUE;
@@ -271,14 +272,16 @@ final class Itineraire {
         double dh = horizontale(p, but);
         if (phase < 0) {
             visites.merge(cellule(ici), 1, Integer::sum);
-            if (montagne(t, maintenant, v)) return;
+            double m = horizontale(p, but) + 1.5 * Math.abs(but.y - p.y);
+            if (meilleurDate < 0 || m < meilleur - 3) { meilleur = m; meilleurDate = maintenant; }
+            if (auBoutDeLaRoute(t, p)) return;
             if (descente(t, maintenant, dh)) return;
             phase = 0;
         }
 
         // a) Le but lui-même, s'il est à portée d'un chemin complet. Si le chemin direct vient d'échouer, la moitié des nœuds.
         if (phase == 0) {
-            if (dh <= 48 && Math.abs(but.y - p.y) <= 24) {
+            if (dh <= 48) {
                 if (!jeton(maintenant)) return;
                 if (aller(t, BlockPos.containing(but), but, v, false, directRate >= 2 ? NOEUDS_ETAPE : 1)) { finChoix(); return; }
             }
@@ -304,6 +307,7 @@ final class Itineraire {
 
         // c) Sous terre : d'abord sortir à l'air libre.
         if (phase == 2) {
+            if (route == null && !cibleMobile && !sousTerre(t) && !Gps.libre()) return; // la route du GPS au tick suivant (une par tick pour le serveur)
             phase = 3;
             if (sousTerre(t) && (dh > 24 || but.y > p.y + 6)) {
                 sortie = sortieRatee ? null : versLeCiel(l, ici, 30000);
@@ -354,6 +358,7 @@ final class Itineraire {
                 return;
             }
             rates.add(c);
+            routeCoupee(c);
             if (t.etapesRatees.size() > 256) t.etapesRatees.values().removeIf(f -> f <= maintenant);
             t.etapesRatees.put(cle, maintenant + OUBLI);
         }
@@ -394,8 +399,78 @@ final class Itineraire {
         etape = null;
     }
 
-    /** Les points d'étape possibles autour de lui, du meilleur au moins bon (vers le but, pas déjà parcouru, pas dans l'eau). */
+    // --- La route du GPS ({@link Gps}) : calculée une fois pour tout le trajet, refaite si un de ses points ne s'atteint pas ---
+
+    private List<BlockPos> route;
+    private boolean routeComplete;
+    private final Set<Long> coupees = new HashSet<>();
+    /** Les points d'étape tirés de la route (un échec y coupe la route). */
+    private final Set<BlockPos> pointsRoute = new HashSet<>();
+
+    /**
+     * Les prochains points de la route, à 28 blocs au plus devant lui, du plus avancé au plus proche (quatre au plus) : la
+     * marche du jeu vérifie ensuite que chacun s'atteint. À la surface seulement (sous terre, c'est la sortie qui compte).
+     */
+    private List<BlockPos> pointsDeRoute(Travailleur t, Level l, BlockPos ici) {
+        // Vers une cible qui bouge (un ennemi, son chef), une route calculée d'avance ne sert à rien : pas de GPS.
+        if (!(l instanceof net.minecraft.server.level.ServerLevel sl) || sousTerre(t) || cibleMobile) return List.of();
+        if (route == null) {
+            if (!Gps.libre()) return List.of(); // une autre recherche a eu lieu sur ce tick (choisirEtape attend son tour avant)
+            long debut = System.nanoTime();
+            Gps.Route r = Gps.chercher(sl, ici, BlockPos.containing(but), coupees);
+            route = r.points();
+            routeComplete = r.complete();
+            t.diag = "GPS : route de " + route.size() * Gps.CASE + " blocs (" + (System.nanoTime() - debut) / 1_000_000 + " ms)";
+        }
+        int i0 = -1;
+        double proche = Double.MAX_VALUE;
+        for (int i = 0; i < route.size(); i++) {
+            double d = route.get(i).distToLowCornerSqr(ici.getX(), route.get(i).getY(), ici.getZ());
+            if (d < proche) { proche = d; i0 = i; }
+        }
+        if (i0 >= 0 && proche > 16 * 16) i0 = -1; // loin de sa route (poussé, fui) : elle repart de son premier point
+        List<BlockPos> r = new ArrayList<>();
+        for (int i = route.size() - 1; i > i0 && r.size() < 4; i--) {
+            BlockPos c = route.get(i);
+            if (horizontale(Vec3.atBottomCenterOf(c), Vec3.atBottomCenterOf(ici)) > 28) continue;
+            int y = Monde.surface(l, c.getX(), c.getZ());
+            if (y == Integer.MIN_VALUE) continue;
+            BlockPos q = new BlockPos(c.getX(), y, c.getZ());
+            if (!Monde.debout(l, q)) continue;
+            r.add(q);
+            pointsRoute.add(q);
+        }
+        return r;
+    }
+
+    /**
+     * Aucune route à pied ne mène au but, plus haut (une cuvette, le pied d'une falaise) : arrivé au bout de la sienne, il
+     * monte là, sur des blocs qu'il reprendra, à la nage par son seau, ou par des marches taillées s'il a l'outil. Vrai s'il
+     * a commencé.
+     */
+    private boolean auBoutDeLaRoute(Travailleur t, Vec3 p) {
+        if (route == null || routeComplete || but.y < p.y + 3 || !evasionPermise(t) || sousTerre(t) || !t.onGround()) return false;
+        BlockPos fin = route.isEmpty() ? t.blockPosition() : route.get(route.size() - 1);
+        if (horizontale(Vec3.atBottomCenterOf(fin), p) > Gps.CASE) return false;
+        if (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return true; }
+        BlockPos devant = t.blockPosition().relative(Direction.getNearest(but.x - p.x, 0, but.z - p.z)).above();
+        if (!Monde.traversable(t.level(), devant) && !sansOutilPourLaParoi(t)) {
+            commencerCreusage(t, false);
+            if (aCreuser != null || montee != null) { choixRates = 0; return true; }
+        }
+        return false;
+    }
+
+    /** Un point de la route ne s'atteint pas : sa case est coupée, la route sera refaite sans elle. */
+    private void routeCoupee(BlockPos c) {
+        if (!pointsRoute.remove(c)) return;
+        coupees.add(Gps.cle(c));
+        route = null;
+    }
+
+    /** Les points d'étape possibles : la route du GPS d'abord, puis autour de lui, du meilleur au moins bon (vers le but, pas déjà parcouru, pas dans l'eau). */
     private List<BlockPos> candidats(Travailleur t, Level l, BlockPos ici, Vec3 p, double dh) {
+        List<BlockPos> devant = pointsDeRoute(t, l, ici);
         double cap = Math.atan2(but.z - p.z, but.x - p.x);
         record Candidat(BlockPos pos, double score) {}
         List<Candidat> candidats = new ArrayList<>();
@@ -411,7 +486,6 @@ final class Itineraire {
                     // Sous un toit (maison, grotte) : le sol de surface est au-dessus de lui, il vise un appui à sa hauteur.
                     int h = sousUnToit && y > p.y + 3 ? appuiPres(l, x, z, ici.getY()) : Integer.MIN_VALUE;
                     if (h != Integer.MIN_VALUE) y = h;
-                    else if (Math.abs(y - p.y) > 12 && !sousTerre(t)) y = Math.max(y, ici.getY()); // falaise : on vise sa hauteur
                     BlockPos q = new BlockPos(x, y, z);
                     if (!vus.add(q) || !Monde.debout(l, q)) continue;
                     double score = horizontale(Vec3.atBottomCenterOf(q), but) + 24 * visites.getOrDefault(cellule(q), 0)
@@ -421,7 +495,9 @@ final class Itineraire {
             }
         }
         candidats.sort(Comparator.comparingDouble(Candidat::score));
-        return candidats.stream().map(Candidat::pos).toList();
+        List<BlockPos> tous = new ArrayList<>(devant);
+        for (Candidat c : candidats) if (!devant.contains(c.pos())) tous.add(c.pos());
+        return tous;
     }
 
     /** Il se tient au bout de ce chemin (à un bloc près). */
@@ -606,7 +682,7 @@ final class Itineraire {
         double dh = horizontale(pd, but);
         if (suite == null) {
             if (plan.size() >= PLAN_MAX) { prolonge = false; return; }
-            if (dh <= 48 && Math.abs(but.y - d.getY()) <= 24) {
+            if (dh <= 48) {
                 if (!jeton(maintenant)) return;
                 BlockPos q = BlockPos.containing(but);
                 Path c = depuis(t, d, q, Math.max(PORTEE_MIN, portee(d, q)), 1);
@@ -618,7 +694,8 @@ final class Itineraire {
                     return;
                 }
             }
-            suite = candidats(t, l, d, pd, dh).stream().filter(c -> horizontale(Vec3.atBottomCenterOf(c), but) < dh - 4).toList();
+            // Un point de la route compte même s'il ne rapproche pas du but à vol d'oiseau (le tour d'un ravin, un col).
+            suite = candidats(t, l, d, pd, dh).stream().filter(c -> pointsRoute.contains(c) || horizontale(Vec3.atBottomCenterOf(c), but) < dh - 4).toList();
             curseurSuite = 0;
             essaisSuite = 0;
             rates.clear();
@@ -631,6 +708,7 @@ final class Itineraire {
             Path ch = depuis(t, d, c, portee(d, c), NOEUDS_ETAPE);
             if (ch != null && ch.canReach()) { plan.add(ch); suite = null; rates.clear(); return; }
             rates.add(c);
+            routeCoupee(c);
         }
         suite = null;
         rates.clear();
@@ -869,64 +947,12 @@ final class Itineraire {
     /** Les marches déjà libres où il a déjà fait un pas pendant ce trajet : il n'y retourne pas (pas d'allers-retours). */
     private final Set<BlockPos> pasFaits = new HashSet<>();
 
-    // --- La montagne (plan A3) : le but est plus haut et il ne s'en rapproche plus -------------------------
+    // --- Les progrès vers le but : sans rien gagner depuis STAGNATION ticks, la descente peut commencer ---------------
 
-    /** Sans gagner au moins 3 blocs vers le but (en hauteur comptée une fois et demie) pendant tant de ticks, il grimpe. */
+    /** Sans gagner au moins 3 blocs vers le but (en hauteur comptée une fois et demie) pendant tant de ticks, il ne s'en rapproche plus. */
     static final int STAGNATION = 600;
     private double meilleur;
-    private long meilleurDate = -1, montagneProchain;
-    /** Les pieds de paroi où il est déjà allé grimper : il n'y retourne pas. */
-    private final Set<BlockPos> pieds = new HashSet<>();
-    /** Le pied de paroi où il va grimper : arrivé là, il grimpe tout de suite (sans attendre, ni repartir sur une autre étape). */
-    private BlockPos auPied;
-    private boolean dernierPas;
-
-    /**
-     * Le but est plus haut et ses étapes ne l'en rapprochent plus depuis {@link #STAGNATION} ticks (il longe le pied de la
-     * montagne) : au pied d'une paroi, il grimpe (blocs qu'il reprend, seau d'eau, escalier s'il a l'outil) ; sinon il va
-     * d'abord au plus près du but qu'un chemin atteint, par un chemin complet, pour y grimper. Une fois toutes les 10 s au
-     * plus (une recherche de chemin). Vrai s'il a commencé quelque chose.
-     */
-    private boolean montagne(Travailleur t, long maintenant, double v) {
-        Vec3 p = t.position();
-        double m = horizontale(p, but) + 1.5 * Math.abs(but.y - p.y); // en montant comme en descendant (la descente s'en sert)
-        BlockPos vise = auPied;
-        boolean arrive = vise != null && vise.distSqr(t.blockPosition()) <= 2;
-        auPied = null;
-        if (!arrive && (meilleurDate < 0 || m < meilleur - 3)) { meilleur = m; meilleurDate = maintenant; return false; }
-        if (but.y < p.y + 3 || !arrive && (maintenant - meilleurDate < STAGNATION || maintenant < montagneProchain) || !evasionPermise(t)
-                || sousTerre(t) || !t.onGround()) return false;
-        // Arrêté un pas avant le pied (le chemin s'arrête à côté) : il fait ce dernier pas, puis grimpe.
-        if (arrive && !t.blockPosition().equals(vise) && !dernierPas) {
-            dernierPas = true;
-            auPied = montee = vise;
-            monteeFin = ageCourant + 40;
-            etape = null;
-            return true;
-        }
-        dernierPas = false;
-        montagneProchain = maintenant + 200;
-        if (caseDeChantier(t, false, true) >= 0 && commencerAPoser(t) || commencerALaNage(t)) { montee = null; choixRates = 0; etape = null; return true; }
-        BlockPos devant = t.blockPosition().relative(Direction.getNearest(but.x - p.x, 0, but.z - p.z)).above();
-        if (!Monde.traversable(t.level(), devant) && !sansOutilPourLaParoi(t)) {
-            commencerCreusage(t, false);
-            if (aCreuser != null || montee != null) { choixRates = 0; return true; }
-        }
-        if (!jeton(maintenant)) { montagneProchain = 0; return false; }
-        Path c = chercher(t, BlockPos.containing(but), 0, Charge.Origine.ETAPE);
-        if (c == null || c.getEndNode() == null) return false;
-        BlockPos pied = c.getEndNode().asBlockPos();
-        if (pied.equals(t.blockPosition()) || pieds.contains(pied)) return false;
-        // À un pas du pied : il fait ce pas, puis grimpe (sans recherche de chemin).
-        if (pied.distSqr(t.blockPosition()) <= 2) { pieds.add(pied); dernierPas = true; auPied = montee = pied; monteeFin = ageCourant + 40; etape = null; return true; }
-        if (!jeton(maintenant)) return false;
-        pieds.add(pied);
-        if (!aller(t, pied, Vec3.atBottomCenterOf(pied), v, true, 1)) return false;
-        prolonge = false; // il s'arrête au pied : de là, il grimpe
-        auPied = pied;
-        t.diag = "va au pied de la paroi " + pied.toShortString();
-        return true;
-    }
+    private long meilleurDate = -1;
 
     // --- La descente (plan A3) : le but est nettement plus bas et aucun chemin complet n'y mène ---------------
 
