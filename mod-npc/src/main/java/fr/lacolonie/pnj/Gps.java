@@ -17,7 +17,7 @@ import java.util.Set;
 
 /**
  * Le GPS (KOLRAX, 20/10) : le trajet complet jusqu'au but, calculé d'avance sur la carte du relief, avant de partir. Une
- * recherche A* sur des cases de {@link #CASE} blocs, chacune à la hauteur de son sol : le terrain chargé, sinon celui que
+ * recherche A* sur des cases de {@link #CASE} blocs, chacune à la hauteur de son sol (le terrain chargé ; ailleurs, supposé
  * le monde générerait là. On passe d'une case à l'autre si la pente se marche (un bloc de montée par bloc d'avancée, au
  * plus) ; jamais par la lave ni la neige poudreuse ; l'eau se nage, plus lentement. Une montagne n'est ni évitée ni
  * recherchée : la route est la plus courte qui se marche, par-dessus si elle est la plus courte. Le détail (les blocs, les
@@ -30,8 +30,6 @@ final class Gps {
      * dans un trou fermé) ne fait pas explorer tout le pays : au banc de charge, 6000 cases pour un but à 18 blocs coûtaient 1 s.
      */
     static final int NOEUDS_PAR_CASE = 100, NOEUDS_MIN = 1500, NOEUDS_MAX = 6000;
-    /** Hauteurs nouvelles demandées au générateur au plus par recherche (quelques ms chacune) ; elles restent connues ensuite. */
-    static final int GENERATEUR_MAX = 64;
     /** Recherches au plus par tick du serveur, pour tous les PNJ (les autres attendent le tick suivant). */
     static final int PAR_TICK = 1;
     static int restant = PAR_TICK;
@@ -42,9 +40,6 @@ final class Gps {
     /** Une recherche est encore permise sur ce tick. */
     static boolean libre() { return restant > 0; }
 
-    /** Les hauteurs déjà demandées au générateur (elles ne changent pas), pour tous les PNJ ; vidé au-delà de 200 000. */
-    private static final Map<Long, Integer> GENERE = new HashMap<>();
-    private static ServerLevel genereDe;
     static final int BLOQUE = Integer.MIN_VALUE, INCONNU = Integer.MIN_VALUE + 1;
 
     private record Noeud(long cle, double f) {}
@@ -119,8 +114,8 @@ final class Gps {
         }
         Collections.reverse(route);
         long ms = (System.nanoTime() - t0) / 1_000_000;
-        if (ms >= 50) ColoniePnj.LOG.warn("GPS lent : {} ms, {} cases explorées, {} hauteurs du générateur, {} -> {} ({} blocs), route {} {}",
-                ms, explores, h.generateur, de.toShortString(), a.toShortString(), (int) Math.sqrt(de.distSqr(a)), route.size(), meilleur == but ? "complète" : "partielle");
+        if (ms >= 50) ColoniePnj.LOG.warn("GPS lent : {} ms, {} cases explorées, {} cases pas encore chargées, {} -> {} ({} blocs), route {} {}",
+                ms, explores, h.inconnues, de.toShortString(), a.toShortString(), (int) Math.sqrt(de.distSqr(a)), route.size(), meilleur == but ? "complète" : "partielle");
         return new Route(route, meilleur == but);
     }
 
@@ -130,7 +125,7 @@ final class Gps {
     private static final class Hauteurs {
         final ServerLevel l;
         final Map<Long, Integer> vues = new HashMap<>();
-        int generateur;
+        int inconnues;
 
         Hauteurs(ServerLevel l) { this.l = l; }
 
@@ -147,17 +142,10 @@ final class Gps {
                 if (dessous.getFluidState().is(FluidTags.LAVA) || dessous.is(Blocks.POWDER_SNOW) || dessous.is(Blocks.MAGMA_BLOCK)) return BLOQUE;
                 return y << 1 | (dessous.getFluidState().is(FluidTags.WATER) ? 1 : 0);
             }
-            // Pas encore chargé : la hauteur que le monde générerait (sans ce que les joueurs y ont bâti), en nombre limité.
-            if (genereDe != l || GENERE.size() > 200_000) { GENERE.clear(); genereDe = l; }
-            long k = cle(Math.floorDiv(x, CASE), Math.floorDiv(z, CASE));
-            Integer connu = GENERE.get(k);
-            if (connu != null) return connu;
-            if (generateur++ >= GENERATEUR_MAX) return INCONNU;
-            var src = l.getChunkSource();
-            int y = src.getGenerator().getBaseHeight(x + CASE / 2, z + CASE / 2, Heightmap.Types.WORLD_SURFACE_WG, l, src.randomState());
-            int v = y << 1 | (y <= l.getSeaLevel() ? 1 : 0);
-            GENERE.put(k, v);
-            return v;
+            // Pas encore chargé : supposé praticable, la route se corrige quand il y arrive. Jamais la hauteur du générateur :
+            // sur le serveur (génération moddée), 64 hauteurs coûtaient plus d'une seconde (1.0.26, le 20/10).
+            inconnues++;
+            return INCONNU;
         }
     }
 }

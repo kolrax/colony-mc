@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -187,6 +188,47 @@ final class Bucheron extends Metier {
      * que la forêt continuait : F2, 20/10).
      */
     static final int FORET_ICI = 64;
+
+    /**
+     * « /pnj arbres » : les arbres de ce bois à {@code rayon} blocs autour de {@code centre}, et pour chacun pourquoi il ne
+     * le prendrait pas, dans l'ordre des règles de {@link Actions#chercherArbre} et de {@link #arbreEnVue}.
+     */
+    static List<String> diagnosticArbres(Travailleur t, ServerLevel l, BlockPos centre, Bois c, int rayon) {
+        java.util.Map<String, List<BlockPos>> parRaison = new java.util.TreeMap<>();
+        int pasCharge = 0;
+        for (int dx = -rayon; dx <= rayon; dx++)
+            for (int dz = -rayon; dz <= rayon; dz++) {
+                if (dx * dx + dz * dz > rayon * rayon) continue;
+                int x = centre.getX() + dx, z = centre.getZ() + dz;
+                if (!l.isLoaded(new BlockPos(x, centre.getY(), z))) { pasCharge++; continue; }
+                int haut = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                for (int y = haut; y > haut - 24; y--) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!l.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) continue;
+                    while (p.getY() > l.getMinBuildHeight() && l.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.LOGS)) p = p.below();
+                    if (!c.bois.bloc(l.getBlockState(p))) break;
+                    String r;
+                    if (!l.getBlockState(p.below()).is(net.minecraft.tags.BlockTags.DIRT)) r = "pied pas sur de la terre (" + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(l.getBlockState(p.below()).getBlock()).getPath() + ")";
+                    else if (t.blocInaccessible(p.asLong())) r = "inaccessible il y a peu";
+                    else if (Lieux.regles(l) && Lieux.dansStructure(l, p)) r = "dans une structure (" + Monde.structure(l, p) + ")";
+                    else if (Lieux.regles(l) && Mineur.baseVoisine(t, p) != null) r = "chez un voisin (base de mineur)";
+                    else if (Lieux.regles(l) && !Lieux.ici(t, p) && Lieux.dansColonie(t, p)) r = "dans la colonie";
+                    else if (Lieux.regles(l) && !Lieux.ici(t, p) && Lieux.zoneConstruite(l, p)) r = "près d'une construction";
+                    else if (Actions.arbre(l, p) == null) r = "pas reconnu comme un arbre naturel";
+                    else if (t.lieuImpose == null && !aPortee(t, p, 0)) r = "trop loin du poste";
+                    else if (!t.peutAller(p)) r = String.format(java.util.Locale.ROOT, "pas le temps de rentrer (%.1f h de marche + 1 h, il reste %.1f h)",
+                            Travailleur.heuresDeMarche(t.blockPosition(), p) + Travailleur.heuresDeMarche(p, t.bureau), t.heuresRestantes());
+                    else r = "OK, il le couperait";
+                    parRaison.computeIfAbsent(r, k -> new ArrayList<>()).add(p);
+                    break;
+                }
+            }
+        List<String> lignes = new ArrayList<>();
+        lignes.add(t.prenom + " : " + c.nom.toLowerCase() + " à " + rayon + " blocs de " + centre.toShortString() + (pasCharge > 0 ? " (" + pasCharge + " colonnes pas chargées)" : ""));
+        if (parRaison.isEmpty()) lignes.add("  aucun arbre de ce bois");
+        parRaison.forEach((r, l2) -> lignes.add("  " + l2.size() + " : " + r + " ; ex. " + l2.stream().limit(3).map(BlockPos::toShortString).toList()));
+        return lignes;
+    }
 
     /** Arrivé sur les lieux de sa mission (il a rejoint le point désigné) et toujours dans leur forêt. */
     static boolean surPlace(Travailleur t) {

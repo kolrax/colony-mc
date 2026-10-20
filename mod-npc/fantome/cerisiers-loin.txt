@@ -1,0 +1,64 @@
+# Le cas de Renaud (KOLRAX, 20/10) : la forêt de cerisiers à ~300 blocs du poste, mission « cerisier » de 64 sans
+# « Travaille ici ». Il y est allé, en a coupé un, puis s'est baladé autour de la forêt au lieu de couper les voisins.
+time set 7500
+fantome apparait cerisiers
+fantome va ~-300 ~ ~
+fantome poste
+fantome donne minecraft:gold_ingot 24
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_axe 1
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+fantome mission bucheron cerisier fois 64
+attendre 5
+ticks 600
+fantome rapport cl-01
+ticks 600
+fantome rapport cl-02
+ticks 600
+fantome rapport cl-03
+ticks 600
+fantome rapport cl-04
+ticks 600
+fantome rapport cl-05
+ticks 600
+fantome rapport cl-06
+ticks 600
+fantome rapport cl-07
+ticks 600
+fantome rapport cl-08
+ticks 600
+fantome rapport cl-09
+ticks 600
+fantome rapport cl-10
+ticks 600
+fantome rapport cl-11
+ticks 600
+fantome rapport cl-12
+ticks 600
+fantome rapport cl-13
+ticks 600
+fantome rapport cl-14
+ticks 600
+fantome rapport cl-15
+ticks 600
+fantome rapport cl-16
+ticks 600
+fantome rapport cl-17
+ticks 600
+fantome rapport cl-18
+ticks 600
+fantome rapport cl-19
+ticks 600
+fantome rapport cl-20
+ticks 600
+fantome rapport cl-21
+ticks 600
+fantome rapport cl-22
+ticks 600
+fantome rapport cl-23
+ticks 600
+fantome rapport cl-24

@@ -332,6 +332,18 @@ public class ColoniePnj {
                     return 1;
                 })))
 
+                // Les arbres autour d'un point, et pourquoi tel bûcheron ne les prendrait pas (Bucheron.diagnosticArbres).
+                .then(Commands.literal("arbres").then(Commands.argument("prenom", StringArgumentType.word()).then(Commands.argument("bois", StringArgumentType.word())
+                        .then(Commands.argument("pos", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos()).executes(c -> {
+                            String n = StringArgumentType.getString(c, "prenom");
+                            var l = tous(c.getSource().getServer()).stream().filter(t -> t.prenom.equalsIgnoreCase(n) && t.level() instanceof ServerLevel).toList();
+                            if (l.isEmpty()) { c.getSource().sendFailure(Component.literal("Aucun PNJ nommé " + n)); return 0; }
+                            if (!(Metier.catalogue("bucheron", StringArgumentType.getString(c, "bois")) instanceof Bucheron.Bois b)) { c.getSource().sendFailure(Component.literal("Bois inconnu")); return 0; }
+                            BlockPos p = net.minecraft.commands.arguments.coordinates.BlockPosArgument.getBlockPos(c, "pos");
+                            for (Travailleur t : l) for (String ligne : Bucheron.diagnosticArbres(t, (ServerLevel) t.level(), p, b, 48)) c.getSource().sendSuccess(() -> Component.literal(ligne), false);
+                            return 1;
+                        })))))
+
                 .then(Commands.literal("banc")
                         .then(Commands.literal("fin").executes(c -> {
                             int n = finBanc(c.getSource().getServer());
