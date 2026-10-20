@@ -1,0 +1,21 @@
+# F2 (19-20/10) : sur les lieux de sa mission, le bûcheron doit enchaîner les arbres sans errer. Le poste au bord
+# de la forêt de cerisiers la plus proche, un bûcheron, mission « cerisier, 48 bûches ». Attendu : il va d'arbre en
+# arbre (pas d'arrêt de plus de 3 s ni d'aller-retour sans abattage), mission finie dans la journée, rien de cassé.
+time set 1000
+fantome apparait cerisiers
+fantome poste
+fantome donne minecraft:gold_ingot 24
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_axe 1
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+fantome mission bucheron cerisier fois 48
+fantome rapport cerisiers-debut
+attendre 5
+ticks 2400
+fantome rapport cerisiers-2min
+ticks 9600
+fantome rapport cerisiers-10min

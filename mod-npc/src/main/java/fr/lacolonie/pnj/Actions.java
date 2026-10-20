@@ -694,7 +694,7 @@ public final class Actions {
             }
             for (int k = 0; k < 8 && !feuilles.isEmpty(); k++) {
                 BlockPos q = feuilles.remove(feuilles.size() - 1);
-                if (detachee(lvl.getBlockState(q))) lvl.destroyBlock(q, true, t);
+                if (detachee(lvl.getBlockState(q))) recolter(t, q); // pousses, bâtons et pommes droit au sac : plus rien à courir ramasser (F2, 20/10)
             }
             if (age % 5 == 0) t.swing(InteractionHand.MAIN_HAND);
             return feuilles.isEmpty() ? Etat.OK : Etat.EN_COURS;
@@ -1447,7 +1447,8 @@ public final class Actions {
                 proche = null;
                 for (ItemEntity ie : t.level().getEntitiesOfClass(ItemEntity.class, zone != null ? zone : t.getBoundingBox().inflate(rayon)))
                     if (filtre.objet(ie.getItem()) && t.inventaire.canAddItem(ie.getItem()) && (proche == null || t.distanceToSqr(ie) < t.distanceToSqr(proche))
-                            && !Monde.bordDeLave(t.level(), ie.blockPosition())) proche = ie;
+                            && !Monde.bordDeLave(t.level(), ie.blockPosition())
+                            && ie.getY() <= t.getY() + 1.5) proche = ie; // un objet resté dans les feuilles, au-dessus de lui : hors d'atteinte (il y restait planté 17 s, F2)
             }
             if (proche == null) return Etat.OK;
             if (coince()) return echec("inaccessible");

@@ -59,3 +59,8 @@ Format :
 - **19/10, ~20 h 45 UTC (session cloud du mod)** : 1.0.23 installée à 19 h 59 UTC (0 joueur, « Done » 20 h 00, `metiers_actifs` posé). Second redémarrage pour **colonie_pnj 1.0.24** (serveur seul, pas de modpack : F6, neige poudreuse évitée). Seul le jar du mod change (`colonie_pnj-1.0.23.jar` rangé dans `/mods-off`). Aucun autre mod touché : Distant Horizons reste dans `/mods`, Chunky dans `/mods-off`, Burnt et GeckoLib inchangés.
 - **20/10, ~15 h 55 UTC (Admin, demandé par KOLRAX)** : génération à l'avance du monde `ouverture` avec Chunky (centre -50 720, rayon 1 500 blocs). Distant Horizons passe dans `/mods-off` et Chunky dans `/mods` le temps de la génération (les deux ensemble font planter le démarrage) ; Chunky reprend seul après un redémarrage (`continueOnRestart`). **Livreurs : ne touchez ni à Chunky ni à DH** ; l'Admin remet DH à la fin et le note ici.
 
+## 2026-10-20 : redémarrage pour la 1.0.25 (session locale)
+- Demande : redémarrage vers 18 h 45 UTC pour installer colonie_pnj 1.0.25 (bûcheron sur place), serveur seul, sans toucher à Chunky ni à DH (Chunky reprend seul). 5 minutes de préavis en jeu.
+- Pourquoi : correction demandée par KOLRAX.
+- Statut : fait par la session locale
+

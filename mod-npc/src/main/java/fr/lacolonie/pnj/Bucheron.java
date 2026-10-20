@@ -97,11 +97,17 @@ final class Bucheron extends Metier {
 
         // 3. L'arbre naturel du bon bois le plus proche de lui : hors de la colonie, ou dans la zone « Travaille ici », jamais
         //    près d'une construction (Lieux). Désigné « Travaille ici » mais loin de ce lieu : il y va d'abord.
-        if (t.lieuImpose != null && !Lieux.ici(t, t.blockPosition())) {
+        // Il rejoint d'abord le point désigné ; une fois arrivé, toute la forêt autour est son terrain (dansSaForet).
+        if (t.lieuImpose != null && !surPlace(t)) {
             if (!aller(t, t.lieuImpose, c)) t.travailleIci(null);
             return;
         }
-        BlockPos arbre = arbreEnVue(t, c);
+        // Le prochain arbre, sans fouiller au hasard : d'abord dans la zone du point désigné, puis dans toute sa forêt ;
+        // à 24 blocs de lui, puis à 48 (la forêt continue plus loin).
+        BlockPos arbre = arbreEnVue(t, c, 24, false);
+        if (arbre == null) arbre = arbreEnVue(t, c, 48, false);
+        if (arbre == null && t.lieuImpose != null) arbre = arbreEnVue(t, c, 24, true);
+        if (arbre == null && t.lieuImpose != null) arbre = arbreEnVue(t, c, 48, true);
         if (arbre != null) {
             Lieux.choisi(t, arbre);
             t.debloquer(Statut.SANS_BOIS);
@@ -112,7 +118,6 @@ final class Bucheron extends Metier {
                 m.put("plants", souches);
             }
             if (!t.chezLui(arbre)) m.putLong("coin_" + c.id, arbre.asLong()); // un bon coin loin de chez lui : il y reviendra
-            m.putLong("ramassage", 0); // ce qui tombera des feuilles : ramassé juste après
             Cerveau.lancer(t, new Actions.Abattre(arbre));
             return;
         }
@@ -170,9 +175,27 @@ final class Bucheron extends Metier {
      * L'arbre du bon bois qu'il peut abattre, le plus proche de lui (24 blocs), où il a le temps d'aller ; null sinon. Sur
      * les lieux de sa mission, seulement dans leur zone : arrivé au bord, il ne rase pas d'abord les arbres d'à côté.
      */
-    static BlockPos arbreEnVue(Travailleur t, Bois c) {
-        BlockPos a = Actions.chercherArbre((ServerLevel) t.level(), t.blockPosition(), 24, c.bois, t, q -> Lieux.arbrePermis(t, q) && (t.lieuImpose != null ? Lieux.ici(t, q) : aPortee(t, q, 0)));
+    static BlockPos arbreEnVue(Travailleur t, Bois c, int rayon, boolean toutLaForet) {
+        BlockPos a = Actions.chercherArbre((ServerLevel) t.level(), t.blockPosition(), rayon, c.bois, t, q -> Lieux.arbrePermis(t, q)
+                && (t.lieuImpose == null ? aPortee(t, q, 0) : toutLaForet ? dansSaForet(t, q) : Lieux.ici(t, q)));
         return a != null && t.peutAller(a) ? a : null;
+    }
+
+    /**
+     * Sur les lieux de sa mission (« Travaille ici »), la forêt où on l'a mis : jusqu'à {@link #FORET_ICI} blocs du point
+     * désigné, pas seulement le cercle de {@link Lieux#RAYON_ICI} (avant, il y abattait 5 arbres puis restait planté alors
+     * que la forêt continuait : F2, 20/10).
+     */
+    static final int FORET_ICI = 64;
+
+    /** Arrivé sur les lieux de sa mission (il a rejoint le point désigné) et toujours dans leur forêt. */
+    static boolean surPlace(Travailleur t) {
+        if (Lieux.ici(t, t.blockPosition())) { t.memoire.putLong("foret_atteinte", t.lieuImpose.asLong()); return true; } // entré dans la zone du point
+        return t.memoire.contains("foret_atteinte") && t.memoire.getLong("foret_atteinte") == t.lieuImpose.asLong() && dansSaForet(t, t.blockPosition());
+    }
+
+    static boolean dansSaForet(Travailleur t, BlockPos q) {
+        return LieuxRegles.dist2(t.lieuImpose.getX(), t.lieuImpose.getZ(), q.getX(), q.getZ()) <= (long) FORET_ICI * FORET_ICI;
     }
 
     /**
@@ -186,9 +209,9 @@ final class Bucheron extends Metier {
         if (!(t.action instanceof Actions.Aller a) || (t.tickCount + t.getId()) % 40 != 0 || !t.memoire.contains("cherche_vers")) return;
         BlockPos vers = BlockPos.of(t.memoire.getLong("cherche_vers"));
         if (Math.floor(a.cible.x) != vers.getX() || Math.floor(a.cible.z) != vers.getZ()) return; // une autre marche (rentrer, déposer…)
-        if (t.lieuImpose != null && !Lieux.ici(t, t.blockPosition())) return; // pas encore sur les lieux
+        if (t.lieuImpose != null && !surPlace(t)) return; // pas encore sur les lieux
         Bois c = Metier.commande(t) instanceof Bois b ? b : (Bois) commandes.get(0);
-        if (arbreEnVue(t, c) != null) t.finirAction("arbre_en_vue");
+        if (arbreEnVue(t, c, 24, false) != null) t.finirAction("arbre_en_vue");
     }
 
     /** Les points d'où repart la recherche de forêt, après le poste : 8 directions, à 240 puis à 400 blocs du poste. */

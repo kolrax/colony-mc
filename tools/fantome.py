@@ -15,7 +15,10 @@ Un seul serveur de développement à la fois sur la machine : le lancement prend
 Le rapport complet : mod-npc/run-fantome/fantome/<scénario>.json ; la console : mod-npc/run-fantome/fantome/console.log.
 """
 import argparse
-import fcntl
+try:
+    import fcntl  # Linux (cloud) ; sous Windows, pas de verrou : un seul serveur de dev à la fois, à la main
+except ImportError:
+    fcntl = None
 import json
 import os
 import signal
@@ -177,10 +180,11 @@ def main():
     mdp = preparer(a.graine, a.garder_monde)
     print(f"Lancement du serveur de développement (graine {a.graine}, dossier {RUN})…", flush=True)
     # Le verrou d'abord (un autre serveur de test peut tourner) : le délai de démarrage ne compte qu'après.
-    verrou = open("/tmp/gametest.lock", "a")
-    print("Attente du verrou /tmp/gametest.lock…", flush=True)
-    fcntl.flock(verrou, fcntl.LOCK_EX)
-    proc = subprocess.Popen(["./gradlew", "runFantome", "--no-daemon"], cwd=MOD, start_new_session=True,
+    verrou = open("/tmp/gametest.lock" if fcntl else os.devnull, "a")
+    if fcntl:
+        print("Attente du verrou /tmp/gametest.lock…", flush=True)
+        fcntl.flock(verrou, fcntl.LOCK_EX)
+    proc = subprocess.Popen([str(MOD / "gradlew.bat") if os.name == "nt" else "./gradlew", "runFantome", "--no-daemon"], cwd=MOD, start_new_session=os.name != "nt",
                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     con = Console(proc, RUN / "fantome" / "console.log")
     code = 0
@@ -221,7 +225,10 @@ def main():
         try:
             proc.wait(timeout=180)
         except subprocess.TimeoutExpired:
-            os.killpg(proc.pid, signal.SIGKILL)  # gradle et le serveur avec lui
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True)
+            else:
+                os.killpg(proc.pid, signal.SIGKILL)  # gradle et le serveur avec lui
         verrou.close()
     f = RUN / "fantome" / f"{nom}.json"
     if not f.exists():

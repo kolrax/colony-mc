@@ -681,6 +681,7 @@ public final class Fantome {
                 .then(Commands.literal("village").executes(c -> apparait(c, "village")))
                 .then(Commands.literal("foret").executes(c -> apparait(c, "foret")))
                 .then(Commands.literal("jungle").executes(c -> apparait(c, "jungle")))
+                .then(Commands.literal("cerisiers").executes(c -> apparait(c, "cerisiers")))
                 .then(Commands.literal("montagne").executes(c -> apparait(c, "montagne")))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(c -> apparait(c, "pos"))));
         f.then(Commands.literal("va").then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(c -> {
@@ -836,6 +837,11 @@ public final class Fantome {
             case "jungle" -> {
                 var b = l.findClosestBiome3d(h -> h.is(BiomeTags.IS_JUNGLE), l.getSharedSpawnPos(), 6400, 32, 64);
                 if (b == null) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Aucune jungle à moins de 6400 blocs")).create();
+                p = terrainLibre(l, b.getFirst(), false);
+            }
+            case "cerisiers" -> {
+                var b = l.findClosestBiome3d(h -> h.is(net.minecraft.world.level.biome.Biomes.CHERRY_GROVE), l.getSharedSpawnPos(), 6400, 32, 64);
+                if (b == null) throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.literal("Aucune forêt de cerisiers à moins de 6400 blocs")).create();
                 p = terrainLibre(l, b.getFirst(), false);
             }
             case "montagne" -> {

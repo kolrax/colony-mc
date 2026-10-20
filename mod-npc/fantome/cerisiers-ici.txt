@@ -1,0 +1,23 @@
+# F2 : comme cerisiers.txt, mais le poste à ~50 blocs de la forêt, et la mission donnée « Travaille ici » au
+# milieu des cerisiers (le cas de KOLRAX : un arbre coupé, puis il erre). « n'importe quel bois ».
+time set 1000
+fantome apparait cerisiers
+fantome va ~-50 ~ ~
+fantome poste
+fantome donne minecraft:gold_ingot 24
+fantome embauche bucheron 2
+attendre 20
+ticks 40
+fantome donne minecraft:iron_axe 1
+fantome donne minecraft:bread 32
+fantome depose
+fantome paie
+fantome va ~50 ~ ~
+fantome bouton_ouvrier bucheron ici
+fantome mission bucheron tout fois 64
+fantome rapport cerisiers-ici-debut
+attendre 5
+ticks 2400
+fantome rapport cerisiers-ici-2min
+ticks 4800
+fantome rapport cerisiers-ici-6min

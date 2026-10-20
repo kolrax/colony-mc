@@ -866,3 +866,10 @@ Aucun code du mod touché, aucune action sur le serveur.
 - 0 joueur connecté, redémarrage à 21 h 39 UTC, « Done » en 2,6 s, aucune erreur du mod. Pas de modpack (rien de client).
 - Lot 18 fini. Routine désactivée (plan à 0 case).
 
+## 2026-10-20 ~18 h 30 UTC : 1.0.25, le bûcheron sur place (session locale, sur demande de KOLRAX : « il coupe un arbre, puis erre bêtement »)
+- **Reproduit au fantôme** (nouveau `apparait cerisiers`, scénarios `cerisiers.txt` et `cerisiers-ici.txt` ; `tools/fantome.py` marche maintenant aussi sous Windows) : mission « Travaille ici » au milieu des cerisiers, 64 bûches. 1.0.24 : 5 arbres en 2 min, puis **bloqué à 60/64 pendant 4 min**, 5 arrêts de 17 s.
+- **Causes** : (1) les feuilles abattues lâchaient pousses et bâtons par terre tout autour, et il courait les ramasser un par un, y compris ceux coincés dans les feuilles hors d'atteinte (17 s planté toutes les 50 s) ; (2) sur les lieux de sa mission, il ne cherchait d'arbres que dans le cercle de 24 blocs autour du point, alors que la forêt continuait.
+- **Corrections** : `Actions.Abattre.feuilles` met les objets des feuilles droit dans le sac (`recolter`) ; `Ramasser` ignore un objet à plus de 1,5 bloc au-dessus de lui ; `Bucheron` : plus de ramassage forcé après un abattage ; recherche du prochain arbre à 24 puis 48 blocs de lui, d'abord dans la zone du point (24), puis dans toute sa forêt (`FORET_ICI` = 64 blocs du point), une fois arrivé (`surPlace`).
+- **Mesures** : `cerisiers-ici` : **64/64 finie et déposée en moins de 2 min, 0 arrêt, 0 demi-tour** ; `cerisiers` : finie en moins de 2 min, 0 arrêt (contre 2 de 17 s). Aucun bloc construit cassé.
+- **Tests** : nouveau `TestsBucheron.toutLaForetDeSaMission` (rouge sur la 1.0.24, vert maintenant) ; `cerisierDeLaZoneDAbord` ajusté (la zone d'abord, puis la forêt). Build + JUnit verts, **428/428 en jeu**. `TestsJeu.partEnExpeditionSansLit` a échoué 2 fois sur 4 passes puis réussi sans changement : capricieux (noté dans `plus-tard.md`).
+

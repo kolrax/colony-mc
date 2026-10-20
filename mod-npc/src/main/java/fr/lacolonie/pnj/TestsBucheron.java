@@ -508,11 +508,35 @@ public class TestsBucheron {
         t.travailleIci(lieu);
         t.forcerChunk();
         h.onEachTick(() -> {
-            if (dehors.stream().anyMatch(q -> !l.getBlockState(q).is(Blocks.CHERRY_LOG)))
-                h.fail("il a entamé le cerisier hors de la zone de sa mission (" + TestsJeu.etat(t, base) + ")");
+            // « D'abord » : sur place, toute la forêt est son terrain (Bucheron.FORET_ICI), mais pas avant d'avoir rejoint le point.
+            if (!abattu(l, dedans) && dehors.stream().anyMatch(q -> !l.getBlockState(q).is(Blocks.CHERRY_LOG)))
+                h.fail("il a entamé le cerisier hors de la zone de sa mission avant celui de la zone (" + TestsJeu.etat(t, base) + ")");
         });
         h.succeedWhen(() -> {
             h.assertTrue(abattu(l, dedans), "le cerisier de la zone doit être abattu (" + TestsJeu.etat(t, base) + ")");
+            t.discard();
+        });
+    }
+
+    /**
+     * KOLRAX (20/10) : « il coupe un arbre, puis erre bêtement ». Sur les lieux de sa mission, il n'abattait que dans un
+     * cercle de 24 blocs autour du point désigné, puis restait planté alors que la forêt continuait. Un cerisier à 8 blocs
+     * du point, un autre à 40 : il abat les deux, l'un après l'autre.
+     */
+    @GameTest(template = "vide", timeoutTicks = 1400)
+    public static void toutLaForetDeSaMission(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos base = TestsJeu.sol(h, 0, 174000);
+        BlockPos lieu = TestsJeu.sol(h, 100, 174000);
+        List<BlockPos> pres = cerisier(l, TestsJeu.sol(h, 108, 174000), 5);
+        List<BlockPos> loin = cerisier(l, TestsJeu.sol(h, 140, 174000), 7);
+        Travailleur t = TestsJeu.employe(h, "bucheron", base, Vec3.atBottomCenterOf(lieu), new ItemStack(Items.IRON_AXE));
+        t.mission("cerisier", "stock", 200);
+        t.travailleIci(lieu);
+        t.forcerChunk();
+        h.succeedWhen(() -> {
+            h.assertTrue(abattu(l, pres), "le cerisier près du point doit être abattu (" + TestsJeu.etat(t, base) + ")");
+            h.assertTrue(abattu(l, loin), "le cerisier plus loin dans la forêt (40 blocs du point) aussi (" + TestsJeu.etat(t, base) + ")");
             t.discard();
         });
     }
